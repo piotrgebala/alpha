@@ -1,0 +1,47 @@
+name: Testy
+
+# Minimalne CI — tylko automatyczne odpalanie testów. Świadomie NIE zawiera deploymentu/staging:
+# to solo-projekt w Fazie 0, bez czego wdrażać. Rozbudować dopiero w Fazie 3 (paper trading),
+# gdy "deployment" zacznie znaczyć coś realnego (testnet). Uzasadnienie pełne:
+# docs/rag/05_metodologia_wytwarzania_i_testow.md
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instaluj zależności
+        run: pip install -r requirements.txt
+
+      - name: Uruchom testy
+        # Bare `pytest` (bez ścieżki) — auto-discovery po całym repo, żeby przyszłe pliki
+        # (agent_5_compliance/test_leakage.py, itd.) były podłapywane bez edycji tego pliku.
+        run: pytest -v
+
+      - name: Sprawdź spójność feature_registry.yaml vs feature_miner.py
+        # Ten sam check, który robiliśmy ręcznie przy walidacji — teraz automatyczny.
+        run: |
+          python3 -c "
+          import yaml, sys
+          with open('agents/feature_registry.yaml') as f:
+              registry = set(yaml.safe_load(f)['features'].keys())
+          sys.path.insert(0, '.')
+          from agents.feature_miner import FEATURE_FUNCTIONS
+          code = set(FEATURE_FUNCTIONS.keys())
+          if registry != code:
+              print('NIEZGODNOŚĆ:', 'registry-only:', registry - code, 'code-only:', code - registry)
+              sys.exit(1)
+          print('feature_registry.yaml zgodny z feature_miner.py:', len(code), 'cech')
+          "

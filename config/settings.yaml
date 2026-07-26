@@ -1,0 +1,24 @@
+# config/settings.yaml
+# Faza 0 — walidacja WYŁĄCZNIE na primary_symbol (BTC). Lista `symbols` przygotowuje grunt pod
+# Fazę 1 (test generalizacji na ETH/SOL/BNB), nie oznacza równoległej walidacji teraz.
+
+data:
+  exchange_id: "binanceusdm"        # Binance USDS-M Futures = perpetuals, nie spot
+  symbols:                          # ZWERYFIKUJ każdy przez exchange.load_markets() przed uruchomieniem
+    - "BTC/USDT:USDT"               # Faza 0: waliduj TYLKO ten, reszta czeka na wynik Commitu 6
+    - "ETH/USDT:USDT"                # Faza 1+: test generalizacji hipotezy z BTC, bez retuningu progów
+    - "SOL/USDT:USDT"
+    - "BNB/USDT:USDT"
+  primary_symbol: "BTC/USDT:USDT"   # jedyny używany do Commit 1-6; reszta niezaangażowana do dalszej decyzji
+  timeframe: "5m"
+  start: "2025-07-01T00:00:00Z"     # ostatnie ~12 miesięcy
+  end: "2026-07-01T00:00:00Z"
+  cache_dir: "data/raw"
+
+features:
+  candles_per_day: 288              # 24h * 60min / 5min — zmień, jeśli timeframe inny
+  regime_window_days: 20
+
+regime_rule:
+  trend_threshold: 0.7
+  range_threshold: 0.3

@@ -1,0 +1,110 @@
+# feature_registry.yaml
+#
+# Manifest cech — źródło prawdy dla agents/feature_miner.py.
+# Każdy wpis: wzór, biblioteka, okno, rola, grupa testowa, ryzyko leakage, data dodania.
+#
+# role:
+#   base           - baza dla innych cech / risk_controller / triple-barrier labeling
+#   regime_filter  - służy do klasyfikacji trend/range, NIE wchodzi do modelu jako feature
+#   signal         - wchodzi jako feature do modelu (Test 1 i/lub Test 2)
+#
+# test_group:
+#   shared - używana w obu testach
+#   trend  - tylko Test 1 (momentum)
+#   range  - tylko Test 2 (mean-reversion)
+
+features:
+  atr_14:
+    formula: "Average True Range, Wilder smoothing, 14-period"
+    library: "TA-Lib (ATR)"
+    window: 14
+    role: base
+    test_group: shared
+    leakage_risk: low
+    added: "2026-07-05"
+
+  atr_pctrank_20d:
+    formula: "Rolling percentile rank atr_14 w trailing oknie ~20 dni (pandas Rolling.rank(pct=True))"
+    library: "pandas"
+    window: "20 dni = 5760 świec @ 5m"
+    role: regime_filter
+    test_group: shared
+    leakage_risk: high
+    leakage_note: "Musi być trailing (rank ostatniej wartości względem okna), nie centered. Pierwszy kandydat do test_leakage.py."
+    added: "2026-07-05"
+
+  direction_persistence_10:
+    formula: "abs(sum(sign(return))) / 10 w trailing 10 świecach"
+    library: "pandas / numpy"
+    window: 10
+    role: regime_filter
+    test_group: shared
+    leakage_risk: low
+    added: "2026-07-05"
+
+  return_lag_1:
+    formula: "ln(close[t] / close[t-1])"
+    library: "numpy"
+    window: 1
+    role: signal
+    test_group: shared
+    leakage_risk: low
+    added: "2026-07-05"
+
+  momentum_5:
+    formula: "ln(close[t] / close[t-5])"
+    library: "numpy"
+    window: 5
+    role: signal
+    test_group: trend
+    leakage_risk: low
+    added: "2026-07-05"
+
+  ema_diff_9_21:
+    formula: "(EMA9 - EMA21) / close[t] — znormalizowane przez cenę"
+    library: "TA-Lib (EMA)"
+    window: "9, 21"
+    role: signal
+    test_group: trend
+    leakage_risk: low
+    added: "2026-07-05"
+
+  volume_zscore_20:
+    formula: "(volume[t] - mean20) / std20, rolling trailing"
+    library: "pandas"
+    window: 20
+    role: signal
+    test_group: shared
+    leakage_risk: low
+    added: "2026-07-05"
+
+  rsi_14:
+    formula: "RSI, Wilder smoothing, 14-period"
+    library: "TA-Lib (RSI)"
+    window: 14
+    role: signal
+    test_group: range
+    leakage_risk: low
+    added: "2026-07-05"
+
+  price_zscore_20:
+    formula: "(close[t] - mean20) / std20, rolling trailing"
+    library: "pandas"
+    window: 20
+    role: signal
+    test_group: range
+    leakage_risk: low
+    added: "2026-07-05"
+
+# Reguła regime gate — deterministyczna, nie model (decyzja: patrz rozmowa o HMM vs reguła)
+regime_rule:
+  trend_threshold: 0.7
+  range_threshold: 0.3
+  ambiguous_action: "wyklucz świecę z Testu 1 i Testu 2"
+  calibration_status: "wartości startowe — kalibrowane w walk-forward (Commit 4), nie finalne"
+
+# Cechy planowane, NIE dodane teraz (protokół: jedna na raz, po Fazie 0 — patrz ustalenia)
+planned_not_added:
+  funding_rate:
+    target: "model_reversion (Test 2) — mechanistycznie pasuje do tezy przegrzanego pozycjonowania"
+    reason_deferred: "Faza 1, dodawana metodycznie po walidacji minimalnego zestawu"

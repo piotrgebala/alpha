@@ -1,0 +1,127 @@
+# 03 — Ryzyko, sizing i metodologia walidacji
+
+## Target: triple-barrier, ATR-scaled — nie forward return
+
+```
+upper barrier:    entry + 1.5 × atr_14
+lower barrier:    entry − 1.5 × atr_14
+vertical barrier: 12 świec (1h) — timeout
+label: która bariera trafiona pierwsza → +1 / −1 / 0
+```
+
+Symetryczne progi na start w obu testach (asymetria — np. szerszy target dla momentum — to
+Faza 1, nie teraz).
+
+**Czemu nie forward return:** forward return (zwrot po N świecach) ignoruje, że w realnym
+tradingu wychodzisz z pozycji przez stop-loss albo take-profit, nie po sztywnej liczbie świec.
+Triple-barrier odwzorowuje faktyczny mechanizm wyjścia — trenujesz model na tym samym zdarzeniu,
+na którym będziesz handlował.
+
+**Krytyczne: ten sam mnożnik `1.5×ATR` jest używany w barierze (label) i w stop-lossie
+risk_controllera.** To naprawia wcześniej zidentyfikowaną niespójność — jeśli te dwie liczby się
+rozjadą, model jest trenowany na innym zdarzeniu niż to, na którym faktycznie handlujesz.
+**Nie zmieniaj jednego bez zmiany drugiego.**
+
+## Walk-forward split — zawsze chronologiczny, nigdy random
+
+Okno: 2 miesiące train / 2 tygodnie test, przesuwane co 2 tygodnie → kilkanaście foldów na 12
+miesiącach danych. Test na tym samym zbiorze co train (random split) tworzy leakage czasowy —
+model "widzi" przyszłość względem części danych treningowych.
+
+**Diagnostyka efektywnej liczby próbek** (informuje interpretację wyniku, nie blokuje pipeline'u):
+```
+policz autokorelację return_lag_1 do lag ~50
+N_eff ≈ N / (1 + 2·Σρ_k)
+```
+Jeśli N_eff jest o rząd wielkości mniejsze niż liczba wierszy — obniż próg pewności przy
+interpretacji Sharpe'a z checkpointu.
+
+## Dwa modele, osobno — nie jeden połączony
+
+`model_momentum` (trenowany na danych Test 1 — świece "trend"), `model_reversion` (dane Test 2 —
+świece "range"). Żadnego wspólnego modelu na tym etapie — uzasadnienie w
+`01_hipoteza_i_architektura.md` (momentum i reversion to sprzeczne zakłady).
+
+Start hiperparametrów (oba modele, na razie identyczne): `max_depth=4`, `learning_rate=0.05`,
+`n_estimators=200`, `early_stopping_rounds=20` na foldzie OOS (nigdy na train — inaczej model
+dopasowuje się do szumu treningowego). Output: `predict_proba`, nie tylko klasa — potrzebne jako
+`signal_confidence`.
+
+**Dobór parametrów wskaźników i modelu — zasada:** zacznij od wartości branżowych/domyślnych
+(Wilder RSI-14/ATR-14). Nie optymalizuj okien na całym zbiorze na raz — to data dredging. Jeśli
+w ogóle optymalizujesz, rób to wewnątrz walk-forward, traktując okno wskaźnika jako hiperparametr
+razem z hiperparametrami XGBoost, z tym samym rygorem antyprzeuczeniowym.
+
+## Interfejs ml_optimizer → risk_controller
+
+```
+ml_optimizer emituje:
+  { signal_direction: -1|0|1, signal_confidence: float,
+    regime: "trend"|"range", atr_14: float, entry_price: float }
+
+risk_controller zwraca:
+  { position_size: float, stop_price: float, take_profit_price: float }
+```
+
+## Sizing — leverage cap zawsze wygrywa, jawnie
+
+```
+size_risk     = (equity × risk_per_trade) / (1.5 × atr_14)
+size_leverage = (equity × max_leverage) / entry_price
+position_size = min(size_risk, size_leverage)
+```
+
+- `risk_per_trade` = 0.5% equity (wartość startowa — fixed fractional, NIE Kelly na tym etapie:
+  Kelly jest wrażliwy na błędy estymacji edge'u, co przy młodym modelu jest gwarantowane).
+- `max_leverage` = 3x (wartość startowa, konserwatywnie).
+- `signal_confidence` skaluje `risk_per_trade` liniowo — słabszy sygnał, mniejsza pozycja, nie
+  próg odcięcia.
+- Stop-loss z ATR (`1.5×atr_14`), nie ze stałego %: stały % ignoruje, że zmienność BTC zmienia
+  się drastycznie między okresami.
+
+**Dlaczego `min()`, nie któraś z formuł osobno:** bez jawnej reguły, w niskiej zmienności (mały
+ATR → mały stop_distance) fixed-fractional może wypluć pozycję większą niż limit leverage. Reguła
+musi być jawna, nie coś do odkrycia w runtime.
+
+## Kill-switch
+
+Prosta reguła, obecna już w backteście Fazy 0 (nie dopiero w Fazie 3): drawdown equity > X% od
+peaku → zatrzymaj generowanie nowych sygnałów. Cel: zobaczyć historycznie, jak często by się
+aktywował, zanim jest to komponent produkcyjny. Niezależny proces/wątek monitorujący konto — nie
+część głównej pętli decyzyjnej (fail-safe, nie fail-soft).
+
+## Checkpoint go/no-go — TRZY ścieżki, nie dwie
+
+| Wynik | Kryterium (startowe) | Decyzja |
+|---|---|---|
+| **GO** | Sharpe po kosztach > 0.5 w >60% foldów, zgodny znak | Faza 1: regime router + funding rate |
+| **WARUNKOWY** | Sharpe 0–0.5 lub niestabilny znak między foldami | Max 3 iteracje protokołu "jedna cecha na raz" (patrz `02_cechy_i_leakage.md`), potem decyzja ponownie |
+| **NO-GO** | Sharpe ≤ 0 w większości foldów | Wróć do feature registry — inna hipoteza/cechy, NIE tuning tego samego zestawu |
+
+Sprawdzić też: stabilność wyniku przy losowym seedzie modelu (sanity check overfittingu), wynik
+osobno per reżim rynkowy (np. 2023 niska zmienność vs 2024-25 era ETF) — jedna liczba Sharpe
+zagregowana po całym okresie maskuje niestabilność między reżimami.
+
+## Retraining modeli (temat dodany po przeglądzie szerszej wizji projektu)
+
+Nie było w pierwotnym planie Fazy 0 — dodać w Fazie 1:
+- Retraining na stałym harmonogramie (np. co miesiąc, spójnie z granulacją okna walk-forward)
+  ORAZ wyzwalany retrening, jeśli live performance (rolling Sharpe/win-rate z ostatnich N
+  transakcji) spadnie istotnie poniżej oczekiwań z backtestu — sygnał driftu reżimu, nie szumu.
+- Nie retrenować częściej niż raz na okno testowe walk-forward — inaczej dopasowanie do
+  najnowszego szumu zamiast trwałego wzorca.
+
+## Ryzyko portfelowe przy wielu instrumentach (BTC/ETH/SOL/BNB)
+
+Dotyczy Fazy 1+, po walidacji generalizacji hipotezy z BTC (patrz `01_hipoteza_i_architektura.md`).
+Zapisane teraz, żeby nie zgubić przy projektowaniu `risk_controller.py` dla wielu instrumentów:
+
+- **Kill-switch na poziomie CAŁEGO konta**, nie per instrument. Agregowany drawdown equity, nie
+  cztery niezależne limity, które osobno wyglądają "w normie".
+- **`risk_per_trade` i `max_leverage` muszą być świadome korelacji między pozycjami.** Cztery
+  pozycje po 0.5% ryzyka każda dają 2% tylko przy zerowej korelacji — crypto altcoiny bywają
+  silnie skorelowane z BTC, więc realne ryzyko portfela może być bliżej sumy niż dywersyfikacji.
+  Rozważyć prosty limit na łączną ekspozycję (np. sumaryczny VaR portfela, nie suma VaR per
+  instrument) zanim się skaluje na 4 instrumenty jednocześnie.
+- **MPT Optimization i Correlation & Covariance** (odłożone wcześniej jako "nierelewantne przy
+  jednym instrumencie") stają się relewantne dopiero na tym etapie — nie wcześniej.
