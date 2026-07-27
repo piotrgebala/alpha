@@ -23,6 +23,27 @@ treści konkretną zmianę (np. "Commit 3: formalny pytest leakage dla 9 funkcji
 dotyczy każdej zmiany statusu w kolumnie "Status" w tym pliku — commit aktualizujący status
 opisuje, co zostało zweryfikowane/wykonane, nie tylko samą zmianę ikony statusu.
 
+## Zasada pracy: zarządzanie zużyciem Claude Code (limity Pro/Max)
+
+**Nie przechodzić na wyższy plan (Max) prewencyjnie.** Start na Pro; decyzję o upgrade'zie
+podejmować na podstawie realnego zużycia z komendy `/usage`, nie z góry. Commit 5 (dwa modele
+XGBoost + `backtest/engine.py` + `backtest/costs.py` + trade journal, C5.1–C5.6) to najbardziej
+prawdopodobny punkt, w którym limity Pro (rolling 5h + tygodniowy) mogą zacząć przeszkadzać —
+długie sesje iteracyjne trening→metryki→debug windują zużycie kontekstu szybciej niż w Commitach
+1–4.
+
+**Nawyki ograniczające zużycie, zgodne z zasadą branch-per-task:**
+- `/clear` po każdym scaleniu zadania do `master` — nie ciągnąć jednej sesji przez kilka zadań
+  C5.x naraz.
+- Monitorować `/usage` na bieżąco podczas pracy nad Commitem 5, zamiast dowiadywać się dopiero po
+  odcięciu.
+- Zrzucać verbose output (logi treningu, output testów) do subagentów zamiast wklejać go wprost do
+  głównej konwersacji.
+
+**Trafienie limitu to pauza (reset okna czasowego), nie utrata pracy** — można poczekać na reset,
+dokupić usage credits na sporadyczne przekroczenia, albo przejść na Max 5x, jeśli limit łapany jest
+systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
+
 ## Legenda statusów
 
 | Status | Znaczenie |
@@ -43,12 +64,12 @@ opisuje, co zostało zweryfikowane/wykonane, nie tylko samą zmianę ikony statu
 | Commit 5 — Dwa modele + backtest | 0 | 0 | 6 | 6 |
 | Commit 5.5 — Risk controller | 0 | 0 | 5 | 5 |
 | Commit 6 — Checkpoint go/no-go | 0 | 0 | 5 | 5 |
-| Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 7 | 7 |
+| Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 8 | 8 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
-| Dokumentacja/workflow (niezależne od fazowania) | 0 | 2 | 1 | 3 |
-| **RAZEM** | **6** | **6** | **40** | **52** |
+| Dokumentacja/workflow (niezależne od fazowania) | 0 | 4 | 1 | 5 |
+| **RAZEM** | **6** | **8** | **41** | **55** |
 
 ---
 
@@ -70,7 +91,7 @@ opisuje, co zostało zweryfikowane/wykonane, nie tylko samą zmianę ikony statu
 | C2.2 | `classify_regime()` | ✅ | |
 | C2.3 | `split_by_regime()` | ✅ | |
 | C2.4 | Nieformalny leakage sanity check (9/9 na danych syntetycznych) | ✅ | Nie zastępuje formalnego testu z Commitu 3 |
-| C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ⏳ | Ryzyko z §7: reżim "trend" może być rzadki — sprawdzić po pobraniu prawdziwych danych |
+| C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ⏳ | Ryzyko z §7: reżim "trend" może być rzadki — sprawdzić po pobraniu prawdziwych danych. CLAUDE.md zasada 1: kalibracja WYŁĄCZNIE wewnątrz walk-forward (Commit 4), nigdy na całym zbiorze naraz |
 
 ### Commit 3 — Test leakage (`agent_5_compliance/test_leakage.py`) — NASTĘPNY KROK
 
@@ -136,6 +157,7 @@ opisuje, co zostało zweryfikowane/wykonane, nie tylko samą zmianę ikony statu
 | F1.5 | Rozszerzenia cech pojedynczo na OOS: MACD, Bollinger, GMMA | ⏳ | Częściowo redundantne z istniejącymi cechami — testować pojedynczo |
 | F1.6 | Onchain data jako kandydat cechy do Test 2 | ⏳ | |
 | F1.7 | `Lean.DataSource.BinanceFundingRate` jako źródło danych funding rate | ⏳ | §10 |
+| F1.8 | Rozszerzenie walidacji na ETH/SOL/BNB — te same progi i hiperparametry co BTC, bez retuningu | ⏳ | CLAUDE.md zasada 9 — test generalizacji tej samej hipotezy, nie równoległa walidacja 4 niezależnych strategii; start dopiero PO indywidualnej walidacji BTC do końca Commitu 6 |
 
 ## Faza 2 — LLM offline/nadzorczo (Q&A) + test_mathematics.py
 
@@ -176,3 +198,5 @@ opisuje, co zostało zweryfikowane/wykonane, nie tylko samą zmianę ikony statu
 | D.1 | YAML frontmatter (`status`, `last_verified`, `depends_on`) w każdym `docs/rag/*.md` | ⬜ | |
 | D.2 | Plik-indeks (Mapa Treści) linkujący `CLAUDE.md` + `IMPLEMENTATION_PLAN.md` + `docs/rag/*.md` | ⬜ | |
 | D.3 | Formalizacja roli `IMPLEMENTATION_PLAN.md` jako "Observational Memory" — rozdzielenie na "aktualny stan" vs "archiwum decyzji" | ⏳ | Dopiero gdy plik znacząco urośnie (np. po Fazie 1) |
+| D.4 | Odpowiedzieć na otwarte pytania z `docs/rag/07`: czy spotkanie/zespoły (Data Engineering/Quantitative Research/Risk Management) są realne, kto ma finalną decyzyjność przy konflikcie z `CLAUDE.md` | ⬜ | Blokuje D.5 |
+| D.5 | Eskalacja rozbieżności terminów action items ze spotkania (15.08/30.08/10.09.2026, `docs/rag/07`) PRZED 15.08.2026, jeśli zobowiązania zespołów są realne | ⬜ | Rekomendacja z `docs/rag/07`; warunkowe od odpowiedzi na D.4 |
