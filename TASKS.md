@@ -60,16 +60,16 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Commit 1 — Dane | 2 | 1 | 0 | 3 |
 | Commit 2 — Feature registry | 4 | 0 | 1 | 5 |
 | Commit 3 — Test leakage (NASTĘPNY KROK) | 0 | 3 | 0 | 3 |
-| Commit 4 — Target + walk-forward split | 0 | 0 | 5 | 5 |
+| Commit 4 — Target + walk-forward split | 0 | 0 | 6 | 6 |
 | Commit 5 — Dwa modele + backtest | 0 | 0 | 6 | 6 |
 | Commit 5.5 — Risk controller | 0 | 0 | 5 | 5 |
 | Commit 6 — Checkpoint go/no-go | 0 | 0 | 5 | 5 |
-| Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 8 | 8 |
+| Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 0 | 4 | 1 | 5 |
-| **RAZEM** | **6** | **8** | **41** | **55** |
+| **RAZEM** | **6** | **8** | **46** | **60** |
 
 ---
 
@@ -99,7 +99,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 |---|---|---|---|
 | C3.1 | Formalny, parametryzowany pytest leakage dla wszystkich 9 funkcji cech (`df[:T]` vs `df[:T+k]`) | ⬜ | |
 | C3.2 | Priorytet: `atr_pctrank_20d` — trailing, nie centered window | ⬜ | Największe ryzyko leakage |
-| C3.3 | Integracja z CI (`.github/workflows/tests.yml`) | ⬜ | |
+| C3.3 | Zweryfikować, że istniejące CI (`.github/workflows/tests.yml`, auto-discovery `pytest -v`) podłapuje nowy `test_leakage.py` bez edycji configu | ⬜ | CI już istnieje — bug trigger `main`→`master` naprawiony osobno; to zadanie to weryfikacja auto-discovery, nie budowa CI od zera |
 
 ### Commit 4 — Target + walk-forward split (`agents/labeling.py`)
 
@@ -110,13 +110,14 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C4.3 | Walk-forward split (2 mies. train / 2 tyg. test, krok 2 tyg., chronologiczny) | ⏳ | |
 | C4.4 | Diagnostyka efektywnej liczby próbek (autokorelacja `return_lag_1`, N_eff) | ⏳ | Informacyjne, nie blokuje |
 | C4.5 | Test leakage dla `labeling.py` PRZED wejściem do modelu | ⏳ | CLAUDE.md zasada 2 |
+| C4.6 | Zmierzyć koszt obliczeniowy pełnego tuningu (walk-forward × hiperparametry × okna wskaźników) na małej próbce PRZED pełnym przeszukiwaniem | ⏳ | §7 — koszt nieoszacowany, sprawdzić nawet na Ryzen 7950X3D |
 
 ### Commit 5 — Dwa modele, osobno (`agents/ml_optimizer.py`, `backtest/`)
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
 | C5.1 | `model_momentum` + `model_reversion` — dwa niezależne XGBoosty | ⏳ | Żadnego wspólnego modelu na tym etapie |
-| C5.2 | Hiperparametry startowe + `early_stopping_rounds=20` na foldzie OOS | ⏳ | |
+| C5.2 | Hiperparametry startowe + `early_stopping_rounds=20` na foldzie OOS | ⏳ | CLAUDE.md zasada 1 — kalibracja/tuning wyłącznie wewnątrz walk-forward, nigdy na całym zbiorze naraz (§5 Commit 5) |
 | C5.3 | `predict_proba` (nie tylko klasa) jako `signal_confidence` | ⏳ | |
 | C5.4 | `backtest/costs.py` — taker fee, funding rate, slippage | ⏳ | |
 | C5.5 | `backtest/engine.py` — pętla sygnał → risk_controller → PnL z kosztami → equity curve | ⏳ | |
@@ -137,7 +138,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
 | C6.1 | Policzyć Sharpe po kosztach per fold | ⏳ | |
-| C6.2 | Klasyfikacja wyniku: GO / WARUNKOWY / NO-GO wg kryteriów z §5 | ⏳ | |
+| C6.2 | Klasyfikacja wyniku: GO / WARUNKOWY / NO-GO wg kryteriów z §5 | ⏳ | WARUNKOWY → max 3 iteracje protokołu jedna-cecha-na-raz, potem decyzja ponownie; NO-GO → wróć do Commit 2 (inna hipoteza/cechy), NIE tuning tego samego zestawu (§5) |
 | C6.3 | Stabilność wyniku przy losowym seedzie modelu (overfitting sanity check) | ⏳ | |
 | C6.4 | Wynik osobno per reżim rynkowy (2023 niska zmienność vs 2024-25 era ETF) | ⏳ | |
 | C6.5 | Decyzja udokumentowana w `IMPLEMENTATION_PLAN.md` | ⏳ | |
@@ -158,6 +159,10 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | F1.6 | Onchain data jako kandydat cechy do Test 2 | ⏳ | |
 | F1.7 | `Lean.DataSource.BinanceFundingRate` jako źródło danych funding rate | ⏳ | §10 |
 | F1.8 | Rozszerzenie walidacji na ETH/SOL/BNB — te same progi i hiperparametry co BTC, bez retuningu | ⏳ | CLAUDE.md zasada 9 — test generalizacji tej samej hipotezy, nie równoległa walidacja 4 niezależnych strategii; start dopiero PO indywidualnej walidacji BTC do końca Commitu 6 |
+| F1.9 | Multi-timeframe (Trend/Day/Hour) — potwierdzenie trendu z wyższego interwału | ⏳ | Dopiero po walidacji na 5m, §10 — osobny wymiar złożoności |
+| F1.10 | Trailing Stop/Take Profit w `risk_controller.py` | ⏳ | Ulepszenie po walidacji statycznej wersji ATR (Commit 5.5), §10 |
+| F1.11 | Expected Shortfall jako uzupełnienie VaR | ⏳ | Naturalne uzupełnienie ogona rozkładu strat, §10 |
+| F1.12 | CatBoost / RandomForest jako porównanie/ensemble | ⏳ | Tylko PO potwierdzeniu edge'u XGBoostem (Commit 6 GO), nie zamiennik na start, §10 |
 
 ## Faza 2 — LLM offline/nadzorczo (Q&A) + test_mathematics.py
 
