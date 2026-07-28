@@ -81,17 +81,18 @@ clas5_core/
 │   ├── __init__.py                 [DONE]
 │   ├── feature_miner.py            [DONE]
 │   ├── feature_registry.yaml       [DONE]
-│   ├── labeling.py                  TODO — Commit 4
+│   ├── labeling.py                  [DONE, 14/14 testów przechodzi (13 w tests/test_labeling.py + 1 leakage w agent_5_compliance/)]
 │   ├── ml_optimizer.py              TODO — Commit 5
 │   └── risk_controller.py           TODO — Commit 5.5
 ├── agent_5_compliance/
-│   └── test_leakage.py              [DONE, 11/11 testów przechodzi]
+│   └── test_leakage.py              [DONE, 12/12 testów przechodzi]
 ├── backtest/
 │   ├── engine.py                    TODO — Commit 5
 │   └── costs.py                     TODO — Commit 5
 └── tests/
     ├── __init__.py                  [DONE]
-    └── test_fetch_ohlcv.py          [DONE, 6/6 testów przechodzi]
+    ├── test_fetch_ohlcv.py          [DONE, 6/6 testów przechodzi]
+    └── test_labeling.py             [DONE, 13/13 testów przechodzi]
 ```
 
 ---
@@ -145,7 +146,7 @@ inaczej:  ambiguous → wyklucz z obu testów
   (11 testów: 9 parametryzowanych + 1 dedykowany dla `atr_pctrank_20d` + 1 sanity na zestaw
   cech) potwierdza to empirycznie, 11/11 przechodzi lokalnie.
 
-### Commit 4 — Target + walk-forward split `[NASTĘPNY KROK]`
+### Commit 4 — Target + walk-forward split `[ZROBIONE — poza C4.6, odłożone do Commit 5]`
 
 `agents/labeling.py`
 
@@ -170,7 +171,17 @@ policz autokorelację return_lag_1 do lag ~50
 N_eff ≈ N / (1 + 2·Σρ_k)
 ```
 
-### Commit 5 — Dwa modele, osobno
+**Zaimplementowane i zweryfikowane empirycznie:** `compute_triple_barrier_labels` (reużywa
+`compute_atr_14` z `feature_miner.py`, nie duplikuje), `generate_walk_forward_folds`,
+`effective_sample_size` — 14/14 testów przechodzi (7 scenariuszy triple-barrier + 3 walk-forward
++ 2 N_eff w `tests/test_labeling.py`, + 1 hypothesis property test wymagany przez DoD dla
+`labeling.py`, + 1 formalny test leakage w `agent_5_compliance/test_leakage.py` — C4.5). Mnożnik
+ATR i vertical barrier są teraz jedynym źródłem prawdy w `config/settings.yaml` sekcja
+`labeling` (C4.2), które `risk_controller.py` będzie musiał czytać w Commicie 5.5. **C4.6
+(koszt obliczeniowy pełnego tuningu) celowo NIE zrobione teraz** — wymaga realnych
+hiperparametrów XGBoost (Commit 5) do sensownego pomiaru; przeniesione tam.
+
+### Commit 5 — Dwa modele, osobno `[NASTĘPNY KROK]`
 
 `agents/ml_optimizer.py`
 

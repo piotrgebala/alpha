@@ -60,8 +60,8 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Commit 1 — Dane | 2 | 1 | 0 | 3 |
 | Commit 2 — Feature registry | 4 | 0 | 1 | 5 |
 | Commit 3 — Test leakage | 3 | 0 | 0 | 3 |
-| Commit 4 — Target + walk-forward split (NASTĘPNY KROK) | 0 | 0 | 6 | 6 |
-| Commit 5 — Dwa modele + backtest | 0 | 0 | 6 | 6 |
+| Commit 4 — Target + walk-forward split | 5 | 0 | 1 | 6 |
+| Commit 5 — Dwa modele + backtest (NASTĘPNY KROK) | 0 | 0 | 6 | 6 |
 | Commit 5.5 — Risk controller | 0 | 0 | 5 | 5 |
 | Commit 6 — Checkpoint go/no-go | 0 | 0 | 5 | 5 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
@@ -69,7 +69,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 0 | 4 | 1 | 5 |
-| **RAZEM** | **9** | **5** | **46** | **60** |
+| **RAZEM** | **14** | **5** | **41** | **60** |
 
 ---
 
@@ -101,16 +101,16 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C3.2 | Priorytet: `atr_pctrank_20d` — trailing, nie centered window | ✅ | Dodatkowy dedykowany test `test_atr_pctrank_20d_trailing_not_centered` (mutacja przyszłych świec) — przechodzi |
 | C3.3 | Zweryfikować, że istniejące CI (`.github/workflows/tests.yml`, auto-discovery `pytest -v`) podłapuje nowy `test_leakage.py` bez edycji configu | ✅ | Potwierdzone na GitHubie (nie tylko lokalnie): run `30383077052` na `master` — `success`, 17/17 przechodzi, bez żadnej edycji `tests.yml` po dodaniu pliku testów |
 
-### Commit 4 — Target + walk-forward split (`agents/labeling.py`)
+### Commit 4 — Target + walk-forward split (`agents/labeling.py`) — ✅ ZROBIONE (poza C4.6, odłożone do Commit 5)
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| C4.1 | Triple-barrier ATR-scaled (upper/lower = ±1.5×ATR, vertical = 12 świec/1h) | ⏳ | |
-| C4.2 | Spójność mnożnika 1.5×ATR z przyszłym `risk_controller` (Commit 5.5) | ⏳ | CLAUDE.md zasada 3 — twarda zależność, nie zmieniać jednej strony bez drugiej |
-| C4.3 | Walk-forward split (2 mies. train / 2 tyg. test, krok 2 tyg., chronologiczny) | ⏳ | |
-| C4.4 | Diagnostyka efektywnej liczby próbek (autokorelacja `return_lag_1`, N_eff) | ⏳ | Informacyjne, nie blokuje |
-| C4.5 | Test leakage dla `labeling.py` PRZED wejściem do modelu | ⏳ | CLAUDE.md zasada 2 |
-| C4.6 | Zmierzyć koszt obliczeniowy pełnego tuningu (walk-forward × hiperparametry × okna wskaźników) na małej próbce PRZED pełnym przeszukiwaniem | ⏳ | §7 — koszt nieoszacowany, sprawdzić nawet na Ryzen 7950X3D |
+| C4.1 | Triple-barrier ATR-scaled (upper/lower = ±1.5×ATR, vertical = 12 świec/1h) | ✅ | Zaimplementowane: `agents/labeling.py::compute_triple_barrier_labels` — reużywa `compute_atr_14` z `feature_miner.py` (bez duplikacji). 7 testów scenariuszowych w `tests/test_labeling.py` (upper/lower hit, vertical timeout, tiebreak gdy obie bariery trafione w tej samej świecy ×2, ATR-warmup→NaN, niepełne okno na końcu datasetu→NaN) + 1 hypothesis property test — wszystkie przechodzą |
+| C4.2 | Spójność mnożnika 1.5×ATR z przyszłym `risk_controller` (Commit 5.5) | ✅ | Jedyne źródło prawdy: `config/settings.yaml` sekcja `labeling.atr_multiplier: 1.5`, `agents/labeling.py::ATR_MULTIPLIER` matchuje. `risk_controller.py` (Commit 5.5) MUSI czytać tę samą wartość — CLAUDE.md zasada 3 |
+| C4.3 | Walk-forward split (2 mies. train / 2 tyg. test, krok 2 tyg., chronologiczny) | ✅ | Zaimplementowane: `agents/labeling.py::generate_walk_forward_folds` — chronologiczne, przesuwane okna, half-open intervals (brak nakładania train/test wewnątrz foldu). 3 testy w `tests/test_labeling.py` (chronologia + brak nakładania, oczekiwana liczba foldów, zbyt mało danych → pusta lista) przechodzą |
+| C4.4 | Diagnostyka efektywnej liczby próbek (autokorelacja `return_lag_1`, N_eff) | ✅ | Zaimplementowane: `agents/labeling.py::effective_sample_size` (N_eff = N/(1+2·Σρ_k), `pd.Series.autocorr`). 2 testy sanity (i.i.d. → N_eff≈N; silnie autoskorelowany → N_eff≪N) przechodzą |
+| C4.5 | Test leakage dla `labeling.py` PRZED wejściem do modelu | ✅ | Zaimplementowane: `agent_5_compliance/test_leakage.py::test_triple_barrier_no_leakage` — metodologia truncate-vs-extend dostosowana do labeli (porównywalny region = wiersze, których pełne okno w przód mieści się w obciętych danych). Przechodzi |
+| C4.6 | Zmierzyć koszt obliczeniowy pełnego tuningu (walk-forward × hiperparametry × okna wskaźników) na małej próbce PRZED pełnym przeszukiwaniem | ⏳ | §7 — koszt nieoszacowany. ODŁOŻONE do Commit 5: sensowny pomiar wymaga realnych hiperparametrów (siatka XGBoost) do połączenia z walk-forward × oknami wskaźników — częściowy pomiar teraz byłby mylący. Sprawdzić nawet na Ryzen 7950X3D |
 
 ### Commit 5 — Dwa modele, osobno (`agents/ml_optimizer.py`, `backtest/`)
 
