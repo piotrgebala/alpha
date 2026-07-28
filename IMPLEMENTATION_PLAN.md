@@ -4,7 +4,8 @@
 > Jeśli zaczynasz nową sesję Claude Code, podepnij ten plik jako kontekst — zastępuje potrzebę
 > przewijania całej wcześniejszej rozmowy.
 >
-> Ostatnia aktualizacja: 2026-07-05. **Status: Commit 1 i Commit 2 zaimplementowane i przetestowane.**
+> Ostatnia aktualizacja: 2026-07-27. **Status: Commity 1–5 zaimplementowane i przetestowane
+> (48/48 testów). Następny krok: Commit 5.5 (risk_controller).**
 
 ---
 
@@ -82,17 +83,21 @@ clas5_core/
 │   ├── feature_miner.py            [DONE]
 │   ├── feature_registry.yaml       [DONE]
 │   ├── labeling.py                  [DONE, 14/14 testów przechodzi (13 w tests/test_labeling.py + 1 leakage w agent_5_compliance/)]
-│   ├── ml_optimizer.py              TODO — Commit 5
+│   ├── ml_optimizer.py              [DONE, 8/8 testów przechodzi (tests/test_ml_optimizer.py)]
 │   └── risk_controller.py           TODO — Commit 5.5
 ├── agent_5_compliance/
 │   └── test_leakage.py              [DONE, 12/12 testów przechodzi]
 ├── backtest/
-│   ├── engine.py                    TODO — Commit 5
-│   └── costs.py                     TODO — Commit 5
+│   ├── __init__.py                  [DONE]
+│   ├── engine.py                    [DONE, 2/2 testów przechodzi (tests/test_engine.py)]
+│   └── costs.py                     [DONE, 7/7 testów przechodzi (tests/test_costs.py)]
 └── tests/
     ├── __init__.py                  [DONE]
     ├── test_fetch_ohlcv.py          [DONE, 6/6 testów przechodzi]
-    └── test_labeling.py             [DONE, 13/13 testów przechodzi]
+    ├── test_labeling.py             [DONE, 13/13 testów przechodzi]
+    ├── test_ml_optimizer.py         [DONE, 8/8 testów przechodzi]
+    ├── test_costs.py                [DONE, 7/7 testów przechodzi]
+    └── test_engine.py               [DONE, 2/2 testów przechodzi]
 ```
 
 ---
@@ -181,7 +186,7 @@ ATR i vertical barrier są teraz jedynym źródłem prawdy w `config/settings.ya
 (koszt obliczeniowy pełnego tuningu) celowo NIE zrobione teraz** — wymaga realnych
 hiperparametrów XGBoost (Commit 5) do sensownego pomiaru; przeniesione tam.
 
-### Commit 5 — Dwa modele, osobno `[NASTĘPNY KROK]`
+### Commit 5 — Dwa modele, osobno `[ZROBIONE]`
 
 `agents/ml_optimizer.py`
 
@@ -196,7 +201,43 @@ hiperparametrów XGBoost (Commit 5) do sensownego pomiaru; przeniesione tam.
 historyczna), slippage jako stały bps.
 `backtest/engine.py` — pętla: sygnał → risk_controller → PnL z kosztami → equity curve.
 
-### Commit 5.5 — Risk controller + interfejs
+**Zaimplementowane i zweryfikowane empirycznie:** `agents/ml_optimizer.py::train_regime_model`
+(natywne `xgboost.train()`/`DMatrix`, nie sklearn-wrapper) + `predict_signal` (argmax +
+confidence z `predict_proba`, tylko drzewa do `best_iteration`) — 8/8 testów przechodzi
+(`tests/test_ml_optimizer.py`). `backtest/costs.py` (fee/funding/slippage, wartości startowe
+teraz też w `config/settings.yaml` sekcja `costs`) — 7/7 testów przechodzi
+(`tests/test_costs.py`). `backtest/engine.py::run_backtest` — pełny pipeline cechy→labels→
+regime→walk-forward→trening/predykcja→sizing→koszty→equity curve — 2/2 testy integracyjne
+przechodzi (`tests/test_engine.py`, syntetyczny OHLCV z jawnie odseparowanymi segmentami
+trend/range, bo czysto losowe dane dają regime="range" dużo częściej niż "trend", C2.5).
+
+**Decyzja — `_placeholder_risk_controller` (tymczasowy, w `backtest/engine.py`):**
+`agents/risk_controller.py` to osobny Commit 5.5 (kontrakt formalny + kill-switch + hypothesis
+property testy, wymagane DoD). Ponieważ `run_backtest` potrzebuje jakiegoś sizingu, żeby policzyć
+PnL już teraz, `_placeholder_risk_controller` implementuje JUŻ udokumentowaną formułę z
+`docs/rag/03_ryzyko_i_sizing.md` (`size_risk`/`size_leverage`/`min()` + `signal_confidence`
+skalujące `risk_per_trade`) — wstrzykiwany przez parametr `risk_controller_fn`, żeby Commit 5.5
+mógł podmienić go na prawdziwy `agents/risk_controller.py` BEZ zmiany pętli `run_backtest`. Nie
+zamyka C5.5.1–C5.5.5 z `TASKS.md` — te formalnie zostają dla Commit 5.5.
+
+**Decyzja — brak modyfikacji `agents/labeling.py`:** PnL wymaga ceny wyjścia z pozycji; dla
+timeoutów (label=0.0) to lookup do `close` w świecy `t + exit_bar_offset` w PEŁNYM df.
+`agents.feature_miner.split_by_regime()` robi `reset_index(drop=True)`, co gubi tę możliwość —
+`backtest/engine.py` świadomie NIE wywołuje `split_by_regime()`, filtruje reżim własnym boolean
+maskiem zachowującym oryginalny index (plus defensywny `reset_index(drop=True)` na starcie
+`run_backtest`, żeby zagwarantować czysty `RangeIndex`). Zero zmian w już scalonym Commicie 4.
+
+**Decyzja — chronologia ponad reżimy:** modele trenowane per-regime per-fold niezależnie, ale
+equity liczone w JEDNYM sekwencyjnym przebiegu po wszystkich sygnałach z obu reżimów, sortowanych
+po `timestamp` — inaczej trades z trend/range (przeplatające się w czasie) dałyby błędną
+chronologię compoundingu equity.
+
+**C4.6 — pomiar częściowy (patrz TASKS.md):** jedno `train_regime_model` (produkcyjne
+hiperparametry, 200 rund, early stopping wyłączony) na 30k wierszy × 4 cechy: **0.436s**
+(~2.2ms/rundę) na Ryzen 7950X3D. Pełny grid search pozostaje niezmierzony — do zrobienia przy
+faktycznej kalibracji hiperparametrów (Commit 6 / Faza 1).
+
+### Commit 5.5 — Risk controller + interfejs `[NASTĘPNY KROK]`
 
 `agents/risk_controller.py`
 
@@ -245,6 +286,13 @@ osobno per reżim rynkowy (2023 niska zmienność vs 2024-25 era ETF).
 - `compute_all_features()` na pełnym 12-miesięcznym syntetycznym zbiorze (105k wierszy): **0.23s**.
 - Nieformalny leakage sanity check: 9/9 cech identyczne na `df[:T]` vs `df[:T+50]`.
 - `tests/test_fetch_ohlcv.py`: 6/6 testów przechodzi (dedup, sortowanie, gap detection).
+- `xgboost` 3.2.0 instaluje się bez problemu na Python 3.14 (`pip install xgboost>=2.0`) — ryzyko
+  braku prebuilt wheela (oflagowane przy planowaniu Commitu 5) nie zmaterializowało się.
+- `agents/ml_optimizer.py::train_regime_model`: jedno pełne trenowanie (200 rund, early stopping
+  wyłączony, `max_depth=4`) na 30k wierszy × 4 cechy — **0.436s** na Ryzen 7950X3D
+  (~2.2ms/rundę). Patrz też C4.6 w `TASKS.md`.
+- Pełny zestaw testów po Commicie 5: **48/48 przechodzi** (31 z Commitów 1–4 + 17 nowych: 7
+  `tests/test_costs.py` + 8 `tests/test_ml_optimizer.py` + 2 `tests/test_engine.py`).
 
 ---
 

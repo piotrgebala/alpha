@@ -35,3 +35,21 @@ walk_forward:
   test_window_days: 14              # 2 tygodnie
   step_days: 14                     # przesunięcie co 2 tygodnie
 
+# Commit 5 (agents/ml_optimizer.py). Hiperparametry startowe dla OBU modeli (model_momentum,
+# model_reversion) — identyczne na tym etapie (docs/rag/03). Kalibracja WYŁĄCZNIE wewnątrz
+# walk-forward (CLAUDE.md zasada 1), nigdy na całym zbiorze naraz.
+model:
+  max_depth: 4
+  learning_rate: 0.05               # native XGBoost API nazywa to "eta"
+  n_estimators: 200                 # native API: num_boost_round
+  early_stopping_rounds: 20         # na foldzie OOS (test), nigdy na train
+  seed: 42                          # jawny i logowany — docs/rag/05 (reprodukowalność)
+
+# Commit 5 (backtest/costs.py). Wartości startowe kosztów transakcyjnych Binance USDS-M Futures —
+# do kalibracji, gdy dostępne będą realne dane funding rate (Faza 1, LEAN BinanceFundingRate,
+# docs/rag/04).
+costs:
+  taker_fee_rate: 0.0005            # 0.05% za stronę (Binance USDS-M Futures, VIP0 taker)
+  funding_rate_8h: 0.0001           # 0.01% / 8h — przybliżenie, brak jeszcze realnych danych funding
+  slippage_bps: 2                   # 2 bps = 0.02%, stała wartość startowa
+
