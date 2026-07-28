@@ -1,0 +1,13 @@
+# Python bytecode / cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.hypothesis/
+
+# Virtual environments
+.venv/
+venv/
+
+# Data cache (generowany przy pierwszym uruchomieniu fetch_ohlcv.py)
+data/raw/*
+!data/raw/.gitkeep

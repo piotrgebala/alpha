@@ -85,7 +85,7 @@ clas5_core/
 │   ├── ml_optimizer.py              TODO — Commit 5
 │   └── risk_controller.py           TODO — Commit 5.5
 ├── agent_5_compliance/
-│   └── test_leakage.py              TODO — Commit 3 (następny krok)
+│   └── test_leakage.py              [DONE, 11/11 testów przechodzi]
 ├── backtest/
 │   ├── engine.py                    TODO — Commit 5
 │   └── costs.py                     TODO — Commit 5
@@ -134,17 +134,18 @@ range:    atr_pctrank_20d < 0.3  AND  persistence < 0.3
 inaczej:  ambiguous → wyklucz z obu testów
 ```
 
-### Commit 3 — Test leakage `[NASTĘPNY KROK]`
+### Commit 3 — Test leakage `[ZROBIONE]`
 
 `agent_5_compliance/test_leakage.py` — formalny, parametryzowany pytest dla wszystkich 9 funkcji.
 
 - Metoda: policz cechę na `df[:T]` i `df[:T+k]`, sprawdź identyczność do T.
 - **Priorytet:** `atr_pctrank_20d` — największe ryzyko (rolling window musi być trailing, nie
-  centered).
-- Nieformalna wersja tego testu już przeszła 9/9 na syntetycznych danych — to nie zastępuje
-  formalnego pytest w CI.
+  centered) — pokryty dodatkowym dedykowanym testem (mutacja świec po punkcie odcięcia).
+- Nieformalna wersja tego testu już przeszła 9/9 na syntetycznych danych — formalny pytest
+  (11 testów: 9 parametryzowanych + 1 dedykowany dla `atr_pctrank_20d` + 1 sanity na zestaw
+  cech) potwierdza to empirycznie, 11/11 przechodzi lokalnie.
 
-### Commit 4 — Target + walk-forward split
+### Commit 4 — Target + walk-forward split `[NASTĘPNY KROK]`
 
 `agents/labeling.py`
 
