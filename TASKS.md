@@ -99,7 +99,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 |---|---|---|---|
 | C3.1 | Formalny, parametryzowany pytest leakage dla wszystkich 9 funkcji cech (`df[:T]` vs `df[:T+k]`) | ✅ | Zaimplementowane: `agent_5_compliance/test_leakage.py::test_feature_no_leakage`, 9/9 cech przechodzi |
 | C3.2 | Priorytet: `atr_pctrank_20d` — trailing, nie centered window | ✅ | Dodatkowy dedykowany test `test_atr_pctrank_20d_trailing_not_centered` (mutacja przyszłych świec) — przechodzi |
-| C3.3 | Zweryfikować, że istniejące CI (`.github/workflows/tests.yml`, auto-discovery `pytest -v`) podłapuje nowy `test_leakage.py` bez edycji configu | ✅ | Zweryfikowane lokalnie: `pytest -v` — 17/17 przechodzi (11 nowych + 6 istniejących); branch trigger naprawiony (main→master) w tym samym commicie |
+| C3.3 | Zweryfikować, że istniejące CI (`.github/workflows/tests.yml`, auto-discovery `pytest -v`) podłapuje nowy `test_leakage.py` bez edycji configu | ✅ | Potwierdzone na GitHubie (nie tylko lokalnie): run `30383077052` na `master` — `success`, 17/17 przechodzi, bez żadnej edycji `tests.yml` po dodaniu pliku testów |
 
 ### Commit 4 — Target + walk-forward split (`agents/labeling.py`)
 
