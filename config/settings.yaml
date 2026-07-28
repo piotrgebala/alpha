@@ -22,3 +22,16 @@ features:
 regime_rule:
   trend_threshold: 0.7
   range_threshold: 0.3
+
+# Commit 4 (agents/labeling.py). atr_multiplier to JEDYNE źródło prawdy dla mnożnika ATR —
+# risk_controller.py (Commit 5.5) MUSI używać tej samej wartości (CLAUDE.md zasada 3, docs/rag/03).
+# Wartości startowe, do kalibracji WYŁĄCZNIE wewnątrz walk-forward (CLAUDE.md zasada 1).
+labeling:
+  atr_multiplier: 1.5               # upper/lower barrier = entry ± atr_multiplier * atr_14
+  vertical_barrier_candles: 12      # 1h @ timeframe 5m — timeout triple-barrier
+
+walk_forward:
+  train_window_days: 60             # ~2 miesiące
+  test_window_days: 14              # 2 tygodnie
+  step_days: 14                     # przesunięcie co 2 tygodnie
+

@@ -32,6 +32,7 @@ import pandas as pd
 import pytest
 
 from agents.feature_miner import FEATURE_FUNCTIONS, compute_atr_pctrank_20d
+from agents.labeling import compute_triple_barrier_labels
 
 # atr_pctrank_20d z domyslnymi parametrami (candles_per_day=288, window_days=20)
 # potrzebuje 5760 wierszy, zanim da nie-NaN wynik -- dane musza byc odpowiednio
@@ -142,5 +143,38 @@ def test_atr_pctrank_20d_trailing_not_centered() -> None:
         original.iloc[:cutoff].reset_index(drop=True),
         mutated.iloc[:cutoff].reset_index(drop=True),
         check_names=False,
+        check_exact=True,
+    )
+
+
+def test_triple_barrier_no_leakage(synthetic_ohlcv: pd.DataFrame) -> None:
+    """
+    C4.5: labelki z definicji patrza w przyszlosc (to NIE jest leakage -- to jest
+    cel triple-barrier). Ryzyko leakage tutaj to bug zagladajacy DALEJ w przyszlosc
+    niz zadeklarowane `vertical_barrier_candles`, albo blad offsetu/alignmentu.
+
+    Metodologia (analogiczna do test_feature_no_leakage, ale dostosowana): licz
+    labelki na df[:CUTOFF] i na pelnym df, porownaj WYLACZNIE wiersze t, ktorych
+    PELNE okno w przod miesci sie w obcietych danych (t + vertical_barrier_candles
+    < CUTOFF) -- te musza byc bit-identyczne niezaleznie od tego, czy df konczy sie
+    na CUTOFF czy ciagnie sie dalej. Wiersze blizej granicy obciecia POPRAWNIE
+    roznia sie (NaN w wersji obcietej z braku danych w przod, nie bug) -- celowo
+    wykluczone z porownania.
+    """
+    vertical_barrier_candles = 12
+    df_full = synthetic_ohlcv
+    df_past = df_full.iloc[:CUTOFF].reset_index(drop=True)
+
+    result_past = compute_triple_barrier_labels(
+        df_past, vertical_barrier_candles=vertical_barrier_candles
+    )
+    result_full = compute_triple_barrier_labels(
+        df_full, vertical_barrier_candles=vertical_barrier_candles
+    )
+
+    comparable = CUTOFF - vertical_barrier_candles
+    pd.testing.assert_frame_equal(
+        result_past.iloc[:comparable].reset_index(drop=True),
+        result_full.iloc[:comparable].reset_index(drop=True),
         check_exact=True,
     )
