@@ -60,16 +60,16 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Commit 1 — Dane | 2 | 1 | 0 | 3 |
 | Commit 2 — Feature registry | 4 | 0 | 1 | 5 |
 | Commit 3 — Test leakage | 3 | 0 | 0 | 3 |
-| Commit 4 — Target + walk-forward split | 5 | 0 | 1 | 6 |
-| Commit 5 — Dwa modele + backtest (NASTĘPNY KROK) | 0 | 0 | 6 | 6 |
-| Commit 5.5 — Risk controller | 0 | 0 | 5 | 5 |
+| Commit 4 — Target + walk-forward split | 5 | 1 | 0 | 6 |
+| Commit 5 — Dwa modele + backtest | 6 | 0 | 0 | 6 |
+| Commit 5.5 — Risk controller (NASTĘPNY KROK) | 0 | 0 | 5 | 5 |
 | Commit 6 — Checkpoint go/no-go | 0 | 0 | 5 | 5 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 0 | 4 | 1 | 5 |
-| **RAZEM** | **14** | **5** | **41** | **60** |
+| **RAZEM** | **20** | **6** | **34** | **60** |
 
 ---
 
@@ -110,18 +110,18 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C4.3 | Walk-forward split (2 mies. train / 2 tyg. test, krok 2 tyg., chronologiczny) | ✅ | Zaimplementowane: `agents/labeling.py::generate_walk_forward_folds` — chronologiczne, przesuwane okna, half-open intervals (brak nakładania train/test wewnątrz foldu). 3 testy w `tests/test_labeling.py` (chronologia + brak nakładania, oczekiwana liczba foldów, zbyt mało danych → pusta lista) przechodzą |
 | C4.4 | Diagnostyka efektywnej liczby próbek (autokorelacja `return_lag_1`, N_eff) | ✅ | Zaimplementowane: `agents/labeling.py::effective_sample_size` (N_eff = N/(1+2·Σρ_k), `pd.Series.autocorr`). 2 testy sanity (i.i.d. → N_eff≈N; silnie autoskorelowany → N_eff≪N) przechodzą |
 | C4.5 | Test leakage dla `labeling.py` PRZED wejściem do modelu | ✅ | Zaimplementowane: `agent_5_compliance/test_leakage.py::test_triple_barrier_no_leakage` — metodologia truncate-vs-extend dostosowana do labeli (porównywalny region = wiersze, których pełne okno w przód mieści się w obciętych danych). Przechodzi |
-| C4.6 | Zmierzyć koszt obliczeniowy pełnego tuningu (walk-forward × hiperparametry × okna wskaźników) na małej próbce PRZED pełnym przeszukiwaniem | ⏳ | §7 — koszt nieoszacowany. ODŁOŻONE do Commit 5: sensowny pomiar wymaga realnych hiperparametrów (siatka XGBoost) do połączenia z walk-forward × oknami wskaźników — częściowy pomiar teraz byłby mylący. Sprawdzić nawet na Ryzen 7950X3D |
+| C4.6 | Zmierzyć koszt obliczeniowy pełnego tuningu (walk-forward × hiperparametry × okna wskaźników) na małej próbce PRZED pełnym przeszukiwaniem | ⚠️ | Pomiar częściowy wykonany w Commicie 5 (po dodaniu realnych hiperparametrów XGBoost): jedno `train_regime_model` (max_depth=4, 200 rund, early stopping wyłączony) na 30k wierszy × 4 cechy = **0.436s** (~2.2ms/rundę), Ryzen 7950X3D. Ekstrapolacja: walk-forward ~9 foldów × 2 reżimy = 18 treningów/kombinację hiperparametrów ≈ 7.9s najgorszy przypadek; grid search 20 kombinacji ≈ 158s — koszt obliczeniowy nie wygląda na blocker. Otwarte: pomiar NIE obejmuje jeszcze przeszukiwania okien wskaźników (`feature_miner.py`) razem z hiperparametrami XGBoost — do zrobienia przy faktycznej kalibracji (Commit 6 / Faza 1) |
 
-### Commit 5 — Dwa modele, osobno (`agents/ml_optimizer.py`, `backtest/`)
+### Commit 5 — Dwa modele, osobno (`agents/ml_optimizer.py`, `backtest/`) — ✅ ZROBIONE
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| C5.1 | `model_momentum` + `model_reversion` — dwa niezależne XGBoosty | ⏳ | Żadnego wspólnego modelu na tym etapie |
-| C5.2 | Hiperparametry startowe + `early_stopping_rounds=20` na foldzie OOS | ⏳ | CLAUDE.md zasada 1 — kalibracja/tuning wyłącznie wewnątrz walk-forward, nigdy na całym zbiorze naraz (§5 Commit 5) |
-| C5.3 | `predict_proba` (nie tylko klasa) jako `signal_confidence` | ⏳ | |
-| C5.4 | `backtest/costs.py` — taker fee, funding rate, slippage | ⏳ | |
-| C5.5 | `backtest/engine.py` — pętla sygnał → risk_controller → PnL z kosztami → equity curve | ⏳ | |
-| C5.6 | Trade journal — logowanie transakcji w ustrukturyzowanym formacie już przy pierwszej implementacji | ⏳ | Heads-up z `docs/rag/06_llm_nadzorczy_i_baza_wiedzy.md` — potrzebne dla Fazy 2/3, nie zmienia zakresu Commitu 5 |
+| C5.1 | `model_momentum` + `model_reversion` — dwa niezależne XGBoosty | ✅ | Zaimplementowane: `agents/ml_optimizer.py::train_regime_model` (generyczny, wywoływany osobno dla `MOMENTUM_FEATURES`/`REVERSION_FEATURES` per reżim w `backtest/engine.py`) — natywne API `xgboost.train()`/`DMatrix`, nie sklearn-wrapper. Żadnego wspólnego modelu |
+| C5.2 | Hiperparametry startowe + `early_stopping_rounds=20` na foldzie OOS | ✅ | `DEFAULT_XGB_PARAMS` (max_depth=4, eta=0.05) + `NUM_BOOST_ROUND=200` + `EARLY_STOPPING_ROUNDS=20`, źródło prawdy `config/settings.yaml` sekcja `model`. Early stopping mierzony na `test_df` (OOS), nigdy train — potwierdzone testem `test_train_regime_model_early_stopping_engages` |
+| C5.3 | `predict_proba` (nie tylko klasa) jako `signal_confidence` | ✅ | `agents/ml_optimizer.py::predict_signal` — `signal_confidence` = predict_proba klasy argmax (nie surowa etykieta), `signal_direction` zdekodowany do {-1,0,1} przez `CLASS_TO_LABEL`. Testy: `test_predict_signal_returns_valid_direction_and_confidence`, `test_predict_signal_preserves_index_after_dropna` |
+| C5.4 | `backtest/costs.py` — taker fee, funding rate, slippage | ✅ | `round_trip_fee_cost`, `funding_cost`, `slippage_cost`, `total_round_trip_cost`. Wartości startowe w `config/settings.yaml` sekcja `costs` (taker_fee_rate=0.0005, funding_rate_8h=0.0001, slippage_bps=2). 7/7 testów przechodzi (`tests/test_costs.py`) |
+| C5.5 | `backtest/engine.py` — pętla sygnał → risk_controller → PnL z kosztami → equity curve | ✅ | Zaimplementowane: `run_backtest`. Prawdziwy `risk_controller` to Commit 5.5 — na razie wstrzyknięty `_placeholder_risk_controller` (formuła już z docs/rag/03, TYMCZASOWA, wstrzykiwana przez `risk_controller_fn`, wymienna bez zmiany pętli). Reżim filtrowany własnym boolean maskiem (nie `split_by_regime()`) żeby zachować index do lookupu ceny wyjścia dla timeoutów. Sygnały z obu reżimów sortowane po `timestamp` przed sekwencyjną symulacją equity. 2/2 testy integracyjne przechodzi (`tests/test_engine.py`) |
+| C5.6 | Trade journal — logowanie transakcji w ustrukturyzowanym formacie już przy pierwszej implementacji | ✅ | `run_backtest` zwraca `trades: pd.DataFrame` z `TRADE_COLUMNS` (entry/exit price, position_size, gross/net PnL, equity before/after) — ustrukturyzowany format od pierwszej implementacji |
 
 ### Commit 5.5 — Risk controller (`agents/risk_controller.py`)
 
