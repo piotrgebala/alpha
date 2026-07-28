@@ -59,8 +59,8 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 |---|---|---|---|---|
 | Commit 1 — Dane | 2 | 1 | 0 | 3 |
 | Commit 2 — Feature registry | 4 | 0 | 1 | 5 |
-| Commit 3 — Test leakage (NASTĘPNY KROK) | 0 | 3 | 0 | 3 |
-| Commit 4 — Target + walk-forward split | 0 | 0 | 6 | 6 |
+| Commit 3 — Test leakage | 3 | 0 | 0 | 3 |
+| Commit 4 — Target + walk-forward split (NASTĘPNY KROK) | 0 | 0 | 6 | 6 |
 | Commit 5 — Dwa modele + backtest | 0 | 0 | 6 | 6 |
 | Commit 5.5 — Risk controller | 0 | 0 | 5 | 5 |
 | Commit 6 — Checkpoint go/no-go | 0 | 0 | 5 | 5 |
@@ -69,7 +69,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 0 | 4 | 1 | 5 |
-| **RAZEM** | **6** | **8** | **46** | **60** |
+| **RAZEM** | **9** | **5** | **46** | **60** |
 
 ---
 
@@ -93,13 +93,13 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C2.4 | Nieformalny leakage sanity check (9/9 na danych syntetycznych) | ✅ | Nie zastępuje formalnego testu z Commitu 3 |
 | C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ⏳ | Ryzyko z §7: reżim "trend" może być rzadki — sprawdzić po pobraniu prawdziwych danych. CLAUDE.md zasada 1: kalibracja WYŁĄCZNIE wewnątrz walk-forward (Commit 4), nigdy na całym zbiorze naraz |
 
-### Commit 3 — Test leakage (`agent_5_compliance/test_leakage.py`) — NASTĘPNY KROK
+### Commit 3 — Test leakage (`agent_5_compliance/test_leakage.py`) — ✅ ZROBIONE
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| C3.1 | Formalny, parametryzowany pytest leakage dla wszystkich 9 funkcji cech (`df[:T]` vs `df[:T+k]`) | ⬜ | |
-| C3.2 | Priorytet: `atr_pctrank_20d` — trailing, nie centered window | ⬜ | Największe ryzyko leakage |
-| C3.3 | Zweryfikować, że istniejące CI (`.github/workflows/tests.yml`, auto-discovery `pytest -v`) podłapuje nowy `test_leakage.py` bez edycji configu | ⬜ | CI już istnieje — bug trigger `main`→`master` naprawiony osobno; to zadanie to weryfikacja auto-discovery, nie budowa CI od zera |
+| C3.1 | Formalny, parametryzowany pytest leakage dla wszystkich 9 funkcji cech (`df[:T]` vs `df[:T+k]`) | ✅ | Zaimplementowane: `agent_5_compliance/test_leakage.py::test_feature_no_leakage`, 9/9 cech przechodzi |
+| C3.2 | Priorytet: `atr_pctrank_20d` — trailing, nie centered window | ✅ | Dodatkowy dedykowany test `test_atr_pctrank_20d_trailing_not_centered` (mutacja przyszłych świec) — przechodzi |
+| C3.3 | Zweryfikować, że istniejące CI (`.github/workflows/tests.yml`, auto-discovery `pytest -v`) podłapuje nowy `test_leakage.py` bez edycji configu | ✅ | Zweryfikowane lokalnie: `pytest -v` — 17/17 przechodzi (11 nowych + 6 istniejących); branch trigger naprawiony (main→master) w tym samym commicie |
 
 ### Commit 4 — Target + walk-forward split (`agents/labeling.py`)
 
