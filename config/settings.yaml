@@ -53,3 +53,11 @@ costs:
   funding_rate_8h: 0.0001           # 0.01% / 8h — przybliżenie, brak jeszcze realnych danych funding
   slippage_bps: 2                   # 2 bps = 0.02%, stała wartość startowa
 
+# Commit 5.5 (agents/risk_controller.py). Sizing + kill-switch — wartości startowe, do
+# kalibracji WYŁĄCZNIE wewnątrz walk-forward (CLAUDE.md zasada 1). max_leverage jest twardym
+# sufitem niezależnym od signal_confidence (CLAUDE.md zasada 5 — leverage cap zawsze wygrywa).
+risk:
+  risk_per_trade: 0.005             # 0.5% equity, fixed-fractional (NIE Kelly na tym etapie)
+  max_leverage: 3.0                 # konserwatywnie, wartość startowa
+  kill_switch_drawdown_pct: 0.15    # drawdown od peaku equity > 15% -> stop nowych sygnałów
+

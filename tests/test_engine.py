@@ -19,6 +19,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from agents.labeling import ATR_MULTIPLIER
 from backtest.engine import TRADE_COLUMNS, run_backtest
 
 N_WARMUP = 5760  # 20 dni @ 5m - wymagane, by atr_pctrank_20d (feature_miner.py) nie było NaN
@@ -88,7 +89,8 @@ def test_run_backtest_produces_trades_for_both_regimes() -> None:
     trades = result["trades"]
     assert list(trades.columns) == TRADE_COLUMNS
     assert len(trades) > 0
-    assert (trades["position_size"] > 0).all()
+    not_suppressed = ~trades["kill_switch_active"]
+    assert (trades.loc[not_suppressed, "position_size"] > 0).all()
     assert (trades["cost"] >= 0).all()
     assert set(trades["signal_direction"].unique()).issubset({-1.0, 1.0})
 
@@ -127,3 +129,42 @@ def test_run_backtest_empty_regime_has_correct_schema() -> None:
     assert len(result["equity_curve"]) == 1
     assert result["final_equity"] == 10_000.0
     assert all(f["skipped"] for f in result["folds_summary"])
+
+
+def test_run_backtest_kill_switch_suppresses_signals_after_large_drawdown() -> None:
+    # Stub risk_controller_fn celowo PRZESADZONY (~50x normalnego stosunku
+    # notional/equity, ignorujący normalny cap 3x z agents.risk_controller).
+    # Uzasadnienie: gross_pnl I cost skalują się liniowo z position_size, więc samo
+    # powiększenie position_size nie wymusza straty (proporcja zysk/koszt się nie
+    # zmienia) — ale oversized position_size wielokrotnie przekraczający normalny
+    # leverage cap sprawia, że JEDNA transakcja w złym kierunku (model nie jest
+    # 100% trafny, szczególnie na "range") generuje spadek equity o dziesiątki %,
+    # deterministycznie wywołując kill-switch niezależnie od jakości predykcji.
+    def _oversized_risk_controller_fn(
+        *, signal_direction, signal_confidence, regime, atr_14, entry_price, equity
+    ):
+        oversized_position_size = (equity * 50.0) / entry_price
+        return {
+            "position_size": oversized_position_size,
+            "stop_price": entry_price - signal_direction * ATR_MULTIPLIER * atr_14,
+            "take_profit_price": entry_price + signal_direction * ATR_MULTIPLIER * atr_14,
+        }
+
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+
+    result = run_backtest(
+        raw_ohlcv,
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+        risk_controller_fn=_oversized_risk_controller_fn,
+    )
+
+    trades = result["trades"]
+    assert trades["kill_switch_active"].any()
+
+    suppressed = trades[trades["kill_switch_active"]]
+    assert (suppressed["position_size"] == 0.0).all()
+    assert (suppressed["equity_before"] == suppressed["equity_after"]).all()

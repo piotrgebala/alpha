@@ -8,15 +8,18 @@ reżimie -> walk-forward foldy (agents.labeling) -> trening + predykcja per fold
 (agents.ml_optimizer) -> sizing (risk_controller_fn) -> koszty (backtest.costs) ->
 equity curve + trade journal (C5.6).
 
-WAŻNE — `_placeholder_risk_controller` (C5.5, TYMCZASOWY):
-`agents/risk_controller.py` to osobny Commit 5.5 (kontrakt formalny + kill-switch +
-hypothesis property testy wymagane przez DoD). Ponieważ engine.py POTRZEBUJE jakiegoś
-sizingu, żeby policzyć PnL już teraz, `_placeholder_risk_controller` implementuje
-JUŻ udokumentowaną formułę (docs/rag/03_ryzyko_i_sizing.md) — size_risk/size_leverage/
-min() + skalowanie confidence. Wstrzykiwany przez parametr `risk_controller_fn`, żeby
-Commit 5.5 mógł podmienić na prawdziwy `agents/risk_controller.py` BEZ zmiany pętli
-poniżej. Nie zamyka zadań C5.5.1-C5.5.4 z TASKS.md — te formalnie zostają dla
-Commit 5.5 (osobny, testowany moduł + kill-switch, C5.5.5).
+RISK CONTROLLER + KILL-SWITCH (Commit 5.5, `agents/risk_controller.py`):
+Sizing pełni `agents.risk_controller.compute_sizing` (domyślny `risk_controller_fn`) —
+kontrakt formalny ml_optimizer -> risk_controller, formuła size_risk/size_leverage/
+min() + skalowanie confidence (docs/rag/03_ryzyko_i_sizing.md), zastępuje dawny
+`_placeholder_risk_controller` (formuła identyczna, teraz formalny, testowany moduł).
+Kill-switch (`agents.risk_controller.check_kill_switch`) sprawdzany PRZED sizingiem
+każdego sygnału: drawdown equity od bieżącego peaku (running max śledzony w pętli
+poniżej) > KILL_SWITCH_DRAWDOWN_PCT -> sygnał pomijany (position_size=0.0, equity bez
+zmian), ale wiersz i tak trafia do `trades` z flagą `kill_switch_active=True`
+(audytowalność — widać dokładnie, kiedy i jak często kill-switch by się aktywował).
+Re-check dynamiczny przy KAŻDYM sygnale: kill-switch wznawia normalną pracę, gdy
+equity odzyska się z powrotem powyżej progu (nie permanentny latch).
 
 DECYZJA — brak modyfikacji agents/labeling.py: PnL wymaga znać cenę wyjścia z pozycji.
 Dla label +1/-1 to trywialne (entry ± atr_multiplier*atr_14). Dla label 0.0 (vertical
@@ -36,6 +39,12 @@ DECYZJA — chronologia ponad reżimy: modele trenowane per-regime per-fold niez
 ale sygnały z OBU reżimów są zbierane do jednej listy i SORTOWANE po timestamp PRZED
 sekwencyjną symulacją equity — inaczej trades z trend/range (które przeplatają się w
 czasie) dałyby błędną chronologię compoundingu.
+
+DECYZJA — kill-switch w `trades`, nie w osobnym kluczu: sygnały stłumione przez
+kill-switch dostają pełny wiersz w `trades` (position_size=0.0, exit_price=NaN,
+equity_before==equity_after, kill_switch_active=True) zamiast osobnej listy
+`kill_switch_events` — jeden ustrukturyzowany trade journal zamiast dwóch równoległych
+źródeł prawdy o tym, co się działo w czasie.
 """
 
 from __future__ import annotations
@@ -63,6 +72,7 @@ from agents.ml_optimizer import (
     predict_signal,
     train_regime_model,
 )
+from agents.risk_controller import KILL_SWITCH_DRAWDOWN_PCT, check_kill_switch, compute_sizing
 from backtest.costs import total_round_trip_cost
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
@@ -72,12 +82,6 @@ from backtest.costs import total_round_trip_cost
 MIN_TRAIN_ROWS = 30
 
 DEFAULT_INITIAL_EQUITY = 10_000.0
-
-# Sizing — wartości startowe (docs/rag/03_ryzyko_i_sizing.md), używane przez
-# _placeholder_risk_controller. Formalne "źródło prawdy" dla tych wartości będzie
-# agents/risk_controller.py (Commit 5.5).
-RISK_PER_TRADE = 0.005  # 0.5% equity, fixed-fractional (NIE Kelly na tym etapie)
-MAX_LEVERAGE = 3.0  # konserwatywnie, wartość startowa
 
 TRADE_COLUMNS = [
     "timestamp",
@@ -94,54 +98,11 @@ TRADE_COLUMNS = [
     "net_pnl",
     "equity_before",
     "equity_after",
+    "kill_switch_active",
 ]
 
 REGIME_FEATURE_SETS = [("trend", MOMENTUM_FEATURES), ("range", REVERSION_FEATURES)]
 
-
-def _placeholder_risk_controller(
-    signal_direction: float,
-    signal_confidence: float,
-    regime: str,
-    atr_14: float,
-    entry_price: float,
-    equity: float,
-    risk_per_trade: float = RISK_PER_TRADE,
-    max_leverage: float = MAX_LEVERAGE,
-    atr_multiplier: float = ATR_MULTIPLIER,
-) -> dict:
-    """
-    Sizing tymczasowy (patrz docstring modułu) — implementuje formułę już w pełni
-    udokumentowaną w docs/rag/03_ryzyko_i_sizing.md, TYMCZASOWO wewnątrz engine.py,
-    do zastąpienia przez agents/risk_controller.py w Commit 5.5.
-
-        size_risk     = (equity * risk_per_trade * signal_confidence) / (atr_multiplier * atr_14)
-        size_leverage = (equity * max_leverage) / entry_price
-        position_size = min(size_risk, size_leverage)
-
-    `signal_confidence` skaluje WYŁĄCZNIE `risk_per_trade` (size_risk) — `size_leverage`
-    zostaje twardym sufitem NIEZALEŻNYM od confidence, inaczej "leverage cap zawsze
-    wygrywa" (CLAUDE.md zasada 5) przestałoby być prawdziwym hard cap.
-
-    Returns:
-        {"position_size": float, "stop_price": float, "take_profit_price": float}
-        — kontrakt zgodny z docs/rag/03, choć engine.py liczy realizowane PnL z
-        rzeczywistej ceny wyjścia (triple-barrier label), nie przez symulację
-        względem stop_price/take_profit_price.
-    """
-    effective_risk_per_trade = risk_per_trade * signal_confidence
-    size_risk = (equity * effective_risk_per_trade) / (atr_multiplier * atr_14)
-    size_leverage = (equity * max_leverage) / entry_price
-    position_size = min(size_risk, size_leverage)
-
-    stop_price = entry_price - signal_direction * atr_multiplier * atr_14
-    take_profit_price = entry_price + signal_direction * atr_multiplier * atr_14
-
-    return {
-        "position_size": position_size,
-        "stop_price": stop_price,
-        "take_profit_price": take_profit_price,
-    }
 
 
 def _collect_candidate_signals(
@@ -303,8 +264,9 @@ def run_backtest(
     num_boost_round: int = NUM_BOOST_ROUND,
     early_stopping_rounds: int = EARLY_STOPPING_ROUNDS,
     seed: int = DEFAULT_SEED,
-    risk_controller_fn: Callable[..., dict] = _placeholder_risk_controller,
+    risk_controller_fn: Callable[..., dict] = compute_sizing,
     min_train_rows: int = MIN_TRAIN_ROWS,
+    kill_switch_drawdown_pct: float = KILL_SWITCH_DRAWDOWN_PCT,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -325,11 +287,13 @@ def run_backtest(
             nadpisywalne np. do szybszych testów na małych danych syntetycznych.
         xgb_params: nadpisania DEFAULT_XGB_PARAMS (agents.ml_optimizer).
         num_boost_round/early_stopping_rounds/seed: przekazywane do train_regime_model.
-        risk_controller_fn: funkcja sizingu — domyślnie `_placeholder_risk_controller`
-            (TYMCZASOWY, patrz docstring modułu). Commit 5.5 wstrzyknie tu
-            agents.risk_controller.compute_position_size (albo analogiczną).
+        risk_controller_fn: funkcja sizingu — domyślnie `agents.risk_controller.compute_sizing`
+            (patrz docstring modułu), wstrzykiwalna (np. do testów).
         min_train_rows: minimalna liczba poprawnych wierszy (po dropna) w train/test
             danego foldu, żeby go nie pominąć.
+        kill_switch_drawdown_pct: próg drawdown od peaku equity, powyżej którego
+            kill-switch tłumi nowe sygnały (agents.risk_controller.check_kill_switch).
+            Domyślnie KILL_SWITCH_DRAWDOWN_PCT (0.15) — nadpisywalne np. do testów.
 
     Returns:
         {
@@ -364,12 +328,41 @@ def run_backtest(
     equity = initial_equity
     trades: list[dict] = []
     equity_curve: list[dict] = [{"timestamp": df["timestamp"].iloc[0], "equity": equity}]
+    peak_equity = equity
 
     for signal in candidate_signals:
         direction = signal["signal_direction"]
         confidence = signal["signal_confidence"]
         entry_price = signal["entry_price"]
         atr_14 = signal["atr_14"]
+
+        # Kill-switch: peak_equity to running max ZANIM ten sygnał zostanie
+        # rozpatrzony (tylko przeszłość/teraźniejszość — brak lookahead). Re-check
+        # dynamiczny co sygnał — patrz docstring modułu.
+        peak_equity = max(peak_equity, equity)
+
+        if check_kill_switch(equity, peak_equity, kill_switch_drawdown_pct):
+            trades.append(
+                {
+                    "timestamp": signal["timestamp"],
+                    "regime": signal["regime"],
+                    "fold_idx": signal["fold_idx"],
+                    "signal_direction": direction,
+                    "signal_confidence": confidence,
+                    "entry_price": entry_price,
+                    "exit_price": float("nan"),
+                    "position_size": 0.0,
+                    "exit_bar_offset": signal["exit_bar_offset"],
+                    "gross_pnl": 0.0,
+                    "cost": 0.0,
+                    "net_pnl": 0.0,
+                    "equity_before": equity,
+                    "equity_after": equity,
+                    "kill_switch_active": True,
+                }
+            )
+            equity_curve.append({"timestamp": signal["timestamp"], "equity": equity})
+            continue
 
         sizing = risk_controller_fn(
             signal_direction=direction,
@@ -411,6 +404,7 @@ def run_backtest(
                 "net_pnl": net_pnl,
                 "equity_before": equity_before,
                 "equity_after": equity,
+                "kill_switch_active": False,
             }
         )
         equity_curve.append({"timestamp": signal["timestamp"], "equity": equity})

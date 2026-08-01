@@ -4,8 +4,8 @@
 > Jeśli zaczynasz nową sesję Claude Code, podepnij ten plik jako kontekst — zastępuje potrzebę
 > przewijania całej wcześniejszej rozmowy.
 >
-> Ostatnia aktualizacja: 2026-07-27. **Status: Commity 1–5 zaimplementowane i przetestowane
-> (48/48 testów). Następny krok: Commit 5.5 (risk_controller).**
+> Ostatnia aktualizacja: 2026-08-01. **Status: Commity 1–5.5 zaimplementowane i przetestowane
+> (66/66 testów). Następny krok: Commit 6 (checkpoint go/no-go).**
 
 ---
 
@@ -84,12 +84,12 @@ clas5_core/
 │   ├── feature_registry.yaml       [DONE]
 │   ├── labeling.py                  [DONE, 14/14 testów przechodzi (13 w tests/test_labeling.py + 1 leakage w agent_5_compliance/)]
 │   ├── ml_optimizer.py              [DONE, 8/8 testów przechodzi (tests/test_ml_optimizer.py)]
-│   └── risk_controller.py           TODO — Commit 5.5
+│   └── risk_controller.py           [DONE, 17/17 testów przechodzi (tests/test_risk_controller.py)]
 ├── agent_5_compliance/
 │   └── test_leakage.py              [DONE, 12/12 testów przechodzi]
 ├── backtest/
 │   ├── __init__.py                  [DONE]
-│   ├── engine.py                    [DONE, 2/2 testów przechodzi (tests/test_engine.py)]
+│   ├── engine.py                    [DONE, 3/3 testów przechodzi (tests/test_engine.py)]
 │   └── costs.py                     [DONE, 7/7 testów przechodzi (tests/test_costs.py)]
 └── tests/
     ├── __init__.py                  [DONE]
@@ -97,7 +97,8 @@ clas5_core/
     ├── test_labeling.py             [DONE, 13/13 testów przechodzi]
     ├── test_ml_optimizer.py         [DONE, 8/8 testów przechodzi]
     ├── test_costs.py                [DONE, 7/7 testów przechodzi]
-    └── test_engine.py               [DONE, 2/2 testów przechodzi]
+    ├── test_engine.py               [DONE, 3/3 testów przechodzi]
+    └── test_risk_controller.py      [DONE, 17/17 testów przechodzi]
 ```
 
 ---
@@ -211,14 +212,15 @@ regime→walk-forward→trening/predykcja→sizing→koszty→equity curve — 2
 przechodzi (`tests/test_engine.py`, syntetyczny OHLCV z jawnie odseparowanymi segmentami
 trend/range, bo czysto losowe dane dają regime="range" dużo częściej niż "trend", C2.5).
 
-**Decyzja — `_placeholder_risk_controller` (tymczasowy, w `backtest/engine.py`):**
-`agents/risk_controller.py` to osobny Commit 5.5 (kontrakt formalny + kill-switch + hypothesis
-property testy, wymagane DoD). Ponieważ `run_backtest` potrzebuje jakiegoś sizingu, żeby policzyć
-PnL już teraz, `_placeholder_risk_controller` implementuje JUŻ udokumentowaną formułę z
-`docs/rag/03_ryzyko_i_sizing.md` (`size_risk`/`size_leverage`/`min()` + `signal_confidence`
-skalujące `risk_per_trade`) — wstrzykiwany przez parametr `risk_controller_fn`, żeby Commit 5.5
-mógł podmienić go na prawdziwy `agents/risk_controller.py` BEZ zmiany pętli `run_backtest`. Nie
-zamyka C5.5.1–C5.5.5 z `TASKS.md` — te formalnie zostają dla Commit 5.5.
+**Decyzja — `_placeholder_risk_controller` (tymczasowy, w `backtest/engine.py`) — ZASTĄPIONY w
+Commicie 5.5:** `agents/risk_controller.py` to osobny Commit 5.5 (kontrakt formalny + kill-switch
++ hypothesis property testy, wymagane DoD). Ponieważ `run_backtest` potrzebował jakiegoś sizingu,
+żeby policzyć PnL już w Commicie 5, `_placeholder_risk_controller` implementował TĘ SAMĄ formułę
+z `docs/rag/03_ryzyko_i_sizing.md` (`size_risk`/`size_leverage`/`min()` + `signal_confidence`
+skalujące `risk_per_trade`) — wstrzykiwany przez parametr `risk_controller_fn`. W Commicie 5.5
+ten placeholder został usunięty, a `risk_controller_fn` domyślnie wskazuje na prawdziwy
+`agents.risk_controller.compute_sizing` — bez żadnej zmiany w pętli `run_backtest`, dokładnie
+jak planowano.
 
 **Decyzja — brak modyfikacji `agents/labeling.py`:** PnL wymaga ceny wyjścia z pozycji; dla
 timeoutów (label=0.0) to lookup do `close` w świecy `t + exit_bar_offset` w PEŁNYM df.
@@ -237,7 +239,7 @@ hiperparametry, 200 rund, early stopping wyłączony) na 30k wierszy × 4 cechy:
 (~2.2ms/rundę) na Ryzen 7950X3D. Pełny grid search pozostaje niezmierzony — do zrobienia przy
 faktycznej kalibracji hiperparametrów (Commit 6 / Faza 1).
 
-### Commit 5.5 — Risk controller + interfejs `[NASTĘPNY KROK]`
+### Commit 5.5 — Risk controller + interfejs `[ZROBIONE]`
 
 `agents/risk_controller.py`
 
@@ -264,7 +266,44 @@ position_size = min(size_risk, size_leverage)
 **Kill-switch:** prosta reguła już w backteście Fazy 0 — drawdown equity > X% od peaku →
 zatrzymaj generowanie nowych sygnałów. Cel: zobaczyć historycznie, jak często by się aktywował.
 
-### Commit 6 — Checkpoint go/no-go: TRZY ścieżki
+**Zaimplementowane i zweryfikowane empirycznie:** `agents/risk_controller.py` — dwuwarstwowy
+design: `compute_position_size` (czysty numeryczny rdzeń: `equity`, `atr_14`, `entry_price` →
+`float`, matchuje dokładnie szablon hypothesis z `docs/rag/05_metodologia_wytwarzania_i_testow.md`)
++ `compute_sizing` (pełny kontrakt dict, drop-in replacement dla `risk_controller_fn` w
+`backtest/engine.py::run_backtest`) + `check_kill_switch`. 17/17 testów przechodzi
+(`tests/test_risk_controller.py`: 13 jednostkowych + 4 hypothesis property, w tym adaptacja
+1:1 szablonu `test_position_size_never_exceeds_leverage_cap` z docs/rag/05).
+
+**Trzy decyzje podjęte podczas planowania (zamiast rekomendowanych domyślnych wartości):**
+
+1. **Próg kill-switcha = 15% drawdown od peaku equity** (nie rekomendowane 20%) —
+   `KILL_SWITCH_DRAWDOWN_PCT = 0.15` w `agents/risk_controller.py`, zdublowane w
+   `config/settings.yaml` sekcja `risk.kill_switch_drawdown_pct`. Konserwatywniejszy próg =
+   kill-switch aktywuje się wcześniej, spójne z ogólnym duchem Fazy 0 (minimalizować ryzyko przed
+   udowodnieniem edge'u).
+2. **Re-check dynamiczny, nie permanentny latch** — `check_kill_switch` jest wywoływane PRZED
+   sizingiem KAŻDEGO sygnału (nie tylko raz), więc kill-switch wznawia normalną pracę, gdy equity
+   odzyska się z powrotem powyżej progu. Alternatywa (permanentny latch, wymagający ręcznego
+   resetu) odrzucona — w Fazie 0 backtest ma pokazać, JAK CZĘSTO próg by się aktywował, a
+   permanentny latch zniekształciłby ten pomiar (jedna aktywacja ubijałaby resztę okresu testowego).
+3. **Sygnały stłumione przez kill-switch trafiają do `trades` DataFrame** (kolumna
+   `kill_switch_active: bool`, `position_size=0.0`, `exit_price=NaN`, `equity_before==equity_after`)
+   zamiast do osobnej listy `kill_switch_events` — jeden ustrukturyzowany trade journal, nie dwa
+   równoległe źródła prawdy o tym, co działo się w czasie. Audytowalność: `trades[trades["kill_switch_active"]]`
+   pokazuje dokładnie, kiedy i jak często kill-switch by się aktywował.
+
+Integracja w `backtest/engine.py::run_backtest`: `peak_equity` (running max equity) śledzony w
+pętli PRZED każdym sygnałem (bez lookahead — tylko przeszłość/teraźniejszość), `check_kill_switch`
+sprawdzany przed wywołaniem `risk_controller_fn`. Nowy parametr `kill_switch_drawdown_pct`
+(domyślnie `KILL_SWITCH_DRAWDOWN_PCT`) — nadpisywalny, analogicznie do innych parametrów silnika.
+Dodatkowy test integracyjny `test_run_backtest_kill_switch_suppresses_signals_after_large_drawdown`
+(`tests/test_engine.py`) — oversized stub `risk_controller_fn` (~50x normalnego stosunku
+notional/equity, celowo ignorujący normalny cap 3x) deterministycznie wymusza drawdown > 15% bez
+zależności od jakości predykcji modelu (gross_pnl i cost skalują się liniowo z position_size, więc
+samo powiększenie position_size nie zmienia proporcji zysk/koszt — ale w połączeniu z choćby
+jedną naturalnie występującą błędną predykcją kierunku daje duży wystarczający swing equity).
+
+### Commit 6 — Checkpoint go/no-go: TRZY ścieżki `[NASTĘPNY KROK]`
 
 | Wynik | Kryterium (startowe) | Decyzja |
 |---|---|---|
@@ -293,6 +332,15 @@ osobno per reżim rynkowy (2023 niska zmienność vs 2024-25 era ETF).
   (~2.2ms/rundę). Patrz też C4.6 w `TASKS.md`.
 - Pełny zestaw testów po Commicie 5: **48/48 przechodzi** (31 z Commitów 1–4 + 17 nowych: 7
   `tests/test_costs.py` + 8 `tests/test_ml_optimizer.py` + 2 `tests/test_engine.py`).
+- `agents/risk_controller.py::compute_position_size`/`compute_sizing`/`check_kill_switch` — sizing
+  formula i kill-switch zweryfikowane zar\u00f3wno jednostkowo, jak i property-based (hypothesis):
+  `position_size` nigdy nie przekracza leverage cap niezale\u017cnie od losowych `equity`/`atr_14`/
+  `entry_price` (`test_position_size_never_exceeds_leverage_cap`), jest niemalej\u0105ce w
+  `signal_confidence` (`test_position_size_monotonic_nondecreasing_in_confidence`),
+  `check_kill_switch` matchuje r\u0119czn\u0105 formu\u0142\u0119 drawdown dla dowolnych losowych warto\u015bci
+  (`test_check_kill_switch_matches_drawdown_formula`).
+- Pełny zestaw testów po Commicie 5.5: **66/66 przechodzi** (48 z Commit\u00f3w 1\u20135 + 17 nowych w
+  `tests/test_risk_controller.py` + 1 nowy integracyjny w `tests/test_engine.py`).
 
 ---
 
