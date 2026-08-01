@@ -142,7 +142,7 @@ def get_ohlcv_cached(
 if __name__ == "__main__":
     import yaml
 
-    with open("config/settings.yaml") as f:
+    with open("config/settings.yaml", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)["data"]
 
     # Faza 0: pobierz TYLKO primary_symbol (BTC) — walidacja hipotezy najpierw na jednym

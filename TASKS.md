@@ -57,19 +57,19 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 
 | Sekcja | ✅ | ⚠️/⬜ | ⏳ | Razem |
 |---|---|---|---|---|
-| Commit 1 — Dane | 2 | 1 | 0 | 3 |
+| Commit 1 — Dane | 3 | 0 | 0 | 3 |
 | Commit 2 — Feature registry | 4 | 0 | 1 | 5 |
 | Commit 3 — Test leakage | 3 | 0 | 0 | 3 |
 | Commit 4 — Target + walk-forward split | 5 | 1 | 0 | 6 |
 | Commit 5 — Dwa modele + backtest | 6 | 0 | 0 | 6 |
 | Commit 5.5 — Risk controller | 5 | 0 | 0 | 5 |
-| Commit 6 — Checkpoint go/no-go (NASTĘPNY KROK) | 0 | 0 | 5 | 5 |
+| Commit 6 — Checkpoint go/no-go (ZROBIONE — wynik NO-GO) | 5 | 0 | 0 | 5 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 0 | 4 | 1 | 5 |
-| **RAZEM** | **25** | **6** | **29** | **60** |
+| **RAZEM** | **31** | **5** | **24** | **60** |
 
 ---
 
@@ -81,7 +81,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 |---|---|---|---|
 | C1.1 | Pobieranie OHLCV z Binance USDS-M Futures (perpetuals) przez ccxt, paginacja + cache parquet | ✅ | |
 | C1.2 | `find_gaps()` — raportowanie dziur w danych bez blokowania pipeline'u | ✅ | |
-| C1.3 | Weryfikacja dokładnego symbolu ccxt (`"BTC/USDT:USDT"`) przez `exchange.load_markets()` na żywym API | ⚠️ | Niepotwierdzone na żywo — zrobić PRZED pierwszym uruchomieniem na realnych danych |
+| C1.3 | Weryfikacja dokładnego symbolu ccxt (`"BTC/USDT:USDT"`) przez `exchange.load_markets()` na żywym API | ✅ | Potwierdzone 2026-08-01 na żywym API: `"BTC/USDT:USDT"` obecny w `exchange.symbols` (Binance USDS-M Futures), obok wariantów z datą wygaśnięcia (nieużywanych). Zgodne z `config/settings.yaml`, bez zmian |
 
 ### Commit 2 — Feature registry (`agents/feature_miner.py`, `agents/feature_registry.yaml`)
 
@@ -133,15 +133,15 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C5.5.4 | `signal_confidence` skaluje `risk_per_trade` liniowo | ✅ | `compute_sizing`: `effective_risk_per_trade = risk_per_trade * signal_confidence`, skaluje WYŁĄCZNIE `size_risk` — `size_leverage` zostaje twardym sufitem niezależnym od confidence (inaczej cap z C5.5.2 przestałby być prawdziwym hard cap). Test `test_compute_sizing_scales_effective_risk_by_confidence` + hypothesis `test_position_size_monotonic_nondecreasing_in_confidence` |
 | C5.5.5 | Kill-switch (drawdown > X% od peaku → stop nowych sygnałów) | ✅ | `check_kill_switch(equity, peak_equity, drawdown_threshold=0.15)` — próg **15%** (decyzja użytkownika, nie rekomendowane 20%), re-check **dynamiczny** przy każdym sygnale (nie permanentny latch — wznawia się, gdy equity odzyska się powyżej progu), fail-safe `peak_equity <= 0` → `True`. Wpięty w `backtest/engine.py::run_backtest`: sprawdzany PRZED sizingiem każdego sygnału, sygnały stłumione trafiają do `trades` z `kill_switch_active=True` (position_size=0.0, equity bez zmian) zamiast osobnej listy — jeden trade journal, nie dwa równoległe źródła prawdy. 5 testów jednostkowych + hypothesis `test_check_kill_switch_matches_drawdown_formula` + integracyjny `test_run_backtest_kill_switch_suppresses_signals_after_large_drawdown` (oversized stub risk_controller_fn wymusza drawdown deterministycznie) |
 
-### Commit 6 — Checkpoint go/no-go
+### Commit 6 — Checkpoint go/no-go — ✅ ZROBIONE (wynik: **NO-GO**)
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| C6.1 | Policzyć Sharpe po kosztach per fold | ⏳ | |
-| C6.2 | Klasyfikacja wyniku: GO / WARUNKOWY / NO-GO wg kryteriów z §5 | ⏳ | WARUNKOWY → max 3 iteracje protokołu jedna-cecha-na-raz, potem decyzja ponownie; NO-GO → wróć do Commit 2 (inna hipoteza/cechy), NIE tuning tego samego zestawu (§5) |
-| C6.3 | Stabilność wyniku przy losowym seedzie modelu (overfitting sanity check) | ⏳ | |
-| C6.4 | Wynik osobno per reżim rynkowy (2023 niska zmienność vs 2024-25 era ETF) | ⏳ | |
-| C6.5 | Decyzja udokumentowana w `IMPLEMENTATION_PLAN.md` | ⏳ | |
+| C6.1 | Policzyć Sharpe po kosztach per fold | ✅ | Zaimplementowane: `backtest/metrics.py::compute_fold_metrics` (zwrot per trade = net_pnl/equity_before, wyklucza `kill_switch_active`; Sharpe annualizowany `sqrt(trades_per_year)`, `trades_per_year` z częstości transakcji per-fold; NaN gdy <2 transakcje lub zerowa wariancja). Realny przebieg (`backtest/run_checkpoint.py`, BTC/USDT:USDT 5m, 2025-07-01→2026-06-30, 105120 świec, brak dziur): tylko 1/40 foldów (regime×fold_idx) miało policzalny Sharpe = **-65.43** (range, fold_idx=0, 35 transakcji); pozostałe 39 NaN (brak transakcji albo fold pominięty przez `min_train_rows`) |
+| C6.2 | Klasyfikacja wyniku: GO / WARUNKOWY / NO-GO wg kryteriów z §5 | ✅ | `classify_checkpoint`: **NO-GO** (fraction_le_zero=1.0 > 0.5 próg w jedynym policzalnym foldzie). Wg reguły routingu: wróć do Commit 2 (inna hipoteza/cechy), NIE tuning tego zestawu (§5). Pełna analiza przyczyn: IMPLEMENTATION_PLAN.md §6/§7 |
+| C6.3 | Stabilność wyniku przy losowym seedzie modelu (overfitting sanity check) | ✅ | 10 seedów (42-51, ustalone z użytkownikiem) przez `backtest/run_checkpoint.py`: WSZYSTKIE dały identyczny mean_sharpe=-65.4333 (std=0.0000 < próg 0.2) → **stabilne** — głównie dlatego, że tylko 1 fold z 40 kiedykolwiek generuje transakcje, a jego wynik okazał się niezależny od seeda modelu w tym przebiegu |
+| C6.4 | Wynik osobno per reżim rynkowy — zinterpretowane jako trend vs range (nie kalendarzowo, patrz Uwagi) | ✅ | Realny zakres danych (2025-07→2026-07) nie sięga 2023 — interpretacja kalendarzowa z opisu zadania nie pasowała, zamieniona (za zgodą użytkownika) na podział wg reżimu. Wynik `summarize_by_regime`: **trend = WARUNKOWY (0/20 foldów policzalnych — WSZYSTKIE pominięte przez `min_train_rows`, reżim empirycznie prawie nieobecny w 14-dniowych oknach testowych, potwierdza ryzyko z C2.5/§7 IMPLEMENTATION_PLAN.md)**; **range = NO-GO (1/20 foldów policzalnych, Sharpe=-65.43)** |
+| C6.5 | Decyzja udokumentowana w `IMPLEMENTATION_PLAN.md` | ✅ | Udokumentowane w §5 (Commit 6) i §6/§7 — pełny opis liczb i przyczyn. Wynik: **NO-GO** |
 
 ---
 
