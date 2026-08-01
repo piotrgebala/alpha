@@ -131,25 +131,27 @@ def test_run_backtest_empty_regime_has_correct_schema() -> None:
     assert all(f["skipped"] for f in result["folds_summary"])
 
 
-def test_run_backtest_kill_switch_suppresses_signals_after_large_drawdown() -> None:
-    # Stub risk_controller_fn celowo PRZESADZONY (~50x normalnego stosunku
-    # notional/equity, ignorujący normalny cap 3x z agents.risk_controller).
-    # Uzasadnienie: gross_pnl I cost skalują się liniowo z position_size, więc samo
-    # powiększenie position_size nie wymusza straty (proporcja zysk/koszt się nie
-    # zmienia) — ale oversized position_size wielokrotnie przekraczający normalny
-    # leverage cap sprawia, że JEDNA transakcja w złym kierunku (model nie jest
-    # 100% trafny, szczególnie na "range") generuje spadek equity o dziesiątki %,
-    # deterministycznie wywołując kill-switch niezależnie od jakości predykcji.
-    def _oversized_risk_controller_fn(
-        *, signal_direction, signal_confidence, regime, atr_14, entry_price, equity
-    ):
-        oversized_position_size = (equity * 50.0) / entry_price
-        return {
-            "position_size": oversized_position_size,
-            "stop_price": entry_price - signal_direction * ATR_MULTIPLIER * atr_14,
-            "take_profit_price": entry_price + signal_direction * ATR_MULTIPLIER * atr_14,
-        }
+def _oversized_risk_controller_fn(
+    *, signal_direction, signal_confidence, regime, atr_14, entry_price, equity
+):
+    """Stub risk_controller_fn celowo PRZESADZONY (~50x normalnego stosunku
+    notional/equity, ignorujący normalny cap 3x z agents.risk_controller).
+    Uzasadnienie: gross_pnl I cost skalują się liniowo z position_size, więc samo
+    powiększenie position_size nie wymusza straty (proporcja zysk/koszt się nie
+    zmienia) — ale oversized position_size wielokrotnie przekraczający normalny
+    leverage cap sprawia, że JEDNA transakcja w złym kierunku (model nie jest
+    100% trafny, szczególnie na "range") generuje spadek equity o dziesiątki %,
+    deterministycznie wywołując kill-switch niezależnie od jakości predykcji.
+    """
+    oversized_position_size = (equity * 50.0) / entry_price
+    return {
+        "position_size": oversized_position_size,
+        "stop_price": entry_price - signal_direction * ATR_MULTIPLIER * atr_14,
+        "take_profit_price": entry_price + signal_direction * ATR_MULTIPLIER * atr_14,
+    }
 
+
+def test_run_backtest_kill_switch_suppresses_signals_after_large_drawdown() -> None:
     raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
 
     result = run_backtest(
@@ -168,3 +170,37 @@ def test_run_backtest_kill_switch_suppresses_signals_after_large_drawdown() -> N
     suppressed = trades[trades["kill_switch_active"]]
     assert (suppressed["position_size"] == 0.0).all()
     assert (suppressed["equity_before"] == suppressed["equity_after"]).all()
+
+
+def test_run_backtest_kill_switch_re_arms_after_cooldown() -> None:
+    # Commit 2c: bez cooldown/re-arm, equity zamrożone przez suppresję nigdy się nie
+    # zmienia (position_size=0.0 -> net_pnl=0.0), więc peak_equity/drawdown też się
+    # nie zmieniają -> kill-switch, raz aktywny, zostawałby aktywny NA ZAWSZE
+    # (deadlock potwierdzony empirycznie w Commit 2b). Cooldown celowo BARDZO krótki
+    # (ułamek dnia), żeby zaobserwować re-arm w krótkim oknie danych syntetycznych
+    # bez czekania na realne KILL_SWITCH_COOLDOWN_DAYS=7 dni.
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+
+    result = run_backtest(
+        raw_ohlcv,
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+        risk_controller_fn=_oversized_risk_controller_fn,
+        kill_switch_cooldown_days=0.01,  # ~14 minut — wyłącznie do testu
+    )
+
+    trades = result["trades"].sort_values("timestamp").reset_index(drop=True)
+    assert trades["kill_switch_active"].any()
+
+    first_suppressed_pos = trades.index[trades["kill_switch_active"]][0]
+    later_rows = trades.iloc[first_suppressed_pos:]
+    later_active = later_rows.loc[~later_rows["kill_switch_active"]]
+    assert len(later_active) > 0, (
+        "Kill-switch powinien ponownie się uzbroić (re-arm) po cooldownie i wpuścić "
+        "kolejny sygnał, zamiast zostać aktywny na zawsze (deadlock z Commit 2b)."
+    )
+    assert (later_active["position_size"] > 0.0).all()
+

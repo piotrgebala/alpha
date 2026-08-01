@@ -431,6 +431,86 @@ uzgodnionego na tę rundę i wymaga własnego przeczytania docs/rag/03 przed jak
 `backtest/diagnose_range_signal.py` zachowany jako trwałe narzędzie (nie jednorazowy scratch) —
 przydatny niezależnie od tego, jaki zakres zostanie wybrany dalej.
 
+### Commit 2c — Kill-switch: przyczyna serii strat + mechanizm cooldown/re-arm `[ZROBIONE]`
+
+**Kontekst i uzgodniony zakres (2026-08-01):** użytkownik zatwierdził ("1.yes 2.yes") rozszerzenie
+zakresu na `agents/risk_controller.py`/`backtest/engine.py`, jedną rundą: (1) diagnoza PRZYCZYNY
+wczesnej serii strat wywołującej kill-switch, (2) naprawa mechanizmu deadlocka. Wybór konkretnego
+mechanizmu naprawy delegowany do decyzji inżynierskiej ("tak jak uważasz za najlepsze"). Przeczytano
+`docs/rag/03_ryzyko_i_sizing.md` w całości przed zmianą (CLAUDE.md) — potwierdzono, że kill-switch
+Fazy 0 ma cel WYŁĄCZNIE obserwacyjny ("zobaczyć historycznie, jak często by się aktywował") i docs
+NIE przepisują żadnego konkretnego mechanizmu odzyskiwania — to była faktycznie otwarta przestrzeń
+projektowa, nie nadpisanie istniejącej decyzji.
+
+**C2c.1 — Diagnostyka przyczyny serii strat (`backtest/diagnose_kill_switch_trigger.py`, poza
+pytest, jak `run_checkpoint.py`/`diagnose_range_signal.py`):** read-only skrypt inspekcji 35
+realnych transakcji sprzed permanentnego zadziałania kill-switcha — rozbija zlumpowany koszt
+(`cost`) z powrotem na `fee`/`funding`/`slippage`, klasyfikuje każdą transakcję jako
+`gross_pnl_negative` (zły kierunek) albo `cost_ate_gain` (dobry kierunek, ale koszt > zysk brutto).
+
+**Wynik C2c.1:** 100% z 35 transakcji miało `signal_direction=1.0` (wyłącznie long) w okresie
+2025-09-24→2025-09-27, gdy cena BTC trendowała W DÓŁ (~113 047→~109 400, ok. -3,6%), sklasyfikowanym
+jako reżim `range`. **26/35 (74%)** miało `gross_pnl < 0` (genuinie zły kierunek — model obstawiał
+long podczas trwałego spadku). **9/35** miało `gross_pnl >= 0`, ale koszt transakcyjny (~28-38 na
+transakcję) przewyższał zysk brutto (~21-23) — też netto ujemne. Średni koszt jako % nominału:
+fee≈0,100%, funding≈0,0004%, slippage≈0,040%, razem≈0,140%.
+
+**Wniosek C2c.1:** kill-switch NIE działał wadliwie — poprawnie wykrył realną, trwałą serię strat.
+Głębsza przyczyna (dlaczego model konsekwentnie obstawiał long podczas trwałego spadku
+sklasyfikowanego jako `range`, i dlaczego zyski były mniejsze niż koszty) to osobne pytanie o
+jakość sygnału/klasyfikację reżimu — jawnie POZA zakresem tej rundy (wymagałoby C2.5 albo rework
+modelu/cech, oba explicite wykluczone z wcześniejszych ustaleń).
+
+**C2c.2 — Mechanizm naprawy deadlocka (decyzja inżynierska, delegowana przez użytkownika):**
+**cooldown/re-arm** — `backtest.engine.run_backtest` śledzi `kill_switch_tripped_at` (moment
+pierwszego nieprzerwanego zadziałania) i po `kill_switch_cooldown_days` (nowy parametr, domyślnie
+**7.0**, `agents.risk_controller.KILL_SWITCH_COOLDOWN_DAYS`, zdublowany w `config/settings.yaml`)
+ciągłej suppresji resetuje `peak_equity` do bieżącego (zamrożonego) equity, dając strategii kolejną
+szansę. `check_kill_switch` sam w sobie NIE zmienia się (nadal czysty/bezstanowy) — decyzja "czy
+już czas na re-arm" wydzielona jako osobna czysta, testowalna funkcja
+`agents.risk_controller.should_rearm_kill_switch(kill_switch_tripped_at, current_timestamp,
+cooldown_days)`, wywoływana z pętli `run_backtest` PRZED `check_kill_switch` w każdej iteracji.
+Odrzucone alternatywy: mark-to-market otwartych pozycji (zbyt duża zmiana architektury Fazy 0 na tę
+rundę), zmiana formuły sizingu (nie adresuje deadlocka, tylko wielkość pojedynczej straty).
+
+**Testy (DoD, docs/rag/05):** `tests/test_risk_controller.py` — 4 testy jednostkowe + 3 hypothesis
+property tests dla `should_rearm_kill_switch` (m.in. `kill_switch_tripped_at=None` → zawsze False
+niezależnie od pozostałych argumentów; dla dowolnego `cooldown_days`+`extra_days>=0` → zawsze True;
+dla dowolnego elapsed < cooldown_days → zawsze False). `tests/test_engine.py` — nowy integracyjny
+`test_run_backtest_kill_switch_re_arms_after_cooldown` (oversized `risk_controller_fn` wymusza trip
+deterministycznie, `kill_switch_cooldown_days=0.01` wymusza szybki re-arm, asercja że przynajmniej
+jedna PÓŹNIEJSZA transakcja ma `kill_switch_active=False`). Pełny zestaw: **94/94 przechodzi**.
+
+**C2c.3 — Ponowny checkpoint po naprawie (`backtest/run_checkpoint.py`, realne dane, domyślny
+`kill_switch_cooldown_days=7.0`):**
+
+| Metryka | Przed (Commit 6/2b, deadlock) | Po (Commit 2c, cooldown/re-arm, seed=42) |
+|---|---|---|
+| Range: foldy z policzalnym Sharpe | 1/20 | **20/20** |
+| Range: łączna liczba realnych transakcji | 35 | **2 562** (34–272/fold) |
+| Range: mean_sharpe | -65,43 (1 fold) | **-53,41** |
+| Range: fraction_le_zero | 1,0 (1/1) | **1,0 (20/20)** |
+| Trend: foldy z policzalnym Sharpe | 0/20 (WARUNKOWY — brak danych) | **3/20** |
+| Trend: łączna liczba realnych transakcji | 0 | **63** |
+| Trend: mean_sharpe | NaN | **-7,15** |
+| Klasyfikacja ogólna (`classify_checkpoint`) | NO-GO (1/40 foldów ważnych) | **NO-GO (23/40 foldów ważnych, mean_sharpe=-47,38)** |
+| Stabilność między 10 seedami (42-51) | stabilne, ale n=1 fold | **stabilne — identyczny mean_sharpe=-47,3774, std=0,0000 na WSZYSTKICH 10 seedach, teraz na 23/40 foldach ważnych** |
+
+**Wniosek C2c.3:** naprawa deadlocka NIE zmienia werdyktu (nadal NO-GO), ale czyni go dużo bardziej
+wiarygodnym — zamiast 1 foldu z 35 transakcjami, teraz WSZYSTKIE 20 foldów `range` handlują (2 562
+transakcji łącznie), wszystkie ze średnim Sharpe głęboko ujemnym (-53,41, fraction_le_zero=1,0) i
+identycznym wynikiem między 10 seedami modelu. To potwierdza (nie tylko sugeruje, jak poprzednio na
+próbie n=1 fold), że model `range` ma systematycznie ujemny edge po kosztach na całym datasecie, nie
+tylko w jednym oknie. `trend` przeszedł z "brak danych" (0/20) do 3/20 foldów z realnymi
+transakcjami — też ujemny (-7,15), ale wyraźnie mniej negatywny niż `range`, i wciąż zbyt mało
+foldów, żeby cokolwiek stanowczo wnioskować o `trend` osobno.
+
+**Status:** ZROBIONE — mechanizm zaimplementowany, przetestowany (94/94), zweryfikowany na realnych
+danych. Otwarta decyzja z użytkownikiem: czy następna runda skupia się na jakości sygnału/
+klasyfikacji reżimu (C2.5 — rekalibracja progów 0.7/0.3, ujawniona przez C2c.1 jako prawdopodobna
+przyczyna 100%-long-only podczas spadku sklasyfikowanego jako `range`) — POZA zakresem tej rundy, do
+ustalenia osobno.
+
 ---
 
 ## 6. Zweryfikowane empirycznie (nie tylko zaplanowane)
@@ -476,6 +556,17 @@ przydatny niezależnie od tego, jaki zakres zostanie wybrany dalej.
   (2026-06-30). Model sam w sobie sygnalizuje w ~99-100% wierszy testowych w każdym foldzie
   `range` — pierwotna diagnoza Commit 6 ("model rzadko sygnalizuje") była błędna. Patrz §5 Commit
   2b dla pełnej diagnozy.
+- **Kill-switch deadlock NAPRAWIONY (Commit 2c, 2026-08-01):** cooldown/re-arm
+  (`agents.risk_controller.should_rearm_kill_switch` + `KILL_SWITCH_COOLDOWN_DAYS=7.0`)
+  zweryfikowany na realnych danych — checkpoint po naprawie: **20/20** foldów `range` mają teraz
+  policzalny Sharpe (**2 562** realnych transakcji łącznie, wcześniej 1/20 foldów, 35 transakcji),
+  mean_sharpe=-53,41 (fraction_le_zero=1,0), stabilne na 10 seedach (std=0,0000). `trend` przeszedł
+  z 0/20 do 3/20 foldów z transakcjami (mean_sharpe=-7,15). Werdykt ogólny pozostaje **NO-GO**, ale
+  teraz oparty na 23/40 foldów ważnych (wcześniej 1/40) — znacznie bardziej wiarygodny. Root-cause
+  diagnostyka (`backtest/diagnose_kill_switch_trigger.py`) pokazała, że pierwotna seria strat to
+  100% sygnałów long podczas trwałego spadku ceny sklasyfikowanego jako `range` (74% genuinie zły
+  kierunek, 26% koszt > zysk brutto) — patrz §5 Commit 2c.
+
 ---
 
 ## 7. Znane ryzyka i otwarte pytania
@@ -494,15 +585,20 @@ przydatny niezależnie od tego, jaki zakres zostanie wybrany dalej.
   nie coś do jednorazowego zamknięcia.
 - **Koszt obliczeniowy pełnego tuningu** (walk-forward × hiperparametry × okna wskaźników)
   nieoszacowany — zmierzyć na małej próbce przed pełnym przeszukiwaniem, nawet na Ryzen 7950X3D.
-- **Kill-switch deadlock — NOWE ryzyko architektoniczne (Commit 2b, 2026-08-01).**
-  `check_kill_switch` jest poprawnie zaprojektowany jako bezstanowy/dynamiczny (nie permanentny
-  latch), ale w obecnej pętli `run_backtest` (Faza 0) equity może się poruszyć WYŁĄCZNIE przez
-  realną transakcję — więc jeśli drawdown raz przekroczy próg 15%, blokuje sam siebie do końca
-  backtestu (equity zamrożone, `peak_equity` też, drawdown nigdy nie maleje). Wymaga decyzji:
-  mark-to-market otwartych pozycji między sygnałami? Osobny próg/mechanizm "remisji" niezależny od
-  realnych transakcji? Inny sizing ograniczający wielkość/częstotliwość wczesnych strat? Do
-  rozstrzygnięcia PRZED jakąkolwiek dalszą kalibracją cech/progów — inaczej każdy kolejny
-  checkpoint ryzykuje ten sam deadlock.
+- **Kill-switch deadlock — NAPRAWIONE (Commit 2c, 2026-08-01).** Poprzednio: `check_kill_switch`
+  poprawnie zaprojektowany jako bezstanowy/dynamiczny, ale w pętli `run_backtest` equity mogło się
+  poruszyć WYŁĄCZNIE przez realną transakcję — więc po pierwszym zadziałaniu blokował sam siebie
+  do końca backtestu. Naprawione cooldown/re-arm mechanizmem: po `kill_switch_cooldown_days` (domyślnie
+  7.0) ciągłej suppresji, `peak_equity` resetuje się do bieżącego equity. Zweryfikowane na realnych
+  danych (§5 Commit 2c) — ryzyko zamknięte.
+- **NOWE ryzyko (Commit 2c, 2026-08-01) — jakość sygnału/klasyfikacja reżimu podczas trwałych
+  trendów.** Root-cause diagnostyka (`backtest/diagnose_kill_switch_trigger.py`) pokazała, że seria
+  strat wywołująca kill-switch to 100% sygnałów `long` podczas trwałego spadku ceny BTC (~-3,6% w
+  3 dni) sklasyfikowanego jako reżim `range` — model `model_reversion` konsekwentnie obstawiał
+  zły kierunek. Sugeruje to, że reguła klasyfikacji reżimu (progi 0.7/0.3, C2.5) może błędnie
+  etykietować trwałe trendy jako `range`, albo że `model_reversion` nie ma wystarczającego edge'u,
+  żeby to skompensować. Jawnie POZA zakresem Commitu 2c (wymaga C2.5 rekalibracji progów i/lub
+  rework modelu/cech `range`) — kandydat na następną rundę, do ustalenia z użytkownikiem.
 
 ---
 

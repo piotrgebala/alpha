@@ -21,6 +21,17 @@ zmian), ale wiersz i tak trafia do `trades` z flagą `kill_switch_active=True`
 Re-check dynamiczny przy KAŻDYM sygnale: kill-switch wznawia normalną pracę, gdy
 equity odzyska się z powrotem powyżej progu (nie permanentny latch).
 
+KILL-SWITCH COOLDOWN/RE-ARM (Commit 2c, 2026-08-01, patrz agents/risk_controller.py
+dla pełnego uzasadnienia): equity NIE zmienia się, gdy sygnał jest stłumiony
+(position_size=0.0 -> net_pnl=0.0), więc bez dodatkowego mechanizmu kill-switch
+zostaje aktywny NA ZAWSZE po pierwszym zadziałaniu (deadlock potwierdzony
+empirycznie w Commit 2b: 99,8% sygnałów stłumionych, equity zamrożone od
+2025-09-27 do końca datasetu, mimo że model w kolejnych foldach nadal generował
+liczne sygnały kandydujące). Pętla poniżej śledzi `kill_switch_tripped_at` — po
+`kill_switch_cooldown_days` ciągłej suppresji resetuje `peak_equity` do bieżącego
+(zamrożonego) equity, dając strategii kolejną szansę zamiast czekać na organiczne
+odzyskanie, które strukturalnie nie może nastąpić w tej architekturze.
+
 DECYZJA — brak modyfikacji agents/labeling.py: PnL wymaga znać cenę wyjścia z pozycji.
 Dla label +1/-1 to trywialne (entry ± atr_multiplier*atr_14). Dla label 0.0 (vertical
 timeout) potrzeba `close` w świecy `t + exit_bar_offset` z PEŁNEGO datasetu — ale
@@ -72,7 +83,13 @@ from agents.ml_optimizer import (
     predict_signal,
     train_regime_model,
 )
-from agents.risk_controller import KILL_SWITCH_DRAWDOWN_PCT, check_kill_switch, compute_sizing
+from agents.risk_controller import (
+    KILL_SWITCH_COOLDOWN_DAYS,
+    KILL_SWITCH_DRAWDOWN_PCT,
+    check_kill_switch,
+    compute_sizing,
+    should_rearm_kill_switch,
+)
 from backtest.costs import total_round_trip_cost
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
@@ -267,6 +284,7 @@ def run_backtest(
     risk_controller_fn: Callable[..., dict] = compute_sizing,
     min_train_rows: int = MIN_TRAIN_ROWS,
     kill_switch_drawdown_pct: float = KILL_SWITCH_DRAWDOWN_PCT,
+    kill_switch_cooldown_days: float = KILL_SWITCH_COOLDOWN_DAYS,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -294,6 +312,10 @@ def run_backtest(
         kill_switch_drawdown_pct: próg drawdown od peaku equity, powyżej którego
             kill-switch tłumi nowe sygnały (agents.risk_controller.check_kill_switch).
             Domyślnie KILL_SWITCH_DRAWDOWN_PCT (0.15) — nadpisywalne np. do testów.
+        kill_switch_cooldown_days: ile dni ciągłej suppresji kill-switcha, zanim
+            peak_equity zostanie zresetowany do bieżącego equity (re-arm) — patrz
+            docstring modułu i agents.risk_controller.KILL_SWITCH_COOLDOWN_DAYS.
+            Domyślnie 7.0 — nadpisywalne np. do testów (wartość mała -> szybszy re-arm).
 
     Returns:
         {
@@ -329,6 +351,9 @@ def run_backtest(
     trades: list[dict] = []
     equity_curve: list[dict] = [{"timestamp": df["timestamp"].iloc[0], "equity": equity}]
     peak_equity = equity
+    # Commit 2c: moment pierwszego nieprzerwanego zadziałania kill-switcha (None, gdy
+    # nieaktywny) — patrz docstring modułu.
+    kill_switch_tripped_at: pd.Timestamp | None = None
 
     for signal in candidate_signals:
         direction = signal["signal_direction"]
@@ -341,7 +366,19 @@ def run_backtest(
         # dynamiczny co sygnał — patrz docstring modułu.
         peak_equity = max(peak_equity, equity)
 
+        # Cooldown/re-arm (Commit 2c) — patrz docstring modułu. Musi być PRZED
+        # check_kill_switch, żeby zresetowany peak_equity obowiązywał już w tej
+        # iteracji. Decyzja "czy już czas" delegowana do czystej, testowanej funkcji
+        # (agents.risk_controller.should_rearm_kill_switch).
+        if should_rearm_kill_switch(
+            kill_switch_tripped_at, signal["timestamp"], kill_switch_cooldown_days
+        ):
+            peak_equity = equity
+            kill_switch_tripped_at = None
+
         if check_kill_switch(equity, peak_equity, kill_switch_drawdown_pct):
+            if kill_switch_tripped_at is None:
+                kill_switch_tripped_at = signal["timestamp"]
             trades.append(
                 {
                     "timestamp": signal["timestamp"],
@@ -363,6 +400,8 @@ def run_backtest(
             )
             equity_curve.append({"timestamp": signal["timestamp"], "equity": equity})
             continue
+
+        kill_switch_tripped_at = None
 
         sizing = risk_controller_fn(
             signal_direction=direction,

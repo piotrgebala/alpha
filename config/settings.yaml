@@ -60,4 +60,5 @@ risk:
   risk_per_trade: 0.005             # 0.5% equity, fixed-fractional (NIE Kelly na tym etapie)
   max_leverage: 3.0                 # konserwatywnie, wartość startowa
   kill_switch_drawdown_pct: 0.15    # drawdown od peaku equity > 15% -> stop nowych sygnałów
+  kill_switch_cooldown_days: 7      # Commit 2c: dni ciągłej suppresji przed reset peak_equity/re-arm
 

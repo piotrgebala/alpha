@@ -47,9 +47,29 @@ KILL-SWITCH (docs/rag/03 — "fail-safe nie fail-soft"):
     powyżej progu). Cel (Faza 0): zobaczyć historycznie, jak często by się
     aktywował, zanim jest komponentem produkcyjnym (Faza 3: niezależny
     proces/wątek monitorujący konto, nie część głównej pętli decyzyjnej).
+
+    UWAGA (Commit 2b/2c, 2026-08-01) — deadlock empirycznie potwierdzony i naprawiony:
+    "dynamiczny re-check" powyżej zakładał, że equity MOŻE samo odzyskać się
+    powyżej progu, ale w architekturze Fazy 0 (backtest.engine.run_backtest) equity
+    NIE zmienia się, gdy sygnał jest stłumiony (position_size=0.0 -> net_pnl=0.0) —
+    bez dodatkowego mechanizmu ten "re-check" nigdy faktycznie by nie odblokował
+    kill-switcha po pierwszym zadziałaniu (Commit 2b: 99,8% sygnałów stłumionych,
+    equity zamrożone permanentnie od 2025-09-27 do końca datasetu). Naprawa
+    (Commit 2c): `backtest.engine.run_backtest` śledzi dodatkowo moment pierwszego
+    zadziałania (`kill_switch_tripped_at`) i po `KILL_SWITCH_COOLDOWN_DAYS` ciągłej
+    suppresji resetuje `peak_equity` do bieżącego (zamrożonego) equity — daje to
+    strategii kolejną szansę zamiast czekać na organiczne odzyskanie, które w tej
+    architekturze strukturalnie nie może nastąpić. Ta funkcja (`check_kill_switch`)
+    sama w sobie NIE zmienia się — nadal czysta, bezstanowa; stan (`peak_equity`,
+    `kill_switch_tripped_at`) trzymany PO STRONIE wywołującej pętli (`run_backtest`).
+    Decyzja "czy już czas na re-arm" jest jednak wydzielona jako osobna czysta funkcja
+    (`should_rearm_kill_switch` poniżej), właśnie żeby dało się ją przetestować
+    (hypothesis, DoD Warstwa 3) bez uruchamiania całego run_backtest.
 """
 
 from __future__ import annotations
+
+import pandas as pd
 
 from agents.labeling import ATR_MULTIPLIER
 
@@ -59,6 +79,10 @@ from agents.labeling import ATR_MULTIPLIER
 RISK_PER_TRADE = 0.005  # 0.5% equity, fixed-fractional (NIE Kelly na tym etapie)
 MAX_LEVERAGE = 3.0  # konserwatywnie, wartość startowa
 KILL_SWITCH_DRAWDOWN_PCT = 0.15  # drawdown od peaku equity > 15% -> stop nowych sygnałów
+# Commit 2c: ile dni CIĄGŁEJ suppresji kill-switcha, zanim `run_backtest` resetuje
+# peak_equity do bieżącego (zamrożonego) equity i daje strategii kolejną szansę —
+# patrz UWAGA w docstringu modułu wyżej. Wartość startowa, do kalibracji.
+KILL_SWITCH_COOLDOWN_DAYS = 7.0
 
 
 def compute_position_size(
@@ -184,3 +208,37 @@ def check_kill_switch(
         return True
     drawdown = (peak_equity - equity) / peak_equity
     return drawdown > drawdown_threshold
+
+
+def should_rearm_kill_switch(
+    kill_switch_tripped_at: pd.Timestamp | None,
+    current_timestamp: pd.Timestamp,
+    cooldown_days: float = KILL_SWITCH_COOLDOWN_DAYS,
+) -> bool:
+    """
+    Cooldown/re-arm (Commit 2c — patrz UWAGA w docstringu modułu). Czysta funkcja
+    decyzyjna WYDZIELONA z pętli `backtest.engine.run_backtest`, żeby dało się ją
+    przetestować w izolacji (hypothesis, Warstwa 3 DoD) bez trenowania modeli.
+
+    Sama NIE trzyma stanu ani go nie mutuje — caller (`run_backtest`) decyduje, co
+    zrobić z wynikiem `True` (reset `peak_equity` do bieżącego equity, wyczyszczenie
+    `kill_switch_tripped_at`).
+
+    UWAGA — konwencja graniczna INNA niż `check_kill_switch`: tu `>=` (cooldown
+    MUSI być OSIĄGNIĘTY, nie tylko przekroczony), bo `cooldown_days` to z definicji
+    minimalny wymagany odstęp, nie próg do ścisłego przekroczenia jak drawdown.
+
+    Args:
+        kill_switch_tripped_at: moment pierwszego nieprzerwanego zadziałania
+            kill-switcha, albo None jeśli kill-switch aktualnie nieaktywny (w tym
+            wypadku zawsze False — nie ma czego re-armować).
+        current_timestamp: timestamp bieżącego sygnału.
+        cooldown_days: ile dni ciągłej suppresji musi minąć zanim nastąpi re-arm.
+
+    Returns:
+        True jeśli powinien nastąpić re-arm (kill_switch_tripped_at nie jest None
+        ORAZ upłynęło >= cooldown_days). W przeciwnym razie False.
+    """
+    if kill_switch_tripped_at is None:
+        return False
+    return (current_timestamp - kill_switch_tripped_at) >= pd.Timedelta(days=cooldown_days)
