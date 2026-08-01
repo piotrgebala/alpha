@@ -1,3 +1,9 @@
+---
+status: active
+last_verified: 2026-08-01
+depends_on: [01_hipoteza_i_architektura.md, 04_narzedzia_zewnetrzne.md, 05_metodologia_wytwarzania_i_testow.md]
+---
+
 # 06 — LLM offline/nadzorczo i baza wiedzy projektu (Faza 2+, na podstawie kursu AI_Devs 4)
 
 ## Zakres i status

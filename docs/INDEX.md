@@ -1,0 +1,39 @@
+# Mapa dokumentacji projektu
+
+> Plik-indeks (D.2 w `TASKS.md`): jedno miejsce linkujące wszystkie dokumenty projektu, z
+> jednozdaniowym opisem każdego. Nie zastępuje żadnego z nich — `IMPLEMENTATION_PLAN.md` zostaje
+> jedynym źródłem aktualnego statusu, `docs/rag/*.md` jedynym źródłem pełnych uzasadnień decyzji.
+>
+> Ostatnia aktualizacja: 2026-08-01.
+
+## Dokumenty nadrzędne (root)
+
+| Plik | Jednozdaniowy opis |
+|---|---|
+| [`README.md`](../README.md) | Wejście do repo dla ludzi (GitHub) — czym jest projekt, szybki start, zastrzeżenia |
+| [`CLAUDE.md`](../CLAUDE.md) | Krótkie, stabilne instrukcje/zasady dla Claude Code, czytane automatycznie na starcie sesji |
+| [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md) | Aktualny status commitów, decyzje, znane ryzyka — żywy dokument, zmienia się często |
+| [`TASKS.md`](../TASKS.md) | Granularny, statusowalny rozkład `IMPLEMENTATION_PLAN.md` na pojedyncze zadania z ID i statusem |
+
+## `docs/rag/` — pełne uzasadnienia decyzji
+
+| Plik | Jednozdaniowy opis |
+|---|---|
+| [`01_hipoteza_i_architektura.md`](rag/01_hipoteza_i_architektura.md) | Dlaczego Faza 0 poprzedza resztę PRD, fazowanie Faza 0–4, hipoteza regime-gated (momentum vs mean-reversion) |
+| [`02_cechy_i_leakage.md`](rag/02_cechy_i_leakage.md) | Metodologia ekstrakcji cech z wielu repo bez zależności runtime, definicje 9 cech Fazy 0, podejście do leakage |
+| [`03_ryzyko_i_sizing.md`](rag/03_ryzyko_i_sizing.md) | Triple-barrier labeling (ATR-scaled), walk-forward split, diagnostyka N_eff, dwa osobne modele |
+| [`04_narzedzia_zewnetrzne.md`](rag/04_narzedzia_zewnetrzne.md) | Uzasadnienie decyzji o freqtrade/LEAN/QuantConnect jako katalogach wzorców, nigdy zależnościach runtime |
+| [`05_metodologia_wytwarzania_i_testow.md`](rag/05_metodologia_wytwarzania_i_testow.md) | Piramida testów (unit/leakage/property-based/integration/walk-forward) i Definition of Done per commit |
+| [`06_llm_nadzorczy_i_baza_wiedzy.md`](rag/06_llm_nadzorczy_i_baza_wiedzy.md) | Projekt trzech komponentów LLM offline/nadzorczo (`ai_interpreter`, `post_trade_critic`, `test_mathematics`) i `docs/rag/` jako baza wiedzy |
+| [`07_notatki_spotkania_i_szersza_wizja_systemu.md`](rag/07_notatki_spotkania_i_szersza_wizja_systemu.md) | Analiza rozbieżności między notatkami ze spotkania (pełny zakres PRD, zespoły z terminami) a dyscypliną Fazy 0 — otwarte pytania |
+
+## Legenda `status` (YAML frontmatter w `docs/rag/*.md`)
+
+| Status | Znaczenie |
+|---|---|
+| `active` | Treść zgodna z aktualnym stanem kodu/decyzji — domyślny status |
+| `stale` | Treść może nie odzwierciedlać aktualnego stanu — do przeglądu przed poleganiem na niej |
+| `superseded` | Zastąpione przez inny dokument (patrz jego `depends_on`/treść) — zostaje jako archiwum |
+
+`depends_on` w każdym pliku wskazuje inne `docs/rag/*.md`, na których dany dokument buduje swoje
+uzasadnienie — czytaj je najpierw, jeśli potrzebujesz pełnego kontekstu.

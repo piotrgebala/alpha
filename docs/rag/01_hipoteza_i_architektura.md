@@ -1,3 +1,9 @@
+---
+status: active
+last_verified: 2026-08-01
+depends_on: []
+---
+
 # 01 — Hipoteza tradingowa i architektura
 
 ## Dlaczego nie realizujemy oryginalnego PRD wprost

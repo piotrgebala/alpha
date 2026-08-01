@@ -1,3 +1,9 @@
+---
+status: active
+last_verified: 2026-08-01
+depends_on: [01_hipoteza_i_architektura.md]
+---
+
 # 02 — Cechy i metodologia leakage
 
 ## Zasada: ekstrakcja z wielu repozytoriów, nigdy zależność runtime

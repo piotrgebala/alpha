@@ -6,7 +6,7 @@
 > śledzenia postępu na poziomie zadania. Aktualizuj status tutaj na bieżąco; nagłówek/status
 > commitu w `IMPLEMENTATION_PLAN.md` aktualizuj przy zamknięciu całego commitu.
 >
-> Ostatnia aktualizacja: 2026-07-27.
+> Ostatnia aktualizacja: 2026-08-01.
 
 ## Zasada pracy: osobny branch per zadanie
 
@@ -68,8 +68,8 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
-| Dokumentacja/workflow (niezależne od fazowania) | 0 | 4 | 1 | 5 |
-| **RAZEM** | **31** | **5** | **24** | **60** |
+| Dokumentacja/workflow (niezależne od fazowania) | 2 | 2 | 1 | 5 |
+| **RAZEM** | **33** | **3** | **24** | **60** |
 
 ---
 
@@ -200,8 +200,8 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| D.1 | YAML frontmatter (`status`, `last_verified`, `depends_on`) w każdym `docs/rag/*.md` | ⬜ | |
-| D.2 | Plik-indeks (Mapa Treści) linkujący `CLAUDE.md` + `IMPLEMENTATION_PLAN.md` + `docs/rag/*.md` | ⬜ | |
+| D.1 | YAML frontmatter (`status`, `last_verified`, `depends_on`) w każdym `docs/rag/*.md` | ✅ | Dodane 7/7 plikom (`01`–`07`); legenda wartości `status` (`active`/`stale`/`superseded`) w `docs/INDEX.md` |
+| D.2 | Plik-indeks (Mapa Treści) linkujący `CLAUDE.md` + `IMPLEMENTATION_PLAN.md` + `docs/rag/*.md` | ✅ | `docs/INDEX.md` — linkuje `CLAUDE.md`+`IMPLEMENTATION_PLAN.md`+`TASKS.md`+`README.md`+7 plików `docs/rag/*.md`, jednozdaniowy opis każdego. `README.md` "Mapa dokumentacji" rozszerzona o brakujące 06/07/`TASKS.md` i zlinkowana do `docs/INDEX.md` jako pełne źródło |
 | D.3 | Formalizacja roli `IMPLEMENTATION_PLAN.md` jako "Observational Memory" — rozdzielenie na "aktualny stan" vs "archiwum decyzji" | ⏳ | Dopiero gdy plik znacząco urośnie (np. po Fazie 1) |
 | D.4 | Odpowiedzieć na otwarte pytania z `docs/rag/07`: czy spotkanie/zespoły (Data Engineering/Quantitative Research/Risk Management) są realne, kto ma finalną decyzyjność przy konflikcie z `CLAUDE.md` | ⬜ | Blokuje D.5 |
 | D.5 | Eskalacja rozbieżności terminów action items ze spotkania (15.08/30.08/10.09.2026, `docs/rag/07`) PRZED 15.08.2026, jeśli zobowiązania zespołów są realne | ⬜ | Rekomendacja z `docs/rag/07`; warunkowe od odpowiedzi na D.4 |

@@ -1,3 +1,9 @@
+---
+status: active
+last_verified: 2026-08-01
+depends_on: [02_cechy_i_leakage.md, 03_ryzyko_i_sizing.md]
+---
+
 # 05 — Metodologia wytwarzania oprogramowania i testów
 
 ## Dlaczego standardowe TDD nie wystarcza w tym projekcie
