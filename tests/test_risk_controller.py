@@ -8,18 +8,21 @@ sizingu i kill-switcha (IMPLEMENTATION_PLAN.md §5 Commit 5.5).
 
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from agents.labeling import ATR_MULTIPLIER
 from agents.risk_controller import (
+    KILL_SWITCH_COOLDOWN_DAYS,
     KILL_SWITCH_DRAWDOWN_PCT,
     MAX_LEVERAGE,
     RISK_PER_TRADE,
     check_kill_switch,
     compute_position_size,
     compute_sizing,
+    should_rearm_kill_switch,
 )
 
 # ---------------------------------------------------------------------------
@@ -173,6 +176,36 @@ def test_check_kill_switch_uses_module_default_threshold() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Warstwa 1: unit tests — should_rearm_kill_switch (Commit 2c)
+# ---------------------------------------------------------------------------
+
+
+def test_should_rearm_kill_switch_false_when_not_tripped() -> None:
+    now = pd.Timestamp("2025-01-01T00:00:00Z")
+    assert should_rearm_kill_switch(None, now, cooldown_days=7.0) is False
+
+
+def test_should_rearm_kill_switch_false_before_cooldown_elapsed() -> None:
+    tripped_at = pd.Timestamp("2025-01-01T00:00:00Z")
+    current = tripped_at + pd.Timedelta(days=3.0)
+    assert should_rearm_kill_switch(tripped_at, current, cooldown_days=7.0) is False
+
+
+def test_should_rearm_kill_switch_true_at_exact_cooldown_boundary() -> None:
+    # Odwrotna konwencja graniczna niż check_kill_switch: tu >=, nie > (patrz
+    # docstring should_rearm_kill_switch) -> dokładnie na granicy już True.
+    tripped_at = pd.Timestamp("2025-01-01T00:00:00Z")
+    current = tripped_at + pd.Timedelta(days=7.0)
+    assert should_rearm_kill_switch(tripped_at, current, cooldown_days=7.0) is True
+
+
+def test_should_rearm_kill_switch_uses_module_default_cooldown() -> None:
+    tripped_at = pd.Timestamp("2025-01-01T00:00:00Z")
+    current = tripped_at + pd.Timedelta(days=KILL_SWITCH_COOLDOWN_DAYS)
+    assert should_rearm_kill_switch(tripped_at, current) is True
+
+
+# ---------------------------------------------------------------------------
 # Warstwa 3: hypothesis property-based (wymagane DoD dla risk_controller.py,
 # docs/rag/05_metodologia_wytwarzania_i_testow.md)
 # ---------------------------------------------------------------------------
@@ -235,3 +268,47 @@ def test_check_kill_switch_matches_drawdown_formula(equity, peak_equity, drawdow
     result = check_kill_switch(equity, peak_equity, drawdown_threshold)
     expected_drawdown = (peak_equity - equity) / peak_equity
     assert result == (expected_drawdown > drawdown_threshold)
+
+
+@given(
+    current_timestamp_offset_days=st.floats(min_value=0.0, max_value=365.0),
+    cooldown_days=st.floats(min_value=0.0, max_value=365.0),
+)
+@settings(max_examples=50, deadline=None)
+def test_should_rearm_kill_switch_false_when_never_tripped(
+    current_timestamp_offset_days, cooldown_days
+) -> None:
+    # kill_switch_tripped_at=None -> zawsze False, niezależnie od cooldown_days czy
+    # current_timestamp (nie ma czego re-armować).
+    current_timestamp = pd.Timestamp("2025-01-01T00:00:00Z") + pd.Timedelta(
+        days=current_timestamp_offset_days
+    )
+    assert should_rearm_kill_switch(None, current_timestamp, cooldown_days) is False
+
+
+@given(
+    cooldown_days=st.floats(min_value=0.01, max_value=365.0),
+    extra_days=st.floats(min_value=0.0, max_value=365.0),
+)
+@settings(max_examples=50, deadline=None)
+def test_should_rearm_kill_switch_true_once_cooldown_elapsed(cooldown_days, extra_days) -> None:
+    # current_timestamp skonstruowany tak, żeby upłynęło DOKŁADNIE cooldown_days +
+    # extra_days (extra_days >= 0) -> zawsze >= cooldown_days -> zawsze True.
+    tripped_at = pd.Timestamp("2025-01-01T00:00:00Z")
+    current_timestamp = tripped_at + pd.Timedelta(days=cooldown_days + extra_days)
+    assert should_rearm_kill_switch(tripped_at, current_timestamp, cooldown_days) is True
+
+
+@given(
+    cooldown_days=st.floats(min_value=0.01, max_value=365.0),
+    fraction_elapsed=st.floats(min_value=0.0, max_value=0.999),
+)
+@settings(max_examples=50, deadline=None)
+def test_should_rearm_kill_switch_false_before_cooldown_elapsed_property(
+    cooldown_days, fraction_elapsed
+) -> None:
+    # current_timestamp skonstruowany tak, żeby upłynęło ŚCIŚLE MNIEJ niż
+    # cooldown_days (margines >= 0.1% cooldown_days) -> zawsze False.
+    tripped_at = pd.Timestamp("2025-01-01T00:00:00Z")
+    current_timestamp = tripped_at + pd.Timedelta(days=cooldown_days * fraction_elapsed)
+    assert should_rearm_kill_switch(tripped_at, current_timestamp, cooldown_days) is False

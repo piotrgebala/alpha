@@ -65,12 +65,13 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Commit 5.5 — Risk controller | 5 | 0 | 0 | 5 |
 | Commit 6 — Checkpoint go/no-go (ZROBIONE — wynik NO-GO) | 5 | 0 | 0 | 5 |
 | Commit 2b — Diagnoza NO-GO: przegląd cech `range` (W TRAKCIE — zablokowane) | 2 | 0 | 2 | 4 |
+| Commit 2c — Kill-switch: przyczyna serii strat + cooldown/re-arm (ZROBIONE) | 3 | 0 | 0 | 3 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 2 | 2 | 1 | 5 |
-| **RAZEM** | **35** | **3** | **26** | **64** |
+| **RAZEM** | **38** | **3** | **26** | **67** |
 
 ---
 
@@ -156,6 +157,18 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C2b.1b | Zweryfikować rzeczywisty mechanizm "0 transakcji" w 19/20 foldów `range`, skoro model jednak sygnalizuje | ✅ | Zweryfikowano ad hoc na `run_backtest(seed=42)["trades"]`/`["folds_summary"]`: 18 135 sygnałów kandydujących łącznie, **18 100 (99,8%) stłumionych przez kill-switch**, tylko **35** realnych transakcji (dokładnie zgodne z Commit 6). Kill-switch uruchomił się 2025-09-27 (3. dzień fold_idx=0 `range`) i NIGDY nie wznówił działania do końca datasetu (2026-06-30) — equity zamrożone na 8469,93 (drawdown 15,30%) permanentnie, bo bez realnej transakcji (a tę właśnie blokuje kill-switch) equity nie może się poruszyć. `check_kill_switch` sam w sobie poprawny/bezstanowy/dynamiczny — to deadlock EMERGENTNY z resztą pętli `run_backtest`, nie błąd tej funkcji. Osobne, niezbadane pytanie: dlaczego pierwsze ~9-10 transakcji fold 0 straciło tak konsekwentnie — poza zakresem tej rundy |
 | C2b.2 | Dodać jedną kandydującą cechę do `REVERSION_FEATURES` (np. Bollinger %B) | ⏳ | **WSTRZYMANE** — C2b.1/C2b.1b obalają przesłankę ("model rzadko sygnalizuje"). Rozszerzanie feature setu nie zaadresuje rzeczywistej przyczyny. Czeka na NOWĄ decyzję użytkownika o zakresie — prawdopodobnie `agents/risk_controller.py` (mechanizm odzyskiwania kill-switcha i/lub formuła sizingu), co wymaga własnego przeczytania docs/rag/03 przed zmianą (CLAUDE.md) i jest POZA uzgodnionym zakresem tej rundy |
 | C2b.3 | Ponowny checkpoint (`run_checkpoint.py`) po C2b.2, porównanie z baseline Commit 6 | ⏳ | Zablokowane przez C2b.2 |
+
+### Commit 2c — Kill-switch: przyczyna serii strat + mechanizm cooldown/re-arm — ✅ ZROBIONE
+
+> Zakres zatwierdzony przez użytkownika 2026-08-01 ("1.yes 2.yes" + "Do both in one round" +
+> "tak jak uważasz za najlepsze" dla wyboru mechanizmu): diagnoza przyczyny serii strat + naprawa
+> deadlocka kill-switcha, jedną rundą. Pełna diagnoza i wyniki: `IMPLEMENTATION_PLAN.md` §5 Commit 2c.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| C2c.1 | Root-cause diagnostyka serii strat wywołującej kill-switch (`backtest/diagnose_kill_switch_trigger.py`) | ✅ | Read-only skrypt inspekcji 35 realnych transakcji — rozbija koszt na fee/funding/slippage. WYNIK: 100% transakcji `signal_direction=1.0` (long) podczas trwałego spadku ceny BTC (~-3,6% w 3 dni) sklasyfikowanego jako `range`; 26/35 (74%) genuinie zły kierunek, 9/35 koszt > zysk brutto. Kill-switch NIE był wadliwy — poprawnie wykrył realną serię strat. Przyczyna głębsza (jakość sygnału/klasyfikacja reżimu) POZA zakresem tej rundy |
+| C2c.2 | Zaprojektować i zaimplementować mechanizm naprawy deadlocka kill-switcha | ✅ | Cooldown/re-arm: `agents.risk_controller.should_rearm_kill_switch` (nowa czysta funkcja, testowalna w izolacji) + `KILL_SWITCH_COOLDOWN_DAYS=7.0` (domyślnie, `config/settings.yaml` sekcja `risk`) — po N dni ciągłej suppresji, `backtest.engine.run_backtest` resetuje `peak_equity` do bieżącego equity. `check_kill_switch` sam w sobie niezmieniony (nadal czysty/bezstanowy). Testy: 4 jednostkowe + 3 hypothesis property tests w `tests/test_risk_controller.py`, 1 nowy integracyjny (`test_run_backtest_kill_switch_re_arms_after_cooldown`) w `tests/test_engine.py`. Pełny zestaw: **94/94 przechodzi** |
+| C2c.3 | Ponowny checkpoint (`run_checkpoint.py`) po naprawie, porównanie z baseline Commit 6/2b | ✅ | Range: 1/20→**20/20** foldów z policzalnym Sharpe (35→**2 562** transakcji), mean_sharpe=-53,41 (fraction_le_zero=1,0). Trend: 0/20→**3/20** foldów (mean_sharpe=-7,15). Ogólnie: **NO-GO potwierdzone** (23/40 foldów ważnych, wcześniej 1/40), stabilne na 10 seedach (std=0,0000). Naprawa nie zmienia werdyktu, ale czyni go dużo bardziej wiarygodnym — patrz IMPLEMENTATION_PLAN.md §5/§6/§7 |
 
 ---
 
