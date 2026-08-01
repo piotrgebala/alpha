@@ -4,8 +4,9 @@
 > Jeśli zaczynasz nową sesję Claude Code, podepnij ten plik jako kontekst — zastępuje potrzebę
 > przewijania całej wcześniejszej rozmowy.
 >
-> Ostatnia aktualizacja: 2026-08-01. **Status: Commity 1–5.5 zaimplementowane i przetestowane
-> (66/66 testów). Następny krok: Commit 6 (checkpoint go/no-go).**
+> Ostatnia aktualizacja: 2026-08-01. **Status: Commity 1–6 zaimplementowane i przetestowane
+> (86/86 testów). Commit 6 (checkpoint go/no-go) na realnych danych BTC/USDT:USDT: wynik
+> **NO-GO**. Następny krok: decyzja z użytkownikiem o powrocie do Commit 2 (§5, §6, §7).**
 
 ---
 
@@ -303,7 +304,7 @@ zależności od jakości predykcji modelu (gross_pnl i cost skalują się liniow
 samo powiększenie position_size nie zmienia proporcji zysk/koszt — ale w połączeniu z choćby
 jedną naturalnie występującą błędną predykcją kierunku daje duży wystarczający swing equity).
 
-### Commit 6 — Checkpoint go/no-go: TRZY ścieżki `[NASTĘPNY KROK]`
+### Commit 6 — Checkpoint go/no-go: TRZY ścieżki `[ZROBIONE — wynik: NO-GO]`
 
 | Wynik | Kryterium (startowe) | Decyzja |
 |---|---|---|
@@ -313,6 +314,44 @@ jedną naturalnie występującą błędną predykcją kierunku daje duży wystar
 
 Sprawdzić też: stabilność wyniku przy losowym seedzie modelu (overfitting sanity check), wynik
 osobno per reżim rynkowy (2023 niska zmienność vs 2024-25 era ETF).
+
+**Metodologia (ustalona z użytkownikiem, brak w docs/rag — trzeba było doprecyzować przed
+implementacją):** Sharpe per trade (risk-free=0, zwrot = net_pnl/equity_before, wyklucza
+kill-switch), annualizacja `sqrt(trades_per_year)` z częstości transakcji per-fold (nie stała
+globalna). C6.4 zinterpretowane jako podział wg REŻIMU (trend vs range), nie kalendarzowo —
+realny zakres danych (2025-07→2026-07) nie sięga 2023. C6.3: 10 seedów (42-51), stabilny =
+std zagregowanego Sharpe < 0.2. Implementacja: `backtest/metrics.py` (czyste funkcje, testy w
+`tests/test_metrics.py`) + `backtest/run_checkpoint.py` (orkiestracja na realnych danych, poza
+pytest).
+
+**Wynik na realnych danych** (BTC/USDT:USDT 5m, Binance USDS-M Futures, 2025-07-01→2026-06-30,
+105 120 świec, zero dziur — pierwsze rzeczywiste dane w tym projekcie, C1.3 potwierdzone przy
+okazji):
+
+- **C6.1/C6.2 — klasyfikacja ogólna: NO-GO.** Tylko 1 z 40 foldów (regime×fold_idx, 20 trend +
+  20 range) miał policzalny Sharpe (≥2 transakcje, niezerowa wariancja): `range`, `fold_idx=0`,
+  35 transakcji, Sharpe = **-65.43**. Pozostałe 39 foldów: NaN (brak transakcji albo fold
+  pominięty przez `min_train_rows=30`).
+- **C6.3 — stabilność:** 10 seedów (42-51) dały IDENTYCZNY mean_sharpe=-65.4333 na każdym
+  (std=0.0000 < próg 0.2) → formalnie stabilne, ale głównie dlatego, że tylko ten jeden fold
+  kiedykolwiek generuje transakcje i jego wynik okazał się w tym przebiegu niezależny od seeda
+  modelu (płytkie drzewa, mały feature set — mało miejsca na wariancję od samego seeda).
+- **C6.4 — per reżim:**
+  - `trend`: **WARUNKOWY** w praktyce nieoceniony — WSZYSTKIE 20 foldów pominięte przez
+    `min_train_rows`, bo 14-dniowe okno testowe konsekwentnie miało <30 świec sklasyfikowanych
+    jako `trend` (typowo 6-29, patrz TASKS.md C6.1 Uwagi). To empiryczne potwierdzenie ryzyka z
+    §7 ("regime trend może być rzadki"), nie nowe odkrycie — ale teraz na realnych danych, nie
+    tylko syntetycznych.
+  - `range`: **NO-GO** — model wygenerował sygnał tylko w 1 z 20 foldów; w pozostałych 19
+    `predict_signal` zwracał wyłącznie `direction=0` (brak transakcji).
+- **Interpretacja (ważne dla decyzji o Commit 2):** Sharpe=-65.43 z pojedynczego foldu (35
+  transakcji, mean_return/std_return≈-2.17 przed annualizacją) to artefakt małej próby — N_eff
+  effektywnie bardzo mały (docs/rag/03 caveat), więc dosłowna wartość liczbowa niesie mało
+  informacji. Bardziej wiarygodny sygnał to STRUKTURALNY: model `range` prawie nigdy nie handluje,
+  a `trend` prawie nigdy nie ma wystarczających danych do wytrenowania/oceny w obecnej strukturze
+  walk-forward. To sugeruje, że powrót do Commit 2 powinien objąć w szczególności C2.5 (kalibracja
+  progów 0.7/0.3) i/lub przegląd feature setu pod kątem modelu `range`, a nie tylko "inne cechy"
+  ogólnikowo — ostateczny zakres do ustalenia z użytkownikiem przed startem.
 
 ---
 
@@ -340,18 +379,32 @@ osobno per reżim rynkowy (2023 niska zmienność vs 2024-25 era ETF).
   `check_kill_switch` matchuje r\u0119czn\u0105 formu\u0142\u0119 drawdown dla dowolnych losowych warto\u015bci
   (`test_check_kill_switch_matches_drawdown_formula`).
 - Pełny zestaw testów po Commicie 5.5: **66/66 przechodzi** (48 z Commit\u00f3w 1\u20135 + 17 nowych w
-  `tests/test_risk_controller.py` + 1 nowy integracyjny w `tests/test_engine.py`).
-
+  `tests/test_risk_controller.py` + 1 nowy integracyjny w `tests/test_engine.py`).- **Pierwsze realne dane w projekcie** (Commit 6): `data/fetch_ohlcv.py` __main__ miał
+  nieużywany dotąd błąd — `open("config/settings.yaml")` bez `encoding="utf-8"` crashował
+  (`UnicodeDecodeError`) na tej maszynie (locale cp1250, nie UTF-8), mimo że plik jest czystym
+  UTF-8 z polskimi znakami w komentarzach. Naprawione jednym słowem kluczowym. Po naprawie:
+  fetch BTC/USDT:USDT 5m 2025-07-01→2026-06-30 przez ccxt/binanceusdm = **105 120 świec, zero
+  dziur**, bez interwencji ręcznej.
+- `exchange.load_markets()` na żywym API (binanceusdm) potwierdza `"BTC/USDT:USDT"` jako
+  poprawny symbol (C1.3, wcześniej tylko założenie) — obok wariantów z datą wygaśnięcia,
+  nieużywanych tutaj.
+- Pełny zestaw testów po Commicie 6: **86/86 przechodzi** (66 z Commitów 1–5.5 + 20 nowych w
+  `tests/test_metrics.py`, w tym 1 hypothesis property test).
+- Checkpoint go/no-go (`backtest/run_checkpoint.py`) na realnych danych: wynik **NO-GO**, patrz
+  §5 Commit 6 dla pełnych liczb i interpretacji.
 ---
 
 ## 7. Znane ryzyka i otwarte pytania
 
-- **Regime "trend" może być rzadki.** Na syntetycznych danych z progami 0.7/0.3, trend = <1%
-  świec (ambiguous ~80%, range ~20%). To strukturalna właściwość AND-owania dwóch warunków, nie
-  tylko artefakt syntetycznych danych. **Sprawdzić jako pierwsze po pobraniu prawdziwych danych**
-  — jeśli się powtórzy, Test 1 może mieć za mało próbek na wiarygodny wynik; rozważ złagodzenie
-  `trend_threshold`.
-- **Symbol ccxt niezweryfikowany na żywo** — `"BTC/USDT:USDT"` to założenie, nie potwierdzony fakt.
+- **Regime "trend" może być rzadki — POTWIERDZONE na realnych danych (Commit 6, 2026-08-01).**
+  Na syntetycznych danych z progami 0.7/0.3, trend = <1% świec. Na realnych danych BTC/USDT:USDT
+  5m (2025-07→2026-07): WSZYSTKIE 20 foldów walk-forward dla `trend` pominięte przez
+  `min_train_rows` — 14-dniowe okno testowe konsekwentnie miało <30 świec sklasyfikowanych jako
+  `trend`. To NIE artefakt syntetycznych danych — strukturalna właściwość AND-owania dwóch
+  warunków przy obecnych progach. Wymaga decyzji: złagodzić `trend_threshold` (C2.5) przy
+  powrocie do Commit 2, zamiast dalszego "sprawdzania".
+- **Symbol ccxt zweryfikowany na żywo (C1.3, 2026-08-01)** — `"BTC/USDT:USDT"` potwierdzony przez
+  `exchange.load_markets()`, zgodny z `config/settings.yaml`. Ryzyko zamknięte.
 - **Survivorship bias w pożyczonych wskaźnikach** — RSI/ATR/EMA przetrwały w publicznym obiegu
   (freqtrade i podobne) częściowo dlatego, że ktoś na nich pokazał dobry backtest. Stała czujność,
   nie coś do jednorazowego zamknięcia.
