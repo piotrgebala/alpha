@@ -6,7 +6,10 @@
 >
 > Ostatnia aktualizacja: 2026-08-01. **Status: Commity 1–6 zaimplementowane i przetestowane
 > (86/86 testów). Commit 6 (checkpoint go/no-go) na realnych danych BTC/USDT:USDT: wynik
-> **NO-GO**. Następny krok: decyzja z użytkownikiem o powrocie do Commit 2 (§5, §6, §7).**
+> **NO-GO**. Commit 2b (diagnoza, zakres uzgodniony: przegląd cech modelu `range`) wykazała, że
+> pierwotna przyczyna NO-GO leży gdzie indziej niż sądzono w Commit 6 (kill-switch, nie
+> model/cechy) — patrz §5 Commit 2b. Następny krok: NOWA decyzja z użytkownikiem o dalszym
+> zakresie (poza cechami — prawdopodobnie `agents/risk_controller.py`).**
 
 ---
 
@@ -343,7 +346,8 @@ okazji):
     §7 ("regime trend może być rzadki"), nie nowe odkrycie — ale teraz na realnych danych, nie
     tylko syntetycznych.
   - `range`: **NO-GO** — model wygenerował sygnał tylko w 1 z 20 foldów; w pozostałych 19
-    `predict_signal` zwracał wyłącznie `direction=0` (brak transakcji).
+    `predict_signal` zwracał wyłącznie `direction=0` (brak transakcji). **[BŁĘDNE — patrz korekta
+    poniżej i Commit 2b.]**
 - **Interpretacja (ważne dla decyzji o Commit 2):** Sharpe=-65.43 z pojedynczego foldu (35
   transakcji, mean_return/std_return≈-2.17 przed annualizacją) to artefakt małej próby — N_eff
   effektywnie bardzo mały (docs/rag/03 caveat), więc dosłowna wartość liczbowa niesie mało
@@ -352,6 +356,80 @@ okazji):
   walk-forward. To sugeruje, że powrót do Commit 2 powinien objąć w szczególności C2.5 (kalibracja
   progów 0.7/0.3) i/lub przegląd feature setu pod kątem modelu `range`, a nie tylko "inne cechy"
   ogólnikowo — ostateczny zakres do ustalenia z użytkownikiem przed startem.
+- **KOREKTA (Commit 2b, 2026-08-01):** oba powyższe zdania okazały się mylące co do przyczyny —
+  sugerowały problem z modelem/cechami `range`. Diagnoza C2b.1/C2b.1b (patrz Commit 2b niżej)
+  pokazuje, że `predict_signal` faktycznie zwraca `direction != 0` w ~99-100% wierszy testowych w
+  KAŻDYM z 20 foldów `range` (nie tylko 1). Prawdziwa przyczyna "1/20 foldów z transakcjami" to
+  kill-switch (`agents/risk_controller.py::check_kill_switch`), permanentnie stłumiony od
+  2025-09-27 (3 dni w fold_idx=0) do końca datasetu (2026-06-30) po serii wczesnych strat.
+  Rekomendacja "C2.5 i/lub przegląd cech `range`" z powyższego akapitu jest nieaktualna — patrz
+  Commit 2b dla poprawionej rekomendacji zakresu.
+
+### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` `[W TRAKCIE — zablokowane na nowej decyzji użytkownika]`
+
+**Kontekst i uzgodniony zakres (ustalony z użytkownikiem przed startem, 2026-08-01):** powrót do
+Commit 2 ograniczony WYŁĄCZNIE do przeglądu/rewizji feature setu modelu `range`
+(`REVERSION_FEATURES`) — jawnie WYKLUCZONE tej rundy: rekalibracja progów regime (C2.5) i zmiana
+mnożnika ATR triple-barrier. Plan: (1) diagnoza przyczyny [C2b.1], (2) jeśli diagnoza wskaże na
+niewystarczające cechy — dodać JEDNĄ kandydującą cechę [C2b.2], (3) ponowny checkpoint [C2b.3].
+
+**C2b.1 — Diagnostyka (`backtest/diagnose_range_signal.py`, poza pytest, jak
+`run_checkpoint.py`):** read-only skrypt reprodukujący dokładnie trening/predykcję
+`backtest.engine._collect_candidate_signals` per fold `range` (te same domyślne
+train/test/step_days, `train_regime_model`/`predict_signal`, seed=42), ale raportujący dodatkowo:
+rozkład klas triple-barrier label (train/test), `booster.get_score(importance_type="gain")`, i
+PEŁNY rozkład `signal_confidence` (nie tylko wiersze z `direction != 0`, w odróżnieniu od
+`_collect_candidate_signals`, który je odrzuca).
+
+**Wynik C2b.1 (nieoczekiwany):** model `model_reversion` sygnalizuje (`direction != 0`) w
+~99-100% wierszy testowych w KAŻDYM z 20 foldów `range` (nie w 1 na 20, jak zapisano pierwotnie w
+Commit 6) — łącznie 17 989 sygnałów spośród 17 989 wierszy testowych z policzalnym labelem.
+Confidence umiarkowana, ale sensowna (~0.44-0.50, baseline losowy dla 3 klas = 0.33). Feature
+importance (gain) niezerowa i zmienna między foldami dla wszystkich 4 cech (`rsi_14` najsilniejsza,
+0.9-4.7 w zależności od foldu; `return_lag_1` najsłabsza, ale nigdy zero). Rozkład labeli
+train/test w każdym foldzie sensownie zbalansowany (~45% +1, ~45% -1, ~9-13% timeout/0) — brak
+strukturalnego problemu z brakiem zdarzeń +1/-1.
+
+**Wniosek C2b.1:** model NIE jest wąskim gardłem. Hipoteza "cechy `range` są za słabe, model rzadko
+sygnalizuje" — którą ta runda miała zweryfikować — jest FAŁSZYWA. Dodanie nowej cechy do
+`REVERSION_FEATURES` (C2b.2) nie zaadresowałoby rzeczywistej przyczyny "1/20 foldów z
+transakcjami" w Commit 6.
+
+**C2b.1b — Weryfikacja rzeczywistego mechanizmu "0 transakcji":** bezpośrednia inspekcja
+`run_backtest(raw_ohlcv, seed=42)["trades"]`/`["folds_summary"]` (ad hoc, bez zmian w kodzie
+pipeline'u):
+- `folds_summary` potwierdza C2b.1: KAŻDY z 20 foldów `range` ma dziesiątki-tysiące sygnałów
+  kandydujących (`n_signals`, PRZED sizingiem/kill-switchem), od 71 (fold 9) do 1713 (fold 10).
+- Łącznie **18 135** wierszy w `trades` (obie strategie/foldy razem) — z czego **18 100 (99,8%)**
+  ma `kill_switch_active=True`, tylko **35** to realne transakcje (`kill_switch_active=False`) —
+  dokładnie zgodne z liczbą "35 transakcji" zaraportowaną w Commit 6 dla `range` fold_idx=0.
+- Kill-switch uruchamia się pierwszy raz **2025-09-27 01:55 UTC** — w fold_idx=0 dla `range`, ~3
+  dni w 14-dniowe okno testowe tego foldu, po ok. 9-10 stratnych transakcjach pod rząd (każda
+  -0,5% do -0,6% equity). Equity spada z 10 000 do **8469,93** (drawdown 15,30%, tuż nad progiem
+  15%) i **zamraża się na tej wartości DO KOŃCA datasetu** (2026-06-30) — kill-switch pozostaje
+  aktywny przez pozostałe ~9 miesięcy backtestu, bez jednego wyjątku.
+- Mechanizm: `check_kill_switch` jest poprawnie bezstanowy i "dynamiczny" (nie permanentny latch —
+  wznawia się, gdy equity wróci powyżej progu, zgodnie z docstringiem i C5.5.5). Problem to
+  DEADLOCK EMERGENTNY z interakcji z resztą pętli `run_backtest`: gdy sygnał jest stłumiony,
+  `position_size=0.0` → `net_pnl=0.0` → equity się NIE zmienia → `peak_equity` też się nie zmienia
+  → drawdown zostaje dokładnie tam, gdzie było w momencie stłumienia. Equity może wrócić ponad próg
+  WYŁĄCZNIE dzięki realnej transakcji — a realna transakcja jest właśnie tym, co jest stłumione.
+  W obecnej architekturze Fazy 0 (brak mark-to-market otwartych pozycji, brak żadnego innego
+  źródła ruchu equity) ten deadlock jest matematycznie nieunikniony, gdy tylko drawdown raz
+  przekroczy próg wystarczająco wcześnie w backteście.
+- Osobne, jeszcze niezbadane pytanie: DLACZEGO pierwsze ~9-10 transakcji `range` fold 0 straciło
+  tak konsekwentnie (jakość sygnału na starcie datasetu, koszty transakcyjne, formuła sizingu,
+  czy zbieg okoliczności) — to POZA zakresem tej rundy (tylko przegląd cech), zostawione jako
+  input do decyzji poniżej.
+
+**Status i decyzja wymagana:** C2b.2 (dodanie cechy) WSTRZYMANE — jego przesłanka jest obalona
+przez C2b.1/C2b.1b. Wymagana NOWA decyzja z użytkownikiem o zakresie dalszej pracy — prawdopodobnie
+dotyczy `agents/risk_controller.py` (mechanizm odzyskiwania kill-switcha i/lub formuła sizingu
+powodująca wczesną serię strat), co jest OSOBNYM zakresem od "przeglądu cech modelu `range`"
+uzgodnionego na tę rundę i wymaga własnego przeczytania docs/rag/03 przed jakąkolwiek zmianą
+(CLAUDE.md, sekcja "Zanim zmienisz coś w risk_controller.py"). Diagnostyczny skrypt
+`backtest/diagnose_range_signal.py` zachowany jako trwałe narzędzie (nie jednorazowy scratch) —
+przydatny niezależnie od tego, jaki zakres zostanie wybrany dalej.
 
 ---
 
@@ -392,6 +470,12 @@ okazji):
   `tests/test_metrics.py`, w tym 1 hypothesis property test).
 - Checkpoint go/no-go (`backtest/run_checkpoint.py`) na realnych danych: wynik **NO-GO**, patrz
   §5 Commit 6 dla pełnych liczb i interpretacji.
+- **Kill-switch deadlock (Commit 2b, 2026-08-01):** zweryfikowano bezpośrednio na `run_backtest`
+  (realne dane, seed=42) — 18 100/18 135 (99,8%) sygnałów kandydujących stłumionych przez
+  kill-switch, permanentnie od 2025-09-27 (3. dzień foldu 0 `range`) do końca datasetu
+  (2026-06-30). Model sam w sobie sygnalizuje w ~99-100% wierszy testowych w każdym foldzie
+  `range` — pierwotna diagnoza Commit 6 ("model rzadko sygnalizuje") była błędna. Patrz §5 Commit
+  2b dla pełnej diagnozy.
 ---
 
 ## 7. Znane ryzyka i otwarte pytania
@@ -410,6 +494,15 @@ okazji):
   nie coś do jednorazowego zamknięcia.
 - **Koszt obliczeniowy pełnego tuningu** (walk-forward × hiperparametry × okna wskaźników)
   nieoszacowany — zmierzyć na małej próbce przed pełnym przeszukiwaniem, nawet na Ryzen 7950X3D.
+- **Kill-switch deadlock — NOWE ryzyko architektoniczne (Commit 2b, 2026-08-01).**
+  `check_kill_switch` jest poprawnie zaprojektowany jako bezstanowy/dynamiczny (nie permanentny
+  latch), ale w obecnej pętli `run_backtest` (Faza 0) equity może się poruszyć WYŁĄCZNIE przez
+  realną transakcję — więc jeśli drawdown raz przekroczy próg 15%, blokuje sam siebie do końca
+  backtestu (equity zamrożone, `peak_equity` też, drawdown nigdy nie maleje). Wymaga decyzji:
+  mark-to-market otwartych pozycji między sygnałami? Osobny próg/mechanizm "remisji" niezależny od
+  realnych transakcji? Inny sizing ograniczający wielkość/częstotliwość wczesnych strat? Do
+  rozstrzygnięcia PRZED jakąkolwiek dalszą kalibracją cech/progów — inaczej każdy kolejny
+  checkpoint ryzykuje ten sam deadlock.
 
 ---
 
