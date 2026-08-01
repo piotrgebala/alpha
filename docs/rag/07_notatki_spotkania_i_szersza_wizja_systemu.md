@@ -1,3 +1,9 @@
+---
+status: active
+last_verified: 2026-08-01
+depends_on: [01_hipoteza_i_architektura.md]
+---
+
 # 07 — Notatki ze spotkania: szersza wizja systemu vs dyscyplina Fazy 0
 
 ## Kontekst i status

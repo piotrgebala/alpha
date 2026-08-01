@@ -1,3 +1,9 @@
+---
+status: active
+last_verified: 2026-08-01
+depends_on: [01_hipoteza_i_architektura.md, 02_cechy_i_leakage.md]
+---
+
 # 04 — Narzędzia zewnętrzne: decyzje i uzasadnienia
 
 Zasada wspólna dla wszystkich poniższych: **katalog wzorców do przeczytania i selektywnego
