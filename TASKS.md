@@ -62,14 +62,14 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Commit 3 — Test leakage | 3 | 0 | 0 | 3 |
 | Commit 4 — Target + walk-forward split | 5 | 1 | 0 | 6 |
 | Commit 5 — Dwa modele + backtest | 6 | 0 | 0 | 6 |
-| Commit 5.5 — Risk controller (NASTĘPNY KROK) | 0 | 0 | 5 | 5 |
-| Commit 6 — Checkpoint go/no-go | 0 | 0 | 5 | 5 |
+| Commit 5.5 — Risk controller | 5 | 0 | 0 | 5 |
+| Commit 6 — Checkpoint go/no-go (NASTĘPNY KROK) | 0 | 0 | 5 | 5 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 0 | 4 | 1 | 5 |
-| **RAZEM** | **20** | **6** | **34** | **60** |
+| **RAZEM** | **25** | **6** | **29** | **60** |
 
 ---
 
@@ -120,18 +120,18 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C5.2 | Hiperparametry startowe + `early_stopping_rounds=20` na foldzie OOS | ✅ | `DEFAULT_XGB_PARAMS` (max_depth=4, eta=0.05) + `NUM_BOOST_ROUND=200` + `EARLY_STOPPING_ROUNDS=20`, źródło prawdy `config/settings.yaml` sekcja `model`. Early stopping mierzony na `test_df` (OOS), nigdy train — potwierdzone testem `test_train_regime_model_early_stopping_engages` |
 | C5.3 | `predict_proba` (nie tylko klasa) jako `signal_confidence` | ✅ | `agents/ml_optimizer.py::predict_signal` — `signal_confidence` = predict_proba klasy argmax (nie surowa etykieta), `signal_direction` zdekodowany do {-1,0,1} przez `CLASS_TO_LABEL`. Testy: `test_predict_signal_returns_valid_direction_and_confidence`, `test_predict_signal_preserves_index_after_dropna` |
 | C5.4 | `backtest/costs.py` — taker fee, funding rate, slippage | ✅ | `round_trip_fee_cost`, `funding_cost`, `slippage_cost`, `total_round_trip_cost`. Wartości startowe w `config/settings.yaml` sekcja `costs` (taker_fee_rate=0.0005, funding_rate_8h=0.0001, slippage_bps=2). 7/7 testów przechodzi (`tests/test_costs.py`) |
-| C5.5 | `backtest/engine.py` — pętla sygnał → risk_controller → PnL z kosztami → equity curve | ✅ | Zaimplementowane: `run_backtest`. Prawdziwy `risk_controller` to Commit 5.5 — na razie wstrzyknięty `_placeholder_risk_controller` (formuła już z docs/rag/03, TYMCZASOWA, wstrzykiwana przez `risk_controller_fn`, wymienna bez zmiany pętli). Reżim filtrowany własnym boolean maskiem (nie `split_by_regime()`) żeby zachować index do lookupu ceny wyjścia dla timeoutów. Sygnały z obu reżimów sortowane po `timestamp` przed sekwencyjną symulacją equity. 2/2 testy integracyjne przechodzi (`tests/test_engine.py`) |
+| C5.5 | `backtest/engine.py` — pętla sygnał → risk_controller → PnL z kosztami → equity curve | ✅ | Zaimplementowane: `run_backtest`. Prawdziwy `risk_controller` (Commit 5.5, `agents/risk_controller.py::compute_sizing`) wstrzyknięty jako domyślny `risk_controller_fn`, wymienny bez zmiany pętli. Reżim filtrowany własnym boolean maskiem (nie `split_by_regime()`) żeby zachować index do lookupu ceny wyjścia dla timeoutów. Sygnały z obu reżimów sortowane po `timestamp` przed sekwencyjną symulacją equity. Kill-switch (`check_kill_switch`) sprawdzany co sygnał przed sizingiem. 3/3 testy integracyjne przechodzi (`tests/test_engine.py`) |
 | C5.6 | Trade journal — logowanie transakcji w ustrukturyzowanym formacie już przy pierwszej implementacji | ✅ | `run_backtest` zwraca `trades: pd.DataFrame` z `TRADE_COLUMNS` (entry/exit price, position_size, gross/net PnL, equity before/after) — ustrukturyzowany format od pierwszej implementacji |
 
-### Commit 5.5 — Risk controller (`agents/risk_controller.py`)
+### Commit 5.5 — Risk controller (`agents/risk_controller.py`) — ✅ ZROBIONE
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| C5.5.1 | Kontrakt wejścia/wyjścia (`signal_direction`/`signal_confidence`/`regime`/`atr_14`/`entry_price` → `position_size`/`stop_price`/`take_profit_price`) | ⏳ | |
-| C5.5.2 | Sizing: `size_risk`, `size_leverage`, `position_size = min(size_risk, size_leverage)` | ⏳ | Leverage cap zawsze wygrywa — CLAUDE.md zasada 5 |
-| C5.5.3 | Parametry startowe: `risk_per_trade=0.5%`, `max_leverage=3x` | ⏳ | |
-| C5.5.4 | `signal_confidence` skaluje `risk_per_trade` liniowo | ⏳ | |
-| C5.5.5 | Kill-switch (drawdown > X% od peaku → stop nowych sygnałów) | ⏳ | |
+| C5.5.1 | Kontrakt wejścia/wyjścia (`signal_direction`/`signal_confidence`/`regime`/`atr_14`/`entry_price` → `position_size`/`stop_price`/`take_profit_price`) | ✅ | Zaimplementowane: `agents/risk_controller.py::compute_sizing` — dokładnie ten kontrakt, drop-in replacement dla `risk_controller_fn` w `backtest/engine.py::run_backtest` (kwargs identyczne z docs/rag/03). Dwuwarstwowy design: `compute_position_size` (czysty numeryczny rdzeń, zwraca float) + `compute_sizing` (pełny kontrakt ze słownikiem) — pozwala hypothesis property testom trzymać się dokładnie szablonu z docs/rag/05 |
+| C5.5.2 | Sizing: `size_risk`, `size_leverage`, `position_size = min(size_risk, size_leverage)` | ✅ | Leverage cap zawsze wygrywa — CLAUDE.md zasada 5. Zaimplementowane w `compute_position_size`. Test hypothesis `test_position_size_never_exceeds_leverage_cap` (property, adaptowany z szablonu docs/rag/05) potwierdza cap niezależnie od `equity`/`atr_14`/`entry_price` |
+| C5.5.3 | Parametry startowe: `risk_per_trade=0.5%`, `max_leverage=3x` | ✅ | `RISK_PER_TRADE=0.005`, `MAX_LEVERAGE=3.0` w `agents/risk_controller.py` ("wartość startowa"), zdublowane w `config/settings.yaml` sekcja `risk` jako źródło prawdy do przyszłej kalibracji. `atr_multiplier` importowany z `agents.labeling.ATR_MULTIPLIER`, nigdy redefiniowany lokalnie — CLAUDE.md zasada 3 |
+| C5.5.4 | `signal_confidence` skaluje `risk_per_trade` liniowo | ✅ | `compute_sizing`: `effective_risk_per_trade = risk_per_trade * signal_confidence`, skaluje WYŁĄCZNIE `size_risk` — `size_leverage` zostaje twardym sufitem niezależnym od confidence (inaczej cap z C5.5.2 przestałby być prawdziwym hard cap). Test `test_compute_sizing_scales_effective_risk_by_confidence` + hypothesis `test_position_size_monotonic_nondecreasing_in_confidence` |
+| C5.5.5 | Kill-switch (drawdown > X% od peaku → stop nowych sygnałów) | ✅ | `check_kill_switch(equity, peak_equity, drawdown_threshold=0.15)` — próg **15%** (decyzja użytkownika, nie rekomendowane 20%), re-check **dynamiczny** przy każdym sygnale (nie permanentny latch — wznawia się, gdy equity odzyska się powyżej progu), fail-safe `peak_equity <= 0` → `True`. Wpięty w `backtest/engine.py::run_backtest`: sprawdzany PRZED sizingiem każdego sygnału, sygnały stłumione trafiają do `trades` z `kill_switch_active=True` (position_size=0.0, equity bez zmian) zamiast osobnej listy — jeden trade journal, nie dwa równoległe źródła prawdy. 5 testów jednostkowych + hypothesis `test_check_kill_switch_matches_drawdown_formula` + integracyjny `test_run_backtest_kill_switch_suppresses_signals_after_large_drawdown` (oversized stub risk_controller_fn wymusza drawdown deterministycznie) |
 
 ### Commit 6 — Checkpoint go/no-go
 
