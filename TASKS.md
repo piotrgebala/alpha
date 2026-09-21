@@ -93,12 +93,13 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | Commit 2.7 — Przegląd kandydatek cech: korelacje (ZROBIONE — 1 cecha odrzucona, brak sygnału cecha-target) | 2 | 0 | 0 | 2 |
 | Commit 2.8 — Formalny test OOS: adx_14 (ZROBIONE — NO-GO ogólnie, poprawa marginalna w trend) | 3 | 0 | 0 | 3 |
 | Commit 2.9 — Naprawa metodologii pomiaru, Backlog Z1–Z4/Z11–Z15 (ZROBIONE — NO-GO odporne na fold-jitter) | 4 | 0 | 0 | 4 |
+| Commit 2.10 — Historia danych 3 lata, Backlog Z5 (ZROBIONE — NO-GO na nowej bazie, niska liczba foldów strukturalna) | 3 | 0 | 0 | 3 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 2 | 2 | 1 | 5 |
-| **RAZEM** | **56** | **3** | **25** | **84** |
+| **RAZEM** | **59** | **3** | **25** | **87** |
 
 ---
 
@@ -281,6 +282,19 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | C2.9.3 | (Z13) `backtest/checkpoint_lib.py` (wspólna biblioteka, FORWARD-LOOKING — historyczne skrypty zamrożone) + `backtest/run_checkpoint_v2.py` (kanoniczny checkpoint v2) + uruchomienie na realnych danych | ✅ | WYNIK: **NO-GO w 10/10 offsetów** (mean_sharpe zakres [-15,89; -6,20], std=3,09, znak ujemny 100%) — pierwsza REALNA weryfikacja odporności werdyktu. Pooled: `range` n=223, **t=-7,15**; `trend` n=135, **t=-2,91**, N_eff=110 → **t_neff=-2,63** — zwrot per trade istotnie ujemny w OBU reżimach. Zmierzony szum σ≈3,1 → porównania wariantów o Δ<~3 nierozstrzygalne na rocznych danych (→ priorytet Z5). `run_checkpoint.py` zostaje jako zamrożony zapis Commitu 6 |
 | C2.9.4 | Higiena: (Z11) `candle_minutes` przewleczone do `total_round_trip_cost` + test integracyjny; (Z12) lint 0 błędów (unused numpy, 3×E741); (Z14) README odświeżone (status, struktura z `runs/`); (Z15) test spójności registry↔kod czyta YAML; (Z4) kolumna "Warianty" + suma w `runs/INDEX.md` | ✅ | Pełny zestaw: **139/139 testów przechodzi** (128 + 11: 2 labeling + 5 metrics + 3 engine + 1 zamiana testu registry) |
 
+### Commit 2.10 — Wydłużenie historii danych do 3 lat (Backlog Z5) — ✅ ZROBIONE (NO-GO na nowej bazie; niska liczba ważnych foldów okazała się strukturalna)
+
+> Zakres: Backlog Z5, wykonane na maszynie użytkownika (Binance dostępne). Decyzja użytkownika:
+> **3 lata** (2023-07-01 → 2026-07-01), `end` bez zmian. Zero zmian w hipotezie/cechach/progach/
+> kosztach/modelu — wyłącznie dane + utwardzenie fetchu. To NOWA BAZA checkpointu, nie porównanie
+> 1:1 z C6–C2.9. Pełny wynik: `runs/2026-09-21_c2.10-extended-history-z5.md`.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| C2.10.1 | Utwardzenie `data/fetch_ohlcv.py`: `_fetch_page_with_retry` (backoff wykładniczy na `ccxt.NetworkError`, max 5 prób; `ExchangeError` bez retry) + log postępu; 4 testy (Warstwa 1, stub bez sieci) | ✅ | Powód: ~316 sekwencyjnych stron bez retry, zapis dopiero po pętli — jeden timeout tracił całość. Semantyka cache/nazwy pliku NIEZMIENIONA (nazwa koduje zakres → nowy zakres = nowy plik). Pełny zestaw: **143/143** (139 + 4). Ruff nieuruchomiony — brak na tej maszynie |
+| C2.10.2 | `data.start` → 2023-07-01 w config; `py -m data.fetch_ohlcv`; weryfikacja integralności PRZED checkpointem | ✅ | **315 648 świec = 1096×288, zero dziur/duplikatów/NaN**, bez ani jednego retry (~2 min). Overlap 2025-07→2026-07 vs stary plik: 105 120 wierszy, max \|Δ\|=0 na wszystkich kolumnach, `equals=True`. Stary parquet ZOSTAJE jako zamrożone źródło C6–C2.9 |
+| C2.10.3 | `py -m backtest.run_checkpoint_v2` (pełny sweep) na nowej bazie + diagnostyka udziału reżimów i bramki kosztowej z `folds_summary` | ✅ | WYNIK: **NO-GO, 21/144 ważnych foldów** (14,6% — jak 15,0% na roku), mean_sharpe -12,39. Pooled: `range` n=530 **t=-10,47** (N_eff=261, t_neff -7,34); `trend` n=395 **t=-5,51** (N_eff=213, t_neff -4,04) — istotnie ujemny zwrot per trade w obu reżimach z dużym zapasem. Fold-jitter 10/10 ujemne, σ≈2,5 bez outliera (offset 9: -189 — artefakt annualizowanego per-fold Sharpe przy n≈kilka; statystyką nośną są pooled t). **Odkrycie strukturalne:** `trend`=0,53% świec (jak na roku) → 61/72 foldów pominiętych; bramka kosztowa blokuje **98,0% sygnałów `range`** (61 313/62 553) → 60/72 foldów z zerem transakcji. Dłuższa historia tego nie naprawia → Z7 (reguła) / Z6 (koszty) / Z10 |
+
 ---
 
 ## Faza 1 — regime router, funding rate, Compliance Gate
@@ -354,11 +368,13 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > realizacji; szczegóły każdej rundy realizacyjnej trafiają jak zwykle do sekcji Commitów +
 > `runs/`.
 >
-> **Stan po Commicie 2.9 (2026-09-21):** Z1–Z4 i Z11–Z15 zamknięte. Otwarte: **Z5** (fetch
-> 3–5 lat historii — wymaga Twojej maszyny; po C2.9 to najważniejsze odblokowanie, bo
-> zmierzony szum fold-jitter σ≈3,1 czyni porównania wariantów o Δ<~3 nierozstrzygalnymi na
-> rocznych danych), **Z6** (weryfikacja kosztów), **Z7/Z8/Z9** (eksperymenty) oraz **Z10**
-> (decyzja strategiczna — przy Tobie; pooled t-staty z C2.9 to najlepszy materiał do niej).
+> **Stan po Commicie 2.10 (2026-09-21):** Z1–Z5 i Z11–Z15 zamknięte. **Z5 zrealizowane na
+> Twojej maszynie** (3 lata, 315 648 świec, zero dziur): NO-GO z twardszymi pooled t-statami
+> (range -10,47, trend -5,51), ale odsetek ważnych foldów NIE wzrósł (14,6%) — problem jest
+> strukturalny: `trend`=0,53% świec, bramka kosztowa blokuje 98% sygnałów `range`. Otwarte:
+> **Z6** (koszty — przy 98% blokady bramka jest werdyktem o kosztach), **Z7** (reguła reżimu —
+> adresuje pusty `trend`), **Z8/Z9** (Z9 teraz wykonalne z tej maszyny) oraz **Z10** (decyzja
+> strategiczna — przy Tobie; `runs/2026-09-21_c2.10-extended-history-z5.md`, sekcja Rekomendacja).
 
 ### A. Wiarygodność pomiaru
 
@@ -373,7 +389,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| Z5 | **Wydłużyć historię danych do 3–5 lat** | ⏳ | Chroniczny problem serii C2.5–C2.8: 4–6 ważnych foldów na 40. Binance USDS-M ma dane od 2019 — 4× więcej foldów, pokrycie hossy 2021/bessy 2022. Fetch WYMAGA maszyny użytkownika (sandbox nie ma dostępu do Binance) — `python -m data.fetch_ohlcv` po zmianie `data.start` w config |
+| Z5 | **Wydłużyć historię danych do 3–5 lat** | ✅ C2.10 | Zrealizowane na maszynie użytkownika (2026-09-21): decyzja użytkownika **3 lata** (2023-07-01 → 2026-07-01), `data.start` w config, `py -m data.fetch_ohlcv` → `data/raw/BTC-USDT-USDT_5m_20230701T000000Z_20260701T000000Z.parquet`, **315 648 świec = 1096×288, zero dziur**, overlap 2025-07→2026-07 identyczny co do bajtu ze starym plikiem (który ZOSTAJE jako zamrożone źródło C6–C2.9). Pętla fetch dostała retry/backoff na `ccxt.NetworkError` (+4 testy). Wynik checkpointu v2 na nowej bazie: sekcja Commit 2.10 + `runs/2026-09-21_c2.10-extended-history-z5.md` |
 | Z6 | Zweryfikować założenia kosztowe (kandydat (c) z §7 IMPLEMENTATION_PLAN.md) | ⏳ | Koszty są OSIĄ werdyktu od Commitu 2d, a `taker=0.05%`/`slippage=2bps`/`funding=0.01%/8h` to wartości startowe. Realny tier fee, udział maker (0.02%), realne dane funding |
 | Z7 | Reguła regime na `adx_14` zamiast/obok dyskretnej `direction_persistence_10` | ⏳ | Osobny, z góry zarejestrowany eksperyment NA REGULE (nie modelu). Motywacja z trzech niezależnych rund: dyskretność persistence (C2.5), corr adx↔persistence=+0,07 (C2.7), błędna klasyfikacja trendu spadkowego jako `range` (C2c) |
 | Z8 | Rozdzielić timeframe od horyzontu trzymania | ⏳ | Nierozdzielony confound C2.6: `VERTICAL_BARRIER_CANDLES=12` = 1h @ 5m, ale 48h @ 4h. Przeliczyć proporcjonalnie jako jawnie nazwany eksperyment |

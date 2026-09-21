@@ -6,10 +6,19 @@ niedeterministyczne w CI). Testują _clean_ohlcv i find_gaps na syntetycznych
 danych — to jest logika, którą faktycznie da się i trzeba zweryfikować.
 """
 
+from pathlib import Path
+
+import ccxt
 import pandas as pd
 import pytest
 
-from data.fetch_ohlcv import _clean_ohlcv, find_gaps, resample_ohlcv
+from data.fetch_ohlcv import (
+    _cache_path,
+    _clean_ohlcv,
+    _fetch_page_with_retry,
+    find_gaps,
+    resample_ohlcv,
+)
 
 
 def _make_df(timestamps: list[str]) -> pd.DataFrame:
@@ -164,3 +173,61 @@ def test_resample_ohlcv_rejects_unsupported_timeframe():
     df = _make_5m_ohlcv_with_known_values(n_hours=1)
     with pytest.raises(ValueError):
         resample_ohlcv(df, "15m")
+
+
+# --- Commit 2.10 (Z5): retry na błędy sieci + nazwa pliku cache ---
+
+
+class _FlakyExchange:
+    """Stub: rzuca NetworkError `n_failures` razy, potem zwraca stałą stronę świec."""
+
+    def __init__(self, n_failures: int):
+        self.n_failures = n_failures
+        self.calls = 0
+
+    def fetch_ohlcv(self, symbol, timeframe, since=None, limit=None):
+        self.calls += 1
+        if self.calls <= self.n_failures:
+            raise ccxt.RequestTimeout("timeout")
+        return [[since, 1.0, 2.0, 0.5, 1.5, 10.0]]
+
+
+def test_fetch_page_retries_on_network_error_then_succeeds(monkeypatch):
+    monkeypatch.setattr("data.fetch_ohlcv.time.sleep", lambda _s: None)
+    ex = _FlakyExchange(n_failures=2)
+    page = _fetch_page_with_retry(ex, "BTC/USDT:USDT", "5m", since=0, max_retries=5)
+    assert page == [[0, 1.0, 2.0, 0.5, 1.5, 10.0]]
+    assert ex.calls == 3
+
+
+def test_fetch_page_raises_after_max_retries(monkeypatch):
+    monkeypatch.setattr("data.fetch_ohlcv.time.sleep", lambda _s: None)
+    ex = _FlakyExchange(n_failures=10)
+    with pytest.raises(ccxt.NetworkError):
+        _fetch_page_with_retry(ex, "BTC/USDT:USDT", "5m", since=0, max_retries=3)
+    assert ex.calls == 3
+
+
+def test_fetch_page_does_not_retry_exchange_error(monkeypatch):
+    """Zły symbol/konfiguracja to nie błąd sieci — retry tylko maskowałby problem."""
+    monkeypatch.setattr("data.fetch_ohlcv.time.sleep", lambda _s: None)
+
+    class _BadSymbolExchange:
+        calls = 0
+
+        def fetch_ohlcv(self, *args, **kwargs):
+            self.calls += 1
+            raise ccxt.BadSymbol("no such market")
+
+    ex = _BadSymbolExchange()
+    with pytest.raises(ccxt.BadSymbol):
+        _fetch_page_with_retry(ex, "XXX", "5m", since=0, max_retries=5)
+    assert ex.calls == 1
+
+
+def test_cache_path_encodes_symbol_timeframe_and_range():
+    """Nazwa pliku koduje pełny zakres — zmiana `data.start` daje NOWY plik, nie nadpisuje."""
+    p = _cache_path("data/raw", "BTC/USDT:USDT", "5m", "2023-07-01T00:00:00Z", "2026-07-01T00:00:00Z")
+    assert p == Path("data/raw") / "BTC-USDT-USDT_5m_20230701T000000Z_20260701T000000Z.parquet"
+    p_old = _cache_path("data/raw", "BTC/USDT:USDT", "5m", "2025-07-01T00:00:00Z", "2026-07-01T00:00:00Z")
+    assert p_old != p

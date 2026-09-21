@@ -21,9 +21,11 @@ metodologicznie czystych testów pojedynczych zmian (Commity 2c–2.8: naprawa k
 bramka kosztowa, kalibracja progów regime, odporność na timeframe 1h/4h, screening korelacji
 cech, formalny test OOS `adx_14`) — wszystkie w paśmie "brak silnego sygnału". Commit 2.9
 naprawił metodologię pomiaru (fold-jitter zamiast pustego sweepu seedów, t-stat/N_eff/pooled
-Sharpe) i potwierdził NO-GO jako odporne na wyrównanie foldów (100% offsetów ujemne). Stan
-testów: 139/139. Surowe wyniki każdej rundy: katalog [`runs/`](runs/INDEX.md). Otwarta
-decyzja strategiczna i backlog poprawek: `TASKS.md` (sekcja Backlog, Z1–Z15).
+Sharpe) i potwierdził NO-GO jako odporne na wyrównanie foldów (100% offsetów ujemne). Commit
+2.10 (Backlog Z5) wydłużył historię danych do 3 lat (2023-07-01 → 2026-06-30, 315 648 świec 5m,
+bez dziur) i ustanowił na niej NOWĄ bazę checkpointu — wyniki C6–C2.9 pozostają zamrożone na
+starym oknie. Stan testów: 143/143. Surowe wyniki każdej rundy: katalog [`runs/`](runs/INDEX.md).
+Otwarta decyzja strategiczna i backlog poprawek: `TASKS.md` (sekcja Backlog, Z1–Z15).
 
 Pełny, aktualny status: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 

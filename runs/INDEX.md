@@ -21,8 +21,13 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 | C2.8 | 2026-09-21 | [2026-09-21_c2.8-adx14-oos-evaluation.md](2026-09-21_c2.8-adx14-oos-evaluation.md) | Formalny test OOS: `adx_14` dodane do `MOMENTUM_FEATURES` (Test 1/trend), `REVERSION_FEATURES` niezmienione — pełny walk-forward + 10-seed sweep, baseline vs kandydat | 1 | **NO-GO (ogólnie, oba warianty)** — `trend` poprawia się z NO-GO do WARUNKOWY (mean_sharpe -8,46→-7,11), ale efekt opiera się na 1 foldzie ledwo przekraczającym zero (n_valid_folds=4); `range` bez zmian. Decyzja o promocji do `MOMENTUM_FEATURES` przy użytkowniku. **Aktualizacja C2.9:** poprawa +0,61 to ~0,2σ zmierzonego szumu fold-jitter — nierozstrzygalna |
 | C2.9 | 2026-09-21 | [2026-09-21_c2.9-measurement-methodology.md](2026-09-21_c2.9-measurement-methodology.md) | Naprawa metodologii pomiaru (Backlog Z1–Z4+Z13): sweep fold-jitter (offset startu okien walk-forward 0–9 dni) ZAMIAST pustego sweepu seedów (XGBoost deterministyczny — std=0,0000 nic nie mierzył), per-fold t-stat, pooled Sharpe per regime, N_eff wpięte do raportu | 0 (diagnostyka/metodologia) | **NO-GO odporne na fold-jitter: 10/10 offsetów ujemne** (zakres [-15,9; -6,2], σ≈3,1). Pooled: zwrot per trade **istotnie ujemny w OBU reżimach** (range t=-7,15; trend t=-2,91, po N_eff -2,63). Zmierzony szum σ≈3,1 czyni porównania wariantów o Δ<~3 nierozstrzygalnymi na rocznych danych → priorytet Z5 (dłuższa historia) |
 
+| C2.10 | 2026-09-21 | [2026-09-21_c2.10-extended-history-z5.md](2026-09-21_c2.10-extended-history-z5.md) | Backlog Z5: historia danych wydłużona do 3 lat (2023-07-01→2026-07-01, 315 648 świec 5m, zero dziur, overlap ze starym oknem identyczny co do bajtu) — NOWA BAZA checkpointu v2 (kanoniczny przebieg + sweep fold-jitter); pipeline niezmieniony | 0 (nowa baza danych) | **NO-GO, 21/144 ważnych foldów** (odsetek 14,6% — jak na roku: strukturalnie, nie ilościowo). Pooled t-stat **range -10,47 / trend -5,51** (N_eff: -7,34 / -4,04) — istotnie ujemny zwrot per trade w obu reżimach z dużym zapasem. Fold-jitter 10/10 ujemne, σ≈2,5 bez outliera (offset 9: -189, artefakt per-fold Sharpe przy n≈kilka). Odkrycie: bramka kosztowa blokuje **98% sygnałów `range`**, `trend`=0,53% świec → 61/72 foldów pominiętych — dłuższa historia tego nie naprawi (→ Z7/Z6/Z10) |
+
 **Suma wariantów hipotezy przetestowanych na tych samych danych (2025-07→2026-07 BTC 5m): 7**
 (4 progi + 2 timeframe'y + 1 cecha), plus 34 obejrzane korelacje opisowe (C2.7).
+
+**Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
+per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
 
 ## Jak dodać nowy wpis
 

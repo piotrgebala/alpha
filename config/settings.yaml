@@ -11,7 +11,10 @@ data:
     - "BNB/USDT:USDT"
   primary_symbol: "BTC/USDT:USDT"   # jedyny używany do Commit 1-6; reszta niezaangażowana do dalszej decyzji
   timeframe: "5m"
-  start: "2025-07-01T00:00:00Z"     # ostatnie ~12 miesięcy
+  # Commit 2.10 (Backlog Z5): 3 lata historii. Poprzednie okno 2025-07-01→2026-07-01 to
+  # zamrożone źródło wyników C6–C2.9 (runs/); jego parquet ZOSTAJE w data/raw nietknięty
+  # (nazwa pliku koduje zakres, więc nowy zakres = nowy plik, bez nadpisywania).
+  start: "2023-07-01T00:00:00Z"
   end: "2026-07-01T00:00:00Z"
   cache_dir: "data/raw"
 
