@@ -19,13 +19,17 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from backtest.metrics import (
+    MIN_TRADES_FOR_HIT_RATE_CI,
     MIN_TRADES_FOR_N_EFF,
+    break_even_hit_rate,
     classify_checkpoint,
     compute_fold_metrics,
+    compute_hit_rate,
     compute_sharpe_ratio,
     compute_t_stat,
     compute_trade_returns,
     summarize_by_regime,
+    summarize_edge_by_regime,
     summarize_pooled_by_regime,
 )
 
@@ -510,3 +514,171 @@ def test_summarize_pooled_by_regime_n_eff_nan_below_min_trades() -> None:
     assert math.isnan(row["t_stat_neff"])
     # t_stat na pełnym n nadal policzalne.
     assert not math.isnan(row["t_stat"])
+
+
+# ---------------------------------------------------------------------------
+# Commit 2.11: instrumentacja edge'u — hit rate, break-even, rozbicie (2p-1)*B vs C
+# ---------------------------------------------------------------------------
+
+
+def _make_edge_trades(rows: list[dict]) -> pd.DataFrame:
+    """Trades z kolumnami czytanymi przez compute_hit_rate/summarize_edge_by_regime."""
+    defaults = {
+        "regime": "range",
+        "fold_idx": 0,
+        "position_size": 1.0,
+        "entry_price": 100.0,
+        "exit_price": 101.0,
+        "gross_pnl": 1.0,
+        "cost": 0.14,
+        "kill_switch_active": False,
+    }
+    if not rows:
+        # Pusty journal ma w engine.py pełen zestaw TRADE_COLUMNS (pd.DataFrame(columns=...)),
+        # więc pusty frame BEZ kolumn byłby artefaktem testu, nie realnym wejściem.
+        return pd.DataFrame(columns=list(defaults))
+    return pd.DataFrame([{**defaults, **row} for row in rows])
+
+
+def test_break_even_hit_rate_matches_manual_formula() -> None:
+    # p = 0.5 * (1 + C/B); C=0.0014, B=0.0028 -> 0.5 * 1.5 = 0.75
+    assert break_even_hit_rate(0.0014, 0.0028) == pytest.approx(0.75)
+    # bariera == koszt -> potrzeba 100% trafności
+    assert break_even_hit_rate(0.0014, 0.0014) == pytest.approx(1.0)
+    # koszt zerowy -> rzut monetą wystarcza
+    assert break_even_hit_rate(0.0, 0.0028) == pytest.approx(0.5)
+
+
+def test_break_even_hit_rate_reproduces_c2_10_range_diagnosis() -> None:
+    """Regresja na realnym pomiarze z C2.10: range B=0.2707%, C=0.1399% -> ~75.8%."""
+    assert break_even_hit_rate(0.001399, 0.002707) == pytest.approx(0.7584, abs=1e-3)
+
+
+def test_break_even_hit_rate_nan_on_degenerate_barrier() -> None:
+    assert math.isnan(break_even_hit_rate(0.0014, 0.0))
+    assert math.isnan(break_even_hit_rate(0.0014, -0.001))
+    assert math.isnan(break_even_hit_rate(0.0014, float("nan")))
+    assert math.isnan(break_even_hit_rate(float("nan"), 0.0028))
+
+
+def test_compute_hit_rate_counts_gross_wins_not_net() -> None:
+    """Trafność liczy się z gross_pnl — netto mieszałoby jakość sygnału z kosztem."""
+    trades = _make_edge_trades(
+        [{"gross_pnl": 10.0, "net_pnl": -1.0}] * 3 + [{"gross_pnl": -10.0, "net_pnl": -20.0}]
+    )
+    result = compute_hit_rate(trades)
+    assert result["n_trades"] == 4
+    # 3/4 wygranych brutto, mimo że WSZYSTKIE są stratne netto.
+    assert result["hit_rate"] == pytest.approx(0.75)
+
+
+def test_compute_hit_rate_excludes_kill_switch_rows() -> None:
+    trades = _make_edge_trades(
+        [
+            {"gross_pnl": 10.0},
+            {"gross_pnl": 10.0},
+            {"gross_pnl": 0.0, "kill_switch_active": True},
+            {"gross_pnl": 0.0, "kill_switch_active": True},
+        ]
+    )
+    result = compute_hit_rate(trades)
+    assert result["n_trades"] == 2
+    assert result["hit_rate"] == pytest.approx(1.0)
+
+
+def test_compute_hit_rate_empty_is_nan_not_zero() -> None:
+    trades = _make_edge_trades([{"gross_pnl": 0.0, "kill_switch_active": True}])
+    result = compute_hit_rate(trades)
+    assert result["n_trades"] == 0
+    assert math.isnan(result["hit_rate"])
+    assert math.isnan(result["z_stat"])
+
+
+def test_compute_hit_rate_ci_suppressed_below_min_trades() -> None:
+    """Poniżej progu: sam ułamek tak, ale CI/z NIE — aproksymacja normalna nie działa."""
+    few = _make_edge_trades([{"gross_pnl": 1.0}] * (MIN_TRADES_FOR_HIT_RATE_CI - 1))
+    result = compute_hit_rate(few)
+    assert result["hit_rate"] == pytest.approx(1.0)
+    assert math.isnan(result["z_stat"])
+    assert math.isnan(result["ci_low"])
+
+    enough = _make_edge_trades([{"gross_pnl": 1.0}] * MIN_TRADES_FOR_HIT_RATE_CI)
+    assert not math.isnan(compute_hit_rate(enough)["z_stat"])
+
+
+def test_compute_hit_rate_z_stat_is_zero_for_coin_flip() -> None:
+    trades = _make_edge_trades([{"gross_pnl": 1.0}] * 50 + [{"gross_pnl": -1.0}] * 50)
+    result = compute_hit_rate(trades)
+    assert result["hit_rate"] == pytest.approx(0.5)
+    assert result["z_stat"] == pytest.approx(0.0)
+
+
+def test_summarize_edge_by_regime_splits_inequality_into_terms() -> None:
+    """B, C i break_even_p liczone z kolumn journalu; margin = hit_rate - break_even_p."""
+    # entry=100, exit=101 -> B = 1%; notional=100, cost=0.25 -> C = 0.25%.
+    # break_even_p = 0.5*(1 + 0.25/1.0) = 0.625.
+    trades = _make_edge_trades(
+        [{"gross_pnl": 1.0, "cost": 0.25}] * 15 + [{"gross_pnl": -1.0, "cost": 0.25}] * 5
+    )
+    row = summarize_edge_by_regime(trades).iloc[0]
+    assert row["barrier_pct"] == pytest.approx(0.01)
+    assert row["cost_pct"] == pytest.approx(0.0025)
+    assert row["break_even_p"] == pytest.approx(0.625)
+    assert row["hit_rate"] == pytest.approx(0.75)
+    assert row["margin"] == pytest.approx(0.125)
+
+
+def test_summarize_edge_by_regime_one_row_per_regime() -> None:
+    trades = _make_edge_trades(
+        [{"regime": "range", "gross_pnl": 1.0}] * 3 + [{"regime": "trend", "gross_pnl": -1.0}] * 2
+    )
+    summary = summarize_edge_by_regime(trades).set_index("regime")
+    assert sorted(summary.index) == ["range", "trend"]
+    assert summary.loc["range", "hit_rate"] == pytest.approx(1.0)
+    assert summary.loc["trend", "hit_rate"] == pytest.approx(0.0)
+
+
+def test_summarize_edge_by_regime_survives_zero_width_barrier() -> None:
+    """exit == entry (bariera zerowa) nie może wysadzić raportu ani dać inf."""
+    trades = _make_edge_trades([{"gross_pnl": -1.0, "exit_price": 100.0}] * 5)
+    row = summarize_edge_by_regime(trades).iloc[0]
+    assert row["barrier_pct"] == pytest.approx(0.0)
+    assert math.isnan(row["break_even_p"])
+    assert math.isnan(row["margin"])
+
+
+@given(
+    cost=st.floats(min_value=1e-6, max_value=0.05),
+    barrier=st.floats(min_value=1e-6, max_value=0.5),
+)
+@settings(max_examples=200, deadline=None)
+def test_break_even_always_above_half_for_positive_cost(cost: float, barrier: float) -> None:
+    """Przy dodatnim koszcie rzut monetą NIGDY nie wystarcza."""
+    p = break_even_hit_rate(cost, barrier)
+    assert p > 0.5
+
+
+@given(
+    cost_low=st.floats(min_value=1e-6, max_value=0.01),
+    extra=st.floats(min_value=1e-6, max_value=0.01),
+    barrier=st.floats(min_value=1e-3, max_value=0.5),
+)
+@settings(max_examples=200, deadline=None)
+def test_break_even_monotonic_in_cost(cost_low: float, extra: float, barrier: float) -> None:
+    """Droższe wykonanie => wymagana wyższa trafność. Niezmiennik kierunku, nie wartości."""
+    assert break_even_hit_rate(cost_low + extra, barrier) > break_even_hit_rate(cost_low, barrier)
+
+
+@given(n_wins=st.integers(min_value=0, max_value=60), n_losses=st.integers(min_value=0, max_value=60))
+@settings(max_examples=100, deadline=None)
+def test_hit_rate_within_unit_interval_and_matches_count(n_wins: int, n_losses: int) -> None:
+    trades = _make_edge_trades(
+        [{"gross_pnl": 1.0}] * n_wins + [{"gross_pnl": -1.0}] * n_losses
+    )
+    result = compute_hit_rate(trades)
+    assert result["n_trades"] == n_wins + n_losses
+    if n_wins + n_losses == 0:
+        assert math.isnan(result["hit_rate"])
+    else:
+        assert 0.0 <= result["hit_rate"] <= 1.0
+        assert result["hit_rate"] == pytest.approx(n_wins / (n_wins + n_losses))

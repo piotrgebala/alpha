@@ -944,6 +944,49 @@ maszyny użytkownika) i decyzja Z10.
 
 ---
 
+### Commit 2.11 — Instrumentacja edge'u `[ZROBIONE — blokada jest w geometrii wypłaty, nie w kierunku sygnału]`
+
+**Kontekst (2026-09-21):** Runda 1 z czterorundowego programu „droga do GO" uzgodnionego
+z użytkownikiem (instrumentacja → koszty Z6 → próg pewności → reguła reżimu Z7; pre-rejestrowana
+reguła STOP po Rundzie 3). Powód rundy: werdykt C2.10 („brak edge'u") **mieszał dwie różne
+rzeczy**. Cała klasyfikacja liczy się z `net_pnl`, a `gross_pnl` — jedyna kolumna mówiąca
+o jakości samego sygnału — była zapisywana w journalu i **nigdy nieczytana przez `metrics.py`**.
+
+Bariery triple-barrier są symetryczne (±`ATR_MULTIPLIER`×ATR, odtwarzane przez
+`engine._resolve_exit_price`), więc wypłata jest w pełni określona przez zgodność kierunku
+z etykietą, a werdykt redukuje się do jednej nierówności:
+
+```
+(2p − 1) · B  >  C     p = trafność kierunku, B = szerokość bariery, C = koszt round-trip
+```
+
+**Co zrobiono:** `backtest/metrics.py` — `break_even_hit_rate` (= 0,5·(1+C/B)), `compute_hit_rate`
+(trafność z `gross_pnl`, z-stat wobec H0: p=0,5, CI Walda, próg raportowania
+`MIN_TRADES_FOR_HIT_RATE_CI=20`), `summarize_edge_by_regime` (rozbicie na człony + margines);
+wpięte do `checkpoint_lib.run_and_summarize` (`edge_per_regime`) i `run_checkpoint_v2`.
+**Kryteria GO/WARUNKOWY/NO-GO NIEZMIENIONE** — nowe miary to diagnostyka obok werdyktu,
+dokładnie jak Z2/Z3 w C2.9. Testy: **157/157** (143 + 14: 11 unit + 3 `hypothesis`).
+
+**Wynik (`runs/2026-09-21_c2.11-edge-instrumentation.md`)** — werdykt bit-identyczny z C2.10
+(`mean_sharpe = -12,392006781796571`, 21/144), co jest regresją baseline'u potwierdzającą, że
+runda jest czysto addytywna:
+
+| regime | n | hit_rate | z | B | C | break_even_p | **margin** |
+|---|---|---|---|---|---|---|---|
+| `range` | 530 | 51,89% | +0,87 | 0,2707% | 0,1399% | **75,83%** | **−23,94 pp** |
+| `trend` | 395 | 50,63% | +0,25 | 0,4719% | 0,1402% | **64,86%** | **−14,23 pp** |
+
+**Wniosek C2.11:** trafność kierunku jest nieistotnie różna od rzutu monetą, ale **dodatnia
+w obu reżimach — model nie jest odwrócony**. Jednocześnie wymagana trafność to 75,8%/64,9%,
+więc nawet górny kraniec CI (56,1%/55,6%) zostawia ~20 pp / ~9 pp pod progiem opłacalności.
+**NO-GO jest przesądzone arytmetycznie geometrią wypłaty, nie błędem kierunku** — to rozróżnienie
+zmienia kierunek dalszej pracy: domknąć lukę może tylko zmiana C (koszt), B (geometria) albo
+selekcja podzbioru o wyższym p, a nie „lepszy model" w realistycznym zakresie.
+
+**Status:** ZROBIONE. Następna: Runda 2 (C2.12 / Backlog Z6) — realistyczny model wykonania.
+
+---
+
 ## 6. Zweryfikowane empirycznie (nie tylko zaplanowane)
 
 - TA-Lib (0.7.0) instaluje się i liczy ATR/RSI/EMA poprawnie (zweryfikowane na random walk).

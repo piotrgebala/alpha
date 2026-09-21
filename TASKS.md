@@ -94,12 +94,13 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | Commit 2.8 — Formalny test OOS: adx_14 (ZROBIONE — NO-GO ogólnie, poprawa marginalna w trend) | 3 | 0 | 0 | 3 |
 | Commit 2.9 — Naprawa metodologii pomiaru, Backlog Z1–Z4/Z11–Z15 (ZROBIONE — NO-GO odporne na fold-jitter) | 4 | 0 | 0 | 4 |
 | Commit 2.10 — Historia danych 3 lata, Backlog Z5 (ZROBIONE — NO-GO na nowej bazie, niska liczba foldów strukturalna) | 3 | 0 | 0 | 3 |
+| Commit 2.11 — Instrumentacja edge'u, Runda 1/4 „droga do GO" (ZROBIONE — blokada w geometrii wypłaty, nie w kierunku sygnału) | 1 | 0 | 0 | 1 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 2 | 2 | 1 | 5 |
-| **RAZEM** | **59** | **3** | **25** | **87** |
+| **RAZEM** | **60** | **3** | **25** | **88** |
 
 ---
 
@@ -294,6 +295,19 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | C2.10.1 | Utwardzenie `data/fetch_ohlcv.py`: `_fetch_page_with_retry` (backoff wykładniczy na `ccxt.NetworkError`, max 5 prób; `ExchangeError` bez retry) + log postępu; 4 testy (Warstwa 1, stub bez sieci) | ✅ | Powód: ~316 sekwencyjnych stron bez retry, zapis dopiero po pętli — jeden timeout tracił całość. Semantyka cache/nazwy pliku NIEZMIENIONA (nazwa koduje zakres → nowy zakres = nowy plik). Pełny zestaw: **143/143** (139 + 4). Ruff nieuruchomiony — brak na tej maszynie |
 | C2.10.2 | `data.start` → 2023-07-01 w config; `py -m data.fetch_ohlcv`; weryfikacja integralności PRZED checkpointem | ✅ | **315 648 świec = 1096×288, zero dziur/duplikatów/NaN**, bez ani jednego retry (~2 min). Overlap 2025-07→2026-07 vs stary plik: 105 120 wierszy, max \|Δ\|=0 na wszystkich kolumnach, `equals=True`. Stary parquet ZOSTAJE jako zamrożone źródło C6–C2.9 |
 | C2.10.3 | `py -m backtest.run_checkpoint_v2` (pełny sweep) na nowej bazie + diagnostyka udziału reżimów i bramki kosztowej z `folds_summary` | ✅ | WYNIK: **NO-GO, 21/144 ważnych foldów** (14,6% — jak 15,0% na roku), mean_sharpe -12,39. Pooled: `range` n=530 **t=-10,47** (N_eff=261, t_neff -7,34); `trend` n=395 **t=-5,51** (N_eff=213, t_neff -4,04) — istotnie ujemny zwrot per trade w obu reżimach z dużym zapasem. Fold-jitter 10/10 ujemne, σ≈2,5 bez outliera (offset 9: -189 — artefakt annualizowanego per-fold Sharpe przy n≈kilka; statystyką nośną są pooled t). **Odkrycie strukturalne:** `trend`=0,53% świec (jak na roku) → 61/72 foldów pominiętych; bramka kosztowa blokuje **98,0% sygnałów `range`** (61 313/62 553) → 60/72 foldów z zerem transakcji. Dłuższa historia tego nie naprawia → Z7 (reguła) / Z6 (koszty) / Z10 |
+
+---
+
+### Commit 2.11 — Instrumentacja edge'u (Runda 1/4 programu „droga do GO") — ✅ ZROBIONE (blokada w geometrii wypłaty, nie w kierunku sygnału)
+
+> Zakres: pierwsza runda czterorundowego programu uzgodnionego z użytkownikiem 2026-09-21
+> (instrumentacja → koszty Z6 → próg pewności → reguła reżimu Z7, z pre-rejestrowaną regułą
+> STOP po Rundzie 3). Zero zmian w pipeline'ie — wyłącznie przyrząd pomiarowy. Pełny wynik:
+> `runs/2026-09-21_c2.11-edge-instrumentation.md`.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| C2.11.1 | `break_even_hit_rate`, `compute_hit_rate`, `summarize_edge_by_regime` w `backtest/metrics.py` + wpięcie do `checkpoint_lib.run_and_summarize` / `run_checkpoint_v2` | ✅ | Motywacja: cały werdykt liczy się z `net_pnl`, a `gross_pnl` (jedyna miara jakości SYGNAŁU) było zapisywane i nigdy nieczytane przez `metrics.py`; trafność istniała tylko jako wyrażenia ad hoc w skryptach diagnostycznych, bez testów. Werdykt redukuje się do **(2p−1)·B > C** — raport pokazuje teraz wszystkie trzy człony + margines. Kryteria GO/NO-GO z docs/rag/03 **NIEZMIENIONE** (diagnostyka obok werdyktu, jak Z2/Z3). Testy: **157/157** (143 + 14: 11 unit + 3 `hypothesis`). WYNIK: werdykt bit-identyczny z C2.10 (regresja baseline'u); trafność **51,9%/50,6%** (z=+0,87/+0,25) vs wymagane **75,8%/64,9%** → luka **−23,9 pp / −14,2 pp** |
 
 ---
 

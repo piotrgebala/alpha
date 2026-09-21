@@ -52,6 +52,13 @@ DAYS_PER_YEAR = 365.25
 # MIN_TRAIN_ROWS w backtest/engine.py i progi klasyfikacji niżej).
 MIN_TRADES_FOR_N_EFF = 10
 
+# Commit 2.11: minimalna liczba transakcji, przy której raportujemy z-stat i przedział
+# ufności trafności kierunku. Poniżej tego progu CI jest szersze niż cały sensowny zakres
+# p (aproksymacja normalna dwumianu zawodzi przy n*p < 5), więc liczba udawałaby precyzję,
+# której nie ma. Sama `hit_rate` jest raportowana zawsze — to surowy ułamek, nie estymator
+# z niepewnością. Próg metodologiczny raportowania, NIE parametr strategii.
+MIN_TRADES_FOR_HIT_RATE_CI = 20
+
 # Progi klasyfikacji checkpointu — docs/rag/03_ryzyko_i_sizing.md, tabela GO/WARUNKOWY/NO-GO.
 SHARPE_THRESHOLD = 0.5
 GO_FRACTION = 0.6
@@ -305,6 +312,137 @@ def classify_checkpoint(
         "fraction_positive_sign": fraction_positive_sign,
         "mean_sharpe": mean_sharpe,
     }
+
+
+def break_even_hit_rate(cost_fraction: float, barrier_fraction: float) -> float:
+    """
+    Commit 2.11 (instrumentacja edge'u): jaka trafność kierunku jest potrzebna, żeby
+    wyjść na zero przy SYMETRYCZNYCH barierach ±B i koszcie round-trip C.
+
+        p * B - (1 - p) * B = C   =>   p = 0.5 * (1 + C / B)
+
+    Symetria barier nie jest założeniem upraszczającym, tylko właściwością pipeline'u:
+    `backtest.engine._resolve_exit_price` odtwarza barierę triple-barrier (±ATR_MULTIPLIER
+    * atr_14), więc wypłata transakcji jest w pełni określona przez to, czy kierunek
+    zgadzał się z etykietą. Stąd cały werdykt GO/NO-GO redukuje się do nierówności
+    (2p - 1) * B > C — a ta funkcja podaje jej punkt równowagi.
+
+    Zwraca NaN dla niedodatniej bariery (brak sensownego punktu odniesienia) — celowo
+    NIE +inf, spójnie z konwencją NaN w compute_sharpe_ratio/compute_t_stat.
+    """
+    if barrier_fraction is None or pd.isna(barrier_fraction) or barrier_fraction <= 0:
+        return float("nan")
+    if cost_fraction is None or pd.isna(cost_fraction):
+        return float("nan")
+    return float(0.5 * (1.0 + cost_fraction / barrier_fraction))
+
+
+def compute_hit_rate(trades: pd.DataFrame) -> dict:
+    """
+    Commit 2.11: trafność kierunku PRZED kosztami — czy model w ogóle wie cokolwiek.
+
+    "Trafienie" = `gross_pnl > 0`, czyli kierunek pozycji zgodny z etykietą (albo, dla
+    wyjść po barierze pionowej, z ruchem ceny do zamknięcia). Świadomie liczone na
+    `gross_pnl`, nie `net_pnl`: `net_pnl` miesza jakość sygnału z modelem kosztów, a
+    właśnie ich rozdzielenie jest celem tej miary (cały werdykt C2.10 liczył się z netto,
+    `gross_pnl` było zapisywane i nigdy nieczytane przez ten moduł).
+
+    Wyklucza wiersze kill_switch_active — jak compute_trade_returns.
+
+    Returns:
+        dict: n_trades, hit_rate, z_stat (wobec H0: p=0.5), ci_low/ci_high (95% Wald).
+        Wszystko NaN przy n=0; z_stat i CI NaN przy n < MIN_TRADES_FOR_HIT_RATE_CI.
+    """
+    real_trades = trades.loc[~trades["kill_switch_active"]]
+    n = len(real_trades)
+    if n == 0:
+        return {
+            "n_trades": 0,
+            "hit_rate": float("nan"),
+            "z_stat": float("nan"),
+            "ci_low": float("nan"),
+            "ci_high": float("nan"),
+        }
+
+    hit_rate = float((real_trades["gross_pnl"] > 0).mean())
+    if n < MIN_TRADES_FOR_HIT_RATE_CI:
+        return {
+            "n_trades": n,
+            "hit_rate": hit_rate,
+            "z_stat": float("nan"),
+            "ci_low": float("nan"),
+            "ci_high": float("nan"),
+        }
+
+    # z wobec H0: p=0.5 -> se pod hipotezą zerową = sqrt(0.25/n), NIE sqrt(p(1-p)/n).
+    z_stat = float((hit_rate - 0.5) / np.sqrt(0.25 / n))
+    # CI Walda wokół ESTYMATY -> tu już se z obserwowanego p.
+    half_width = 1.96 * np.sqrt(hit_rate * (1.0 - hit_rate) / n)
+    return {
+        "n_trades": n,
+        "hit_rate": hit_rate,
+        "z_stat": z_stat,
+        "ci_low": float(hit_rate - half_width),
+        "ci_high": float(hit_rate + half_width),
+    }
+
+
+def summarize_edge_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
+    """
+    Commit 2.11: rozbicie nierówności GO — (2p - 1) * B > C — na człony, per reżim.
+
+    Po co obok summarize_pooled_by_regime: tamta mówi, CZY wynik netto różni się od zera.
+    Ta mówi, DLACZEGO — rozdziela jakość sygnału (p) od geometrii wypłaty (B) i modelu
+    kosztów (C), więc od razu widać, który człon blokuje werdykt. Bez tego rozbicia
+    "NO-GO" nie odróżnia "model nie ma pojęcia" od "model ma rację, ale koszt zjada
+    barierę" — a to dwie całkiem różne diagnozy prowadzące do różnych następnych kroków.
+
+    Kolumny per regime:
+        n_trades, hit_rate, ci_low, ci_high, z_stat  - trafność kierunku (compute_hit_rate)
+        barrier_pct  - średnia |exit - entry| / entry, czyli B jako ułamek ceny
+        cost_pct     - średni koszt round-trip jako ułamek nominału, czyli C
+        break_even_p - 0.5 * (1 + C/B), wymagana trafność (break_even_hit_rate)
+        margin       - hit_rate - break_even_p; DODATNI margines to warunek konieczny
+                       (nie wystarczający) dodatniej wartości oczekiwanej transakcji
+
+    UWAGA metodologiczna: `barrier_pct` i `cost_pct` są liczone jako średnie po
+    transakcjach, więc `break_even_p` z ich ilorazu to przybliżenie pierwszego rzędu
+    (E[C]/E[B] != E[C/B]). Miara diagnostyczna do czytania rzędu wielkości i kierunku
+    zmian między rundami — NIE wchodzi do kryteriów klasyfikacji z docs/rag/03, które
+    pozostają NIEZMIENIONE.
+    """
+    rows: list[dict] = []
+    for regime, group in trades.groupby("regime"):
+        real_trades = group.loc[~group["kill_switch_active"]]
+        hit = compute_hit_rate(group)
+
+        notional = real_trades["position_size"] * real_trades["entry_price"]
+        notional = notional.replace(0.0, np.nan)
+        entry_price = real_trades["entry_price"].replace(0.0, np.nan)
+
+        barrier_pct = float(
+            ((real_trades["exit_price"] - real_trades["entry_price"]).abs() / entry_price).mean()
+        ) if len(real_trades) else float("nan")
+        cost_pct = float((real_trades["cost"] / notional).mean()) if len(real_trades) else float("nan")
+
+        break_even_p = break_even_hit_rate(cost_pct, barrier_pct)
+        margin = (
+            hit["hit_rate"] - break_even_p
+            if not (pd.isna(hit["hit_rate"]) or pd.isna(break_even_p))
+            else float("nan")
+        )
+
+        rows.append(
+            {
+                "regime": regime,
+                **hit,
+                "barrier_pct": barrier_pct,
+                "cost_pct": cost_pct,
+                "break_even_p": break_even_p,
+                "margin": margin,
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def summarize_by_regime(fold_metrics: pd.DataFrame) -> pd.DataFrame:

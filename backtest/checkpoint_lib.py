@@ -42,6 +42,7 @@ from backtest.metrics import (
     classify_checkpoint,
     compute_fold_metrics,
     summarize_by_regime,
+    summarize_edge_by_regime,
     summarize_pooled_by_regime,
 )
 from data.fetch_ohlcv import find_gaps, get_ohlcv_cached
@@ -101,6 +102,7 @@ def run_and_summarize(
         "classification": classify_checkpoint(fold_metrics),
         "per_regime": summarize_by_regime(fold_metrics),
         "pooled_per_regime": summarize_pooled_by_regime(result["trades"]),
+        "edge_per_regime": summarize_edge_by_regime(result["trades"]),
     }
 
 

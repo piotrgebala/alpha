@@ -26,8 +26,11 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 **Suma wariantów hipotezy przetestowanych na tych samych danych (2025-07→2026-07 BTC 5m): 7**
 (4 progi + 2 timeframe'y + 1 cecha), plus 34 obejrzane korelacje opisowe (C2.7).
 
+| C2.11 | 2026-09-21 | [2026-09-21_c2.11-edge-instrumentation.md](2026-09-21_c2.11-edge-instrumentation.md) | Instrumentacja edge'u (Runda 1/4 programu „droga do GO"): rozbicie werdyktu na człony nierówności **(2p−1)·B > C** — `compute_hit_rate` (trafność kierunku z `gross_pnl`, z-stat, CI), `break_even_hit_rate`, `summarize_edge_by_regime` wpięte do kanonicznego raportu. Pipeline nietknięty | 0 (instrumentacja pomiaru) | **Werdykt bit-identyczny z C2.10** (regresja baseline'u). Diagnoza zmienia się jakościowo: trafność **51,9% / 50,6%** (z=+0,87 / +0,25 — nieistotnie powyżej monety, ale NIE odwrócona) vs wymagane **75,8% / 64,9%**. Luka **−23,9 pp** (`range`) i **−14,2 pp** (`trend`) → NO-GO jest przesądzone **geometrią wypłaty**, nie błędnym kierunkiem sygnału |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
+C2.11 to instrumentacja (0 wariantów), więc licznik nadal 0.
 
 ## Jak dodać nowy wpis
 
