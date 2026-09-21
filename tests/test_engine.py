@@ -37,9 +37,11 @@ from backtest.engine import (
     DEFAULT_TREND_THRESHOLD,
     EXECUTION_MAKER_LIMIT,
     EXECUTION_TAKER_ONLY,
+    PREREGISTERED_CONFIDENCE_QUANTILE,
     TRADE_COLUMNS,
     _execution_legs,
     _resolve_exit_reason,
+    _train_fold_confidence_threshold,
     run_backtest,
 )
 
@@ -563,3 +565,132 @@ def test_run_backtest_maker_model_is_cheaper_than_taker_only() -> None:
         return (real["cost"] / (real["position_size"] * real["entry_price"])).mean()
 
     assert mean_cost_fraction(maker) < mean_cost_fraction(taker)
+
+
+# ---------------------------------------------------------------------------
+# Commit 2.13: prog pewnosci kalibrowany WEWNATRZ walk-forward
+# ---------------------------------------------------------------------------
+
+
+class _StubBooster:
+    """Nie dotyka XGBoost — testujemy politykę progu, nie uczenie modelu."""
+
+
+def test_confidence_threshold_disabled_returns_none(monkeypatch) -> None:
+    assert _train_fold_confidence_threshold(_StubBooster(), pd.DataFrame(), [], None) is None
+
+
+def test_confidence_threshold_comes_from_train_not_test(monkeypatch) -> None:
+    """
+    NAJWAŻNIEJSZY test tej rundy: próg MUSI pochodzić z foldu treningowego.
+    Rozkłady są rozjechane celowo — gdyby próg liczył się z testu, wyszłoby ~0.9,
+    a nie ~0.5, więc test jednoznacznie odróżnia obie implementacje.
+    """
+    train_conf = pd.DataFrame(
+        {"signal_direction": [1.0] * 5, "signal_confidence": [0.1, 0.2, 0.3, 0.4, 0.5]}
+    )
+    test_conf = pd.DataFrame(
+        {"signal_direction": [1.0] * 5, "signal_confidence": [0.9, 0.9, 0.9, 0.9, 0.9]}
+    )
+    seen: list[int] = []
+
+    def fake_predict_signal(booster, df, feature_columns):
+        seen.append(len(df))
+        return train_conf if len(df) == 5 else test_conf
+
+    monkeypatch.setattr("backtest.engine.predict_signal", fake_predict_signal)
+    threshold = _train_fold_confidence_threshold(
+        _StubBooster(), pd.DataFrame(index=range(5)), [], confidence_quantile=1.0
+    )
+    assert threshold == pytest.approx(0.5)  # max z TRENINGU, nie 0.9 z testu
+
+
+def test_confidence_threshold_ignores_flat_signals(monkeypatch) -> None:
+    """direction == 0 to brak sygnału — nie może współtworzyć rozkładu progu."""
+    frame = pd.DataFrame(
+        {
+            "signal_direction": [0.0, 0.0, 1.0, -1.0],
+            "signal_confidence": [0.99, 0.99, 0.10, 0.20],
+        }
+    )
+    monkeypatch.setattr("backtest.engine.predict_signal", lambda *a, **k: frame)
+    threshold = _train_fold_confidence_threshold(
+        _StubBooster(), pd.DataFrame(index=range(4)), [], confidence_quantile=1.0
+    )
+    assert threshold == pytest.approx(0.20)
+
+
+def test_confidence_threshold_none_when_no_directional_signals(monkeypatch) -> None:
+    frame = pd.DataFrame({"signal_direction": [0.0, 0.0], "signal_confidence": [0.5, 0.6]})
+    monkeypatch.setattr("backtest.engine.predict_signal", lambda *a, **k: frame)
+    assert (
+        _train_fold_confidence_threshold(
+            _StubBooster(), pd.DataFrame(index=range(2)), [], confidence_quantile=0.75
+        )
+        is None
+    )
+
+
+def test_run_backtest_confidence_quantile_none_reproduces_baseline() -> None:
+    """q=None musi dać wynik bit-identyczny z baseline'em — inaczej rundy nieporównywalne."""
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+    base = run_backtest(raw, **kwargs)
+    explicit_none = run_backtest(raw, confidence_quantile=None, **kwargs)
+    assert base["final_equity"] == explicit_none["final_equity"]
+    assert len(base["trades"]) == len(explicit_none["trades"])
+
+
+def test_run_backtest_confidence_quantile_zero_admits_everything() -> None:
+    """q=0 to prog rowny minimum -> nic nie powinno zostac odrzucone przez pewnosc."""
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    result = run_backtest(
+        raw,
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        min_barrier_to_cost_ratio=0.0,
+        confidence_quantile=0.0,
+    )
+    gated = sum(f["n_signals_confidence_gated"] for f in result["folds_summary"])
+    assert gated == 0
+
+
+def test_run_backtest_higher_quantile_never_admits_more_signals() -> None:
+    """
+    Niezmiennik monotoniczności: ostrzejszy próg nie może przepuścić WIĘCEJ SYGNAŁÓW.
+
+    Mierzone na `n_signals` (etap `_collect_candidate_signals`, przed symulacją equity),
+    bo tylko tam ta własność musi zachodzić. Na poziomie WYKONANYCH transakcji
+    monotoniczność NIE obowiązuje i nie jest to błąd bramki, tylko zależność od ścieżki:
+    odfiltrowanie stratnej transakcji zmienia krzywą equity, co zmienia stan kill-switcha,
+    a ten decyduje o supresji późniejszych sygnałów. Empirycznie (fixture seed=7):
+    q=0.0 -> 1131 transakcji, q=0.5 -> 1139. Asercja na transakcjach testowałaby więc
+    nieprawdziwą własność systemu.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+    counts = []
+    for q in (0.0, 0.5, PREREGISTERED_CONFIDENCE_QUANTILE):
+        result = run_backtest(raw, confidence_quantile=q, **kwargs)
+        counts.append(sum(f["n_signals"] for f in result["folds_summary"]))
+    assert counts[0] >= counts[1] >= counts[2]
+    assert counts[0] > counts[2], "próg 0.75 musi cokolwiek odfiltrować na tym fixture"
+
+
+def test_run_backtest_confidence_gate_accounting_is_consistent() -> None:
+    """Odrzucenia przez pewność muszą być policzone, a nie zniknąć po cichu."""
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    result = run_backtest(
+        raw,
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        min_barrier_to_cost_ratio=0.0,
+        confidence_quantile=PREREGISTERED_CONFIDENCE_QUANTILE,
+    )
+    active = [f for f in result["folds_summary"] if not f["skipped"]]
+    assert active, "fixture musi wyprodukować choć jeden aktywny fold"
+    assert sum(f["n_signals_confidence_gated"] for f in active) > 0
+    for fold in active:
+        assert fold["confidence_threshold"] is not None

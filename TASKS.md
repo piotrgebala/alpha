@@ -96,12 +96,13 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | Commit 2.10 — Historia danych 3 lata, Backlog Z5 (ZROBIONE — NO-GO na nowej bazie, niska liczba foldów strukturalna) | 3 | 0 | 0 | 3 |
 | Commit 2.11 — Instrumentacja edge'u, Runda 1/4 „droga do GO" (ZROBIONE — blokada w geometrii wypłaty, nie w kierunku sygnału) | 1 | 0 | 0 | 1 |
 | Commit 2.12 — Model wykonania maker/taker, Backlog Z6, Runda 2/4 (ZROBIONE — NO-GO, ale ok. połowa luki domknięta) | 1 | 0 | 0 | 1 |
+| Commit 2.13 — Próg pewności w walk-forward, Runda 3/4 (ZROBIONE — hipoteza sfalsyfikowana, reguła STOP uruchomiona) | 2 | 0 | 0 | 2 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 2 | 2 | 1 | 5 |
-| **RAZEM** | **61** | **3** | **25** | **89** |
+| **RAZEM** | **63** | **3** | **25** | **91** |
 
 ---
 
@@ -323,6 +324,20 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | C2.12.1 | `backtest/costs.py`: `MAKER_FEE_RATE`, `leg_fee_rate`, `exit_leg_for_reason`, fee per noga + slippage tylko na nogach taker (domyślne taker/taker wstecznie zgodne) | ✅ | Motywacja: `costs.py` modelował WYŁĄCZNIE takera po obu stronach — to nie było założenie konserwatywne, tylko brak modelu. Asymetria TP=maker/SL=taker działa na NIEKORZYŚĆ strategii o niskiej trafności, więc jest konserwatywna wobec hipotezy. Testy: 9 nowych w `test_costs.py` |
 | C2.12.2 | `backtest/engine.py`: kolumna `exit_reason` (z iloczynu `direction*label`), `_execution_legs`, parametr `execution_model`; bramka kosztowa dostaje konserwatywne założenie (wyjście taker) | ✅ | Blokada usunięta po drodze: `label` był konsumowany w `_resolve_exit_price` i nie trafiał do journalu, więc nogi wyjścia nie dało się wycenić. Sam `label` nie wystarcza — short na etykiecie −1 to TP, nie SL. Testy: 16 nowych w `test_engine.py`, w tym **regresja baseline'u** (`taker_only` odtwarza koszt sprzed C2.12 co do cyfry) |
 | C2.12.3 | Pełny `run_checkpoint_v2` (kanoniczny + sweep fold-jitter) na 3 latach | ✅ | WYNIK: **NO-GO**, ale koszt **−52%**, foldy ważne **21→54**, transakcje `range` **530→7 155**, zwrot per trade **+35%/+39%**, margines **−23,9→−15,5 pp** / **−14,2→−9,1 pp**. `trend` t_neff = **−1,75** (\|t\|<2, nieodróżnialny od zera). Sprzężenie: tańszy koszt wpuszcza sygnały o węższej barierze (B −25%/−19%), więc break-even spadł tylko o 9,2/5,9 pp. **Ostrzeżenie:** `mean_sharpe` −12,4→−59,6 przy LEPSZEJ ekonomice per trade, fold-jitter σ 3,1→75,7, spójność znaku 100%→80% — per-fold Sharpe (podstawa kryteriów docs/rag/03) przestał być wiarygodnym przyrządem. Testy: **182/182** |
+
+---
+
+### Commit 2.13 — Próg pewności kalibrowany wewnątrz walk-forward (Runda 3/4) — ✅ ZROBIONE (hipoteza SFALSYFIKOWANA, reguła STOP uruchomiona)
+
+> Zakres: Runda 3 programu „droga do GO". Hipoteza, próg i kryterium sukcesu zarejestrowane
+> PRZED uruchomieniem (`runs/2026-09-21_c2.12-*.md`, sekcja Rekomendacja). Pełny wynik:
+> `runs/2026-09-21_c2.13-confidence-threshold.md`.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| C2.13.1 | `_train_fold_confidence_threshold` + parametr `confidence_quantile` + liczniki `n_signals_confidence_gated`/`confidence_threshold` w `folds_summary` | ✅ | Próg liczony WYŁĄCZNIE na foldzie treningowym (kwantyl zbioru testowego byłby dobraniem progu pod dane, na których mierzymy wynik). Jawne zastrzeżenie: predykcje na treningu są in-sample, więc próg jest ZAWYŻONY → przepuszcza mniej, niż sugeruje nominalne q (46 239 odrzuconych vs 4 631 przepuszczonych) — obciążenie działa na niekorzyść hipotezy. Domyślnie `None` = baseline odtwarzalny co do cyfry. Testy: 8 nowych, w tym rozstrzygający „próg z train, nie z test" |
+| C2.13.2 | `backtest/evaluate_confidence_threshold.py` (poza pytest, na `checkpoint_lib`) + uruchomienie baseline vs kandydat | ✅ | **WYNIK: kryterium NIESPEŁNIONE.** `range`: hit 51,07%→51,41%, margin −15,5→−14,7 pp, z_margin **−17,11**. `trend`: hit **49,86%→45,54%** (spadek o 4,32 pp, w stronę PRZECIWNĄ do przewidywanej), margin −9,1→−13,2 pp, z_margin **−2,66**, n spadło 355→101. Klasyfikacja NO-GO→NO-GO. Monotoniczny „skill" zmierzony przed programem okazał się **artefaktem selekcji post hoc**. Testy: **190/190** |
+| C2.13.3 | Reguła STOP | ✅ | Warunek spełniony (`z_margin` ≪ +2 w obu reżimach) → **Runda 4 (C2.14 / Z7) NIE uruchomiona.** Uruchomienie jej po zobaczeniu negatywnego wyniku byłoby dokładnie tym, czemu reguła STOP zapobiega. Budżet multiple-testing na nowej bazie = **2**. Decyzja Z10 przy użytkowniku |
 
 ---
 

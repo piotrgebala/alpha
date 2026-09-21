@@ -30,9 +30,12 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 
 | C2.12 | 2026-09-21 | [2026-09-21_c2.12-execution-cost-model.md](2026-09-21_c2.12-execution-cost-model.md) | Backlog Z6 (Runda 2/4 „droga do GO"): realistyczny model wykonania — maker na wejściu i TP, taker na SL/timeout, slippage tylko na nogach taker; kolumna `exit_reason` w journalu; `execution_model` = `taker_only` / `maker_limit` | 1 | **NO-GO (nadal), ale mechanizm zadziałał:** koszt **−52%** (0,140%→0,067%), foldy ważne **21→54**, transakcje `range` **530→7 155**, zwrot per trade **+35%/+39%**, margines **−23,9→−15,5 pp** (`range`) i **−14,2→−9,1 pp** (`trend`) — ok. połowa luki domknięta. Efekt tłumiony sprzężeniem: tańszy koszt wpuszcza sygnały o **węższej barierze** (B −25%/−19%). **Ostrzeżenie pomiarowe:** `mean_sharpe` rozjechał się (−12,4→−59,6 przy LEPSZEJ ekonomice per trade), fold-jitter σ 3,1→75,7, spójność znaku 100%→80% — per-fold Sharpe przestał być wiarygodnym przyrządem; nośne są pooled t i margin |
 
+| C2.13 | 2026-09-21 | [2026-09-21_c2.13-confidence-threshold.md](2026-09-21_c2.13-confidence-threshold.md) | Runda 3/4 „droga do GO": pre-rejestrowany próg pewności `q=0,75` liczony na foldzie TRENINGOWYM, stosowany OOS (`_train_fold_confidence_threshold`, `confidence_quantile`); baseline vs kandydat przez `evaluate_confidence_threshold.py` | 1 | **HIPOTEZA SFALSYFIKOWANA — reguła STOP uruchomiona.** `range` margin −15,5→−14,7 pp (z_margin **−17,1**), `trend` trafność **49,9%→45,5%** (−4,3 pp, w stronę PRZECIWNĄ do przewidywanej), margin −9,1→−13,2 pp (z_margin **−2,66**). Kryterium `z_margin>2` niespełnione w żadnym reżimie, klasyfikacja NO-GO→NO-GO. Monotoniczny „skill" z pomiaru przed programem okazał się **artefaktem selekcji post hoc** (kwartyl wybrany po zobaczeniu wyniku, na danych zpoolowanych). **Runda 4 (Z7) NIE uruchomiona** — zgodnie z regułą STOP. Decyzja Z10 przy użytkowniku |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
-C2.11 to instrumentacja (0 wariantów); **C2.12 to +1 wariant (model kosztów) => licznik = 1**.
+C2.11 to instrumentacja (0 wariantów); C2.12 to +1 wariant (model kosztów); C2.13 to +1 wariant
+(próg pewności) => **licznik = 2**.
 
 ## Jak dodać nowy wpis
 

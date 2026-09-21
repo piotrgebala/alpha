@@ -1032,6 +1032,47 @@ pewności kalibrowany wewnątrz walk-forward, atakujący człon `p`.
 
 ---
 
+### Commit 2.13 — Próg pewności kalibrowany wewnątrz walk-forward `[ZROBIONE — hipoteza SFALSYFIKOWANA, reguła STOP uruchomiona]`
+
+**Kontekst (2026-09-21):** Runda 3/4 programu „droga do GO", atakująca człon `p` nierówności
+(2p−1)·B > C. Hipoteza, próg i kryterium sukcesu **zarejestrowane przed uruchomieniem**:
+trafność w górnym kwartylu `signal_confidence` (zmierzona przed programem: 57,1% `range`,
+63,3% `trend`) miała wobec progów break-even z C2.12 dać po raz pierwszy dodatni margines
+w `trend`. Kryterium: `z_margin > 2` w co najmniej jednym reżimie + poprawa klasyfikacji.
+
+**Metodologia:** próg = kwantyl `signal_confidence` z foldu **treningowego**, stosowany OOS;
+JEDNA pre-rejestrowana wartość `q=0.75`, zero sweepu. Reszta pipeline'u bez zmian.
+
+**Wynik (`runs/2026-09-21_c2.13-confidence-threshold.md`) — kryterium NIESPEŁNIONE:**
+
+| | baseline (C2.12) | kandydat (q=0,75) |
+|---|---|---|
+| `range`: hit / margin / z_margin | 51,07% / −15,52 pp / −26,25 | 51,41% / −14,73 pp / **−17,11** |
+| `trend`: hit / margin / z_margin | 49,86% / −9,08 pp / −3,42 | **45,54%** / −13,24 pp / **−2,66** |
+| Klasyfikacja | NO-GO | NO-GO |
+
+**Wniosek C2.13:** efekt, na którym opierała się hipoteza, **nie istnieje poza próbą, na
+której go zmierzono**. Monotoniczną zależność trafności od pewności zmierzono post hoc, na
+danych zpoolowanych z 3 lat, wybierając górny kwartyl PO zobaczeniu wyniku; uczciwa wersja
+(próg w foldzie treningowym, ocena OOS) nie odtwarza jej wcale, a w `trend` daje wynik
+**przeciwny** (−4,32 pp). To podręcznikowy przykład złudzenia z selekcji post hoc.
+Po trzech rundach: koszt dał się obniżyć o połowę, ale **człon `p` nie daje się ruszyć** —
+trafność pozostaje nieodróżnialna od rzutu monetą (`range` z=+1,64, `trend` z=−0,90).
+
+**REGUŁA STOP — URUCHOMIONA.** Warunek (`z_margin ≤ 2` w każdym reżimie) spełniony, więc
+**Runda 4 (C2.14 / Z7) NIE została uruchomiona** — jej uruchomienie po zobaczeniu
+negatywnego wyniku byłoby dokładnie tym, czemu reguła zapobiega. Budżet multiple-testing
+na nowej bazie: **2**.
+
+**Status:** ZROBIONE. Program „droga do GO" zatrzymany zgodnie z regułą. Otwarta decyzja
+**Z10** (przy użytkowniku): (a) udokumentowane zamknięcie Fazy 0 wynikiem negatywnym,
+(b) świadome nadpisanie STOP i Runda 4 (Z7 — inna definicja reżimu), (c) nowa hipoteza na
+członie `B` (Z8 — geometria wypłaty, jedyny człon nietknięty przez program). Niezależnie
+od kierunku: **`mean_sharpe` i oparte na nim kryteria z docs/rag/03 wymagają rewizji**
+(patrz ostrzeżenie pomiarowe z C2.12).
+
+---
+
 ## 6. Zweryfikowane empirycznie (nie tylko zaplanowane)
 
 - TA-Lib (0.7.0) instaluje się i liczy ATR/RSI/EMA poprawnie (zweryfikowane na random walk).
