@@ -748,6 +748,155 @@ patrz §7 dla zaktualizowanego stanu najważniejszego otwartego ryzyka.
 
 ---
 
+### Commit 2.7 — Przegląd kandydatek nowych cech: korelacje `[ZROBIONE — wynik: 1 cecha odrzucona, brak sygnału cecha-target]`
+
+**Zakres:** użytkownik zapytał, czy zamiast dalszego tuningu parametrów lepiej najpierw
+zbudować szerszy zestaw kandydatek cech i sprawdzić korelacje między nimi, zanim wybierze się
+którąś do formalnego testu. Uzgodniona metodologia (docs/rag/02, CLAUDE.md zasada 4): korelacja
+cecha-cecha (Spearman, cały zbiór) jest BEZPIECZNA — nie dotyka etykiety, więc służy tylko do
+wykrycia redundancji. Korelacja cecha-target jest z definicji podglądaniem etykiety na całym
+zbiorze, więc dopuszczona WYŁĄCZNIE jako opisowa/eksploracyjna (nigdy jako bramka selekcji) —
+jedyny krok o wadze dowodowej pozostaje formalny walk-forward jednej wybranej cechy.
+
+**Kod:** nowy `backtest/screen_feature_candidates.py` (poza pytest, jak inne skrypty
+analityczne) + 8 nowych, czystych funkcji cech (4 rodziny: volatility, momentum,
+mean-reversion, volume), świadomie zaprojektowanych jako nie-redundantne z 9 cechami w
+`agents/feature_miner.FEATURE_FUNCTIONS` NA PODSTAWIE definicji wzoru. Nie wchodzą do
+registry produkcyjnego na tym etapie (screening przed-rejestracyjny, formalny test leakage
+dopiero przy promocji jednej cechy). Pełny wynik: `runs/2026-09-21_c2.7-feature-candidate-screening.md`.
+
+**Wynik — blok 2 (korelacja cecha-cecha, redundancja):**
+
+| Znalezisko | Szczegóły |
+|---|---|
+| `bb_pctb_20` **ODRZUCONY** | corr=+1,000 z `price_zscore_20` (już w modelu Test 2) — afiniczna transformacja tej samej informacji, nie nowa cecha |
+| `adx_14` **wyróżniony** | jedyny kandydat z niską korelacją do reszty registry (corr z `direction_persistence_10` = +0,07, mimo że oba mierzą "siłę trendu") — sensowny kandydat #1 do formalnego testu OOS |
+| rodzina volatility (`bb_width_20`, `realized_vol_20`) | silnie redundantna z istniejącymi `atr_14`/`atr_pctrank_20d` (corr 0,79–0,88) |
+| `obv_zscore_20` | etykieta "volume" myląca — w praktyce bliżej mean-reversion/momentum (corr 0,72–0,78 z `price_zscore_20`/`bb_pctb_20`), bo OBV odziedzicza znak zwrotu ceny |
+
+**Wynik — blok 3 (korelacja cecha-target, opisowa/eksploracyjna):** żadna z 17 zbadanych cech
+(9 istniejących + 8 kandydatek) nie przekracza |corr| ≈ 0,065 z targetem w żadnym reżimie
+(`trend`: n=523, max=-0,065 `volume_roc_10`; `range`: n=22 198, max=-0,035 `realized_vol_20`).
+Czwarty niezależny sygnał (po C2.5 progach, C2.6 timeframe) wskazujący, że problem nie jest w
+doborze konkretnej cechy z tego zestawu.
+
+**Wniosek:** krok bezpieczny dał jeden konkretny wynik praktyczny (odrzucenie `bb_pctb_20`,
+wyróżnienie `adx_14`); krok opisowy nie dał przesłanki faworyzującej żadną cechę ponad szum —
+spójne z NO-GO C2.5/C2.6. Decyzja, czy testować `adx_14` formalnie w walk-forward (i czy
+osobno rozważyć go jako zamiennik `direction_persistence_10` w regule regime — otwarty wątek
+z Commitu 2c o błędnej klasyfikacji trendu spadkowego jako `range`), należy do użytkownika.
+
+**Status:** ZROBIONE. Zero zmian w `agents/feature_miner.FEATURE_FUNCTIONS`/
+`agents/ml_optimizer.py`/config — czysty screening, żadna decyzja architektoniczna
+nie została podjęta automatycznie.
+
+---
+
+### Commit 2.8 — Formalny test OOS: `adx_14` dodane do MOMENTUM_FEATURES `[ZROBIONE — wynik: NO-GO ogólnie, poprawa marginalna w trend]`
+
+**Zakres:** użytkownik poprosił o sformalizowanie testu OOS dla `adx_14` (kandydat
+wyróżniony w Commicie 2.7 jako jedyny nisko skorelowany z resztą registry). Zgodnie z
+CLAUDE.md zasada 4 (jedna cecha na raz, mierzona OOS): `adx_14` DODANE (nie zamiana) do
+`MOMENTUM_FEATURES` (Test 1/trend), `REVERSION_FEATURES` (Test 2/range) niezmienione —
+porównanie baseline vs kandydat przez identyczny pipeline walk-forward.
+
+**Kod:** `compute_adx_14` promowane z `backtest/screen_feature_candidates.py` (screening)
+do produkcyjnego `agents/feature_miner.FEATURE_FUNCTIONS` (10. cecha) + wpis w
+`agents/feature_registry.yaml` + jednostkowy test granic [0,100]
+(`tests/test_feature_miner.py`) + formalny test leakage automatycznie objął nową cechę
+(parametryzacja `agent_5_compliance/test_leakage.py`, licznik 9→10). Nowy parametr
+`regime_feature_sets` w `backtest/engine.py::run_backtest` (ten sam wzorzec threading co
+`trend_threshold`/`candles_per_day` z C2.5/C2.6) pozwala porównać warianty feature setu
+bez duplikacji pipeline'u i bez trwałej zmiany `agents/ml_optimizer.py` — nowy test
+integracyjny weryfikuje przekazanie parametru. Nowy skrypt
+`backtest/evaluate_feature_candidate.py` (poza pytest): baseline (4 cechy) vs kandydat
+(5 cech), pełny walk-forward + 10-seed sweep. Pełny zestaw: **128/128 przechodzi**
+(125 + 3: 1 unit test adx_14 + 1 integracyjny regime_feature_sets + 1 nowa instancja
+parametryzowanego testu leakage). Pełny wynik: `runs/2026-09-21_c2.8-adx14-oos-evaluation.md`.
+
+**Wynik:**
+
+| wariant | mean_sharpe (seed=42) | trend_sharpe | klasyfikacja ogólna | klasyfikacja trend | stabilność (10 seed) |
+|---|---|---|---|---|---|
+| baseline (4 cechy) | -14,3078 | -8,4560 | NO-GO | NO-GO | std=0,0000 |
+| **+adx_14 (5 cech)** | **-13,6943** | **-7,1116** | **NO-GO** | **WARUNKOWY** | std=0,0000 |
+
+Poprawa w `trend` wynika w praktyce z JEDNEGO foldu (fold_idx=11, seed=42) zmieniającego
+Sharpe z -2,40 na +0,09 — wartość ledwo powyżej zera, przy tylko 4 ważnych foldach trend w
+całym przebiegu (ten sam problem małej próby co C2.5/C2.6). `range` (2/2 ważne foldy
+ujemne w obu wariantach, Sharpe ~-26/-27) pozostaje kompletnie niezmieniony i nadal
+dominuje ogólny werdykt NO-GO.
+
+**Wniosek C2.8 — piąty niezależny wynik w tym samym paśmie:** mała, konsekwentna (nie
+losowa) poprawa w `trend`, niewystarczająca do zmiany ogólnego werdyktu i oparta na
+efekcie pojedynczego foldu przy bardzo małej próbie. Spójne z C2.7 (korelacja
+`adx_14`-target w `trend` = -0,0279, w paśmie szumu). Decyzja o promocji `adx_14` do
+`MOMENTUM_FEATURES` na stałe należy do użytkownika — skrypt świadomie nie wybiera
+zwycięzcy.
+
+**Status:** ZROBIONE. `compute_adx_14` zostaje w registry (obliczana, przetestowana),
+`MOMENTUM_FEATURES` w `agents/ml_optimizer.py` NIEZMIENIONE do czasu decyzji użytkownika.
+
+---
+
+### Commit 2.9 — Naprawa metodologii pomiaru (Backlog Z1–Z4, Z11–Z15) `[ZROBIONE — NO-GO odporne na fold-jitter; zwrot per trade istotnie ujemny w obu reżimach]`
+
+**Zakres:** realizacja pierwszej transzy backlogu z pełnego audytu projektu (TASKS.md, sekcja
+"Backlog — przegląd 2026-09-21"), na polecenie użytkownika ("Dopisz i wypchnij do repo a
+później zacznij realizować"). Runda zmienia WYŁĄCZNIE metodologię pomiaru i higienę — zero
+zmian w hipotezie, cechach, progach, kosztach czy modelu.
+
+**Kluczowe odkrycie audytu (Z1):** sweep stabilności po seedach (C6.3) mierzył dokładnie
+nic — `DEFAULT_XGB_PARAMS` bez `subsample`/`colsample_bytree` czyni XGBoost w pełni
+deterministycznym, więc seed nie zmieniał ani jednego drzewa. Stąd std=0,0000 identyczne do
+ostatniej cyfry w KAŻDYM eksperymencie C6→C2.8 (~10 pustych "potwierdzeń stabilności").
+
+**Zrealizowane:**
+- **Z1:** `start_offset_days` w `generate_walk_forward_folds` (labeling.py; + unit test +
+  hypothesis property test, DoD Warstwa 3) → `fold_start_offset_days` w `run_backtest` →
+  sweep fold-jitter (offsety 0–9 dni) w nowej wspólnej bibliotece. Perturbuje ARBITRALNE
+  wyrównanie granic foldów, nie model — offset=0 odtwarza historyczny baseline co do
+  ostatniej cyfry. Świadomie BEZ nowego progu pass/fail (stary std<0,2 dotyczył pustego
+  szumu seedów) — raportowany rozkład + spójność znaku.
+- **Z2:** `compute_t_stat` + kolumna `t_stat` per fold (bez annualizacji — annualizowany
+  Sharpe przy n=31–37/fold nadmuchiwał wartości do ±20–60) + `summarize_pooled_by_regime`
+  (wszystkie transakcje reżimu połączone między foldami). Kryteria klasyfikacji
+  GO/WARUNKOWY/NO-GO NIEZMIENIONE — nowe miary są diagnostyką obok werdyktu.
+- **Z3:** `effective_sample_size` (C4.4, dotąd NIGDZIE nieużywane) wpięte do raportu:
+  `n_eff` + konserwatywny `t_stat_neff` w pooled summary.
+- **Z4:** kolumna "Warianty" (księga multiple-testing) w `runs/INDEX.md` + suma pod tabelą
+  (dotychczas: 7 wariantów hipotezy na tych samych danych).
+- **Z13 (forward-looking):** `backtest/checkpoint_lib.py` — wspólne load/fetch/summarize/
+  sweep; historyczne skrypty NIE refaktoryzowane (zamrożone zapisy eksperymentów). Pierwszy
+  użytkownik: `backtest/run_checkpoint_v2.py` (kanoniczny checkpoint v2; `run_checkpoint.py`
+  zostaje jako zapis Commitu 6).
+- **Higiena:** Z11 (`candle_minutes` przewleczone do kosztów — funding liczony z realnego
+  czasu trzymania, nie liczby świec; test integracyjny), Z12 (lint: ruff 0 błędów), Z14
+  (README zaktualizowane: status, struktura z `runs/`), Z15 (test spójności registry↔kod
+  czyta `feature_registry.yaml` zamiast hardkodować listę). docs/rag/03 zaktualizowane
+  (sekcja stabilności). Pełny zestaw: **139/139 testów przechodzi** (128 + 11).
+
+**Wynik na realnych danych (`runs/2026-09-21_c2.9-measurement-methodology.md`):**
+
+| Miara | Wartość |
+|---|---|
+| Fold-jitter (10 offsetów) | **NO-GO w 10/10**, mean_sharpe zakres [-15,89; -6,20], std=3,09, znak ujemny 100% |
+| Pooled `range` (n=223) | mean/trade=-0,00108, **t=-7,15** (N_eff zdegenerowany → NaN, uczciwie) |
+| Pooled `trend` (n=135) | mean/trade=-0,00063, **t=-2,91**, N_eff=110 → **t_neff=-2,63** |
+
+**Wniosek C2.9:** (a) NO-GO jest po raz pierwszy potwierdzone REALNĄ perturbacją — nie jest
+artefaktem wyrównania foldów; (b) zwrot per trade jest **istotnie ujemny w obu reżimach**
+(najtwardsze dotąd sformułowanie stanu hipotezy); (c) zmierzona skala szumu fold-jitter
+(σ≈3,1 mean_sharpe) czyni porównania wariantów o Δ<~3 nierozstrzygalnymi na rocznych danych
+— retrospektywnie: "poprawa" C2.8 (+0,61) to ~0,2σ tego szumu, co wzmacnia tamtejszą
+rekomendację niepromowania `adx_14`; (d) **Z5 (3–5 lat historii, fetch na maszynie
+użytkownika) jest teraz najważniejszym odblokowaniem** dalszej pracy hipotezowej.
+
+**Status:** ZROBIONE. Backlog: Z1–Z4, Z11–Z15 zamknięte; otwarte pozostają Z5–Z9 (Z5/Z9
+wymagają maszyny użytkownika) i decyzja Z10.
+
+---
+
 ## 6. Zweryfikowane empirycznie (nie tylko zaplanowane)
 
 - TA-Lib (0.7.0) instaluje się i liczy ATR/RSI/EMA poprawnie (zweryfikowane na random walk).
@@ -876,11 +1025,44 @@ patrz §7 dla zaktualizowanego stanu najważniejszego otwartego ryzyka.
   maker 0,02% koszt spada do 0,08%) — coraz mniej prawdopodobne, żeby to zmieniło wniosek, skoro
   problem przetrwał nawet przy koszcie efektywnie ~11× mniejszym niż bariera na 4h; (d) powrót
   do rejestru cech per docs/rag/02, jedna cecha na raz, mierzona OOS (reguła routingu
-  checkpointu, docs/rag/03: NO-GO → rejestr cech, nie dalszy tuning) — obecnie NAJBARDZIEJ
-  uzasadniony kierunek. Decyzja między (c)/(d) należy do użytkownika. Dodatkowy, nierozdzielony
-  wątek z Commitu 2.6: `VERTICAL_BARRIER_CANDLES=12` nieprzeliczone przy zmianie timeframe
-  (1h/4h oznacza 12h/48h trzymania pozycji) — jeśli timeframe ma być badany dalej, to osobny,
-  jawnie nazwany eksperyment (rozdzielić timeframe danych od horyzontu trzymania).
+  checkpointu, docs/rag/03: NO-GO → rejestr cech, nie dalszy tuning) — **Commit 2.7 rozpoczął
+  ten kierunek** screeningiem korelacji (patrz niżej), formalny test OOS jednej cechy wciąż nie
+  wykonany. Dodatkowy, nierozdzielony wątek z Commitu 2.6: `VERTICAL_BARRIER_CANDLES=12`
+  nieprzeliczone przy zmianie timeframe (1h/4h oznacza 12h/48h trzymania pozycji) — jeśli
+  timeframe ma być badany dalej, to osobny, jawnie nazwany eksperyment (rozdzielić timeframe
+  danych od horyzontu trzymania).
+- **Screening korelacji (Commit 2.7, 2026-09-21) — czwarty niezależny sygnał w tym samym
+  kierunku, plus jeden konkretny wniosek praktyczny.** Korelacja Spearman cecha-target
+  (opisowa/eksploracyjna, cały zbiór) na 17 cechach (9 istniejących + 8 nowych kandydatek,
+  4 rodziny) nie pokazała ŻADNEJ korelacji przekraczającej |corr| ≈ 0,065 z targetem w
+  żadnym reżimie — spójne z brakiem edge'u z C2.5/C2.6, tym razem metodą niezależną od modelu
+  XGBoost. Praktyczny efekt uboczny: korelacja cecha-cecha ujawniła, że kandydat `bb_pctb_20`
+  jest matematycznie redundantny z już używanym `price_zscore_20` (corr=1,000) — odrzucony bez
+  potrzeby testu OOS. `adx_14` wyróżnia się jako jedyny kandydat nisko skorelowany z resztą
+  registry (w tym, zaskakująco, z dyskretnym `direction_persistence_10` — corr=+0,07) — kandydat
+  do ewentualnego formalnego testu OOS i/lub do osobnej dyskusji jako zamiennik
+  `direction_persistence_10` w regule regime (dotyczy otwartego wątku o błędnej klasyfikacji
+  trendu spadkowego jako `range`, Commit 2c). Żadna decyzja o promocji cechy nie została
+  podjęta — pełny wynik: `runs/2026-09-21_c2.7-feature-candidate-screening.md`.
+- **Formalny test OOS `adx_14` (Commit 2.8, 2026-09-21) — piąty niezależny wynik w tym samym
+  paśmie "brak silnego sygnału".** Dodanie `adx_14` do `MOMENTUM_FEATURES` (Test 1, Test 2
+  niezmieniony) daje małą, konsekwentną poprawę w `trend` (mean_sharpe -8,46→-7,11,
+  klasyfikacja NO-GO→WARUNKOWY), ale werdykt OGÓLNY pozostaje NO-GO w obu wariantach
+  (stabilne, std=0,0000 na 10 seedach). Poprawa opiera się na JEDNYM foldzie zmieniającym
+  Sharpe z -2,40 na +0,09 (praktycznie zero) przy tylko 4 ważnych foldach trend — zbyt słaby i
+  zbyt zależny od pojedynczego przypadku dowód, by uzasadnić promocję do produkcyjnego feature
+  setu. `range` (dominujący udział w werdykcie NO-GO) kompletnie niezmieniony. `compute_adx_14`
+  zostaje w registry (formalnie przetestowana pod kątem leakage), `MOMENTUM_FEATURES`
+  NIEZMIENIONE do czasu decyzji użytkownika. Pełny wynik:
+  `runs/2026-09-21_c2.8-adx14-oos-evaluation.md`.
+- **Naprawiona metodologia pomiaru zaostrzyła obraz (Commit 2.9, 2026-09-21).** Sweep
+  stabilności po seedach mierzył nic (deterministyczny XGBoost — każde dotychczasowe
+  "std=0,0000 STABILNY" było puste); zastąpiony fold-jitterem: **NO-GO w 10/10 offsetów**,
+  a pooled t-stat pokazuje **istotnie ujemny zwrot per trade w OBU reżimach** (range
+  t=-7,15; trend t=-2,91/-2,63 po N_eff). Zmierzony szum wyrównania foldów (σ≈3,1
+  mean_sharpe) czyni porównania wariantów o Δ<~3 nierozstrzygalnymi na rocznych danych 5m —
+  **kolejne rundy hipotezowe bez dłuższej historii danych (Backlog Z5) mają ograniczoną moc
+  rozstrzygania**. Pełny wynik: `runs/2026-09-21_c2.9-measurement-methodology.md`.
 - **Założenia kosztowe są wartościami startowymi, a teraz decydują o werdykcie.** Dopóki koszt był
   jednym z wielu składników, jego przybliżony charakter nie miał znaczenia. Po Commicie 2d koszt
   jest osią diagnozy, więc `taker_fee_rate=0.0005` / `slippage_bps=2` / `funding_rate_8h=0.0001`

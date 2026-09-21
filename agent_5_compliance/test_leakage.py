@@ -27,12 +27,19 @@ wersja odpalana w CI (.github/workflows/tests.yml), nie duplikatem.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
+import yaml
 
 from agents.feature_miner import FEATURE_FUNCTIONS, compute_atr_pctrank_20d
 from agents.labeling import compute_triple_barrier_labels
+
+FEATURE_REGISTRY_PATH = (
+    Path(__file__).resolve().parent.parent / "agents" / "feature_registry.yaml"
+)
 
 # atr_pctrank_20d z domyslnymi parametrami (candles_per_day=288, window_days=20)
 # potrzebuje 5760 wierszy, zanim da nie-NaN wynik -- dane musza byc odpowiednio
@@ -77,20 +84,21 @@ def synthetic_ohlcv() -> pd.DataFrame:
     return _make_synthetic_ohlcv(N_ROWS, seed=42)
 
 
-def test_feature_functions_covers_all_nine() -> None:
-    """Sanity: FEATURE_FUNCTIONS musi miec dokladnie te 9 cech z Fazy 0 (feature_registry.yaml)."""
-    expected = {
-        "atr_14",
-        "atr_pctrank_20d",
-        "direction_persistence_10",
-        "return_lag_1",
-        "momentum_5",
-        "ema_diff_9_21",
-        "volume_zscore_20",
-        "rsi_14",
-        "price_zscore_20",
-    }
-    assert set(FEATURE_FUNCTIONS.keys()) == expected
+def test_feature_functions_matches_registry() -> None:
+    """
+    Sanity (Commit 2.9/Z15): FEATURE_FUNCTIONS musi byc 1:1 zgodne z kluczami
+    `features` w agents/feature_registry.yaml (zrodlo prawdy metadanych cech).
+    Wczesniejsza wersja hardkodowala liste nazw (test_feature_functions_covers_all_
+    nine/ten) i wymagala recznej edycji przy kazdej nowej cesze — teraz czyta YAML,
+    wiec rozjazd registry<->kod jest lapany przez pytest lokalnie, nie dopiero przez
+    inline-check w .github/workflows/tests.yml (ktory zostaje jako druga linia).
+    """
+    with open(FEATURE_REGISTRY_PATH, encoding="utf-8") as f:
+        registry = set(yaml.safe_load(f)["features"].keys())
+    code = set(FEATURE_FUNCTIONS.keys())
+    assert (
+        code == registry
+    ), f"registry-only: {sorted(registry - code)}, code-only: {sorted(code - registry)}"
 
 
 @pytest.mark.parametrize("feature_name", sorted(FEATURE_FUNCTIONS.keys()))
@@ -125,7 +133,10 @@ def test_atr_pctrank_20d_trailing_not_centered() -> None:
     wartosci PRZED punktem odciecia sie nie zmieniaja -- zlapaloby regresje do
     rolling(center=True) bardziej bezposrednio niz test_feature_no_leakage.
     """
-    window_kwargs = {"candles_per_day": 10, "window_days": 5}  # window=50, szybszy test niz 5760
+    window_kwargs = {
+        "candles_per_day": 10,
+        "window_days": 5,
+    }  # window=50, szybszy test niz 5760
     n_rows = 300
     cutoff = 250
 

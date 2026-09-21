@@ -26,12 +26,21 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from agents.labeling import ATR_MULTIPLIER
+from agents.ml_optimizer import REVERSION_FEATURES
 from agents.risk_controller import MIN_BARRIER_TO_COST_RATIO
-from backtest.engine import DEFAULT_CANDLES_PER_DAY, DEFAULT_TREND_THRESHOLD, TRADE_COLUMNS, run_backtest
+from backtest.engine import (
+    DEFAULT_CANDLES_PER_DAY,
+    DEFAULT_TREND_THRESHOLD,
+    TRADE_COLUMNS,
+    run_backtest,
+)
 
-N_WARMUP = 5760  # 20 dni @ 5m - wymagane, by atr_pctrank_20d (feature_miner.py) nie było NaN
+N_WARMUP = (
+    5760  # 20 dni @ 5m - wymagane, by atr_pctrank_20d (feature_miner.py) nie było NaN
+)
 N_TREND = 2880  # 10 dni - segment o wysokim, trwałym ATR + konsekwentny kierunek -> regime="trend"
 N_RANGE = 2880  # 10 dni - segment o niskim ATR + losowym kierunku -> regime="range"
 
@@ -48,8 +57,8 @@ def _make_pipeline_test_ohlcv(seed: int = 7) -> pd.DataFrame:
     for _ in range(N_WARMUP):
         step = rng.normal(0.0, 0.15)
         o, c = price, price + step
-        h, l = max(o, c) + 0.5, min(o, c) - 0.5
-        rows.append((o, h, l, c))
+        h, low_ = max(o, c) + 0.5, min(o, c) - 0.5
+        rows.append((o, h, low_, c))
         price = c
 
     # Trend: silny konsekwentny dryf w górę + wysoki true range -> wysoki atr_pctrank_20d
@@ -57,8 +66,8 @@ def _make_pipeline_test_ohlcv(seed: int = 7) -> pd.DataFrame:
     for _ in range(N_TREND):
         o = price
         c = price + rng.uniform(3.0, 4.0)
-        h, l = c + 1.0, o - 1.0
-        rows.append((o, h, l, c))
+        h, low_ = c + 1.0, o - 1.0
+        rows.append((o, h, low_, c))
         price = c
 
     # Range: mały szum wokół stałego poziomu -> niski atr_pctrank_20d oraz niski
@@ -67,12 +76,14 @@ def _make_pipeline_test_ohlcv(seed: int = 7) -> pd.DataFrame:
     for _ in range(N_RANGE):
         o = range_level + rng.normal(0.0, 0.15)
         c = range_level + rng.normal(0.0, 0.15)
-        h, l = max(o, c) + 0.05, min(o, c) - 0.05
-        rows.append((o, h, l, c))
+        h, low_ = max(o, c) + 0.05, min(o, c) - 0.05
+        rows.append((o, h, low_, c))
 
     df = pd.DataFrame(rows, columns=["open", "high", "low", "close"])
     df["volume"] = rng.uniform(50.0, 150.0, size=len(df))
-    df["timestamp"] = pd.date_range("2026-01-01", periods=len(df), freq="5min", tz="UTC")
+    df["timestamp"] = pd.date_range(
+        "2026-01-01", periods=len(df), freq="5min", tz="UTC"
+    )
     return df[["timestamp", "open", "high", "low", "close", "volume"]]
 
 
@@ -299,7 +310,9 @@ def test_run_backtest_threads_regime_thresholds_to_signal_population() -> None:
         min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
     )
 
-    baseline = run_backtest(raw_ohlcv, trend_threshold=DEFAULT_TREND_THRESHOLD, **kwargs)
+    baseline = run_backtest(
+        raw_ohlcv, trend_threshold=DEFAULT_TREND_THRESHOLD, **kwargs
+    )
     unreachable_threshold = run_backtest(raw_ohlcv, trend_threshold=0.99, **kwargs)
 
     def _trend_signals(result: dict) -> int:
@@ -332,7 +345,9 @@ def test_run_backtest_threads_candles_per_day_to_signal_population() -> None:
         min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
     )
 
-    baseline = run_backtest(raw_ohlcv, candles_per_day=DEFAULT_CANDLES_PER_DAY, **kwargs)
+    baseline = run_backtest(
+        raw_ohlcv, candles_per_day=DEFAULT_CANDLES_PER_DAY, **kwargs
+    )
     starved = run_backtest(raw_ohlcv, candles_per_day=100_000, **kwargs)
 
     def _total_signals(result: dict) -> int:
@@ -340,3 +355,105 @@ def test_run_backtest_threads_candles_per_day_to_signal_population() -> None:
 
     assert _total_signals(baseline) > 0
     assert _total_signals(starved) == 0
+
+
+def test_run_backtest_threads_regime_feature_sets_to_model_training() -> None:
+    # Commit 2.8 (Warstwa 4, integracyjny): `regime_feature_sets` musi dotrzeć od
+    # run_backtest() aż do _collect_candidate_signals() (trening modelu per regime),
+    # nie zostać po cichu zignorowane na rzecz modułowej stałej REGIME_FEATURE_SETS.
+    # Dowód: podanie nieistniejącej nazwy kolumny jako cechy MUSI wywołać KeyError przy
+    # `train_df.dropna(subset=[*feature_columns, "label"])` — gdyby run_backtest
+    # przyjmował parametr, ale go nie przekazywał dalej (nadal używając baseline
+    # MOMENTUM_FEATURES), błędu by nie było.
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+        min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
+    )
+    bogus_feature_sets = [
+        ("trend", ["nonexistent_feature_xyz"]),
+        ("range", REVERSION_FEATURES),
+    ]
+
+    with pytest.raises(KeyError):
+        run_backtest(raw_ohlcv, regime_feature_sets=bogus_feature_sets, **kwargs)
+
+
+def test_run_backtest_threads_fold_start_offset_to_walk_forward() -> None:
+    # Commit 2.9 (Z1, Warstwa 4, integracyjny): `fold_start_offset_days` musi dotrzeć
+    # od run_backtest() przez _collect_candidate_signals() do
+    # generate_walk_forward_folds() — dowód zachowaniem: pierwszy fold każdego reżimu
+    # w folds_summary startuje o DOKŁADNIE offset dni później niż w baseline. Gdyby
+    # parametr był przyjmowany, ale nieprzekazywany, train_start byłyby identyczne.
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+        min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
+    )
+
+    baseline = run_backtest(raw_ohlcv, fold_start_offset_days=0.0, **kwargs)
+    shifted = run_backtest(raw_ohlcv, fold_start_offset_days=1.0, **kwargs)
+
+    def _first_train_start(result: dict, regime: str):
+        starts = [
+            f["train_start"]
+            for f in result["folds_summary"]
+            if f["regime"] == regime and f["train_start"] is not None
+        ]
+        return min(starts) if starts else None
+
+    for regime in ("trend", "range"):
+        base_start = _first_train_start(baseline, regime)
+        shifted_start = _first_train_start(shifted, regime)
+        assert base_start is not None and shifted_start is not None
+        assert shifted_start == base_start + pd.Timedelta(days=1)
+
+
+def test_run_backtest_threads_candle_minutes_to_funding_cost() -> None:
+    # Commit 2.9 (Z11, Warstwa 4, integracyjny): `candle_minutes` musi dotrzeć od
+    # run_backtest() do backtest.costs.total_round_trip_cost — składnik funding
+    # zależy od REALNEGO czasu trzymania (candles * minuty), nie liczby świec.
+    # Dowód zachowaniem: te same dane i sygnały, inne candle_minutes -> inne koszty
+    # (fee/slippage identyczne, funding przeskalowany 12x), a domyślne == jawne 5.
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+        min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
+    )
+
+    default_run = run_backtest(raw_ohlcv, **kwargs)
+    explicit_5 = run_backtest(raw_ohlcv, candle_minutes=5, **kwargs)
+    minutes_60 = run_backtest(raw_ohlcv, candle_minutes=60, **kwargs)
+
+    real_default = default_run["trades"].loc[
+        ~default_run["trades"]["kill_switch_active"]
+    ]
+    real_5 = explicit_5["trades"].loc[~explicit_5["trades"]["kill_switch_active"]]
+    real_60 = minutes_60["trades"].loc[~minutes_60["trades"]["kill_switch_active"]]
+
+    # Domyślna wartość == jawne 5 (bez zmiany zachowania sprzed Commitu 2.9).
+    assert real_default["cost"].sum() == pytest.approx(real_5["cost"].sum())
+
+    # PIERWSZA transakcja obu przebiegów jest w pełni porównywalna (identyczny sygnał,
+    # identyczne equity startowe -> identyczny position_size i gross), różni się
+    # WYŁĄCZNIE komponentem funding kosztu (12x dłuższy czas trzymania w minutach).
+    # Dalsze transakcje mogą się już rozjechać (inne koszty -> inna ścieżka equity ->
+    # inny moment kill-switcha) — i to rozjechanie też jest dowodem threadingu, ale
+    # asercja na pierwszej transakcji jest deterministyczna.
+    first_5 = real_5.iloc[0]
+    first_60 = real_60.iloc[0]
+    assert first_60["timestamp"] == first_5["timestamp"]
+    assert first_60["gross_pnl"] == pytest.approx(first_5["gross_pnl"])
+    assert first_60["cost"] != pytest.approx(first_5["cost"])

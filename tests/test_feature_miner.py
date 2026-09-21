@@ -23,6 +23,7 @@ from agents.feature_miner import (
     DEFAULT_RANGE_THRESHOLD,
     DEFAULT_TREND_THRESHOLD,
     classify_regime,
+    compute_adx_14,
     compute_all_features,
     compute_atr_pctrank_20d,
 )
@@ -57,7 +58,9 @@ def test_classify_regime_default_thresholds_match_named_constants() -> None:
     df = _make_synthetic_ohlcv()
     default_call = classify_regime(df)
     explicit_call = classify_regime(
-        df, trend_threshold=DEFAULT_TREND_THRESHOLD, range_threshold=DEFAULT_RANGE_THRESHOLD
+        df,
+        trend_threshold=DEFAULT_TREND_THRESHOLD,
+        range_threshold=DEFAULT_RANGE_THRESHOLD,
     )
     pd.testing.assert_series_equal(default_call, explicit_call)
 
@@ -124,15 +127,23 @@ def test_compute_atr_pctrank_20d_warmup_length_scales_with_candles_per_day() -> 
     # warmup (liczba początkowych NaN) też musi być mniejszy — to bezpośrednio testuje, że
     # parametr faktycznie dociera do window w rolling(), nie tylko jest przyjmowany.
     df = _make_synthetic_ohlcv(n=600, seed=5)
-    warmup_288 = compute_atr_pctrank_20d(df, candles_per_day=288).isna().sum()  # window=5760 > n -> wszystko NaN
-    warmup_24 = compute_atr_pctrank_20d(df, candles_per_day=24).isna().sum()  # window=480 < n=600
-    assert warmup_288 == len(df)  # window (5760) > n (600) -> zero policzalnych wartości
+    warmup_288 = (
+        compute_atr_pctrank_20d(df, candles_per_day=288).isna().sum()
+    )  # window=5760 > n -> wszystko NaN
+    warmup_24 = (
+        compute_atr_pctrank_20d(df, candles_per_day=24).isna().sum()
+    )  # window=480 < n=600
+    assert warmup_288 == len(
+        df
+    )  # window (5760) > n (600) -> zero policzalnych wartości
     # Pierwsza policzalna wartość wymaga PEŁNEGO okna 480 świec BEZ NaN w atr_14 (który sam ma
     # ~14-świecowy warmup TA-Lib) -> pierwszy nie-NaN wypada przy indeksie ~14+480-1=493, nie
     # przy "gołym" 480-1 — stąd sprawdzenie względne (< warmup_288), nie literał niezależny od
     # implementacji rolling/rank.
     assert warmup_24 < warmup_288
-    assert warmup_24 < len(df)  # dowód, że okno 24/dzień faktycznie daje policzalne wartości
+    assert warmup_24 < len(
+        df
+    )  # dowód, że okno 24/dzień faktycznie daje policzalne wartości
 
 
 def test_classify_regime_threads_candles_per_day_to_atr_rank_window() -> None:
@@ -147,14 +158,18 @@ def test_classify_regime_threads_candles_per_day_to_atr_rank_window() -> None:
     # 0.7/0.3 domyślne w ogóle coś selekcjonują na tych danych syntetycznych; niezależnie
     # od tego liczba "ambiguous" musi się zmniejszyć względem wariantu z candles_per_day=288).
     loose_window_regime = classify_regime(df, candles_per_day=24)
-    assert (loose_window_regime == "ambiguous").sum() < (default_regime == "ambiguous").sum()
+    assert (loose_window_regime == "ambiguous").sum() < (
+        default_regime == "ambiguous"
+    ).sum()
 
 
 def test_compute_all_features_threads_candles_per_day_to_regime_column() -> None:
     # Analogicznie do progów (test_compute_all_features_threads_thresholds_to_regime_column):
     # compute_all_features musi PRZEKAZAĆ candles_per_day do classify_regime, nie zignorować.
     df = _make_synthetic_ohlcv(n=600, seed=5)
-    default_result = compute_all_features(df)  # candles_per_day=DEFAULT_CANDLES_PER_DAY=288
+    default_result = compute_all_features(
+        df
+    )  # candles_per_day=DEFAULT_CANDLES_PER_DAY=288
     custom_result = compute_all_features(df, candles_per_day=24)
     pd.testing.assert_series_equal(
         custom_result["regime"],
@@ -162,4 +177,20 @@ def test_compute_all_features_threads_candles_per_day_to_regime_column() -> None
         check_names=False,
     )
     assert not default_result["regime"].equals(custom_result["regime"])
-    assert DEFAULT_CANDLES_PER_DAY == 288  # dokumentuje domyślną wartość, mirroring config
+    assert (
+        DEFAULT_CANDLES_PER_DAY == 288
+    )  # dokumentuje domyślną wartość, mirroring config
+
+
+def test_compute_adx_14_bounded_and_named() -> None:
+    # Commit 2.8 (promocja z screeningu C2.7): ADX jest teoretycznie ograniczone do
+    # [0, 100] niezależnie od wejścia — sprawdza poprawność wire-up do talib.ADX (ten
+    # sam wzorzec co compute_atr_14/compute_rsi_14 — brak dodatkowej logiki ponad samo
+    # opakowanie, formalny test leakage osobno w agent_5_compliance/test_leakage.py).
+    df = _make_synthetic_ohlcv()
+    adx = compute_adx_14(df)
+    assert len(adx) == len(df)
+    assert adx.name == "adx_14"
+    valid = adx.dropna()
+    assert len(valid) > 0  # dane wystarczająco długie, żeby przejść 14-świecowy warmup
+    assert (valid >= 0.0).all() and (valid <= 100.0).all()

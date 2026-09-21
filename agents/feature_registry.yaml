@@ -96,6 +96,23 @@ features:
     leakage_risk: low
     added: "2026-07-05"
 
+  adx_14:
+    formula: "Average Directional Index, Wilder smoothing, 14-period — siła trendu niezależna od kierunku"
+    library: "TA-Lib (ADX)"
+    window: 14
+    role: signal
+    test_group: trend
+    leakage_risk: low
+    added: "2026-09-21"
+    note: >
+      Promowana z screeningu korelacji (Commit 2.7, backtest/screen_feature_candidates.py) —
+      jedyny z 8 kandydatów nisko skorelowany z resztą registry (corr=+0.07 z
+      direction_persistence_10). Formalny test OOS jako DODATEK do MOMENTUM_FEATURES
+      (agents/ml_optimizer.py), nie zamiennik żadnej istniejącej cechy: Commit 2.8,
+      backtest/evaluate_feature_candidate.py, runs/2026-09-21_c2.8-adx14-oos-evaluation.md.
+      Obliczana dla każdej świecy (FEATURE_FUNCTIONS) niezależnie od wyniku testu OOS —
+      dodanie do MOMENTUM_FEATURES jest osobną decyzją, dopiero po przeczytaniu wyniku.
+
 # Reguła regime gate — deterministyczna, nie model (decyzja: patrz rozmowa o HMM vs reguła)
 regime_rule:
   trend_threshold: 0.7

@@ -41,7 +41,9 @@ ENTRY_PRICE = 100.0
 def _make_df_from_ohlc(rows: list[tuple[float, float, float, float]]) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=["open", "high", "low", "close"])
     df["volume"] = 100.0
-    df["timestamp"] = pd.date_range("2026-01-01", periods=len(df), freq="5min", tz="UTC")
+    df["timestamp"] = pd.date_range(
+        "2026-01-01", periods=len(df), freq="5min", tz="UTC"
+    )
     return df[["timestamp", "open", "high", "low", "close", "volume"]]
 
 
@@ -72,8 +74,18 @@ def test_triple_barrier_upper_hit(entry_atr: float) -> None:
     lower = ENTRY_PRICE - ATR_MULTIPLIER * entry_atr
     rows = _warmup_rows(N_WARMUP, ENTRY_PRICE) + [
         (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE),  # entry
-        (ENTRY_PRICE, upper - 1.0, lower + 1.0, ENTRY_PRICE),  # offset 1: brak trafienia
-        (ENTRY_PRICE, upper + 0.5, lower + 1.0, ENTRY_PRICE),  # offset 2: upper trafiona
+        (
+            ENTRY_PRICE,
+            upper - 1.0,
+            lower + 1.0,
+            ENTRY_PRICE,
+        ),  # offset 1: brak trafienia
+        (
+            ENTRY_PRICE,
+            upper + 0.5,
+            lower + 1.0,
+            ENTRY_PRICE,
+        ),  # offset 2: upper trafiona
         (ENTRY_PRICE, upper - 1.0, lower + 1.0, ENTRY_PRICE),  # offset 3: filler
     ]
     df = _make_df_from_ohlc(rows)
@@ -89,9 +101,24 @@ def test_triple_barrier_lower_hit(entry_atr: float) -> None:
     lower = ENTRY_PRICE - ATR_MULTIPLIER * entry_atr
     rows = _warmup_rows(N_WARMUP, ENTRY_PRICE) + [
         (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE),  # entry
-        (ENTRY_PRICE, upper - 1.0, lower + 1.0, ENTRY_PRICE),  # offset 1: brak trafienia
-        (ENTRY_PRICE, upper - 1.0, lower + 1.0, ENTRY_PRICE),  # offset 2: brak trafienia
-        (ENTRY_PRICE, upper - 1.0, lower - 0.5, ENTRY_PRICE),  # offset 3: lower trafiona
+        (
+            ENTRY_PRICE,
+            upper - 1.0,
+            lower + 1.0,
+            ENTRY_PRICE,
+        ),  # offset 1: brak trafienia
+        (
+            ENTRY_PRICE,
+            upper - 1.0,
+            lower + 1.0,
+            ENTRY_PRICE,
+        ),  # offset 2: brak trafienia
+        (
+            ENTRY_PRICE,
+            upper - 1.0,
+            lower - 0.5,
+            ENTRY_PRICE,
+        ),  # offset 3: lower trafiona
     ]
     df = _make_df_from_ohlc(rows)
     result = compute_triple_barrier_labels(df, vertical_barrier_candles=3)
@@ -152,7 +179,8 @@ def test_triple_barrier_same_candle_tiebreak_lower_closer(entry_atr: float) -> N
 
 def test_triple_barrier_atr_warmup_is_nan() -> None:
     rows = _warmup_rows(N_WARMUP, ENTRY_PRICE) + [
-        (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE) for _ in range(5)
+        (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE)
+        for _ in range(5)
     ]
     df = _make_df_from_ohlc(rows)
     atr = compute_atr_14(df)
@@ -166,7 +194,8 @@ def test_triple_barrier_atr_warmup_is_nan() -> None:
 def test_triple_barrier_tail_insufficient_window_is_nan() -> None:
     vertical = 3
     rows = _warmup_rows(N_WARMUP, ENTRY_PRICE) + [
-        (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE) for _ in range(10)
+        (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE)
+        for _ in range(10)
     ]
     df = _make_df_from_ohlc(rows)
     result = compute_triple_barrier_labels(df, vertical_barrier_candles=vertical)
@@ -203,7 +232,12 @@ def test_walk_forward_folds_chronological_and_no_overlap() -> None:
 
     assert len(folds) > 0
     for fold in folds:
-        assert fold["train_start"] < fold["train_end"] == fold["test_start"] < fold["test_end"]
+        assert (
+            fold["train_start"]
+            < fold["train_end"]
+            == fold["test_start"]
+            < fold["test_end"]
+        )
         assert not (fold["train_mask"] & fold["test_mask"]).any()
         assert fold["train_mask"].sum() > 0
         assert fold["test_mask"].sum() > 0
@@ -221,6 +255,31 @@ def test_walk_forward_folds_too_little_data_returns_empty() -> None:
     df = _make_daily_df(50)  # 60 (train) + 14 (test) = 74 > 50 dostępnych dni
     folds = generate_walk_forward_folds(df, train_days=60, test_days=14, step_days=14)
     assert folds == []
+
+
+def test_walk_forward_folds_start_offset_shifts_first_fold() -> None:
+    # Commit 2.9 (Z1): offset przesuwa start PIERWSZEGO foldu o dokładnie tyle dni,
+    # a domyślne 0.0 zachowuje się identycznie jak przed parametryzacją.
+    df = _make_daily_df(200)
+    baseline = generate_walk_forward_folds(
+        df, train_days=60, test_days=14, step_days=14
+    )
+    offset = generate_walk_forward_folds(
+        df, train_days=60, test_days=14, step_days=14, start_offset_days=7.0
+    )
+    explicit_zero = generate_walk_forward_folds(
+        df, train_days=60, test_days=14, step_days=14, start_offset_days=0.0
+    )
+
+    assert len(baseline) > 0 and len(offset) > 0
+    assert offset[0]["train_start"] == baseline[0]["train_start"] + pd.Timedelta(days=7)
+    # Offset skraca dostępne dane — liczba foldów nie może wzrosnąć.
+    assert len(offset) <= len(baseline)
+    # Domyślna wartość == jawne 0.0 (bez zmiany zachowania sprzed Commitu 2.9).
+    assert len(explicit_zero) == len(baseline)
+    for a, b in zip(explicit_zero, baseline):
+        assert a["train_start"] == b["train_start"]
+        assert a["test_end"] == b["test_end"]
 
 
 # ---------------------------------------------------------------------------
@@ -300,7 +359,9 @@ def test_triple_barrier_label_and_offset_always_valid(
     """
     df = _make_synthetic_ohlcv(n_rows, seed)
     result = compute_triple_barrier_labels(
-        df, atr_multiplier=atr_multiplier, vertical_barrier_candles=vertical_barrier_candles
+        df,
+        atr_multiplier=atr_multiplier,
+        vertical_barrier_candles=vertical_barrier_candles,
     )
 
     non_nan_labels = result["label"].dropna()
@@ -309,3 +370,44 @@ def test_triple_barrier_label_and_offset_always_valid(
     non_nan = result.dropna()
     assert (non_nan["exit_bar_offset"] >= 1).all()
     assert (non_nan["exit_bar_offset"] <= vertical_barrier_candles).all()
+
+
+@given(offset_days=st.floats(min_value=0.0, max_value=30.0, allow_nan=False))
+@settings(max_examples=50, deadline=None)
+def test_walk_forward_folds_offset_preserves_chronology_invariants(
+    offset_days: float,
+) -> None:
+    """
+    Commit 2.9 (Z1), własność wymagana przez DoD (docs/rag/05) dla labeling.py:
+    dla DOWOLNEGO nieujemnego offsetu każdy wygenerowany fold zachowuje niezmienniki
+    walk-forward (train ściśle przed test, brak nakładania masek wewnątrz foldu),
+    a pierwszy fold startuje dokładnie o `offset_days` później niż pierwsza świeca.
+    Offset perturbuje WYRÓWNANIE granic foldów, nigdy ich chronologię.
+    """
+    timestamps = pd.date_range("2026-01-01", periods=200, freq="D", tz="UTC")
+    df = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "open": 100.0,
+            "high": 101.0,
+            "low": 99.0,
+            "close": 100.0,
+            "volume": 10.0,
+        }
+    )
+    folds = generate_walk_forward_folds(
+        df, train_days=60, test_days=14, step_days=14, start_offset_days=offset_days
+    )
+
+    for fold in folds:
+        assert (
+            fold["train_start"]
+            < fold["train_end"]
+            == fold["test_start"]
+            < fold["test_end"]
+        )
+        assert not (fold["train_mask"] & fold["test_mask"]).any()
+
+    if folds:
+        expected_start = timestamps[0] + pd.Timedelta(days=offset_days)
+        assert folds[0]["train_start"] == expected_start

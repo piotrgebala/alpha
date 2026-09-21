@@ -80,7 +80,6 @@ from __future__ import annotations
 
 from typing import Callable
 
-import numpy as np
 import pandas as pd
 
 from agents.feature_miner import (
@@ -115,7 +114,11 @@ from agents.risk_controller import (
     is_cost_feasible,
     should_rearm_kill_switch,
 )
-from backtest.costs import round_trip_cost_fraction, total_round_trip_cost
+from backtest.costs import (
+    CANDLE_MINUTES,
+    round_trip_cost_fraction,
+    total_round_trip_cost,
+)
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
 # TASKS.md C2.5: "reżim trend może być rzadki"). To engineering safeguard, NIE parametr
@@ -146,7 +149,6 @@ TRADE_COLUMNS = [
 REGIME_FEATURE_SETS = [("trend", MOMENTUM_FEATURES), ("range", REVERSION_FEATURES)]
 
 
-
 def _collect_candidate_signals(
     df: pd.DataFrame,
     train_days: int,
@@ -158,6 +160,8 @@ def _collect_candidate_signals(
     seed: int,
     min_train_rows: int,
     min_barrier_to_cost_ratio: float,
+    regime_feature_sets: list[tuple[str, list[str]]],
+    fold_start_offset_days: float,
 ) -> tuple[list[dict], list[dict]]:
     """
     Trenuje model_momentum/model_reversion per walk-forward fold, generuje sygnały
@@ -170,12 +174,19 @@ def _collect_candidate_signals(
     equity i toru transakcji (patrz decyzja w docstringu modułu). Liczba sygnałów
     odrzuconych przez bramkę trafia do `folds_summary["n_signals_cost_gated"]` —
     audytowalność bez zaśmiecania trade journalu wierszami zerowymi.
+
+    `regime_feature_sets` (Commit 2.8): przekazywane z `run_backtest`, NIE czytane
+    z modułowej stałej `REGIME_FEATURE_SETS` bezpośrednio — pozwala
+    `backtest/evaluate_feature_candidate.py` porównać baseline vs kandydata (jedna
+    nowa cecha dodana do `MOMENTUM_FEATURES`/`REVERSION_FEATURES`) przez ten sam
+    pipeline, bez duplikacji logiki (ten sam wzorzec co `trend_threshold`/
+    `candles_per_day` w C2.5/C2.6).
     """
     cost_fraction = round_trip_cost_fraction()
     candidate_signals: list[dict] = []
     folds_summary: list[dict] = []
 
-    for regime_name, feature_columns in REGIME_FEATURE_SETS:
+    for regime_name, feature_columns in regime_feature_sets:
         # Świadomie NIE agents.feature_miner.split_by_regime() — patrz decyzja w
         # docstringu modułu (potrzebujemy zachowanego oryginalnego indexu).
         regime_df = df[df["regime"] == regime_name]
@@ -203,7 +214,13 @@ def _collect_candidate_signals(
             )
             continue
 
-        folds = generate_walk_forward_folds(regime_df, train_days, test_days, step_days)
+        folds = generate_walk_forward_folds(
+            regime_df,
+            train_days,
+            test_days,
+            step_days,
+            start_offset_days=fold_start_offset_days,
+        )
 
         for fold_idx, fold in enumerate(folds):
             train_df = regime_df[fold["train_mask"]]
@@ -340,6 +357,9 @@ def run_backtest(
     trend_threshold: float = DEFAULT_TREND_THRESHOLD,
     range_threshold: float = DEFAULT_RANGE_THRESHOLD,
     candles_per_day: int = DEFAULT_CANDLES_PER_DAY,
+    regime_feature_sets: list[tuple[str, list[str]]] | None = None,
+    fold_start_offset_days: float = 0.0,
+    candle_minutes: int = CANDLE_MINUTES,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -386,6 +406,26 @@ def run_backtest(
             Musi być nadpisane na 24 (1h) / 6 (4h) przy uruchamianiu na danych o innym
             timeframe (`backtest/checkpoint_timeframe_robustness.py`) — inaczej okno
             "~20 dni" przestaje reprezentować 20 dni kalendarzowych.
+        regime_feature_sets: Commit 2.8 — nadpisanie `REGIME_FEATURE_SETS` (domyślnie
+            `[("trend", MOMENTUM_FEATURES), ("range", REVERSION_FEATURES)]` z
+            `agents.ml_optimizer`). `None` (domyślnie) = zachowanie bez zmian.
+            Nadpisywalne, żeby `backtest/evaluate_feature_candidate.py` mogło
+            porównać baseline vs kandydata (nowa cecha dodana do jednego z zestawów)
+            przez ten sam pipeline, bez duplikacji logiki (CLAUDE.md zasada 4 — jedna
+            cecha na raz, mierzona OOS).
+        fold_start_offset_days: Commit 2.9 (Z1) — przesunięcie startu pierwszego okna
+            walk-forward w dniach (agents.labeling.generate_walk_forward_folds).
+            Używane WYŁĄCZNIE przez sweep stabilności fold-jitter
+            (`backtest/checkpoint_lib.py`) — perturbacja ARBITRALNEGO wyrównania
+            granic foldów, NIE parametr hipotezy. Domyślne 0.0 = zachowanie
+            identyczne jak przed Commitem 2.9.
+        candle_minutes: Commit 2.9 (Z11) — długość świecy w minutach, przekazywana do
+            `backtest.costs.total_round_trip_cost` (składnik funding zależy od
+            REALNEGO czasu trzymania pozycji, nie liczby świec). Konwersja jednostek,
+            analogiczna do `candles_per_day` — NIE parametr hipotezy. Domyślnie 5
+            (timeframe 5m); przy danych 1h/4h MUSI być nadpisane na 60/240, inaczej
+            funding jest liczony 12×/48× za nisko (materialnie mały efekt, ~0,0004%
+            nominału, ale to bug jednostek, nie świadome uproszczenie).
 
     Returns:
         {
@@ -407,6 +447,9 @@ def run_backtest(
     df["label"] = labels["label"]
     df["exit_bar_offset"] = labels["exit_bar_offset"]
 
+    active_feature_sets = (
+        REGIME_FEATURE_SETS if regime_feature_sets is None else regime_feature_sets
+    )
     candidate_signals, folds_summary = _collect_candidate_signals(
         df,
         train_days=train_days,
@@ -418,6 +461,8 @@ def run_backtest(
         seed=seed,
         min_train_rows=min_train_rows,
         min_barrier_to_cost_ratio=min_barrier_to_cost_ratio,
+        regime_feature_sets=active_feature_sets,
+        fold_start_offset_days=fold_start_offset_days,
     )
 
     # Chronologia ponad reżimy — patrz docstring modułu.
@@ -425,7 +470,9 @@ def run_backtest(
 
     equity = initial_equity
     trades: list[dict] = []
-    equity_curve: list[dict] = [{"timestamp": df["timestamp"].iloc[0], "equity": equity}]
+    equity_curve: list[dict] = [
+        {"timestamp": df["timestamp"].iloc[0], "equity": equity}
+    ]
     peak_equity = equity
     # Commit 2c: moment pierwszego nieprzerwanego zadziałania kill-switcha (None, gdy
     # nieaktywny) — patrz docstring modułu.
@@ -497,6 +544,7 @@ def run_backtest(
             notional=notional,
             holding_candles=signal["exit_bar_offset"],
             direction=direction,
+            candle_minutes=candle_minutes,
         )
         net_pnl = gross_pnl - cost
 

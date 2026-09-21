@@ -28,7 +28,12 @@ def _make_df(timestamps: list[str]) -> pd.DataFrame:
 
 def test_clean_ohlcv_removes_duplicate_timestamps():
     df = _make_df(
-        ["2026-01-01T00:00Z", "2026-01-01T00:05Z", "2026-01-01T00:05Z", "2026-01-01T00:10Z"]
+        [
+            "2026-01-01T00:00Z",
+            "2026-01-01T00:05Z",
+            "2026-01-01T00:05Z",
+            "2026-01-01T00:10Z",
+        ]
     )
     cleaned = _clean_ohlcv(df, end="2026-01-02T00:00Z")
     assert cleaned["timestamp"].is_unique
@@ -82,7 +87,9 @@ def _make_5m_ohlcv_with_known_values(n_hours: int = 3) -> pd.DataFrame:
     n = n_hours * 12
     timestamps = pd.date_range("2026-01-01T00:00", periods=n, freq="5min", tz="UTC")
     idx_in_hour = pd.Series(range(n)) % 12
-    base = 100.0 + (pd.Series(range(n)) // 12) * 100.0  # poziom bazowy różny per godzina
+    base = (
+        100.0 + (pd.Series(range(n)) // 12) * 100.0
+    )  # poziom bazowy różny per godzina
     return pd.DataFrame(
         {
             "timestamp": timestamps,
@@ -100,12 +107,21 @@ def test_resample_ohlcv_aggregates_ohlc_and_volume_correctly():
     resampled = resample_ohlcv(df, "1h")
 
     assert len(resampled) == 2
-    assert list(resampled.columns) == ["timestamp", "open", "high", "low", "close", "volume"]
+    assert list(resampled.columns) == [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+    ]
 
     first_hour = resampled.iloc[0]
     assert first_hour["timestamp"] == pd.Timestamp("2026-01-01T00:00", tz="UTC")
     assert first_hour["open"] == pytest.approx(100.0)  # pierwsza świeca 5m tej godziny
-    assert first_hour["high"] == pytest.approx(100.0 + 11 + 0.5)  # ostatnia świeca ma max high
+    assert first_hour["high"] == pytest.approx(
+        100.0 + 11 + 0.5
+    )  # ostatnia świeca ma max high
     assert first_hour["low"] == pytest.approx(100.0 - 0.5)  # pierwsza świeca ma min low
     assert first_hour["close"] == pytest.approx(100.0 + 11 + 0.1)  # ostatnia świeca 5m
     assert first_hour["volume"] == pytest.approx(120.0)  # suma 12 x 10.0
@@ -126,7 +142,9 @@ def test_resample_ohlcv_4h_bucket_matches_three_1h_buckets():
 def test_resample_ohlcv_drops_incomplete_trailing_bucket():
     # 90 minut = 1 pełna godzina + 30 min niepełnej — niepełny bucket musi zniknąć
     # (dropna), a nie zostać zwrócony z brakującymi polami.
-    timestamps = pd.date_range("2026-01-01T00:00", periods=18, freq="5min", tz="UTC")  # 90 min
+    timestamps = pd.date_range(
+        "2026-01-01T00:00", periods=18, freq="5min", tz="UTC"
+    )  # 90 min
     df = pd.DataFrame(
         {
             "timestamp": timestamps,

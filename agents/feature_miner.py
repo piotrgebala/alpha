@@ -46,7 +46,9 @@ DEFAULT_CANDLES_PER_DAY = 288
 
 def compute_atr_14(df: pd.DataFrame) -> pd.Series:
     """Average True Range, Wilder smoothing, 14-period (TA-Lib)."""
-    atr = talib.ATR(df["high"].values, df["low"].values, df["close"].values, timeperiod=14)
+    atr = talib.ATR(
+        df["high"].values, df["low"].values, df["close"].values, timeperiod=14
+    )
     return pd.Series(atr, index=df.index, name="atr_14")
 
 
@@ -70,7 +72,9 @@ def compute_direction_persistence_10(df: pd.DataFrame) -> pd.Series:
 
 
 def compute_atr_pctrank_20d(
-    df: pd.DataFrame, candles_per_day: int = DEFAULT_CANDLES_PER_DAY, window_days: int = 20
+    df: pd.DataFrame,
+    candles_per_day: int = DEFAULT_CANDLES_PER_DAY,
+    window_days: int = 20,
 ) -> pd.Series:
     """
     Rolling percentyl atr_14 względem trailing okna ~20 dni.
@@ -163,6 +167,26 @@ def compute_volume_zscore_20(df: pd.DataFrame) -> pd.Series:
     return z.rename("volume_zscore_20")
 
 
+def compute_adx_14(df: pd.DataFrame) -> pd.Series:
+    """
+    Average Directional Index, 14-period (TA-Lib) — siła trendu NIEZALEŻNA od
+    kierunku, wartości ciągłe w [0, 100].
+
+    Commit 2.8 (promocja z screeningu C2.7, `backtest/screen_feature_candidates.py`):
+    korelacja Spearman cecha-cecha na realnych danych BTC pokazała, że `adx_14` jest
+    JEDYNYM z 8 kandydatów screeningu nisko skorelowanym z resztą registry (w tym,
+    zaskakująco, z `direction_persistence_10` — corr=+0,07, mimo że oba mają mierzyć
+    "siłę trendu") — sensowny kandydat do formalnego testu OOS jako DODATEK do
+    `MOMENTUM_FEATURES` (agents/ml_optimizer.py), nie zamiennik. Wynik formalnego
+    testu OOS: `backtest/evaluate_feature_candidate.py`,
+    `runs/2026-09-21_c2.8-adx14-oos-evaluation.md`.
+    """
+    adx = talib.ADX(
+        df["high"].values, df["low"].values, df["close"].values, timeperiod=14
+    )
+    return pd.Series(adx, index=df.index, name="adx_14")
+
+
 # ---------------------------------------------------------------------------
 # Cechy Test 2 — Mean-reversion (używane tylko na świecach z regime == "range")
 # ---------------------------------------------------------------------------
@@ -189,6 +213,7 @@ FEATURE_FUNCTIONS = {
     "volume_zscore_20": compute_volume_zscore_20,
     "rsi_14": compute_rsi_14,
     "price_zscore_20": compute_price_zscore_20,
+    "adx_14": compute_adx_14,
 }
 
 
@@ -215,15 +240,23 @@ def compute_all_features(
     out = df.copy()
     for name, fn in FEATURE_FUNCTIONS.items():
         out[name] = fn(df)
-    out["regime"] = classify_regime(df, trend_threshold, range_threshold, candles_per_day)
+    out["regime"] = classify_regime(
+        df, trend_threshold, range_threshold, candles_per_day
+    )
     return out
 
 
-def split_by_regime(df_with_features: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def split_by_regime(
+    df_with_features: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Filtruje do dwóch podzbiorów: (test1_trend_momentum, test2_range_reversion).
     Wymaga, żeby df_with_features miał już kolumnę 'regime' (patrz compute_all_features).
     """
-    test1 = df_with_features[df_with_features["regime"] == "trend"].reset_index(drop=True)
-    test2 = df_with_features[df_with_features["regime"] == "range"].reset_index(drop=True)
+    test1 = df_with_features[df_with_features["regime"] == "trend"].reset_index(
+        drop=True
+    )
+    test2 = df_with_features[df_with_features["regime"] == "range"].reset_index(
+        drop=True
+    )
     return test1, test2

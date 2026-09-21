@@ -128,7 +128,9 @@ def compute_triple_barrier_labels(
         labels[t] = label
         exit_bar_offset[t] = offset
 
-    return pd.DataFrame({"label": labels, "exit_bar_offset": exit_bar_offset}, index=df.index)
+    return pd.DataFrame(
+        {"label": labels, "exit_bar_offset": exit_bar_offset}, index=df.index
+    )
 
 
 def generate_walk_forward_folds(
@@ -136,6 +138,7 @@ def generate_walk_forward_folds(
     train_days: int = TRAIN_WINDOW_DAYS,
     test_days: int = TEST_WINDOW_DAYS,
     step_days: int = STEP_DAYS,
+    start_offset_days: float = 0.0,
 ) -> list[dict]:
     """
     Generuje chronologiczne, przesuwane okna walk-forward (docs/rag/03).
@@ -146,11 +149,22 @@ def generate_walk_forward_folds(
     train-oknach (to normalne dla walk-forward, nie leakage — w KAŻDYM foldzie
     z osobna test jest zawsze ściśle po jego własnym train).
 
+    `start_offset_days` (Commit 2.9): przesuwa start PIERWSZEGO foldu o zadaną liczbę
+    dni względem pierwszej świecy danych. Używane WYŁĄCZNIE przez sweep stabilności
+    fold-jitter (`backtest/checkpoint_lib.py`) — perturbuje ARBITRALNY wybór
+    wyrównania granic foldów (dotąd zawsze "od pierwszej świecy"), NIE jest
+    parametrem hipotezy ani kandydatem do kalibracji. Domyślne 0.0 = zachowanie
+    identyczne jak przed Commitem 2.9. Kontekst: sweep stabilności po seedach
+    (C6.3) okazał się pusty poznawczo, bo XGBoost w obecnej konfiguracji (bez
+    subsample/colsample) jest deterministyczny — patrz docs/rag/03, aktualizacja
+    2026-09-21.
+
     Args:
         df: DataFrame z kolumną `timestamp` (tz-aware, posortowana chronologicznie).
         train_days: długość okna treningowego w dniach.
         test_days: długość okna testowego w dniach.
         step_days: przesunięcie startu kolejnego foldu w dniach.
+        start_offset_days: przesunięcie startu pierwszego foldu w dniach (>= 0).
 
     Returns:
         Lista dictów: {train_start, train_end, test_start, test_end,
@@ -165,7 +179,7 @@ def generate_walk_forward_folds(
     step_delta = pd.Timedelta(days=step_days)
 
     folds = []
-    train_start = timestamps.iloc[0]
+    train_start = timestamps.iloc[0] + pd.Timedelta(days=start_offset_days)
     while True:
         train_end = train_start + train_delta
         test_start = train_end

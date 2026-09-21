@@ -19,11 +19,14 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from backtest.metrics import (
+    MIN_TRADES_FOR_N_EFF,
     classify_checkpoint,
     compute_fold_metrics,
     compute_sharpe_ratio,
+    compute_t_stat,
     compute_trade_returns,
     summarize_by_regime,
+    summarize_pooled_by_regime,
 )
 
 
@@ -40,9 +43,27 @@ def _make_trades(rows: list[dict]) -> pd.DataFrame:
 def test_compute_trade_returns_formula() -> None:
     trades = _make_trades(
         [
-            {"regime": "trend", "fold_idx": 0, "net_pnl": 100.0, "equity_before": 10_000.0, "kill_switch_active": False},
-            {"regime": "trend", "fold_idx": 0, "net_pnl": -50.0, "equity_before": 10_100.0, "kill_switch_active": False},
-            {"regime": "trend", "fold_idx": 0, "net_pnl": 25.0, "equity_before": 10_050.0, "kill_switch_active": False},
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 100.0,
+                "equity_before": 10_000.0,
+                "kill_switch_active": False,
+            },
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": -50.0,
+                "equity_before": 10_100.0,
+                "kill_switch_active": False,
+            },
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 25.0,
+                "equity_before": 10_050.0,
+                "kill_switch_active": False,
+            },
         ]
     )
     returns = compute_trade_returns(trades)
@@ -53,9 +74,21 @@ def test_compute_trade_returns_formula() -> None:
 def test_compute_trade_returns_excludes_kill_switch_rows() -> None:
     trades = _make_trades(
         [
-            {"regime": "trend", "fold_idx": 0, "net_pnl": 100.0, "equity_before": 10_000.0, "kill_switch_active": False},
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 100.0,
+                "equity_before": 10_000.0,
+                "kill_switch_active": False,
+            },
             # net_pnl absurdalnie duży, żeby test JAWNIE wykrył, gdyby wiersz nie został wykluczony.
-            {"regime": "trend", "fold_idx": 0, "net_pnl": 999_999.0, "equity_before": 10_000.0, "kill_switch_active": True},
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 999_999.0,
+                "equity_before": 10_000.0,
+                "kill_switch_active": True,
+            },
         ]
     )
     returns = compute_trade_returns(trades)
@@ -89,8 +122,12 @@ def test_compute_sharpe_ratio_nan_zero_variance() -> None:
 
 def test_compute_sharpe_ratio_risk_free_rate_lowers_result() -> None:
     returns = pd.Series([0.01, 0.02, 0.015, 0.005])
-    sharpe_zero_rf = compute_sharpe_ratio(returns, periods_per_year=252.0, risk_free_rate=0.0)
-    sharpe_positive_rf = compute_sharpe_ratio(returns, periods_per_year=252.0, risk_free_rate=0.005)
+    sharpe_zero_rf = compute_sharpe_ratio(
+        returns, periods_per_year=252.0, risk_free_rate=0.0
+    )
+    sharpe_positive_rf = compute_sharpe_ratio(
+        returns, periods_per_year=252.0, risk_free_rate=0.005
+    )
     assert sharpe_positive_rf < sharpe_zero_rf
 
 
@@ -102,10 +139,34 @@ def test_compute_sharpe_ratio_risk_free_rate_lowers_result() -> None:
 def test_compute_fold_metrics_basic_grouping() -> None:
     trades = _make_trades(
         [
-            {"regime": "trend", "fold_idx": 0, "net_pnl": 100.0, "equity_before": 10_000.0, "kill_switch_active": False},
-            {"regime": "trend", "fold_idx": 0, "net_pnl": 50.0, "equity_before": 10_100.0, "kill_switch_active": False},
-            {"regime": "range", "fold_idx": 0, "net_pnl": -30.0, "equity_before": 10_000.0, "kill_switch_active": False},
-            {"regime": "range", "fold_idx": 0, "net_pnl": -40.0, "equity_before": 9_970.0, "kill_switch_active": False},
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 100.0,
+                "equity_before": 10_000.0,
+                "kill_switch_active": False,
+            },
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 50.0,
+                "equity_before": 10_100.0,
+                "kill_switch_active": False,
+            },
+            {
+                "regime": "range",
+                "fold_idx": 0,
+                "net_pnl": -30.0,
+                "equity_before": 10_000.0,
+                "kill_switch_active": False,
+            },
+            {
+                "regime": "range",
+                "fold_idx": 0,
+                "net_pnl": -40.0,
+                "equity_before": 9_970.0,
+                "kill_switch_active": False,
+            },
         ]
     )
     folds_summary = [
@@ -159,9 +220,18 @@ def test_compute_fold_metrics_whole_regime_skip_none_fold_idx() -> None:
 
 def test_compute_fold_metrics_fold_with_zero_matching_trades() -> None:
     """fold_idx obecny w folds_summary, ale zero pasujących wierszy w trades (np.
-    wszystkie sygnały stłumione przez kill-switch) -> n_trades=0, sharpe=NaN, bez crasha."""
+    wszystkie sygnały stłumione przez kill-switch) -> n_trades=0, sharpe=NaN, bez crasha.
+    """
     trades = _make_trades(
-        [{"regime": "trend", "fold_idx": 0, "net_pnl": 5.0, "equity_before": 10_000.0, "kill_switch_active": True}]
+        [
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 5.0,
+                "equity_before": 10_000.0,
+                "kill_switch_active": True,
+            }
+        ]
     )
     folds_summary = [
         {
@@ -179,7 +249,15 @@ def test_compute_fold_metrics_fold_with_zero_matching_trades() -> None:
 
 def test_compute_fold_metrics_single_trade_insufficient() -> None:
     trades = _make_trades(
-        [{"regime": "trend", "fold_idx": 0, "net_pnl": 5.0, "equity_before": 10_000.0, "kill_switch_active": False}]
+        [
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 5.0,
+                "equity_before": 10_000.0,
+                "kill_switch_active": False,
+            }
+        ]
     )
     folds_summary = [
         {
@@ -200,7 +278,9 @@ def test_compute_fold_metrics_single_trade_insufficient() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _fold_metrics_from_sharpes(sharpes: list[float], regime: str = "trend") -> pd.DataFrame:
+def _fold_metrics_from_sharpes(
+    sharpes: list[float], regime: str = "trend"
+) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "regime": [regime] * len(sharpes),
@@ -292,15 +372,141 @@ def test_summarize_by_regime_independent_classification() -> None:
 
 @given(
     sharpes=st.lists(
-        st.floats(min_value=-10.0, max_value=10.0, allow_nan=False) | st.just(float("nan")),
+        st.floats(min_value=-10.0, max_value=10.0, allow_nan=False)
+        | st.just(float("nan")),
         min_size=0,
         max_size=30,
     )
 )
 @settings(max_examples=50, deadline=None)
 def test_classify_checkpoint_always_returns_valid_label(sharpes: list[float]) -> None:
-    fold_metrics = _fold_metrics_from_sharpes(sharpes) if sharpes else pd.DataFrame(
-        {"regime": [], "fold_idx": [], "sharpe": []}
+    fold_metrics = (
+        _fold_metrics_from_sharpes(sharpes)
+        if sharpes
+        else pd.DataFrame({"regime": [], "fold_idx": [], "sharpe": []})
     )
     result = classify_checkpoint(fold_metrics)
     assert result["classification"] in {"GO", "WARUNKOWY", "NO-GO"}
+
+
+# ---------------------------------------------------------------------------
+# Warstwa 1: compute_t_stat + summarize_pooled_by_regime (Commit 2.9, Z2+Z3)
+# ---------------------------------------------------------------------------
+
+
+def test_compute_t_stat_matches_manual_formula() -> None:
+    returns = pd.Series([0.01, 0.02, -0.005, 0.015])
+    expected = returns.mean() / (returns.std(ddof=1) / np.sqrt(len(returns)))
+    assert compute_t_stat(returns) == pytest.approx(float(expected))
+
+
+@pytest.mark.parametrize(
+    "returns",
+    [pd.Series([], dtype=float), pd.Series([0.01]), pd.Series([0.02, 0.02, 0.02])],
+)
+def test_compute_t_stat_nan_for_degenerate_input(returns: pd.Series) -> None:
+    # <2 obserwacje albo zerowa wariancja — spójnie z compute_sharpe_ratio.
+    assert math.isnan(compute_t_stat(returns))
+
+
+def test_compute_fold_metrics_includes_t_stat_column() -> None:
+    trades = _make_trades(
+        [
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 100.0,
+                "equity_before": 10_000.0,
+                "kill_switch_active": False,
+            },
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": -50.0,
+                "equity_before": 10_100.0,
+                "kill_switch_active": False,
+            },
+            {
+                "regime": "trend",
+                "fold_idx": 0,
+                "net_pnl": 25.0,
+                "equity_before": 10_050.0,
+                "kill_switch_active": False,
+            },
+        ]
+    )
+    folds_summary = [
+        {
+            "regime": "trend",
+            "fold_idx": 0,
+            "test_start": pd.Timestamp("2026-01-01", tz="UTC"),
+            "test_end": pd.Timestamp("2026-01-15", tz="UTC"),
+            "skip_reason": None,
+        }
+    ]
+    metrics = compute_fold_metrics(trades, folds_summary)
+    assert "t_stat" in metrics.columns
+    returns = compute_trade_returns(trades)
+    assert metrics.iloc[0]["t_stat"] == pytest.approx(compute_t_stat(returns))
+
+
+def test_summarize_pooled_by_regime_pools_across_folds_and_excludes_kill_switch() -> (
+    None
+):
+    rng = np.random.default_rng(0)
+    rows = []
+    # 100 transakcji trend rozrzuconych po 5 foldach — pooling MUSI je połączyć.
+    for i in range(100):
+        rows.append(
+            {
+                "regime": "trend",
+                "fold_idx": i % 5,
+                "net_pnl": float(rng.normal(5.0, 20.0)),
+                "equity_before": 10_000.0,
+                "kill_switch_active": False,
+            }
+        )
+    # Wiersz stłumiony przez kill-switch — musi zostać wykluczony z n_trades.
+    rows.append(
+        {
+            "regime": "trend",
+            "fold_idx": 0,
+            "net_pnl": 999_999.0,
+            "equity_before": 10_000.0,
+            "kill_switch_active": True,
+        }
+    )
+    trades = _make_trades(rows)
+
+    summary = summarize_pooled_by_regime(trades)
+    assert list(summary["regime"]) == ["trend"]
+    row = summary.iloc[0]
+    assert row["n_trades"] == 100
+    returns = compute_trade_returns(trades)
+    assert row["mean_return"] == pytest.approx(float(returns.mean()))
+    assert row["t_stat"] == pytest.approx(compute_t_stat(returns))
+    # Z3: N_eff policzone (n >= MIN_TRADES_FOR_N_EFF), w przedziale (0, n],
+    # a t_stat_neff jest konserwatywny: |t_neff| <= |t| gdy n_eff <= n.
+    assert 100 >= MIN_TRADES_FOR_N_EFF
+    assert 0 < row["n_eff"] <= row["n_trades"]
+    assert abs(row["t_stat_neff"]) <= abs(row["t_stat"]) + 1e-9
+
+
+def test_summarize_pooled_by_regime_n_eff_nan_below_min_trades() -> None:
+    rows = [
+        {
+            "regime": "range",
+            "fold_idx": 0,
+            "net_pnl": float(v),
+            "equity_before": 10_000.0,
+            "kill_switch_active": False,
+        }
+        for v in [10.0, -5.0, 7.0]  # 3 < MIN_TRADES_FOR_N_EFF
+    ]
+    summary = summarize_pooled_by_regime(_make_trades(rows))
+    row = summary.iloc[0]
+    assert row["n_trades"] == 3
+    assert math.isnan(row["n_eff"])
+    assert math.isnan(row["t_stat_neff"])
+    # t_stat na pełnym n nadal policzalne.
+    assert not math.isnan(row["t_stat"])

@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-08-01
+last_verified: 2026-09-21
 depends_on: [01_hipoteza_i_architektura.md, 02_cechy_i_leakage.md]
 ---
 
@@ -107,6 +107,25 @@ część głównej pętli decyzyjnej (fail-safe, nie fail-soft).
 Sprawdzić też: stabilność wyniku przy losowym seedzie modelu (sanity check overfittingu), wynik
 osobno per reżim rynkowy (np. 2023 niska zmienność vs 2024-25 era ETF) — jedna liczba Sharpe
 zagregowana po całym okresie maskuje niestabilność między reżimami.
+
+**AKTUALIZACJA 2026-09-21 (Commit 2.9) — stabilność po seedach okazała się pusta poznawczo i
+została zastąpiona.** XGBoost w konfiguracji Fazy 0 (`DEFAULT_XGB_PARAMS` bez
+`subsample`/`colsample_bytree`) jest w pełni deterministyczny — seed nie zmienia ani jednego
+drzewa, więc "std=0,0000 (STABILNY)" ze sweepu C6.3 mierzył dokładnie nic (empirycznie: wynik
+identyczny do ostatniej cyfry w KAŻDYM eksperymencie C6→C2.8, ~10 niezależnych potwierdzeń).
+Zamiennik (`backtest/checkpoint_lib.py::sweep_fold_offsets`, pierwszy użytkownik
+`backtest/run_checkpoint_v2.py`): **fold-jitter** — przesunięcie startu okien walk-forward o
+0–9 dni (`start_offset_days` w `generate_walk_forward_folds`). Perturbuje ARBITRALNY wybór
+wyrównania granic foldów, nie model i nie hipotezę; offset=0 to dokładnie kanoniczny przebieg,
+więc porównywalność historyczna zachowana. Świadomie BEZ nowego progu pass/fail (stary
+std<0.2 dotyczył szumu seedów i nie przenosi się na realną perturbację podziału danych) —
+raportowane są rozkład (std, zakres) i spójność znaku; interpretacja przy użytkowniku.
+Dodatkowo od Commitu 2.9 raport checkpointu zawiera: per-fold `t_stat` (bez annualizacji —
+annualizowany Sharpe przy 30–40 transakcjach na fold nadmuchiwał wartości do rzędów ±20–60),
+zbiorczą diagnostykę pooled per regime oraz `N_eff`/`t_stat_neff` (efektywna liczba
+niezależnych obserwacji z autokorelacji zwrotów — funkcja z C4.4, wpięta do raportu po raz
+pierwszy). Kryteria klasyfikacji GO/WARUNKOWY/NO-GO z tabeli wyżej pozostają NIEZMIENIONE —
+nowe miary są diagnostyką obok werdyktu, nie nowym werdyktem.
 
 ## Retraining modeli (temat dodany po przeglądzie szerszej wizji projektu)
 

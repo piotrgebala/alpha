@@ -40,7 +40,9 @@ def _make_separable_dataset(n_per_class: int = 150, seed: int = 0) -> pd.DataFra
     return df.sample(frac=1.0, random_state=seed).reset_index(drop=True)
 
 
-def _train_test_split(df: pd.DataFrame, test_frac: float = 0.2) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _train_test_split(
+    df: pd.DataFrame, test_frac: float = 0.2
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     n_test = int(len(df) * test_frac)
     return df.iloc[:-n_test].copy(), df.iloc[-n_test:].copy()
 
@@ -72,7 +74,9 @@ def test_train_regime_model_learns_separable_pattern() -> None:
     booster = train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
     signals = predict_signal(booster, test_df, FEATURE_COLUMNS)
 
-    accuracy = (signals["signal_direction"].to_numpy() == test_df["label"].to_numpy()).mean()
+    accuracy = (
+        signals["signal_direction"].to_numpy() == test_df["label"].to_numpy()
+    ).mean()
     assert accuracy > 0.9
 
 
@@ -97,7 +101,9 @@ def test_train_regime_model_raises_on_empty_train_after_dropna() -> None:
     df = _make_separable_dataset(seed=3)
     train_df, test_df = _train_test_split(df)
     train_df = train_df.copy()
-    train_df["f1"] = np.nan  # wszystkie wiersze train_df stają się niepoprawne po dropna
+    train_df["f1"] = (
+        np.nan
+    )  # wszystkie wiersze train_df stają się niepoprawne po dropna
 
     with pytest.raises(ValueError):
         train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
@@ -107,7 +113,9 @@ def test_train_regime_model_raises_on_empty_test_after_dropna() -> None:
     df = _make_separable_dataset(seed=4)
     train_df, test_df = _train_test_split(df)
     test_df = test_df.copy()
-    test_df["label"] = np.nan  # wszystkie wiersze test_df stają się niepoprawne po dropna
+    test_df["label"] = (
+        np.nan
+    )  # wszystkie wiersze test_df stają się niepoprawne po dropna
 
     with pytest.raises(ValueError):
         train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)

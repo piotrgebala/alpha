@@ -16,9 +16,14 @@ Pełne uzasadnienie tej decyzji i wszystkich pozostałych: [`docs/rag/01_hipotez
 ## Status
 
 **Faza 0, checkpoint go/no-go (Commit 6) zakończony wynikiem NO-GO** na realnych danych
-BTC/USDT:USDT (2025-07-01 → 2026-06-30). Commity 1–6 zaimplementowane, przetestowane i
-zweryfikowane empirycznie (86/86 testów). Aktualny krok: ukierunkowany przegląd feature setu
-modelu `range` (mean-reversion) — progi regime i mnożnik ATR zostają bez zmian.
+BTC/USDT:USDT (2025-07-01 → 2026-06-30), potwierdzonym serią pięciu niezależnych,
+metodologicznie czystych testów pojedynczych zmian (Commity 2c–2.8: naprawa kill-switcha,
+bramka kosztowa, kalibracja progów regime, odporność na timeframe 1h/4h, screening korelacji
+cech, formalny test OOS `adx_14`) — wszystkie w paśmie "brak silnego sygnału". Commit 2.9
+naprawił metodologię pomiaru (fold-jitter zamiast pustego sweepu seedów, t-stat/N_eff/pooled
+Sharpe) i potwierdził NO-GO jako odporne na wyrównanie foldów (100% offsetów ujemne). Stan
+testów: 139/139. Surowe wyniki każdej rundy: katalog [`runs/`](runs/INDEX.md). Otwarta
+decyzja strategiczna i backlog poprawek: `TASKS.md` (sekcja Backlog, Z1–Z15).
 
 Pełny, aktualny status: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
@@ -40,21 +45,23 @@ clas5_core/
 ├── README.md                     ← ten plik
 ├── CLAUDE.md                     — instrukcje dla Claude Code (czytane automatycznie)
 ├── IMPLEMENTATION_PLAN.md        — status commitów, żywy dokument
+├── TASKS.md                      — zadania per commit + Backlog (Z1–Z15)
 ├── .github/workflows/tests.yml   — CI: pytest + spójność registry/kod
-├── docs/rag/                     — pełne uzasadnienia decyzji, per temat
-│   ├── 01_hipoteza_i_architektura.md
-│   ├── 02_cechy_i_leakage.md
-│   ├── 03_ryzyko_i_sizing.md
-│   ├── 04_narzedzia_zewnetrzne.md
-│   └── 05_metodologia_wytwarzania_i_testow.md
+├── docs/rag/                     — pełne uzasadnienia decyzji (01–07), per temat
+├── docs/INDEX.md                 — mapa całej dokumentacji
 ├── config/settings.yaml          — instrumenty, timeframe, progi regime
-├── data/fetch_ohlcv.py           — pobieranie i cache OHLCV (Binance USDS-M Futures)
+├── data/fetch_ohlcv.py           — pobieranie/cache OHLCV + resample (Binance USDS-M Futures)
 ├── agents/
-│   ├── feature_miner.py          — 9 cech + regime classifier
-│   └── feature_registry.yaml     — manifest cech (wzór, źródło, rola)
-├── agent_5_compliance/           — testy leakage (Commit 3, w budowie)
-├── backtest/                     — silnik backtestu + koszty (Commit 5, w budowie)
-├── tests/                        — testy jednostkowe
+│   ├── feature_miner.py          — 10 cech + regime classifier
+│   ├── feature_registry.yaml     — manifest cech (wzór, źródło, rola)
+│   ├── labeling.py               — triple-barrier target + walk-forward split
+│   ├── ml_optimizer.py           — dwa modele XGBoost (momentum / reversion)
+│   └── risk_controller.py        — sizing, kill-switch, bramka kosztowa
+├── agent_5_compliance/           — formalne testy leakage
+├── backtest/                     — silnik backtestu, koszty, metryki, checkpoint v2,
+│                                    skrypty analityczne (zamrożone zapisy eksperymentów)
+├── runs/                         — surowy output ciężkich przebiegów (INDEX.md = spis treści)
+├── tests/                        — testy jednostkowe/integracyjne/property-based (139)
 └── requirements.txt
 ```
 

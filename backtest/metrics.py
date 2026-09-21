@@ -41,7 +41,16 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from agents.labeling import effective_sample_size
+
 DAYS_PER_YEAR = 365.25
+
+# Commit 2.9 (Z3): minimalna liczba transakcji, przy której liczenie N_eff (autokorelacja
+# zwrotów) ma jakikolwiek sens — poniżej tego progu estymator autokorelacji jest czystym
+# szumem, więc raportujemy NaN zamiast liczby udającej informację. Próg metodologiczny
+# raportowania, NIE parametr strategii — świadomie poza config/settings.yaml (jak
+# MIN_TRAIN_ROWS w backtest/engine.py i progi klasyfikacji niżej).
+MIN_TRADES_FOR_N_EFF = 10
 
 # Progi klasyfikacji checkpointu — docs/rag/03_ryzyko_i_sizing.md, tabela GO/WARUNKOWY/NO-GO.
 SHARPE_THRESHOLD = 0.5
@@ -80,7 +89,9 @@ def compute_sharpe_ratio(
     return float((mean_excess / std) * np.sqrt(periods_per_year))
 
 
-def compute_fold_metrics(trades: pd.DataFrame, folds_summary: list[dict]) -> pd.DataFrame:
+def compute_fold_metrics(
+    trades: pd.DataFrame, folds_summary: list[dict]
+) -> pd.DataFrame:
     """
     Per-fold (regime, fold_idx) Sharpe po kosztach — C6.1.
 
@@ -135,12 +146,111 @@ def compute_fold_metrics(trades: pd.DataFrame, folds_summary: list[dict]) -> pd.
                 "test_end": test_end,
                 "n_trades": n_trades,
                 "mean_return": fold_returns.mean() if n_trades > 0 else float("nan"),
-                "std_return": fold_returns.std(ddof=1) if n_trades > 1 else float("nan"),
+                "std_return": (
+                    fold_returns.std(ddof=1) if n_trades > 1 else float("nan")
+                ),
                 "sharpe": sharpe,
+                "t_stat": compute_t_stat(fold_returns),
                 "skip_reason": fold.get("skip_reason"),
             }
         )
 
+    return pd.DataFrame(rows)
+
+
+def compute_t_stat(returns: pd.Series) -> float:
+    """
+    Commit 2.9 (Z2): zwykła t-statystyka średniego zwrotu per trade wobec zera:
+
+        t = mean(returns) / (std(returns) / sqrt(n))
+
+    BEZ annualizacji — w odróżnieniu od `compute_sharpe_ratio`, gdzie mnożnik
+    sqrt(trades_per_year) przy n=30-40 transakcji w foldzie nadmuchuje wartości do
+    rzędów ±20-60, statystycznie bezsensownych. t-stat mówi wprost: "o ile odchyleń
+    standardowych ŚREDNIEJ wynik różni się od zera przy TEJ liczbie obserwacji" —
+    |t| < ~2 to wynik nieodróżnialny od szumu niezależnie od znaku Sharpe'a.
+
+    UWAGA: to nadal zakłada niezależność obserwacji — przy autokorelacji zwrotów
+    realna informacja jest mniejsza (patrz N_eff w `summarize_pooled_by_regime`).
+    NaN dla n < 2 albo zerowej wariancji (spójnie z compute_sharpe_ratio).
+    """
+    n = len(returns)
+    if n < 2:
+        return float("nan")
+    std = returns.std(ddof=1)
+    if std == 0 or pd.isna(std):
+        return float("nan")
+    return float(returns.mean() / (std / np.sqrt(n)))
+
+
+def summarize_pooled_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
+    """
+    Commit 2.9 (Z2+Z3): DIAGNOSTYKA zbiorcza per regime — wszystkie realne transakcje
+    reżimu POŁĄCZONE między foldami w jeden strumień zwrotów, zamiast średniej z
+    per-foldowych Sharpe'ów liczonych na 30-40 obserwacjach każdy.
+
+    Po co, skoro jest classify_checkpoint: per-fold Sharpe przy tak małych n jest
+    zdominowany przez szum estymacji std; pooling podnosi n do setek/tysięcy i
+    pozwala uczciwie zapytać "czy średni zwrot per trade w tym reżimie różni się
+    od zera". To NIE zastępuje klasyfikacji checkpointu (kryteria GO/WARUNKOWY/NO-GO
+    z docs/rag/03 pozostają bez zmian) — uzupełnia ją o miary istotności.
+
+    Zastrzeżenie metodologiczne (jawne): pooling łączy transakcje generowane przez
+    RÓŻNE modele (każdy fold trenuje własny) — opisuje więc strumień wyników CAŁEGO
+    pipeline'u walk-forward, nie pojedynczego modelu. Dokładnie tym strumieniem
+    handlowałby system w praktyce, więc to właściwa jednostka opisu strategii.
+
+    Kolumny wyniku, per regime:
+        n_trades        - liczba realnych transakcji (bez kill_switch_active)
+        mean_return     - średni zwrot per trade
+        std_return      - odch. std. zwrotu per trade
+        sharpe_per_trade- mean/std, BEZ annualizacji (porównywalne między reżimami
+                          o różnej częstości transakcji)
+        t_stat          - mean / (std/sqrt(n)) — istotność przy założeniu niezależności
+        n_eff           - efektywna liczba niezależnych obserwacji (autokorelacja
+                          zwrotów, agents.labeling.effective_sample_size, C4.4 —
+                          wpięta do raportu po raz pierwszy w Commicie 2.9); NaN gdy
+                          n < MIN_TRADES_FOR_N_EFF albo estymator zdegenerowany
+        t_stat_neff     - t-stat przeskalowany do N_eff: mean / (std/sqrt(n_eff)) —
+                          konserwatywna istotność uwzględniająca autokorelację
+    """
+    rows: list[dict] = []
+    for regime, group in trades.groupby("regime"):
+        returns = compute_trade_returns(group)
+        n = len(returns)
+        mean = float(returns.mean()) if n > 0 else float("nan")
+        std = float(returns.std(ddof=1)) if n > 1 else float("nan")
+        sharpe_per_trade = mean / std if n > 1 and std > 0 else float("nan")
+        t_stat = compute_t_stat(returns)
+
+        n_eff = float("nan")
+        t_stat_neff = float("nan")
+        if n >= MIN_TRADES_FOR_N_EFF:
+            ess = effective_sample_size(returns.reset_index(drop=True))
+            candidate_n_eff = ess["n_eff"]
+            # Estymator N_eff = n/(1+2*sum(rho)) potrafi się zdegenerować: sum(rho)
+            # <= -0.5 daje wartość ujemną/ogromną (raportuj NaN), a lekko ujemna
+            # suma autokorelacji (typowa dla i.i.d. szumu) daje n_eff nieznacznie
+            # > n — przycinaj do n, bo "więcej informacji niż obserwacji" nie ma
+            # interpretacji w roli, do której N_eff tu służy (konserwatywna korekta
+            # istotności W DÓŁ przy dodatniej autokorelacji).
+            if candidate_n_eff > 0:
+                n_eff = float(min(candidate_n_eff, n))
+                if std and std > 0 and not pd.isna(std):
+                    t_stat_neff = float(mean / (std / np.sqrt(n_eff)))
+
+        rows.append(
+            {
+                "regime": regime,
+                "n_trades": n,
+                "mean_return": mean,
+                "std_return": std,
+                "sharpe_per_trade": sharpe_per_trade,
+                "t_stat": t_stat,
+                "n_eff": n_eff,
+                "t_stat_neff": t_stat_neff,
+            }
+        )
     return pd.DataFrame(rows)
 
 
