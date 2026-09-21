@@ -127,6 +127,13 @@ from backtest.costs import (
 # (model Commitów 5-2.11, zachowany do regresji baseline'u); "maker_limit" = wejście
 # limitem, wyjście zależnie od powodu (TP limitem, SL/timeout marketem) — decyzja
 # użytkownika 2026-09-21. Nazwane warianty, NIE pokrętło do strojenia.
+# Commit 2.13: prog pewnosci. PRE-REJESTROWANA wartosc q=0.75 (gorny kwartyl) - ta sama
+# definicja, na ktorej zmierzono monotoniczna zaleznosc trafnosci od signal_confidence
+# przed programem. JEDNA wartosc, zero sweepu: przeszukiwanie po q byloby dobieraniem
+# parametru po wyniku (CLAUDE.md zasada 1 i 4). Domyslnie None = wylaczone, zeby baseline
+# pozostal odtwarzalny co do cyfry.
+PREREGISTERED_CONFIDENCE_QUANTILE = 0.75
+
 EXECUTION_TAKER_ONLY = "taker_only"
 EXECUTION_MAKER_LIMIT = "maker_limit"
 DEFAULT_EXECUTION_MODEL = EXECUTION_MAKER_LIMIT
@@ -174,6 +181,7 @@ def _collect_candidate_signals(
     min_barrier_to_cost_ratio: float,
     regime_feature_sets: list[tuple[str, list[str]]],
     execution_model: str,
+    confidence_quantile: float | None,
     fold_start_offset_days: float,
 ) -> tuple[list[dict], list[dict]]:
     """
@@ -259,6 +267,8 @@ def _collect_candidate_signals(
                         "skip_reason": f"n_train_valid={n_train_valid}, n_test_valid={n_test_valid} < min_train_rows={min_train_rows}",
                         "n_signals": 0,
                         "n_signals_cost_gated": 0,
+                        "n_signals_confidence_gated": 0,
+                        "confidence_threshold": None,
                         "best_iteration": None,
                         "seed": seed,
                     }
@@ -274,16 +284,31 @@ def _collect_candidate_signals(
                 early_stopping_rounds=early_stopping_rounds,
                 seed=seed,
             )
+            confidence_threshold = _train_fold_confidence_threshold(
+                booster, train_df, feature_columns, confidence_quantile
+            )
             signals = predict_signal(booster, test_df, feature_columns)
 
             n_signals = 0
             n_signals_cost_gated = 0
+            n_signals_confidence_gated = 0
             for idx, row in signals.iterrows():
                 direction = row["signal_direction"]
                 if direction == 0.0:
                     continue
                 label = test_df.loc[idx, "label"]
                 if pd.isna(label):
+                    continue
+
+                # Commit 2.13 — bramka pewności. Świadomie PRZED bramką kosztową:
+                # to filtr JAKOŚCI SYGNAŁU, a tamta filtruje HANDLOWALNOŚĆ świecy.
+                # Dzięki tej kolejności n_signals_cost_gated zachowuje znaczenie
+                # "odrzucone przez koszt spośród sygnałów, w które i tak byśmy weszli".
+                if (
+                    confidence_threshold is not None
+                    and row["signal_confidence"] < confidence_threshold
+                ):
+                    n_signals_confidence_gated += 1
                     continue
 
                 # Commit 2d — bramka wykonalności kosztowej (patrz docstring tej
@@ -327,6 +352,8 @@ def _collect_candidate_signals(
                     "skip_reason": None,
                     "n_signals": n_signals,
                     "n_signals_cost_gated": n_signals_cost_gated,
+                    "n_signals_confidence_gated": n_signals_confidence_gated,
+                    "confidence_threshold": confidence_threshold,
                     "best_iteration": booster.best_iteration,
                     "seed": seed,
                 }
@@ -355,6 +382,38 @@ def _resolve_exit_price(df: pd.DataFrame, signal: dict) -> float:
 
     exit_idx = signal["original_index"] + int(signal["exit_bar_offset"])
     return df.loc[exit_idx, "close"]
+
+
+def _train_fold_confidence_threshold(
+    booster,
+    train_df: pd.DataFrame,
+    feature_columns: list[str],
+    confidence_quantile: float | None,
+) -> float | None:
+    """
+    Commit 2.13: prog `signal_confidence` wyznaczony WYLACZNIE na foldzie TRENINGOWYM.
+
+    Dlaczego nie na testowym: kwantyl policzony na zbiorze testowym oznaczalby dobranie
+    progu pod dane, na ktorych mierzymy wynik - czyli dokladnie ten rodzaj przeciekania
+    decyzji, ktory ma wykluczac walk-forward (CLAUDE.md zasada 1).
+
+    ZASTRZEZENIE JAWNE (kierunek obciazenia): predykcje na `train_df` sa IN-SAMPLE, wiec
+    model jest na nich przesadnie pewny. Prog z ich kwantyla jest zatem ZAWYZONY wzgledem
+    rozkladu pewnosci na tescie, co przepuszcza MNIEJ transakcji, niz sugeruje nominalne
+    q. Obciazenie dziala wiec na niekorzysc hipotezy (konserwatywnie), nie na jej korzysc.
+
+    Zwraca None, gdy prog jest wylaczony albo gdy model nie wygenerowal na treningu ani
+    jednego sygnalu kierunkowego (brak podstawy do policzenia kwantyla).
+    """
+    if confidence_quantile is None:
+        return None
+    train_signals = predict_signal(booster, train_df, feature_columns)
+    directional = train_signals.loc[
+        train_signals["signal_direction"] != 0.0, "signal_confidence"
+    ]
+    if directional.empty:
+        return None
+    return float(directional.quantile(confidence_quantile))
 
 
 def _resolve_exit_reason(direction: float, label: float) -> str:
@@ -414,6 +473,7 @@ def run_backtest(
     fold_start_offset_days: float = 0.0,
     candle_minutes: int = CANDLE_MINUTES,
     execution_model: str = DEFAULT_EXECUTION_MODEL,
+    confidence_quantile: float | None = None,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -517,6 +577,7 @@ def run_backtest(
         min_barrier_to_cost_ratio=min_barrier_to_cost_ratio,
         regime_feature_sets=active_feature_sets,
         execution_model=execution_model,
+        confidence_quantile=confidence_quantile,
         fold_start_offset_days=fold_start_offset_days,
     )
 
