@@ -892,8 +892,55 @@ artefaktem wyrównania foldów; (b) zwrot per trade jest **istotnie ujemny w obu
 rekomendację niepromowania `adx_14`; (d) **Z5 (3–5 lat historii, fetch na maszynie
 użytkownika) jest teraz najważniejszym odblokowaniem** dalszej pracy hipotezowej.
 
-**Status:** ZROBIONE. Backlog: Z1–Z4, Z11–Z15 zamknięte; otwarte pozostają Z5–Z9 (Z5/Z9
-wymagają maszyny użytkownika) i decyzja Z10.
+**Status:** ZROBIONE. Backlog: Z1–Z4, Z11–Z15 zamknięte; Z5 zrealizowane w Commicie 2.10
+(poniżej); otwarte pozostają Z6–Z9 i decyzja Z10.
+
+---
+
+### Commit 2.10 — Wydłużenie historii danych do 3 lat (Backlog Z5) `[ZROBIONE — NO-GO na nowej bazie; niska liczba ważnych foldów okazała się strukturalna, nie ilościowa]`
+
+**Kontekst i zakres (2026-09-21):** Z5 czekało na maszynę użytkownika (sandbox bez dostępu do
+Binance). Wykonane na niej: dostęp potwierdzony (ccxt 4.5.48, ~0,35 s/stronę). Decyzja
+użytkownika: **3 lata, 2023-07-01 → 2026-07-01** (z opcji 3 lat / 5 lat / maks od 2019-09-10);
+`end` bez zmian, więc stare okno jest ścisłym sufiksem nowego. Zero zmian w hipotezie/cechach/
+progach/kosztach/modelu. **Nowa baza checkpointu — nie porównanie 1:1 z C6–C2.9**; licznik
+multiple-testing w `runs/INDEX.md` rozwidlony per zbiór danych (stary: 7, nowy: 0).
+
+**Co zrobiono:**
+- **C2.10.1 — utwardzenie fetchu** (`data/fetch_ohlcv.py`): `_fetch_page_with_retry` — retry z
+  wykładniczym backoffem na `ccxt.NetworkError` (max 5 prób), `ExchangeError` celowo bez retry;
+  log postępu co 50 stron. Semantyka cache niezmieniona (nazwa pliku koduje zakres → nowy zakres
+  = nowy plik, stary parquet ZOSTAJE jako zamrożone źródło C6–C2.9). 4 testy (stub, bez sieci).
+  Pełny zestaw: **143/143** (139 + 4).
+- **C2.10.2 — fetch + integralność:** `data.start=2023-07-01`; **315 648 świec = 1096×288, zero
+  dziur/duplikatów/NaN**, bez ani jednego retry. Overlap 2025-07→2026-07 ze starym plikiem:
+  105 120 wierszy, max |Δ|=0 na wszystkich kolumnach OHLCV, `equals=True`.
+- **C2.10.3 — checkpoint v2** (`run_checkpoint_v2`, pełny sweep) + diagnostyka udziału reżimów i
+  bramki kosztowej z `folds_summary`.
+
+**Wynik na realnych danych (`runs/2026-09-21_c2.10-extended-history-z5.md`):**
+
+| Miara | Stare okno (C2.9, 1 rok) | **Nowe okno (C2.10, 3 lata)** |
+|---|---|---|
+| Foldy ważne / łącznie | 6 / 40 (15,0%) | **21 / 144 (14,6%)** |
+| Klasyfikacja, mean_sharpe | NO-GO, -14,31 | **NO-GO, -12,39** |
+| Pooled `range`: n, t_stat, t_neff | 223, -7,15, NaN | **530, -10,47, -7,34** (N_eff=261) |
+| Pooled `trend`: n, t_stat, t_neff | 135, -2,91, -2,63 | **395, -5,51, -4,04** (N_eff=213) |
+| Fold-jitter | 10/10 ujemne, σ=3,09 | **10/10 ujemne**, σ≈2,5 bez outliera (offset 9: -189) |
+| Udział `trend` / `range` | 0,55% / 22,25% | **0,53% / 21,62%** |
+| Bramka kosztowa `range`: % zablokowanych | — | **98,0%** (61 313 / 62 553) |
+
+**Wniosek C2.10:** (a) werdykt NO-GO jest twardszy — zwrot per trade istotnie ujemny w obu
+reżimach z dużym zapasem (t≈-10 / -5,5), odporny na fold-jitter również na 3 latach; (b) **odsetek
+ważnych foldów nie wzrósł** — 3× więcej danych dało liniowo więcej foldów, ale przyczyna jest
+strukturalna: pusty reżim `trend` (0,53% świec, dyskretność persistence — C2.5/Z7) i bramka
+kosztowa blokująca 98% sygnałów `range` (Commit 2d/Z6). Dłuższa historia tego nie naprawi;
+(c) outlier offset=9 (mean_sharpe -189) to znana słabość annualizowanego per-fold Sharpe przy
+n≈kilka (C2.9/Z2) — statystyką nośną są pooled t; (d) dalsze dźwignie: Z7 (reguła reżimu), Z6
+(koszty — przy 98% blokady bramka jest werdyktem o kosztach, nie o modelu), Z10 (decyzja).
+
+**Status:** ZROBIONE. Backlog: Z1–Z5, Z11–Z15 zamknięte; otwarte Z6–Z9 (Z9 teraz wykonalne z
+maszyny użytkownika) i decyzja Z10.
 
 ---
 
@@ -1063,6 +1110,10 @@ wymagają maszyny użytkownika) i decyzja Z10.
   mean_sharpe) czyni porównania wariantów o Δ<~3 nierozstrzygalnymi na rocznych danych 5m —
   **kolejne rundy hipotezowe bez dłuższej historii danych (Backlog Z5) mają ograniczoną moc
   rozstrzygania**. Pełny wynik: `runs/2026-09-21_c2.9-measurement-methodology.md`.
+  **Aktualizacja C2.10 (Z5 zrobione, 3 lata danych):** werdykt twardszy (range t=-10,47, trend
+  t=-5,51), ale odsetek ważnych foldów bez zmian (14,6%) — ograniczenie jest strukturalne
+  (`trend`=0,53% świec; bramka kosztowa blokuje 98% sygnałów `range`), nie do naprawienia
+  dłuższą historią. Pełny wynik: `runs/2026-09-21_c2.10-extended-history-z5.md`.
 - **Założenia kosztowe są wartościami startowymi, a teraz decydują o werdykcie.** Dopóki koszt był
   jednym z wielu składników, jego przybliżony charakter nie miał znaczenia. Po Commicie 2d koszt
   jest osią diagnozy, więc `taker_fee_rate=0.0005` / `slippage_bps=2` / `funding_rate_8h=0.0001`

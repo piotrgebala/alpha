@@ -25,6 +25,13 @@ import pandas as pd
 
 OHLCV_COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
 
+# Commit 2.10 (Z5): retry z wykładniczym backoffem na błędy sieciowe. Przy 3 latach 5m
+# (~316 sekwencyjnych stron po 1000 świec) pojedynczy timeout bez retry wyrzucał całość
+# (zapis do parquet dopiero po zakończeniu pętli). Wartości startowe, nie strojone.
+FETCH_MAX_RETRIES = 5
+FETCH_BACKOFF_S = 1.0
+FETCH_PROGRESS_EVERY_PAGES = 50
+
 
 def _raw_candles_to_df(candles: list[list[float]]) -> pd.DataFrame:
     """Konwertuje listę świec z ccxt (ms epoch) na DataFrame z tz-aware timestampem UTC."""
@@ -137,6 +144,36 @@ def find_gaps(df: pd.DataFrame, timeframe_minutes: int, tolerance: int = 1) -> p
     return df.loc[gap_mask, ["timestamp"]].assign(gap_before=diffs[gap_mask])
 
 
+def _fetch_page_with_retry(
+    exchange,
+    symbol: str,
+    timeframe: str,
+    since: int,
+    limit: int = 1000,
+    max_retries: int = FETCH_MAX_RETRIES,
+    backoff_s: float = FETCH_BACKOFF_S,
+) -> list[list[float]]:
+    """
+    Jedna strona `fetch_ohlcv` z retry na `ccxt.NetworkError` (RequestTimeout,
+    ExchangeNotAvailable, RateLimitExceeded, DDoSProtection — wszystkie dziedziczą po nim).
+    Backoff wykładniczy: backoff_s * 2**k. Po wyczerpaniu prób re-raise ostatniego błędu.
+    `ExchangeError` (np. zły symbol) NIE jest retry'owany — to błąd konfiguracji, nie sieci.
+
+    Przyjmuje dowolny obiekt z metodą `fetch_ohlcv`, żeby dało się testować stubem bez sieci.
+    """
+    last_error: Exception | None = None
+    for attempt in range(max_retries):
+        try:
+            return exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=limit)
+        except ccxt.NetworkError as e:
+            last_error = e
+            wait = backoff_s * (2**attempt)
+            print(f"[fetch] błąd sieci (próba {attempt + 1}/{max_retries}): {e!r} — czekam {wait:.0f}s")
+            time.sleep(wait)
+    assert last_error is not None
+    raise last_error
+
+
 def get_ohlcv(
     symbol: str,
     timeframe: str,
@@ -165,15 +202,19 @@ def get_ohlcv(
     end_ts = exchange.parse8601(end)
 
     all_candles: list[list[float]] = []
+    n_pages = 0
     while since < end_ts:
-        candles = exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=1000)
+        candles = _fetch_page_with_retry(exchange, symbol, timeframe, since, limit=1000)
         if not candles:
             break
         all_candles.extend(candles)
+        n_pages += 1
         last_ts = candles[-1][0]
         if last_ts <= since:
             # zabezpieczenie przed nieskończoną pętlą, gdyby giełda zwróciła te same dane
             break
+        if n_pages % FETCH_PROGRESS_EVERY_PAGES == 0:
+            print(f"[fetch] {len(all_candles)} świec, ostatnia: {exchange.iso8601(last_ts)}")
         since = last_ts + 1
         time.sleep((exchange.rateLimit or 0) / 1000)
 
