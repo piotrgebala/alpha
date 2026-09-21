@@ -67,6 +67,16 @@ def main(quick: bool) -> None:
         "przy tej liczbie obserwacji; t_stat_neff dodatkowo koryguje za autokorelację."
     )
 
+    print("\n=== Rozbicie edge'u: (2p-1)*B vs C (Commit 2.11) ===")
+    print(primary["edge_per_regime"].to_string(index=False))
+    print(
+        "[interpretacja] hit_rate = trafność kierunku PRZED kosztami (gross_pnl>0);\n"
+        "break_even_p = 0.5*(1 + C/B) = trafność wymagana, żeby wyjść na zero przy tej\n"
+        "szerokości bariery i tym koszcie; margin = hit_rate - break_even_p. Margin <= 0\n"
+        "oznacza, że werdykt jest przesądzony arytmetycznie, niezależnie od jakości modelu.\n"
+        "z_stat wobec H0: p=0.5 — |z| < ~2 => trafność nieodróżnialna od rzutu monetą."
+    )
+
     if quick:
         print("\n[--quick] pomijam sweep fold-jitter.")
         return
