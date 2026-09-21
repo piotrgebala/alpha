@@ -21,6 +21,24 @@ import numpy as np
 import pandas as pd
 import talib
 
+# Wartości startowe reguły regime (docs/rag/02_cechy_i_leakage.md), do kalibracji
+# WYŁĄCZNIE wewnątrz walk-forward (CLAUDE.md zasada 1) — patrz
+# backtest/calibrate_regime_thresholds.py (Commit 2.5). Źródło prawdy mirroring:
+# config/settings.yaml sekcja `regime_rule`. Nazwane stałe (nie literały w sygnaturze
+# funkcji) od Commitu 2.5 — zero magic numbers poza registry/configiem (docs/rag/05),
+# ten sam wzorzec co ATR_MULTIPLIER w agents/labeling.py.
+DEFAULT_TREND_THRESHOLD = 0.7
+DEFAULT_RANGE_THRESHOLD = 0.3
+
+# Konwersja "liczba świec na dzień" -> zależy WYŁĄCZNIE od timeframe danych wejściowych, nie od
+# hipotezy (w odróżnieniu od progów regime wyżej). Mirroring config/settings.yaml sekcja
+# `features.candles_per_day` (tam już udokumentowane: "zmień, jeśli timeframe inny" — Commit 2.6
+# to pierwsze użycie tej furtki, dotąd nieużywanej programowo). Wartość startowa 288 = 24h*60/5min
+# (timeframe 5m, Commit 1-2.5). Błędna wartość tutaj NIE jest tuningiem hipotezy — to bug
+# jednostek: `atr_pctrank_20d` przestaje reprezentować "~20 dni kalendarzowych" i staje się oknem
+# o niezdefiniowanej (błędnej) długości czasowej, patrz `compute_atr_pctrank_20d`.
+DEFAULT_CANDLES_PER_DAY = 288
+
 # ---------------------------------------------------------------------------
 # Cechy bazowe (używane też przez risk_controller i triple-barrier labeling)
 # ---------------------------------------------------------------------------
@@ -52,7 +70,7 @@ def compute_direction_persistence_10(df: pd.DataFrame) -> pd.Series:
 
 
 def compute_atr_pctrank_20d(
-    df: pd.DataFrame, candles_per_day: int = 288, window_days: int = 20
+    df: pd.DataFrame, candles_per_day: int = DEFAULT_CANDLES_PER_DAY, window_days: int = 20
 ) -> pd.Series:
     """
     Rolling percentyl atr_14 względem trailing okna ~20 dni.
@@ -71,8 +89,9 @@ def compute_atr_pctrank_20d(
 
 def classify_regime(
     df: pd.DataFrame,
-    trend_threshold: float = 0.7,
-    range_threshold: float = 0.3,
+    trend_threshold: float = DEFAULT_TREND_THRESHOLD,
+    range_threshold: float = DEFAULT_RANGE_THRESHOLD,
+    candles_per_day: int = DEFAULT_CANDLES_PER_DAY,
 ) -> pd.Series:
     """
     Klasyfikuje każdą świecę jako 'trend', 'range' albo 'ambiguous'.
@@ -84,8 +103,24 @@ def classify_regime(
     Progi to wartości STARTOWE do kalibracji w walk-forward (Commit 4), nie finalne.
     To reguła deterministyczna (nie model) — patrz uzasadnienie: audytowalność +
     brak dodatkowego zużycia budżetu statystycznego na uczenie regime gate.
+
+    `candles_per_day` (Commit 2.6): przekazywane WYŁĄCZNIE do `compute_atr_pctrank_20d`, żeby
+    okno "~20 dni" pozostało ~20 dni KALENDARZOWYCH niezależnie od timeframe danych wejściowych
+    (domyślnie 288 = 5m). To konwersja jednostek, nie parametr hipotezy — w odróżnieniu od
+    `trend_threshold`/`range_threshold` NIE jest kandydatem do kalibracji.
+
+    UWAGA (Commit 2.5, 2026-09-21): `direction_persistence_10` jest zmienną DYSKRETNĄ
+    (`|sum(sign(return))|/10`, przyjmuje tylko wartości `k/10`) — patrz
+    `backtest/diagnose_cost_feasibility.py` (blok 1). Próg 0.7 wpada w lukę jej
+    rozkładu (masa siedzi na 0.6 i 0.8), co samo z siebie czyni `trend` prawie pustym,
+    niezależnie od `atr_pctrank_20d`. Kalibracja progów: `backtest/
+    calibrate_regime_thresholds.py` (poza pytest, jak inne skrypty analityczne) —
+    porównuje z góry zarejestrowany, mały zestaw kandydatów (wybrany ze WŁASNOŚCI
+    formuły persistence — dyskretne kroki k/10 — nie z podglądania Sharpe na tym
+    zbiorze, CLAUDE.md zasada 1) przez pełny walk-forward checkpoint, bez
+    automatycznego wyboru "zwycięzcy" — decyzja zostaje przy użytkowniku.
     """
-    atr_rank = compute_atr_pctrank_20d(df)
+    atr_rank = compute_atr_pctrank_20d(df, candles_per_day=candles_per_day)
     persistence = compute_direction_persistence_10(df)
 
     regime = pd.Series("ambiguous", index=df.index, name="regime")
@@ -157,15 +192,30 @@ FEATURE_FUNCTIONS = {
 }
 
 
-def compute_all_features(df: pd.DataFrame) -> pd.DataFrame:
+def compute_all_features(
+    df: pd.DataFrame,
+    trend_threshold: float = DEFAULT_TREND_THRESHOLD,
+    range_threshold: float = DEFAULT_RANGE_THRESHOLD,
+    candles_per_day: int = DEFAULT_CANDLES_PER_DAY,
+) -> pd.DataFrame:
     """
     Dolicza wszystkie cechy z FEATURE_FUNCTIONS + kolumnę 'regime' jako nowe
     kolumny. Nie mutuje df wejściowego.
+
+    `trend_threshold`/`range_threshold` przekazywane do `classify_regime` —
+    parametryzowane od Commitu 2.5, żeby `backtest.engine.run_backtest` (a przez
+    nią `backtest/calibrate_regime_thresholds.py`) mogło porównywać kandydatów bez
+    duplikowania logiki regime gate.
+
+    `candles_per_day` (Commit 2.6): przekazywane do `classify_regime` ->
+    `compute_atr_pctrank_20d` — konwersja jednostek dla timeframe inny niż 5m (domyślny),
+    żeby `backtest.engine.run_backtest` mogło uruchomić identyczny pipeline na danych 1h/4h
+    (`backtest/checkpoint_timeframe_robustness.py`) bez łamania semantyki "~20 dni" okna ATR.
     """
     out = df.copy()
     for name, fn in FEATURE_FUNCTIONS.items():
         out[name] = fn(df)
-    out["regime"] = classify_regime(df)
+    out["regime"] = classify_regime(df, trend_threshold, range_threshold, candles_per_day)
     return out
 
 

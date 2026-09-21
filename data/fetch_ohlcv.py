@@ -46,6 +46,82 @@ def _clean_ohlcv(df: pd.DataFrame, end: str) -> pd.DataFrame:
     return df
 
 
+
+# Interwały docelowe wspierane przez `resample_ohlcv` (Commit 2.6) — mapowanie na alias
+# `pandas.DataFrame.resample`. Celowo mały, zamknięty zbiór (nie ogólny parser interwałów) —
+# to narzędzie dla JEDNEGO, z góry określonego eksperymentu (walidacja hipotezy na 1h/4h),
+# nie ogólna funkcja "zmień timeframe na cokolwiek".
+RESAMPLE_TARGET_TIMEFRAMES = {"1h": "1h", "4h": "4h"}
+
+
+def resample_ohlcv(df: pd.DataFrame, target_timeframe: str) -> pd.DataFrame:
+    """
+    Agreguje świece OHLCV do grubszego interwału (np. 5m -> 1h/4h) standardową agregacją
+    OHLC/wolumenu: open=pierwszy, high=max, low=min, close=ostatni, volume=suma.
+
+    UŻYCIE (Commit 2.6, 2026-09-21): to środowisko nie ma dostępu sieciowego do Binance
+    (`fapi.binance.com` blokowane przez proxy), więc natywny fetch 1h/4h przez
+    `get_ohlcv_cached` nie jest tu możliwy. Ta funkcja jest ŚWIADOMYM ZASTĘPSTWEM: agreguje
+    z tego samego, już zweryfikowanego (Commit 1, `find_gaps` = zero dziur) źródła 5m, zamiast
+    pobierać niezależnie z giełdy. To NIE jest identyczne z natywnym fetchem 1h/4h (patrz
+    ograniczenia niżej) — traktuj wynik jako "resampled from 5m", jawnie odróżnione w nazwie
+    pliku cache od potencjalnego przyszłego natywnego fetcha (ten sam `symbol`/`timeframe`
+    dałby inną nazwę pliku przez `get_ohlcv_cached._cache_path`).
+
+    Wymaga (odpowiedzialność WYWOŁUJĄCEGO, nie tej funkcji): `df` bez dziur (`find_gaps`) i
+    posortowany chronologicznie — inaczej `resample` cicho wypełni brakujące okna NaN-ami
+    zamiast zgłosić błąd. `timestamp` = LEWA krawędź okna (etykieta = początek świecy),
+    zgodnie z konwencją ccxt/Binance dla natywnie pobranych świec.
+
+    Ograniczenia względem natywnego fetcha z giełdy (świadome, do udokumentowania w wynikach,
+    nie do "naprawienia" tutaj): (1) giełda może liczyć swoje natywne świece 1h/4h z danych
+    o wyższej rozdzielczości niż 5m (np. z tickowych), więc high/low mogą się nieznacznie różnić
+    od agregacji z 5m, jeśli ekstremum ceny wypadło WEWNĄTRZ jednej świecy 5m, a nie na jej
+    granicy — agregacja z 5m jest wtedy identyczna z natywną TYLKO gdy ekstremum pokrywa się
+    z granicą 5m, co w praktyce jest bliskim przybliżeniem, nie gwarancją identyczności;
+    (2) wolumen sumowany z 5m powinien być identyczny z natywnym (addytywny, bez utraty
+    precyzji ponad zaokrąglenie giełdy).
+
+    Args:
+        df: DataFrame [timestamp, open, high, low, close, volume], bez dziur, posortowany.
+        target_timeframe: jeden z kluczy `RESAMPLE_TARGET_TIMEFRAMES` (obecnie "1h", "4h").
+
+    Returns:
+        DataFrame w tym samym schemacie OHLCV_COLUMNS, zagregowany, posortowany chronologicznie.
+    """
+    if target_timeframe not in RESAMPLE_TARGET_TIMEFRAMES:
+        raise ValueError(
+            f"target_timeframe={target_timeframe!r} nieobsługiwany — dozwolone: "
+            f"{sorted(RESAMPLE_TARGET_TIMEFRAMES)}"
+        )
+    rule = RESAMPLE_TARGET_TIMEFRAMES[target_timeframe]
+    indexed = df.set_index("timestamp").sort_index()
+    grouper = indexed.resample(rule, label="left", closed="left")
+    resampled = grouper.agg(
+        {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "sum",
+        }
+    )
+
+    # Odrzuć bucket brzegowy (pierwszy/ostatni), jeśli nie ma PEŁNEJ liczby świec źródłowych —
+    # inaczej niepełny bucket (np. dane zaczynające/kończące się w środku godziny przy resample
+    # do 1h) dostałby poprawne, ale MYLĄCE OHLC policzone tylko z części okna, nieodróżnialne od
+    # pełnego bucketu. `expected_count` liczone z medianowego kroku źródła — odporne na
+    # pojedyncze duplikaty/braki, których i tak nie powinno być (Commit 1, find_gaps).
+    source_step = df["timestamp"].sort_values().diff().median()
+    target_delta = pd.Timedelta(rule)
+    expected_count = round(target_delta / source_step)
+    counts = grouper.size()
+    resampled = resampled.loc[counts == expected_count]
+
+    resampled = resampled.dropna(how="any").reset_index()
+    return resampled[OHLCV_COLUMNS]
+
+
 def find_gaps(df: pd.DataFrame, timeframe_minutes: int, tolerance: int = 1) -> pd.DataFrame:
     """
     Raportuje (NIE rzuca wyjątku) miejsca, gdzie odstęp między świecami przekracza

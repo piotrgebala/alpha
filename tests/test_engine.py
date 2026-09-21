@@ -29,7 +29,7 @@ import pandas as pd
 
 from agents.labeling import ATR_MULTIPLIER
 from agents.risk_controller import MIN_BARRIER_TO_COST_RATIO
-from backtest.engine import TRADE_COLUMNS, run_backtest
+from backtest.engine import DEFAULT_CANDLES_PER_DAY, DEFAULT_TREND_THRESHOLD, TRADE_COLUMNS, run_backtest
 
 N_WARMUP = 5760  # 20 dni @ 5m - wymagane, by atr_pctrank_20d (feature_miner.py) nie było NaN
 N_TREND = 2880  # 10 dni - segment o wysokim, trwałym ATR + konsekwentny kierunek -> regime="trend"
@@ -275,3 +275,68 @@ def test_run_backtest_cost_gate_default_is_enabled() -> None:
         f["n_signals"] for f in explicit_run["folds_summary"]
     )
     assert default_run["final_equity"] == explicit_run["final_equity"]
+
+
+def test_run_backtest_threads_regime_thresholds_to_signal_population() -> None:
+    # Commit 2.5 (Warstwa 4, integracyjny): `trend_threshold`/`range_threshold` muszą
+    # dotrzeć od run_backtest() aż do compute_all_features()/classify_regime() —
+    # weryfikujemy to zachowaniem, nie samym przekazaniem argumentu (por.
+    # test_compute_all_features_threads_thresholds_to_regime_column w
+    # tests/test_feature_miner.py, który sprawdza to na poziomie niżej).
+    #
+    # Segment "trend" w `_make_pipeline_test_ohlcv` ma z konstrukcji wysoki, ale
+    # SKOŃCZONY atr_pctrank_20d/direction_persistence_10 — próg 0.99 jest wybrany, by
+    # być wyżej niż jakakolwiek świeca może osiągnąć, więc MUSI wyzerować sygnały w
+    # reżimie trend, gdyby próg faktycznie nie docierał do classify_regime (np. gdyby
+    # run_backtest go przyjmował, ale nie przekazywał dalej), test by tego nie wykrył.
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+        min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
+    )
+
+    baseline = run_backtest(raw_ohlcv, trend_threshold=DEFAULT_TREND_THRESHOLD, **kwargs)
+    unreachable_threshold = run_backtest(raw_ohlcv, trend_threshold=0.99, **kwargs)
+
+    def _trend_signals(result: dict) -> int:
+        return sum(
+            f["n_signals"] for f in result["folds_summary"] if f["regime"] == "trend"
+        )
+
+    assert _trend_signals(baseline) > 0
+    assert _trend_signals(unreachable_threshold) == 0
+
+
+def test_run_backtest_threads_candles_per_day_to_signal_population() -> None:
+    # Commit 2.6 (Warstwa 4, integracyjny): `candles_per_day` musi dotrzeć od run_backtest()
+    # aż do compute_atr_pctrank_20d() (przez compute_all_features -> classify_regime) — ten
+    # sam wzorzec co test_run_backtest_threads_regime_thresholds_to_signal_population dla C2.5.
+    #
+    # candles_per_day=100_000 daje okno atr_pctrank_20d = 100_000*20 = 2_000_000 świec —
+    # znacznie więcej niż len(_make_pipeline_test_ohlcv())=11520 — więc atr_pctrank_20d
+    # MUSI być w całości NaN -> regime w całości "ambiguous" -> ZERO sygnałów w OBU
+    # reżimach, gdyby parametr faktycznie docierał do classify_regime. Gdyby run_backtest
+    # przyjmował go, ale nie przekazywał dalej (pozostając przy domyślnym 288), baseline
+    # trend/range nadal miałby sygnały — test by tego nie wykrył.
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+        min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
+    )
+
+    baseline = run_backtest(raw_ohlcv, candles_per_day=DEFAULT_CANDLES_PER_DAY, **kwargs)
+    starved = run_backtest(raw_ohlcv, candles_per_day=100_000, **kwargs)
+
+    def _total_signals(result: dict) -> int:
+        return sum(f["n_signals"] for f in result["folds_summary"])
+
+    assert _total_signals(baseline) > 0
+    assert _total_signals(starved) == 0

@@ -83,7 +83,12 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
-from agents.feature_miner import compute_all_features
+from agents.feature_miner import (
+    DEFAULT_CANDLES_PER_DAY,
+    DEFAULT_RANGE_THRESHOLD,
+    DEFAULT_TREND_THRESHOLD,
+    compute_all_features,
+)
 from agents.labeling import (
     ATR_MULTIPLIER,
     STEP_DAYS,
@@ -332,6 +337,9 @@ def run_backtest(
     kill_switch_drawdown_pct: float = KILL_SWITCH_DRAWDOWN_PCT,
     kill_switch_cooldown_days: float = KILL_SWITCH_COOLDOWN_DAYS,
     min_barrier_to_cost_ratio: float = MIN_BARRIER_TO_COST_RATIO,
+    trend_threshold: float = DEFAULT_TREND_THRESHOLD,
+    range_threshold: float = DEFAULT_RANGE_THRESHOLD,
+    candles_per_day: int = DEFAULT_CANDLES_PER_DAY,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -367,6 +375,17 @@ def run_backtest(
             zysku do kosztu round-trip, żeby sygnał w ogóle wszedł do gry
             (agents.risk_controller.is_cost_feasible). Domyślnie 2.0. Wartość 0.0
             całkowicie wyłącza bramkę (przydatne do odtworzenia baseline'u Commitu 2c).
+        trend_threshold/range_threshold: Commit 2.5 — progi reguły regime
+            (agents.feature_miner.classify_regime), domyślnie wartości startowe
+            (0.7/0.3, config/settings.yaml sekcja `regime_rule`). Nadpisywalne, żeby
+            `backtest/calibrate_regime_thresholds.py` mogło porównywać z góry
+            zarejestrowanych kandydatów przez ten sam pipeline, bez duplikacji.
+        candles_per_day: Commit 2.6 — konwersja jednostek dla `atr_pctrank_20d`
+            (agents.feature_miner.compute_atr_pctrank_20d), NIE parametr hipotezy.
+            Domyślnie 288 (timeframe 5m, config/settings.yaml sekcja `features`).
+            Musi być nadpisane na 24 (1h) / 6 (4h) przy uruchamianiu na danych o innym
+            timeframe (`backtest/checkpoint_timeframe_robustness.py`) — inaczej okno
+            "~20 dni" przestaje reprezentować 20 dni kalendarzowych.
 
     Returns:
         {
@@ -378,7 +397,12 @@ def run_backtest(
         }
     """
     df = raw_ohlcv.reset_index(drop=True).copy()
-    df = compute_all_features(df)
+    df = compute_all_features(
+        df,
+        trend_threshold=trend_threshold,
+        range_threshold=range_threshold,
+        candles_per_day=candles_per_day,
+    )
     labels = compute_triple_barrier_labels(df)
     df["label"] = labels["label"]
     df["exit_bar_offset"] = labels["exit_bar_offset"]

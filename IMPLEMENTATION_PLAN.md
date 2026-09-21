@@ -621,6 +621,131 @@ Otwarte pytanie do rozstrzygnięcia przy okazji: czy przy trafności ~49% na św
 hipoteza w obecnym kształcie (5m, `REVERSION_FEATURES`) nie wymaga raczej zmiany horyzontu/cech niż
 progów — patrz §7.
 
+### Commit 2.5 — Kalibracja progów reguły regime `[ZROBIONE — wynik: NO-GO, hipoteza falsyfikowana]`
+
+**Zakres:** sprawdzić, czy poluzowanie progów `classify_regime` (uwzględniając dyskretność
+`direction_persistence_10`, C2d.0 pkt 1) usuwa/łagodzi NO-GO, bez zmiany żadnego innego elementu
+pipeline'u (bramka kosztowa Commitu 2d pozostaje AKTYWNA, `min_barrier_to_cost_ratio=2.0`).
+
+**C2.5.1 — Parametryzacja (`agents/feature_miner.py`, `backtest/engine.py`):**
+`DEFAULT_TREND_THRESHOLD=0.7`/`DEFAULT_RANGE_THRESHOLD=0.3` jako nazwane stałe (mirroring
+`config/settings.yaml` sekcja `regime_rule`, wzorzec `ATR_MULTIPLIER` z `agents/labeling.py`,
+docs/rag/05 — zero magic numbers poza registry/configiem). `classify_regime` i
+`compute_all_features` przyjmują `trend_threshold`/`range_threshold` jako parametry (domyślnie
+te stałe); `run_backtest` przyjmuje i przekazuje je dalej, żeby skrypt kalibracyjny mógł
+porównywać kandydatów przez dokładnie ten sam pipeline bez duplikacji logiki. Testy: 6 nowych
+jednostkowych w `tests/test_feature_miner.py` (równoważność domyślne/jawne progi, rozłączność
+trend/range, niezmienniki monotoniczności populacji względem progów, przekazanie progów przez
+`compute_all_features` do kolumny `regime`) + 1 nowy integracyjny w `tests/test_engine.py`
+(próg nieosiągalny 0.99 ⇒ zero sygnałów trend, weryfikacja end-to-end przekazania parametru przez
+`run_backtest`). Pełny zestaw: **117/117 przechodzi**.
+
+**C2.5.2 — Kalibracja (`backtest/calibrate_regime_thresholds.py`, poza pytest, jak inne skrypty
+analityczne):** 4 kandydaci `(trend_threshold, range_threshold)`, wybrani z góry WYŁĄCZNIE ze
+STRUKTURY formuły `persistence` (dyskretne wsparcie {0, 0.2, 0.4, 0.6, 0.8, 1.0}), nie z
+podglądania Sharpe'a na tym zbiorze (CLAUDE.md zasada 1): `(0.7, 0.3)` baseline, `(0.6, 0.4)`
+kontrola (przewidywanie: ta sama "luka" rozkładu co baseline), `(0.5, 0.3)` przecina pierwszą
+granicę masy na osi trend, `(0.5, 0.5)` przecina granicę na obu osiach. Każdy oceniony przez
+identyczny pipeline co Commit 6 (10-seedowy sweep stabilności, seed 42-51), bez automatycznego
+wyboru zwycięzcy. Pełny wynik + surowy output: `runs/2026-09-21_c2.5-threshold-calibration.md`.
+
+**Wynik C2.5.2:**
+
+| trend_thr | range_thr | %trend | %range | mean_sharpe (seed=42) | klasyfikacja | stabilność (10 seed) |
+|---|---|---|---|---|---|---|
+| 0.7 | 0.3 (baseline) | 0.50% | 21.13% | **-14.31** | NO-GO | std=0,0000 |
+| 0.6 | 0.4 | 0.63% | 27.72% | **-14.25** | NO-GO | std=0,0000 |
+| 0.5 | 0.3 | 4.28% | 21.13% | **-18.00** | NO-GO | std=0,0000 |
+| 0.5 | 0.5 | 4.28% | 44.18% | **-19.58** | NO-GO | std=0,0000 |
+
+**Wniosek C2.5 — hipoteza CZĘŚCIOWO potwierdzona co do mechanizmu, ale FALSYFIKOWANA co do
+wniosku:**
+- Poluzowanie progów faktycznie zwiększa populację `trend` (0,50%→4,28%, 8,5×) — mechanizm
+  działa zgodnie z diagnozą C2d.0.
+- Kandydat kontrolny `(0.6, 0.4)` NIE odtworzył identycznej populacji co baseline — przewidywanie
+  było błędne, bo `atr_pctrank_20d` jest CIĄGŁA: nawet przesunięcie progu w "luce" rozkładu
+  `persistence` samo w sobie zmienia próg na drugiej, ciągłej osi reguły AND. Uczciwa korekta:
+  "luka rozkładu" nie jest jedynym czynnikiem sterującym populacją regime.
+- **Główny wynik: więcej świec `trend`/`range` = GORSZY wynik, nie lepszy.** `mean_sharpe`
+  pogarsza się monotonicznie wraz z poluzowaniem progów (-14,31 → -14,25 → -18,00 → -19,58).
+  Świece DODANE przez poluzowanie progu są NIE LEPSZEJ jakości niż te już objęte przy 0,7/0,3 —
+  to odrzuca hipotezę, że "brakujące" (odrzucone jako `ambiguous`) świece kryją niewykorzystany
+  edge, który regime rule przez pomyłkę odcina. Wszystkie 4 kandydatów: **NO-GO**, stabilnie.
+
+**Status:** ZROBIONE. Zgodnie z regułą routingu checkpointu (docs/rag/03: NO-GO → powrót do
+rejestru cech, NIE dalszy tuning tej samej reguły), **rekalibracja progów regime jest wyczerpana
+jako kierunek — `config/settings.yaml` pozostaje przy baseline (0.7, 0.3)**, bo jest w
+rzeczywistości najlepszym (najmniej ujemnym) z czterech przetestowanych wyników. Ciężar dowodu
+dla otwartego pytania "dlaczego model `range` stawiał na long podczas trendu spadkowego" przesuwa
+się z hipotezy (a) "zła kalibracja progów" (WYCZERPANA) na hipotezę (b) "model/cechy nie mają
+edge'u" — patrz §7. Decyzja o następnym kroku (nowa cecha vs głębsza diagnoza modelu) należy do
+użytkownika.
+
+### Commit 2.6 — Odporność hipotezy na timeframe (1h, 4h) `[ZROBIONE — wynik: NO-GO, hipoteza falsyfikowana]`
+
+**Zakres:** użytkownik zauważył, że cały pipeline (Commit 1-2.5) działał WYŁĄCZNIE na 5m, i że
+pozycja jest trzymana max. 1h (12 świec 5m) — bardzo krótki horyzont względem stałego kosztu
+transakcyjnego. Zapytał, czy wynik (NO-GO, Commit 2d/2.5) utrzymuje się na grubszych interwałach
+(1h, 4h), gdzie bariera ATR-owa naturalnie rośnie względem kosztu. Uzgodniony zakres: PRZELICZYĆ
+cały checkpoint na 1h i 4h, zmieniając WYŁĄCZNIE timeframe danych (+ `candles_per_day` jako
+wymuszona konwersja jednostek, nie parametr hipotezy) — wszystko inne (progi 0.7/0.3,
+`ATR_MULTIPLIER`, bramka kosztowa 2.0) niezmienione (CLAUDE.md zasada 1/4).
+
+**Ograniczenie środowiska (odkryte przy starcie, nie wcześniej znane):** cloud sandbox nie ma
+dostępu sieciowego do Binance (`fapi.binance.com` → `403 Forbidden` na poziomie proxy,
+zweryfikowane przed startem). Natywny fetch 1h/4h przez `data.fetch_ohlcv.get_ohlcv_cached` był
+więc niemożliwy — dane 1h/4h zostały zamiast tego **zagregowane z tego samego, zweryfikowanego
+źródła 5m** przez nową funkcję `data.fetch_ohlcv.resample_ohlcv` (open/high/low/close/volumen,
+odrzucanie niepełnych bucketów brzegowych; 7 nowych testów jednostkowych). To świadome
+zastępstwo, jawnie odróżnione nazwą w dokumentacji od potencjalnego przyszłego natywnego fetcha —
+pełne ograniczenia w docstringu funkcji.
+
+**C2.6.1 — Kod:** `resample_ohlcv` (`data/fetch_ohlcv.py`, + testy w `tests/test_fetch_ohlcv.py`).
+`candles_per_day` sparametryzowane przez `classify_regime`/`compute_all_features`/`run_backtest`
+(ten sam wzorzec co progi w C2.5) — BEZ tego atr_pctrank_20d na 1h/4h liczyłby okno "20 dni" z
+literałem 288 zakładającym 5m, co dałoby okno o BŁĘDNEJ długości kalendarzowej (np. przy 1h:
+288*20=5760 świec = 240 dni zamiast 20). To poprawka jednostek, nie tuning. 4 nowe testy w
+`tests/test_feature_miner.py` + 1 integracyjny w `tests/test_engine.py`. Pełny zestaw: **125/125
+przechodzi** (117 + 8: 4 resample + 3 feature_miner + 1 engine).
+
+**C2.6.2 — Skrypt (`backtest/checkpoint_timeframe_robustness.py`, poza pytest):** identyczny
+pipeline co Commit 6/2c/2d/2.5, uruchomiony na 5m (referencja), 1h (8 760 świec), 4h (2 190
+świec) — dokładny, bezresztowy podział z 105 120 świec 5m potwierdza brak przesunięcia
+granic/dziur przy resample. Pełny wynik: `runs/2026-09-21_c2.6-timeframe-robustness.md`.
+
+**Wynik C2.6.2:**
+
+| timeframe | mean_sharpe (seed=42) | klasyfikacja | trend: n_valid_folds | stabilność (10 seed) |
+|---|---|---|---|---|
+| 5m (referencja) | -14,31 | NO-GO | 4/20 | std=0,0000 |
+| **1h** | **-15,57** | NO-GO | **0/18** | std=0,0000 |
+| **4h** | **-8,75** | NO-GO | **0/12** | std=0,0000 |
+
+Diagnostyka uzupełniająca (metodologia Commitu 2d, powtórzona per timeframe) potwierdza, że
+mechanizm bariera-vs-koszt **DZIAŁA jak przewidziano**: w `range` wymagana trafność break-even
+spada z niemożliwych 103,9% (5m) do 61,2% (1h) i 54,4% (4h), a odsetek świec arytmetycznie
+niewykonalnych z 56,8% (5m) do **0,0%** (1h i 4h). Mimo to trafność kierunku na realnych
+transakcjach po bramce pozostaje na poziomie rzutu monetą: **49,0%** (1h) albo wypada GORZEJ:
+**41,2%** (4h, systematycznie zły kierunek, nie tylko brak edge'u).
+
+**Wniosek C2.6 — trzeci niezależny test wskazujący ten sam kierunek:** naprawienie stosunku
+bariera/koszt (potwierdzone empirycznie) NIE przywraca edge'u kierunkowego. Hipoteza "problem
+jest tylko kosztowy/za krótki timeframe" jest FALSYFIKOWANA — dokłada się do wniosku z C2.5
+("problem jest w modelu/cechach, nie w kalibracji reguły regime czy granulacji danych").
+Dodatkowo: regime `trend` staje się PRAKTYCZNIE PUSTY na 1h/4h (0 transakcji), bo
+`direction_persistence_10` pozostał liczony na STAŁEJ liczbie 10 świec (świadoma decyzja tej
+rundy) — przy 1h/4h oznacza to wymóg 10h/40h tego samego znaku zwrotu, coraz rzadsze zjawisko.
+
+**Ograniczenia do uwzględnienia przy interpretacji (jawnie udokumentowane, nie ukryte):**
+1. `VERTICAL_BARRIER_CANDLES=12` NIE zostało przeliczone — pozycja trzymana 12h (1h) / 48h (4h)
+   zamiast 1h (5m). Timeframe danych i horyzont trzymania NIE są rozdzielone w tej rundzie.
+2. Dane 4h są małe (2 190 świec, 524 `range`) — wynik -8,75/41,2% może częściowo odzwierciedlać
+   szum małej próby.
+3. Dane 1h/4h to agregacja z 5m (ograniczenie środowiska), nie natywny fetch z giełdy.
+
+**Status:** ZROBIONE. Kierunek "zmiana timeframe naprawia problem" wyczerpany na tym etapie —
+patrz §7 dla zaktualizowanego stanu najważniejszego otwartego ryzyka.
+
 ---
 
 ## 6. Zweryfikowane empirycznie (nie tylko zaplanowane)
@@ -697,13 +822,21 @@ progów — patrz §7.
 
 ## 7. Znane ryzyka i otwarte pytania
 
-- **Regime "trend" może być rzadki — POTWIERDZONE na realnych danych (Commit 6, 2026-08-01).**
-  Na syntetycznych danych z progami 0.7/0.3, trend = <1% świec. Na realnych danych BTC/USDT:USDT
-  5m (2025-07→2026-07): WSZYSTKIE 20 foldów walk-forward dla `trend` pominięte przez
-  `min_train_rows` — 14-dniowe okno testowe konsekwentnie miało <30 świec sklasyfikowanych jako
-  `trend`. To NIE artefakt syntetycznych danych — strukturalna właściwość AND-owania dwóch
-  warunków przy obecnych progach. Wymaga decyzji: złagodzić `trend_threshold` (C2.5) przy
-  powrocie do Commit 2, zamiast dalszego "sprawdzania".
+- **Regime "trend" jest rzadki — POTWIERDZONE, a poluzowanie progów NIE POMAGA (Commit 6 →
+  Commit 2.5, 2026-09-21).** Na realnych danych BTC/USDT:USDT 5m trend = 0,50% świec przy
+  progach 0,7/0,3. Commit 2.5 poluzował progi do (0,5, 0,3)/(0,5, 0,5), zwiększając populację
+  trend do 4,28% (8,5×) — ale `mean_sharpe` POGORSZYŁ SIĘ (-14,31 → -18,00/-19,58), wszystkie
+  warianty NO-GO. Rzadkość regime `trend` NIE jest już otwartym ryzykiem do "naprawienia
+  kalibracją" — jest zamkniętym eksperymentem z wynikiem: więcej świec trend/range nie poprawia
+  wyniku, bo dodane świece nie mają lepszej jakości sygnału. Pełny wynik:
+  `runs/2026-09-21_c2.5-threshold-calibration.md`.
+- **Regime "trend" jest jeszcze rzadszy na grubszych timeframe'ach (Commit 2.6, 2026-09-21).**
+  Przy STAŁEJ liczbie 10 świec dla `direction_persistence_10` (świadomie nieprzeliczonej per
+  timeframe), regime `trend` dał **ZERO transakcji** na 1h i 4h (0/18 i 0/12 foldów), gorzej niż
+  na 5m (4/20). Zmiana timeframe pogłębiła, nie złagodziła, problem z rzadkością trend — jeśli
+  timeframe ma być badany dalej, `direction_persistence_10`/inne okna candle-based wymagałyby
+  przeliczenia analogicznie do `candles_per_day` (Commit 2.6), co NIE zostało zrobione w tej
+  rundzie (świadomy zakres: zmienić TYLKO timeframe + niezbędną konwersję jednostek ATR).
 - **Symbol ccxt zweryfikowany na żywo (C1.3, 2026-08-01)** — `"BTC/USDT:USDT"` potwierdzony przez
   `exchange.load_markets()`, zgodny z `config/settings.yaml`. Ryzyko zamknięte.
 - **Survivorship bias w pożyczonych wskaźnikach** — RSI/ATR/EMA przetrwały w publicznym obiegu
@@ -727,18 +860,27 @@ progów — patrz §7.
   rework modelu/cech `range`) — **doprecyzowane przez Commit 2d**: reguła reżimu faktycznie jest
   współwinna (dyskretność `direction_persistence_10`, próg 0,7 w luce rozkładu), ale nie jest
   całą przyczyną — patrz ryzyko niżej.
-- **NAJWAŻNIEJSZE OTWARTE RYZYKO (Commit 2d, 2026-09-21) — brak edge'u kierunkowego na świecach
-  opłacalnych.** Po włączeniu bramki wykonalności kosztowej trafność kierunku modelu `range` spada
-  z 54,6% do **49,3%**, czyli do poziomu rzutu monetą, przy wymaganych ~75% (próg ratio=2.0). Edge,
-  który model miał, mieszkał w świecach niskozmiennych, gdzie transakcja jest arytmetycznie
-  nieopłacalna. To przesuwa pytanie z „jak obniżyć koszt / poprawić bramkę" na „czy hipoteza
-  mean-reversion na 5m z obecnym `REVERSION_FEATURES` w ogóle ma czego szukać na świecach
-  szerokobarierowych". Kandydaci na kolejne rundy, do ustalenia: (a) C2.5 — rekalibracja progów
-  regime wewnątrz walk-forward, z uwzględnieniem dyskretności persistence (uzgodnione jako
-  następna runda); (b) zmiana horyzontu/timeframe albo `atr_multiplier`, żeby stosunek ruchu do
-  kosztu miał sens strukturalnie (dotyka CLAUDE.md zasady 3 — labeling i risk_controller muszą
-  zmienić się razem); (c) weryfikacja założeń kosztowych (taker 0,05%/stronę to wartość startowa;
-  przy maker 0,02% koszt spada do 0,08%, a wymagana trafność w `range` do 80,8%).
+- **NAJWAŻNIEJSZE OTWARTE RYZYKO (Commit 2d→2.5→2.6, 2026-09-21) — brak edge'u kierunkowego,
+  kandydaci (a) i (b) WYCZERPANE.** Po włączeniu bramki wykonalności kosztowej trafność
+  kierunku modelu `range` spada z 54,6% do **49,3%** na 5m, przy wymaganych ~75% (ratio=2.0).
+  Commit 2.5 przetestował kandydata (a) — rekalibrację progów regime — i go ODRZUCIŁ (4 z góry
+  zarejestrowani kandydaci, wszyscy NO-GO, wynik pogarsza się wraz z poluzowaniem progów).
+  **Commit 2.6 przetestował kandydata (b) — zmianę timeframe (1h, 4h) — i również go ODRZUCIŁ:**
+  mechanizm bariera-vs-koszt naprawiony empirycznie (0% świec arytmetycznie niewykonalnych na
+  1h/4h, wobec 56,8% na 5m), ale trafność kierunku pozostaje ~49% (1h) albo spada do ~41% (4h,
+  gorzej niż rzut monetą) — patrz Commit 2.6 wyżej i
+  `runs/2026-09-21_c2.6-timeframe-robustness.md`. Trzy niezależne testy (bramka kosztowa,
+  progi regime, timeframe) wskazują teraz zgodnie na TEN SAM wniosek: problem nie jest ani
+  kosztowy, ani kalibracyjny, ani granulacyjny — jest w samym modelu/cechach. Pozostają
+  kandydaci: (c) weryfikacja założeń kosztowych (taker 0,05%/stronę to wartość startowa; przy
+  maker 0,02% koszt spada do 0,08%) — coraz mniej prawdopodobne, żeby to zmieniło wniosek, skoro
+  problem przetrwał nawet przy koszcie efektywnie ~11× mniejszym niż bariera na 4h; (d) powrót
+  do rejestru cech per docs/rag/02, jedna cecha na raz, mierzona OOS (reguła routingu
+  checkpointu, docs/rag/03: NO-GO → rejestr cech, nie dalszy tuning) — obecnie NAJBARDZIEJ
+  uzasadniony kierunek. Decyzja między (c)/(d) należy do użytkownika. Dodatkowy, nierozdzielony
+  wątek z Commitu 2.6: `VERTICAL_BARRIER_CANDLES=12` nieprzeliczone przy zmianie timeframe
+  (1h/4h oznacza 12h/48h trzymania pozycji) — jeśli timeframe ma być badany dalej, to osobny,
+  jawnie nazwany eksperyment (rozdzielić timeframe danych od horyzontu trzymania).
 - **Założenia kosztowe są wartościami startowymi, a teraz decydują o werdykcie.** Dopóki koszt był
   jednym z wielu składników, jego przybliżony charakter nie miał znaczenia. Po Commicie 2d koszt
   jest osią diagnozy, więc `taker_fee_rate=0.0005` / `slippage_bps=2` / `funding_rate_8h=0.0001`

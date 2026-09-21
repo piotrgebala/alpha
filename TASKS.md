@@ -44,6 +44,27 @@ długie sesje iteracyjne trening→metryki→debug windują zużycie kontekstu s
 dokupić usage credits na sporadyczne przekroczenia, albo przejść na Max 5x, jeśli limit łapany jest
 systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 
+## Zasada pracy: `runs/*.md` — surowy output ciężkich obliczeń
+
+**Ustalone z użytkownikiem 2026-09-21, rozszerzone 2026-09-21 (C2.6).** Każde uruchomienie
+skryptu analitycznego, które generuje dużo surowego outputu (kalibracja, sweep seedów,
+diagnostyka na realnych danych — np. `backtest/calibrate_regime_thresholds.py`,
+`backtest/checkpoint_timeframe_robustness.py`, `backtest/run_checkpoint.py`), zapisuje pełny
+raw output do `runs/YYYY-MM-DD_<slug>.md`: **ID testu** (spójne z numeracją Commitów, gdzie
+dotyczy), metadane (branch/commit/komenda/parametry/dane), pełny stdout w bloku kodu, oraz
+(od C2.6) obowiązkowa sekcja **Co na plus (+) / Co na minus (-)** — krótkie, uczciwe
+zestawienie tego, co wynik potwierdza/wzmacnia, i tego, co pozostaje słabe/niepewne/
+niepełne (włącznie z ograniczeniami metodologicznymi danej rundy, nie tylko wynikiem
+liczbowym). Plik trafia do repo (**commitowany**, nie `.gitignore` — "commitować wszystko",
+decyzja użytkownika) — to trwały, odtwarzalny zapis, nie scratch.
+
+**`runs/INDEX.md`** — spis treści całego katalogu: ID testu, data, link do pliku, jednozdaniowy
+opis, wynik. Aktualizowany (nowy wiersz) przy każdym nowym pliku w `runs/`.
+
+`IMPLEMENTATION_PLAN.md` i `TASKS.md` dostają tylko SYNTEZĘ (tabelę porównawczą + wniosek) i
+link do pliku w `runs/`, nie kopię całego outputu — ten sam wzorzec co zwięzłe podsumowania
+Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
+
 ## Legenda statusów
 
 | Status | Znaczenie |
@@ -58,7 +79,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Sekcja | ✅ | ⚠️/⬜ | ⏳ | Razem |
 |---|---|---|---|---|
 | Commit 1 — Dane | 3 | 0 | 0 | 3 |
-| Commit 2 — Feature registry | 4 | 0 | 1 | 5 |
+| Commit 2 — Feature registry | 5 | 0 | 0 | 5 |
 | Commit 3 — Test leakage | 3 | 0 | 0 | 3 |
 | Commit 4 — Target + walk-forward split | 5 | 1 | 0 | 6 |
 | Commit 5 — Dwa modele + backtest | 6 | 0 | 0 | 6 |
@@ -67,12 +88,14 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Commit 2b — Diagnoza NO-GO: przegląd cech `range` (W TRAKCIE — zablokowane) | 2 | 0 | 2 | 4 |
 | Commit 2c — Kill-switch: przyczyna serii strat + cooldown/re-arm (ZROBIONE) | 3 | 0 | 0 | 3 |
 | Commit 2d — Bramka wykonalności kosztowej (ZROBIONE — wynik NO-GO potwierdzony) | 4 | 0 | 0 | 4 |
+| Commit 2.5 — Kalibracja progów regime (ZROBIONE — wynik NO-GO, hipoteza falsyfikowana) | 2 | 0 | 0 | 2 |
+| Commit 2.6 — Odporność na timeframe 1h/4h (ZROBIONE — wynik NO-GO, hipoteza falsyfikowana) | 2 | 0 | 0 | 2 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 2 | 2 | 1 | 5 |
-| **RAZEM** | **42** | **3** | **26** | **71** |
+| **RAZEM** | **47** | **3** | **25** | **75** |
 
 ---
 
@@ -94,7 +117,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C2.2 | `classify_regime()` | ✅ | |
 | C2.3 | `split_by_regime()` | ✅ | |
 | C2.4 | Nieformalny leakage sanity check (9/9 na danych syntetycznych) | ✅ | Nie zastępuje formalnego testu z Commitu 3 |
-| C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ⏳ | **NASTĘPNA RUNDA (uzgodnione 2026-09-21, po Commicie 2d).** Ryzyko z §7 POTWIERDZONE i doprecyzowane przez C2d.0: `direction_persistence_10` jest DYSKRETNA (`|sum(sign)|/10`, wartości `k/10`), a próg 0,7 wpada w lukę jej rozkładu (0,6 → 7% świec, 0,8 → 1,3%) — to on, nie `atr_pctrank_20d`, czyni `trend` prawie pustym (0,53%; przy progu 0,5 → 4,53%). Implikacja: progi nie są ciągłym pokrętłem, muszą snapować do osiągalnych wartości rozkładu. CLAUDE.md zasada 1: kalibracja WYŁĄCZNIE wewnątrz walk-forward, nigdy na całym zbiorze naraz |
+| C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ✅ | **ZROBIONE 2026-09-21 — wynik: NO-GO, hipoteza falsyfikowana.** Pełny opis pracy i wyniku: sekcja "Commit 2.5" niżej (po Commicie 2d), `runs/2026-09-21_c2.5-threshold-calibration.md`, IMPLEMENTATION_PLAN.md §5/§7 |
 
 ### Commit 3 — Test leakage (`agent_5_compliance/test_leakage.py`) — ✅ ZROBIONE
 
@@ -184,6 +207,33 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C2d.1 | Czysta funkcja bramki + wpięcie w pipeline | ✅ | `agents.risk_controller.is_cost_feasible` (+ rdzeń `barrier_to_cost_ratio`): sygnał dopuszczony tylko gdy `(atr_multiplier*atr_14)/entry_price >= min_barrier_to_cost_ratio * cost_fraction`. Próg startowy **2.0** (`config/settings.yaml` sekcja `risk`) wyprowadzony z break-even `p=0.5*(1+1/ratio)` → 75%, NIE z przeszukiwania po Sharpe (CLAUDE.md zasada 1). `cost_fraction` z nowej `backtest.costs.round_trip_cost_fraction()` — te same stałe co `total_round_trip_cost`, zero duplikacji. Filtruje KANDYDATURĘ sygnału w `_collect_candidate_signals` (nie trafia do trade journalu — to właściwość świecy, nie zdarzenie w torze equity, w odróżnieniu od kill-switcha), licznik w `folds_summary["n_signals_cost_gated"]`; `backtest/metrics.py` bez zmian. NIE jest progiem na `signal_confidence` (docs/rag/03 świadomie taki odrzuca — bramka jest ortogonalna). `atr_multiplier` nietknięty (CLAUDE.md zasada 3) |
 | C2d.2 | Testy jednostkowe + hypothesis + integracyjne (DoD docs/rag/05) | ✅ | 7 jednostkowych + **4 hypothesis** w `tests/test_risk_controller.py` (zgodność bramki ze stosunkiem, monotoniczność niemalejąca w `atr_14`, próg 0.0 przepuszcza wszystko, fail-safe dla `entry_price<=0`/`cost_fraction<=0`/NaN, reprodukcja diagnozy `range`), 3 w `tests/test_costs.py`, 2 integracyjne w `tests/test_engine.py` (księgowanie bez gubienia sygnałów, bramka domyślnie włączona). Trzy testy sprzed 2d dostały jawne `min_barrier_to_cost_ratio=0.0` — ich przedmiotem jest kill-switch. Pełny zestaw: **110/110 przechodzi** (94 + 16) |
 | C2d.3 | Ponowny checkpoint po bramce, porównanie z baseline Commit 2c | ✅ | Bramka odcięła **17 547 z 18 135 sygnałów (96,8%)**, w `range` 97,5%. Foldy z policzalnym Sharpe 23/40→**6/40**, transakcje 2 625→**358**, mean_sharpe -47,38→**-14,31** (range -26,01, trend -8,46, przy czym trend ma teraz 25% foldów z Sharpe>0,5 wobec 0% wcześniej). **Łączny gross -593 → +166** — strata BYŁA kosztowa, diagnoza potwierdzona empirycznie. ALE: trafność kierunku w `range` spada 54,6%→**49,3%** na świecach przechodzących bramkę — edge mieszkał w świecach nieopłacalnych. **Werdykt: NO-GO**, stabilne na 10 seedach (std=0,0000). Regresja kontrolna `min_barrier_to_cost_ratio=0.0` odtwarza baseline Commitu 2c co do ostatniej cyfry (-47,377414474779975, 23/40) |
+
+### Commit 2.5 — Kalibracja progów reguły regime — ✅ ZROBIONE (wynik: NO-GO, hipoteza falsyfikowana)
+
+> Zakres uzgodniony z użytkownikiem 2026-09-21 ("comitować wszystko, Chcesz, żebym tak rozpisał i
+> odpalił C2.5 tak"): bounded-autonomy — z góry zarejestrowany, mały, strukturalnie (nie z PnL)
+> uzasadniony zestaw kandydatów progów regime, oceniony przez pełny walk-forward checkpoint, bez
+> automatycznego wyboru zwycięzcy. Pełna diagnoza, tabela i surowy output:
+> `IMPLEMENTATION_PLAN.md` §5 Commit 2.5, `runs/2026-09-21_c2.5-threshold-calibration.md`.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| C2.5.1 | Parametryzacja progów regime (`agents/feature_miner.py`, `backtest/engine.py`) + testy (DoD docs/rag/05) | ✅ | `DEFAULT_TREND_THRESHOLD=0.7`/`DEFAULT_RANGE_THRESHOLD=0.3` jako nazwane stałe (mirroring `config/settings.yaml`, wzorzec `ATR_MULTIPLIER`); `classify_regime`/`compute_all_features`/`run_backtest` przyjmują i przekazują progi dalej, bez zmiany domyślnego zachowania. Testy: 6 nowych jednostkowych w `tests/test_feature_miner.py` (nowy plik — dotąd `feature_miner.py` miał pokrycie tylko przez test leakage, nie testu POPRAWNOŚCI reguły progowej) + 1 integracyjny w `tests/test_engine.py` (próg nieosiągalny 0.99 ⇒ zero sygnałów trend, weryfikuje przekazanie parametru end-to-end). Pełny zestaw: **117/117 przechodzi** (110 + 7) |
+| C2.5.2 | Skrypt kalibracyjny (`backtest/calibrate_regime_thresholds.py`) + uruchomienie na realnych danych, 4 kandydaci × 10-seed sweep | ✅ | 4 kandydaci z góry zarejestrowani ze STRUKTURY dyskretnego wsparcia `direction_persistence_10` (`{0,0.2,0.4,0.6,0.8,1.0}`), nie z podglądania Sharpe'a (CLAUDE.md zasada 1): `(0.7,0.3)` baseline, `(0.6,0.4)` kontrola, `(0.5,0.3)`, `(0.5,0.5)`. WYNIK: **wszystkie 4 NO-GO**, `mean_sharpe` POGARSZA SIĘ wraz z poluzowaniem progów (-14,31→-14,25→-18,00→-19,58, stabilne na 10 seedach każdy, std=0,0000). Poluzowanie zwiększa populację `trend` (0,50%→4,28%) i `range` (21,13%→44,18%), ale dodane świece są GORSZEJ jakości, nie lepszej — falsyfikuje hipotezę "brakujące świece kryją niewykorzystany edge". Kandydat kontrolny `(0.6,0.4)` NIE odtworzył populacji baseline (przewidywanie w docstringu było błędne — `atr_pctrank_20d` jest ciągła, więc próg zmienia populację nawet w "luce" rozkładu `persistence`), udokumentowana korekta własnej hipotezy. **Decyzja: `config/settings.yaml` pozostaje przy baseline (0,7/0,3)** — najlepszy (najmniej ujemny) z czterech wyników, zgodnie z regułą routingu checkpointu (docs/rag/03: NO-GO → rejestr cech, nie dalszy tuning) |
+
+### Commit 2.6 — Odporność hipotezy na timeframe (1h, 4h) — ✅ ZROBIONE (wynik: NO-GO, hipoteza falsyfikowana)
+
+> Zakres uzgodniony z użytkownikiem 2026-09-21: użytkownik zauważył krótki horyzont trzymania
+> pozycji na 5m (max. 1h) i zapytał, czy NO-GO utrzymuje się na grubszych interwałach (1h, 4h),
+> gdzie bariera ATR rośnie względem stałego kosztu. Zmieniona WYŁĄCZNIE granulacja danych +
+> niezbędna konwersja jednostek (`candles_per_day`) — reszta pipeline'u (progi, ATR_MULTIPLIER,
+> bramka kosztowa) niezmieniona. Pełna diagnoza: `IMPLEMENTATION_PLAN.md` §5 Commit 2.6,
+> `runs/2026-09-21_c2.6-timeframe-robustness.md`.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| C2.6.1 | `resample_ohlcv` (`data/fetch_ohlcv.py`) + parametryzacja `candles_per_day` (`agents/feature_miner.py`, `backtest/engine.py`) + testy | ✅ | Sandbox nie ma dostępu do Binance (`fapi.binance.com` → 403 na proxy) — dane 1h/4h AGREGOWANE z bazy 5m (open/high/low/close/volumen, odrzucanie niepełnych bucketów brzegowych), jawnie odróżnione od potencjalnego natywnego fetcha. `candles_per_day` (288→24→6) sparametryzowane analogicznie do progów C2.5 — bez tego okno "20 dni" ATR percentile liczyłoby błędną liczbę dni na innym timeframe. Testy: 4 nowe w `tests/test_fetch_ohlcv.py` (agregacja OHLC/volumenu, spójność 5m→4h vs 5m→1h→4h, odrzucanie niepełnego bucketu, walidacja timeframe), 3 w `tests/test_feature_miner.py`, 1 integracyjny w `tests/test_engine.py`. Pełny zestaw: **125/125 przechodzi** (117 + 8) |
+| C2.6.2 | Skrypt `backtest/checkpoint_timeframe_robustness.py` + uruchomienie na 5m (referencja)/1h/4h, 10-seed sweep każdy | ✅ | Dokładny bezresztowy podział z 105 120 świec 5m: 8 760 (1h), 2 190 (4h). WYNIK: **oba NO-GO** — 1h mean_sharpe=-15,57, 4h mean_sharpe=-8,75 (5m referencja: -14,31), stabilne na 10 seedach (std=0,0000 każdy). Diagnostyka bariera-vs-koszt (metodologia Commitu 2d) POTWIERDZA naprawę mechanizmu: 0% świec arytmetycznie niewykonalnych na 1h/4h (wobec 56,8% na 5m), wymagana trafność break-even spada z 103,9% do 54–61%. MIMO TO trafność kierunku pozostaje ~49,0% (1h, rzut monetą) albo spada do ~41,2% (4h, gorzej niż losowo). Regime `trend` praktycznie pusty na 1h/4h (0 transakcji) — `direction_persistence_10` pozostał na STAŁEJ liczbie 10 świec, nieprzeliczonej per timeframe (świadomy zakres tej rundy). **Trzeci niezależny test (po bramce kosztowej i progach regime) wskazujący, że problem jest w modelu/cechach, nie w koszcie/kalibracji/granulacji danych** |
 
 ---
 
