@@ -31,10 +31,15 @@ import pytest
 from agents.labeling import ATR_MULTIPLIER
 from agents.ml_optimizer import REVERSION_FEATURES
 from agents.risk_controller import MIN_BARRIER_TO_COST_RATIO
+from backtest.costs import MAKER, TAKER, total_round_trip_cost
 from backtest.engine import (
     DEFAULT_CANDLES_PER_DAY,
     DEFAULT_TREND_THRESHOLD,
+    EXECUTION_MAKER_LIMIT,
+    EXECUTION_TAKER_ONLY,
     TRADE_COLUMNS,
+    _execution_legs,
+    _resolve_exit_reason,
     run_backtest,
 )
 
@@ -457,3 +462,104 @@ def test_run_backtest_threads_candle_minutes_to_funding_cost() -> None:
     assert first_60["timestamp"] == first_5["timestamp"]
     assert first_60["gross_pnl"] == pytest.approx(first_5["gross_pnl"])
     assert first_60["cost"] != pytest.approx(first_5["cost"])
+
+
+# ---------------------------------------------------------------------------
+# Commit 2.12 (Backlog Z6): model wykonania maker/taker + kolumna exit_reason
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "direction, label, expected",
+    [
+        (1.0, 1.0, "tp"),  # long, trafiona górna bariera
+        (1.0, -1.0, "sl"),  # long, trafiona dolna bariera
+        (-1.0, -1.0, "tp"),  # short, trafiona dolna bariera => ZYSK
+        (-1.0, 1.0, "sl"),  # short, trafiona górna bariera => STRATA
+        (1.0, 0.0, "timeout"),
+        (-1.0, 0.0, "timeout"),
+    ],
+)
+def test_resolve_exit_reason_needs_direction_and_label(
+    direction: float, label: float, expected: str
+) -> None:
+    """Sam `label` nie wystarcza: short na etykiecie -1 to TP, nie SL."""
+    assert _resolve_exit_reason(direction, label) == expected
+
+
+def test_resolve_exit_reason_nan_label_is_timeout() -> None:
+    assert _resolve_exit_reason(1.0, float("nan")) == "timeout"
+
+
+def test_execution_legs_taker_only_ignores_exit_reason() -> None:
+    for reason in ("tp", "sl", "timeout"):
+        assert _execution_legs(EXECUTION_TAKER_ONLY, reason) == (TAKER, TAKER)
+
+
+def test_execution_legs_maker_limit_depends_on_exit_reason() -> None:
+    assert _execution_legs(EXECUTION_MAKER_LIMIT, "tp") == (MAKER, MAKER)
+    assert _execution_legs(EXECUTION_MAKER_LIMIT, "sl") == (MAKER, TAKER)
+    assert _execution_legs(EXECUTION_MAKER_LIMIT, "timeout") == (MAKER, TAKER)
+
+
+def test_execution_legs_rejects_unknown_model() -> None:
+    with pytest.raises(ValueError):
+        _execution_legs("maker_only", "tp")
+
+
+def test_run_backtest_journal_exit_reason_matches_direction_times_label() -> None:
+    """Kolumna w journalu musi zgadzać się z czystą funkcją na KAŻDYM wierszu."""
+    result = run_backtest(
+        _make_pipeline_test_ohlcv(seed=7),
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        min_barrier_to_cost_ratio=0.0,  # syntetyczne ATR jest małe wobec ceny
+    )
+    real = result["trades"].loc[~result["trades"]["kill_switch_active"]]
+    assert len(real) > 0
+    assert set(real["exit_reason"].unique()) <= {"tp", "sl", "timeout"}
+    # Transakcje TP muszą mieć dodatni gross_pnl, SL ujemny — to definicja obu pojęć.
+    assert (real.loc[real["exit_reason"] == "tp", "gross_pnl"] > 0).all()
+    assert (real.loc[real["exit_reason"] == "sl", "gross_pnl"] < 0).all()
+
+
+def test_run_backtest_taker_only_reproduces_pre_c212_costs() -> None:
+    """
+    REGRESJA BASELINE'U: execution_model='taker_only' musi dać DOKŁADNIE ten sam koszt
+    co model sprzed Commitu 2.12 (2x taker + 2x slippage + funding). Bez tego nie da się
+    uczciwie porównać rund — C2.10/C2.11 przestałyby być odtwarzalne.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    result = run_backtest(
+        raw,
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        min_barrier_to_cost_ratio=0.0,
+        execution_model=EXECUTION_TAKER_ONLY,
+    )
+    real = result["trades"].loc[~result["trades"]["kill_switch_active"]]
+    assert len(real) > 0
+    for _, row in real.iterrows():
+        notional = row["position_size"] * row["entry_price"]
+        expected = total_round_trip_cost(
+            notional=notional,
+            holding_candles=row["exit_bar_offset"],
+            direction=row["signal_direction"],
+        )
+        assert row["cost"] == pytest.approx(expected)
+
+
+def test_run_backtest_maker_model_is_cheaper_than_taker_only() -> None:
+    """Sedno Rundy 2 na poziomie pipeline'u, nie tylko formuły."""
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+    taker = run_backtest(raw, execution_model=EXECUTION_TAKER_ONLY, **kwargs)
+    maker = run_backtest(raw, execution_model=EXECUTION_MAKER_LIMIT, **kwargs)
+
+    def mean_cost_fraction(result: dict) -> float:
+        real = result["trades"].loc[~result["trades"]["kill_switch_active"]]
+        return (real["cost"] / (real["position_size"] * real["entry_price"])).mean()
+
+    assert mean_cost_fraction(maker) < mean_cost_fraction(taker)

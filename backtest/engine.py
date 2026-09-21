@@ -116,9 +116,20 @@ from agents.risk_controller import (
 )
 from backtest.costs import (
     CANDLE_MINUTES,
+    MAKER,
+    TAKER,
+    exit_leg_for_reason,
     round_trip_cost_fraction,
     total_round_trip_cost,
 )
+
+# Commit 2.12 (Backlog Z6): modele wykonania. "taker_only" = market po obu stronach
+# (model Commitów 5-2.11, zachowany do regresji baseline'u); "maker_limit" = wejście
+# limitem, wyjście zależnie od powodu (TP limitem, SL/timeout marketem) — decyzja
+# użytkownika 2026-09-21. Nazwane warianty, NIE pokrętło do strojenia.
+EXECUTION_TAKER_ONLY = "taker_only"
+EXECUTION_MAKER_LIMIT = "maker_limit"
+DEFAULT_EXECUTION_MODEL = EXECUTION_MAKER_LIMIT
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
 # TASKS.md C2.5: "reżim trend może być rzadki"). To engineering safeguard, NIE parametr
@@ -138,6 +149,7 @@ TRADE_COLUMNS = [
     "exit_price",
     "position_size",
     "exit_bar_offset",
+    "exit_reason",
     "gross_pnl",
     "cost",
     "net_pnl",
@@ -161,6 +173,7 @@ def _collect_candidate_signals(
     min_train_rows: int,
     min_barrier_to_cost_ratio: float,
     regime_feature_sets: list[tuple[str, list[str]]],
+    execution_model: str,
     fold_start_offset_days: float,
 ) -> tuple[list[dict], list[dict]]:
     """
@@ -182,7 +195,12 @@ def _collect_candidate_signals(
     pipeline, bez duplikacji logiki (ten sam wzorzec co `trend_threshold`/
     `candles_per_day` w C2.5/C2.6).
     """
-    cost_fraction = round_trip_cost_fraction()
+    # Bramka kosztowa działa PRZED wejściem w pozycję, więc nie zna powodu wyjścia, a ten
+    # decyduje o typie nogi wyjścia. Zakładamy więc wyjście TAKER (jakby każda transakcja
+    # kończyła się stopem/timeoutem) — konserwatywnie, bo zaniżony koszt przepuszczałby
+    # sygnały, których bariera go nie pokrywa. Patrz docstring round_trip_cost_fraction.
+    entry_leg_for_gate = MAKER if execution_model == EXECUTION_MAKER_LIMIT else TAKER
+    cost_fraction = round_trip_cost_fraction(entry_leg=entry_leg_for_gate, exit_leg=TAKER)
     candidate_signals: list[dict] = []
     folds_summary: list[dict] = []
 
@@ -339,6 +357,41 @@ def _resolve_exit_price(df: pd.DataFrame, signal: dict) -> float:
     return df.loc[exit_idx, "close"]
 
 
+def _resolve_exit_reason(direction: float, label: float) -> str:
+    """
+    Commit 2.12 (Z6): powód wyjścia z pozycji — potrzebny, żeby wycenić nogę wyjścia
+    (`backtest.costs.exit_leg_for_reason`).
+
+    `label` mówi, KTÓRA bariera triple-barrier została trafiona (+1 górna, -1 dolna,
+    0 bariera pionowa/timeout), a `direction` — po której stronie stoi pozycja. Dopiero
+    ich ILOCZYN mówi, czy to było take-profit czy stop-loss: short (-1) na świecy
+    z etykietą -1 to TP, ten sam short na etykiecie +1 to SL.
+    """
+    if label == 0.0 or pd.isna(label):
+        return "timeout"
+    return "tp" if direction * label > 0 else "sl"
+
+
+def _execution_legs(execution_model: str, exit_reason: str) -> tuple[str, str]:
+    """
+    Typy zleceń (maker/taker) nogi wejścia i wyjścia dla danego modelu wykonania.
+
+        taker_only  - obie nogi market. Model Commitów 5-2.11, zachowany do regresji
+                      baseline'u (odtwarza wynik C2.10/C2.11 co do cyfry).
+        maker_limit - wejście jako limit (maker); wyjście zależnie od powodu:
+                      TP limit (maker), SL i timeout market (taker). Decyzja
+                      użytkownika 2026-09-21, uzasadnienie w costs.exit_leg_for_reason.
+    """
+    if execution_model == EXECUTION_TAKER_ONLY:
+        return TAKER, TAKER
+    if execution_model == EXECUTION_MAKER_LIMIT:
+        return MAKER, exit_leg_for_reason(exit_reason)
+    raise ValueError(
+        f"execution_model musi być jednym z "
+        f"{(EXECUTION_TAKER_ONLY, EXECUTION_MAKER_LIMIT)}, dostałem: {execution_model!r}"
+    )
+
+
 def run_backtest(
     raw_ohlcv: pd.DataFrame,
     initial_equity: float = DEFAULT_INITIAL_EQUITY,
@@ -360,6 +413,7 @@ def run_backtest(
     regime_feature_sets: list[tuple[str, list[str]]] | None = None,
     fold_start_offset_days: float = 0.0,
     candle_minutes: int = CANDLE_MINUTES,
+    execution_model: str = DEFAULT_EXECUTION_MODEL,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -462,6 +516,7 @@ def run_backtest(
         min_train_rows=min_train_rows,
         min_barrier_to_cost_ratio=min_barrier_to_cost_ratio,
         regime_feature_sets=active_feature_sets,
+        execution_model=execution_model,
         fold_start_offset_days=fold_start_offset_days,
     )
 
@@ -513,6 +568,7 @@ def run_backtest(
                     "exit_price": float("nan"),
                     "position_size": 0.0,
                     "exit_bar_offset": signal["exit_bar_offset"],
+                    "exit_reason": None,
                     "gross_pnl": 0.0,
                     "cost": 0.0,
                     "net_pnl": 0.0,
@@ -539,12 +595,17 @@ def run_backtest(
         exit_price = _resolve_exit_price(df, signal)
         gross_pnl = direction * (exit_price - entry_price) * position_size
 
+        exit_reason = _resolve_exit_reason(direction, signal["label"])
+        entry_leg, exit_leg = _execution_legs(execution_model, exit_reason)
+
         notional = position_size * entry_price
         cost = total_round_trip_cost(
             notional=notional,
             holding_candles=signal["exit_bar_offset"],
             direction=direction,
             candle_minutes=candle_minutes,
+            entry_leg=entry_leg,
+            exit_leg=exit_leg,
         )
         net_pnl = gross_pnl - cost
 
@@ -562,6 +623,7 @@ def run_backtest(
                 "exit_price": exit_price,
                 "position_size": position_size,
                 "exit_bar_offset": signal["exit_bar_offset"],
+                "exit_reason": exit_reason,
                 "gross_pnl": gross_pnl,
                 "cost": cost,
                 "net_pnl": net_pnl,

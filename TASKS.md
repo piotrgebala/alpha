@@ -95,12 +95,13 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | Commit 2.9 — Naprawa metodologii pomiaru, Backlog Z1–Z4/Z11–Z15 (ZROBIONE — NO-GO odporne na fold-jitter) | 4 | 0 | 0 | 4 |
 | Commit 2.10 — Historia danych 3 lata, Backlog Z5 (ZROBIONE — NO-GO na nowej bazie, niska liczba foldów strukturalna) | 3 | 0 | 0 | 3 |
 | Commit 2.11 — Instrumentacja edge'u, Runda 1/4 „droga do GO" (ZROBIONE — blokada w geometrii wypłaty, nie w kierunku sygnału) | 1 | 0 | 0 | 1 |
+| Commit 2.12 — Model wykonania maker/taker, Backlog Z6, Runda 2/4 (ZROBIONE — NO-GO, ale ok. połowa luki domknięta) | 1 | 0 | 0 | 1 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 2 | 2 | 1 | 5 |
-| **RAZEM** | **60** | **3** | **25** | **88** |
+| **RAZEM** | **61** | **3** | **25** | **89** |
 
 ---
 
@@ -311,6 +312,20 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 
 ---
 
+### Commit 2.12 — Realistyczny model wykonania maker/taker (Backlog Z6, Runda 2/4) — ✅ ZROBIONE (NO-GO, ale ok. połowa luki do opłacalności domknięta)
+
+> Zakres: Runda 2 programu „droga do GO". Decyzja użytkownika: maker na wejściu i take-proficie,
+> taker na stop-lossie i timeoucie; slippage tylko na nogach taker. Pełny wynik:
+> `runs/2026-09-21_c2.12-execution-cost-model.md`.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| C2.12.1 | `backtest/costs.py`: `MAKER_FEE_RATE`, `leg_fee_rate`, `exit_leg_for_reason`, fee per noga + slippage tylko na nogach taker (domyślne taker/taker wstecznie zgodne) | ✅ | Motywacja: `costs.py` modelował WYŁĄCZNIE takera po obu stronach — to nie było założenie konserwatywne, tylko brak modelu. Asymetria TP=maker/SL=taker działa na NIEKORZYŚĆ strategii o niskiej trafności, więc jest konserwatywna wobec hipotezy. Testy: 9 nowych w `test_costs.py` |
+| C2.12.2 | `backtest/engine.py`: kolumna `exit_reason` (z iloczynu `direction*label`), `_execution_legs`, parametr `execution_model`; bramka kosztowa dostaje konserwatywne założenie (wyjście taker) | ✅ | Blokada usunięta po drodze: `label` był konsumowany w `_resolve_exit_price` i nie trafiał do journalu, więc nogi wyjścia nie dało się wycenić. Sam `label` nie wystarcza — short na etykiecie −1 to TP, nie SL. Testy: 16 nowych w `test_engine.py`, w tym **regresja baseline'u** (`taker_only` odtwarza koszt sprzed C2.12 co do cyfry) |
+| C2.12.3 | Pełny `run_checkpoint_v2` (kanoniczny + sweep fold-jitter) na 3 latach | ✅ | WYNIK: **NO-GO**, ale koszt **−52%**, foldy ważne **21→54**, transakcje `range` **530→7 155**, zwrot per trade **+35%/+39%**, margines **−23,9→−15,5 pp** / **−14,2→−9,1 pp**. `trend` t_neff = **−1,75** (\|t\|<2, nieodróżnialny od zera). Sprzężenie: tańszy koszt wpuszcza sygnały o węższej barierze (B −25%/−19%), więc break-even spadł tylko o 9,2/5,9 pp. **Ostrzeżenie:** `mean_sharpe` −12,4→−59,6 przy LEPSZEJ ekonomice per trade, fold-jitter σ 3,1→75,7, spójność znaku 100%→80% — per-fold Sharpe (podstawa kryteriów docs/rag/03) przestał być wiarygodnym przyrządem. Testy: **182/182** |
+
+---
+
 ## Faza 1 — regime router, funding rate, Compliance Gate
 
 > Start dopiero po wyniku GO/WARUNKOWY z Commitu 6.
@@ -404,7 +419,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
 | Z5 | **Wydłużyć historię danych do 3–5 lat** | ✅ C2.10 | Zrealizowane na maszynie użytkownika (2026-09-21): decyzja użytkownika **3 lata** (2023-07-01 → 2026-07-01), `data.start` w config, `py -m data.fetch_ohlcv` → `data/raw/BTC-USDT-USDT_5m_20230701T000000Z_20260701T000000Z.parquet`, **315 648 świec = 1096×288, zero dziur**, overlap 2025-07→2026-07 identyczny co do bajtu ze starym plikiem (który ZOSTAJE jako zamrożone źródło C6–C2.9). Pętla fetch dostała retry/backoff na `ccxt.NetworkError` (+4 testy). Wynik checkpointu v2 na nowej bazie: sekcja Commit 2.10 + `runs/2026-09-21_c2.10-extended-history-z5.md` |
-| Z6 | Zweryfikować założenia kosztowe (kandydat (c) z §7 IMPLEMENTATION_PLAN.md) | ⏳ | Koszty są OSIĄ werdyktu od Commitu 2d, a `taker=0.05%`/`slippage=2bps`/`funding=0.01%/8h` to wartości startowe. Realny tier fee, udział maker (0.02%), realne dane funding |
+| Z6 | Zweryfikować założenia kosztowe (kandydat (c) z §7 IMPLEMENTATION_PLAN.md) | ✅ C2.12 | Koszty są OSIĄ werdyktu od Commitu 2d, a `taker=0.05%`/`slippage=2bps`/`funding=0.01%/8h` to wartości startowe. Realny tier fee, udział maker (0.02%), realne dane funding |
 | Z7 | Reguła regime na `adx_14` zamiast/obok dyskretnej `direction_persistence_10` | ⏳ | Osobny, z góry zarejestrowany eksperyment NA REGULE (nie modelu). Motywacja z trzech niezależnych rund: dyskretność persistence (C2.5), corr adx↔persistence=+0,07 (C2.7), błędna klasyfikacja trendu spadkowego jako `range` (C2c) |
 | Z8 | Rozdzielić timeframe od horyzontu trzymania | ⏳ | Nierozdzielony confound C2.6: `VERTICAL_BARRIER_CANDLES=12` = 1h @ 5m, ale 48h @ 4h. Przeliczyć proporcjonalnie jako jawnie nazwany eksperyment |
 | Z9 | Walidacja natywnych świec 1h/4h vs resample z 5m | ⏳ | Wymaga maszyny użytkownika (dostęp do Binance); sprawdza, czy agregacja z 5m nie zniekształca wyniku C2.6 |
