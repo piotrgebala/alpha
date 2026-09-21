@@ -12,6 +12,14 @@ kierunku (ambiguous warmup -> trend -> range), żeby DETERMINISTYCZNIE (dla usta
 seeda) wywołać OBA reżimy classify_regime — czysto losowe dane (i.i.d.) dają reżim
 "range" dużo częściej niż "trend" (ryzyko odnotowane w TASKS.md C2.5), więc nie
 gwarantowałyby ćwiczenia obu ścieżek.
+
+UWAGA (Commit 2d): testy w tym pliku, które powstały PRZED bramką wykonalności kosztowej,
+przekazują jawnie `min_barrier_to_cost_ratio=0.0` (bramka wyłączona). Powód: segment
+"range" w `_make_pipeline_test_ohlcv` ma z KONSTRUKCJI bardzo mały ATR (szum std=0.15
+wokół stałego poziomu), czyli dokładnie przypadek, który bramka blokuje — bez tego
+wyłączenia testy kill-switcha przestałyby testować kill-switcha, bo nie doszłoby do
+żadnej transakcji. Sama bramka ma własny test integracyjny niżej
+(`test_run_backtest_cost_gate_blocks_narrow_barrier_signals`).
 """
 
 from __future__ import annotations
@@ -20,6 +28,7 @@ import numpy as np
 import pandas as pd
 
 from agents.labeling import ATR_MULTIPLIER
+from agents.risk_controller import MIN_BARRIER_TO_COST_RATIO
 from backtest.engine import TRADE_COLUMNS, run_backtest
 
 N_WARMUP = 5760  # 20 dni @ 5m - wymagane, by atr_pctrank_20d (feature_miner.py) nie było NaN
@@ -77,6 +86,7 @@ def test_run_backtest_produces_trades_for_both_regimes() -> None:
         step_days=2,
         num_boost_round=50,
         early_stopping_rounds=10,
+        min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
     )
 
     folds_summary = result["folds_summary"]
@@ -162,6 +172,7 @@ def test_run_backtest_kill_switch_suppresses_signals_after_large_drawdown() -> N
         num_boost_round=50,
         early_stopping_rounds=10,
         risk_controller_fn=_oversized_risk_controller_fn,
+        min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
     )
 
     trades = result["trades"]
@@ -190,6 +201,7 @@ def test_run_backtest_kill_switch_re_arms_after_cooldown() -> None:
         early_stopping_rounds=10,
         risk_controller_fn=_oversized_risk_controller_fn,
         kill_switch_cooldown_days=0.01,  # ~14 minut — wyłącznie do testu
+        min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
     )
 
     trades = result["trades"].sort_values("timestamp").reset_index(drop=True)
@@ -204,3 +216,62 @@ def test_run_backtest_kill_switch_re_arms_after_cooldown() -> None:
     )
     assert (later_active["position_size"] > 0.0).all()
 
+
+def test_run_backtest_cost_gate_blocks_narrow_barrier_signals() -> None:
+    # Commit 2d (Warstwa 4, integracyjny): ta sama próbka syntetyczna, dwa przebiegi —
+    # bramka wyłączona (0.0) vs włączona (wartość startowa 2.0). Segment "range" w
+    # `_make_pipeline_test_ohlcv` ma z konstrukcji bardzo wąską barierę względem kosztu,
+    # więc bramka MUSI odciąć część sygnałów i policzyć je w n_signals_cost_gated.
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+    )
+
+    without_gate = run_backtest(raw_ohlcv, min_barrier_to_cost_ratio=0.0, **kwargs)
+    with_gate = run_backtest(raw_ohlcv, min_barrier_to_cost_ratio=2.0, **kwargs)
+
+    n_signals_off = sum(f["n_signals"] for f in without_gate["folds_summary"])
+    n_signals_on = sum(f["n_signals"] for f in with_gate["folds_summary"])
+    n_gated_off = sum(f["n_signals_cost_gated"] for f in without_gate["folds_summary"])
+    n_gated_on = sum(f["n_signals_cost_gated"] for f in with_gate["folds_summary"])
+
+    # Bramka wyłączona -> nikt nie jest odrzucany; włączona -> odrzuca i zmniejsza pulę.
+    assert n_gated_off == 0
+    assert n_gated_on > 0
+    assert n_signals_on < n_signals_off
+
+    # Zachowanie księgowe: każdy sygnał jest albo dopuszczony, albo odrzucony — bez
+    # gubienia po drodze (te same sygnały kandydujące, inny podział).
+    assert n_signals_on + n_gated_on == n_signals_off
+
+    # Schemat i niezmienniki trade journalu bez zmian (bramka nie dodaje wierszy).
+    assert list(with_gate["trades"].columns) == TRADE_COLUMNS
+    real = with_gate["trades"].loc[~with_gate["trades"]["kill_switch_active"]]
+    assert (real["position_size"] > 0).all()
+
+
+def test_run_backtest_cost_gate_default_is_enabled() -> None:
+    # Bramka jest domyślnie WŁĄCZONA (MIN_BARRIER_TO_COST_RATIO), nie opt-in — wywołanie
+    # bez jawnego argumentu musi dawać ten sam wynik co jawne podanie wartości startowej.
+    raw_ohlcv = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+    )
+
+    default_run = run_backtest(raw_ohlcv, **kwargs)
+    explicit_run = run_backtest(
+        raw_ohlcv, min_barrier_to_cost_ratio=MIN_BARRIER_TO_COST_RATIO, **kwargs
+    )
+
+    assert sum(f["n_signals"] for f in default_run["folds_summary"]) == sum(
+        f["n_signals"] for f in explicit_run["folds_summary"]
+    )
+    assert default_run["final_equity"] == explicit_run["final_equity"]

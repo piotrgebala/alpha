@@ -511,6 +511,116 @@ klasyfikacji reżimu (C2.5 — rekalibracja progów 0.7/0.3, ujawniona przez C2c
 przyczyna 100%-long-only podczas spadku sklasyfikowanego jako `range`) — POZA zakresem tej rundy, do
 ustalenia osobno.
 
+### Commit 2d — Bramka wykonalności kosztowej `[ZROBIONE]`
+
+**Kontekst i uzgodniony zakres (2026-09-21):** runda miała być C2.5 (rekalibracja progów regime).
+Przed jej rozpoczęciem wykonano read-only diagnostykę, która obaliła przesłankę — i użytkownik
+zatwierdził zmianę zakresu na bramkę wykonalności kosztowej, z C2.5 przesuniętym na osobną,
+następną rundę (jedna zmiana na raz, CLAUDE.md zasada 4). Przeczytano `docs/rag/03_ryzyko_i_sizing.md`
+i `docs/rag/05_metodologia_wytwarzania_i_testow.md` w całości przed zmianą (CLAUDE.md) — potwierdzono,
+że docs NIE opisują żadnej bramki wykonalności kosztowej, więc jest to nowa przestrzeń projektowa,
+nie nadpisanie istniejącej decyzji.
+
+**C2d.0 — Diagnostyka (`backtest/diagnose_cost_feasibility.py`, poza pytest, jak
+`run_checkpoint.py`/`diagnose_range_signal.py`/`diagnose_kill_switch_trigger.py`):** trzy bloki
+read-only na realnych danych BTC/USDT:USDT 5m (2025-07→2026-07, 105 120 świec) — rozkład reguły
+reżimu, porównanie szerokości bariery triple-barrier z kosztem round-trip, oraz dekompozycja
+realnych transakcji na gross vs koszt.
+
+**Wynik C2d.0 — trzy ustalenia, z których drugie przewraca dotychczasową diagnozę:**
+
+1. **`direction_persistence_10` jest zmienną DYSKRETNĄ** — z definicji `|sum(sign(return))|/10`
+   przyjmuje tylko wartości `k/10`. Realny rozkład: 0,0 → 26%, 0,2 → 42%, 0,4 → 22%, 0,6 → 7%,
+   0,8 → 1,3%, 1,0 → 0,1%. Próg `trend_threshold=0.7` wpada w LUKĘ rozkładu (między 0,6 a 0,8),
+   więc `trend` = 0,53% świec. To próg persistence, nie `atr_pctrank_20d`, czyni ten reżim prawie
+   pustym — doprecyzowanie ryzyka z §7 i C2.5. Przesunięcie 0,7→0,5 daje `trend` = 4,53%. **Implikacja
+   dla C2.5: progi nie są ciągłym pokrętłem — muszą snapować do osiągalnych wartości rozkładu.**
+2. **W reżimie `range` bariera zysku jest WĘŻSZA NIŻ KOSZT.** Mediana `1.5×ATR` w `range` = **0,130%
+   ceny** przy koszcie round-trip = **0,140% nominału** (2× taker 0,05% + 2× slippage 2 bps; funding
+   ~0,0004%, pomijalny). Wymagana trafność kierunku na break-even, `p = 0.5*(1 + koszt/bariera)`,
+   wynosi tam **103,9% — arytmetycznie nieosiągalna**. W **56,8%** świec `range` nawet PEŁNE
+   trafienie bariery nie pokrywa kosztu. Dla porównania: `trend` = 68,2%, `ambiguous` = 77,5%.
+3. **Model `range` MA edge kierunkowy** — trafiał kierunek w **54,6%** z 2 562 realnych transakcji
+   Commitu 2c. Mimo to **42%** transakcji z POPRAWNYM kierunkiem kończyło netto pod kreską, łączny
+   gross wyniósł **-569** przy koszcie **9 168** (net -9 737).
+
+**Wniosek C2d.0:** NO-GO Commitu 2c był w ~94% wynikiem ARYTMETYCZNYM, nie statystycznym. Hipoteza
+mean-reversion nie została uczciwie przetestowana — została przetestowana na oknach, w których nie
+mogła wygrać. Sama rekalibracja progów (C2.5) nie zaadresowałaby tego: przesunęłaby tylko, które
+świece nazywamy `range`, nie zmieniając faktu, że definicja reżimu (niski percentyl ATR) z
+konstrukcji wybiera świece o najgorszym stosunku ruchu do stałego kosztu.
+
+**C2d.1 — Mechanizm (`agents/risk_controller.py`):** czysta funkcja
+`is_cost_feasible(atr_14, entry_price, cost_fraction, atr_multiplier, min_barrier_to_cost_ratio)`
+(+ jej rdzeń `barrier_to_cost_ratio`) — sygnał wchodzi do gry tylko, gdy
+`(atr_multiplier * atr_14) / entry_price >= min_barrier_to_cost_ratio * cost_fraction`. Wartość
+startowa **`MIN_BARRIER_TO_COST_RATIO = 2.0`** (`config/settings.yaml` sekcja `risk`) wyprowadzona
+z arytmetyki break-even `p = 0.5*(1 + 1/ratio)` — ratio 2.0 ⇒ wymagana trafność 75% — a NIE z
+przeszukiwania po Sharpe (CLAUDE.md zasada 1). `cost_fraction` liczony przez nową
+`backtest.costs.round_trip_cost_fraction()` z tych samych stałych co `total_round_trip_cost` (zero
+duplikacji literałów, docs/rag/05) i przekazywany jawnie — `agents/` nie zależy od `backtest/`.
+
+Decyzje projektowe:
+- **Bramka filtruje KANDYDATURĘ sygnału (`backtest.engine._collect_candidate_signals`), nie trafia
+  do trade journalu** — inaczej niż kill-switch. Kill-switch jest zdarzeniem zależnym od equity i
+  historii, więc jego moment ma znaczenie w torze transakcji; bramka kosztowa jest deterministyczną
+  właściwością POJEDYNCZEJ świecy, niezależną od equity. Licznik odrzuceń trafia do
+  `folds_summary["n_signals_cost_gated"]`. Dzięki temu `backtest/metrics.py` nie wymaga ŻADNEJ
+  zmiany ani nowego wyjątku w filtrze realnych transakcji.
+- **To NIE jest próg odcięcia po `signal_confidence`** — docs/rag/03 świadomie odrzuca taki próg
+  („słabszy sygnał, mniejsza pozycja, nie próg odcięcia"). Bramka jest ortogonalna: dotyczy
+  geometrii bariera-vs-koszt, nie pewności modelu.
+- **`atr_multiplier` nietknięty** — CLAUDE.md zasada 3 nienaruszona (bariera triple-barrier i
+  stop-loss nadal dzielą tę samą stałą).
+- **`min_barrier_to_cost_ratio=0.0` wyłącza bramkę** — używane przez testy sprzed Commitu 2d oraz
+  do odtworzenia baseline'u Commitu 2c.
+
+**C2d.2 — Testy (DoD, docs/rag/05):** 7 testów jednostkowych + 4 hypothesis property tests w
+`tests/test_risk_controller.py` (zgodność bramki ze stosunkiem; monotoniczność niemalejąca w
+`atr_14`; próg 0.0 przepuszcza wszystko; fail-safe dla `entry_price<=0`/`cost_fraction<=0`/NaN;
+reprodukcja diagnozy reżimu `range`), 3 jednostkowe w `tests/test_costs.py`, 2 integracyjne w
+`tests/test_engine.py` (bramka odcina sygnały i księguje je bez gubienia:
+`n_signals_on + n_gated_on == n_signals_off`; bramka domyślnie WŁĄCZONA). Trzy testy sprzed Commitu
+2d dostały jawne `min_barrier_to_cost_ratio=0.0` — ich przedmiotem jest kill-switch, a syntetyczny
+segment `range` ma z konstrukcji wąską barierę. Pełny zestaw: **110/110 przechodzi** (94 + 16).
+
+**C2d.3 — Ponowny checkpoint po bramce (realne dane, `min_barrier_to_cost_ratio=2.0`):**
+
+| Metryka | Przed (Commit 2c) | Po (Commit 2d, seed=42) |
+|---|---|---|
+| Sygnały odrzucone przez bramkę | — | **17 547 z 18 135 (96,8%)** — w tym 17 537/17 989 (97,5%) w `range` |
+| Foldy z policzalnym Sharpe | 23/40 | **6/40** (range 2/20, trend 4/20) |
+| Realne transakcje | 2 625 | **358** (range 223, trend 135) |
+| `mean_sharpe` (ogółem) | -47,38 | **-14,31** |
+| Range: mean_sharpe | -53,41 | **-26,01** |
+| Trend: mean_sharpe | -7,15 | **-8,46** (ale 25% foldów ma Sharpe > 0,5, wcześniej 0%) |
+| Łączny gross | **-593** (range -569, trend -24) | **+166** (range +38, trend +128) |
+| Łączny koszt | 9 354 | **2 953** |
+| Trafność kierunku (range) | 54,6% | **49,3%** |
+| Klasyfikacja | NO-GO | **NO-GO** |
+| Stabilność (10 seedów, 42-51) | std=0,0000 | **std=0,0000 — identyczny mean_sharpe na wszystkich 10** |
+
+Regresja kontrolna: `min_barrier_to_cost_ratio=0.0` odtwarza baseline Commitu 2c **co do ostatniej
+cyfry** (`mean_sharpe=-47,377414474779975`, 23/40 foldów) — bramka jest jedyną zmianą zachowania.
+
+**Wniosek C2d.3 — dwa wyniki, jeden dobry i jeden zły:**
+- **Potwierdzone: strata BYŁA kosztowa.** Łączny gross przeszedł z **-593 na +166** — po odcięciu
+  świec, na których wygrana była arytmetycznie niemożliwa, strategia przestaje tracić brutto.
+  Diagnoza C2d.0 jest empirycznie potwierdzona, nie tylko prawdopodobna.
+- **Nowe, niewygodne ustalenie: edge kierunkowy ZNIKA dokładnie tam, gdzie transakcja jest
+  opłacalna.** Trafność w `range` spada z 54,6% (wszystkie świece) do **49,3%** (tylko świece
+  przechodzące bramkę) — czyli te 54,6% mieszkało w świecach wąskobarierowych, niskozmiennych,
+  na których i tak nie dało się zarobić. Na świecach szerokobarierowych model jest nieodróżnialny
+  od rzutu monetą. Przy wymaganych 75% to przepaść, nie luka do zasypania tuningiem.
+- **Werdykt pozostaje NO-GO**, ale jego PRZYCZYNA jest teraz inna i dużo lepiej określona: nie
+  „koszty zjadają zysk", tylko „na świecach, gdzie koszt da się pokryć, model nie ma kierunku".
+
+**Status:** ZROBIONE. Następna runda (uzgodniona z góry): **C2.5 — rekalibracja progów regime
+wewnątrz walk-forward**, z uwzględnieniem dyskretności `direction_persistence_10` (C2d.0 pkt 1).
+Otwarte pytanie do rozstrzygnięcia przy okazji: czy przy trafności ~49% na świecach opłacalnych
+hipoteza w obecnym kształcie (5m, `REVERSION_FEATURES`) nie wymaga raczej zmiany horyzontu/cech niż
+progów — patrz §7.
+
 ---
 
 ## 6. Zweryfikowane empirycznie (nie tylko zaplanowane)
@@ -566,6 +676,22 @@ ustalenia osobno.
   diagnostyka (`backtest/diagnose_kill_switch_trigger.py`) pokazała, że pierwotna seria strat to
   100% sygnałów long podczas trwałego spadku ceny sklasyfikowanego jako `range` (74% genuinie zły
   kierunek, 26% koszt > zysk brutto) — patrz §5 Commit 2c.
+- **Bariera `range` jest węższa niż koszt round-trip (Commit 2d, 2026-09-21).** Zmierzone na
+  realnych danych (`backtest/diagnose_cost_feasibility.py`): mediana `1.5×ATR` w reżimie `range` =
+  **0,130% ceny** wobec kosztu **0,140% nominału** → wymagana trafność break-even **103,9%**,
+  arytmetycznie nieosiągalna; 56,8% świec `range` nie pokrywa kosztu nawet przy pełnym trafieniu
+  bariery. `trend` = 68,2%, `ambiguous` = 77,5%.
+- **`direction_persistence_10` jest zmienną dyskretną (Commit 2d).** `|sum(sign)|/10` przyjmuje
+  tylko wartości `k/10`; realny rozkład to 0,0 → 26%, 0,2 → 42%, 0,4 → 22%, 0,6 → 7%, 0,8 → 1,3%.
+  Próg 0,7 wpada w lukę rozkładu — to on, nie `atr_pctrank_20d`, czyni reżim `trend` prawie pustym
+  (0,53% świec; przy progu 0,5 → 4,53%).
+- **Model `range` ma edge kierunkowy, ale w niewłaściwych świecach (Commit 2d).** 54,6% trafności
+  na wszystkich 2 562 transakcjach Commitu 2c, ale **49,3%** po odfiltrowaniu świec, na których
+  bariera nie pokrywa kosztu. Łączny gross przeszedł z -593 (bez bramki) na **+166** (z bramką) —
+  strata Commitu 2c była w ~94% kosztowa, co bramka potwierdziła empirycznie.
+- **Bramka wykonalności kosztowej nie zmienia werdyktu (Commit 2d).** Po odcięciu 96,8% sygnałów:
+  mean_sharpe -47,38 → **-14,31**, nadal **NO-GO**, stabilne na 10 seedach (std=0,0000). Regresja
+  kontrolna z `min_barrier_to_cost_ratio=0.0` odtwarza baseline Commitu 2c co do ostatniej cyfry.
 
 ---
 
@@ -598,7 +724,26 @@ ustalenia osobno.
   zły kierunek. Sugeruje to, że reguła klasyfikacji reżimu (progi 0.7/0.3, C2.5) może błędnie
   etykietować trwałe trendy jako `range`, albo że `model_reversion` nie ma wystarczającego edge'u,
   żeby to skompensować. Jawnie POZA zakresem Commitu 2c (wymaga C2.5 rekalibracji progów i/lub
-  rework modelu/cech `range`) — kandydat na następną rundę, do ustalenia z użytkownikiem.
+  rework modelu/cech `range`) — **doprecyzowane przez Commit 2d**: reguła reżimu faktycznie jest
+  współwinna (dyskretność `direction_persistence_10`, próg 0,7 w luce rozkładu), ale nie jest
+  całą przyczyną — patrz ryzyko niżej.
+- **NAJWAŻNIEJSZE OTWARTE RYZYKO (Commit 2d, 2026-09-21) — brak edge'u kierunkowego na świecach
+  opłacalnych.** Po włączeniu bramki wykonalności kosztowej trafność kierunku modelu `range` spada
+  z 54,6% do **49,3%**, czyli do poziomu rzutu monetą, przy wymaganych ~75% (próg ratio=2.0). Edge,
+  który model miał, mieszkał w świecach niskozmiennych, gdzie transakcja jest arytmetycznie
+  nieopłacalna. To przesuwa pytanie z „jak obniżyć koszt / poprawić bramkę" na „czy hipoteza
+  mean-reversion na 5m z obecnym `REVERSION_FEATURES` w ogóle ma czego szukać na świecach
+  szerokobarierowych". Kandydaci na kolejne rundy, do ustalenia: (a) C2.5 — rekalibracja progów
+  regime wewnątrz walk-forward, z uwzględnieniem dyskretności persistence (uzgodnione jako
+  następna runda); (b) zmiana horyzontu/timeframe albo `atr_multiplier`, żeby stosunek ruchu do
+  kosztu miał sens strukturalnie (dotyka CLAUDE.md zasady 3 — labeling i risk_controller muszą
+  zmienić się razem); (c) weryfikacja założeń kosztowych (taker 0,05%/stronę to wartość startowa;
+  przy maker 0,02% koszt spada do 0,08%, a wymagana trafność w `range` do 80,8%).
+- **Założenia kosztowe są wartościami startowymi, a teraz decydują o werdykcie.** Dopóki koszt był
+  jednym z wielu składników, jego przybliżony charakter nie miał znaczenia. Po Commicie 2d koszt
+  jest osią diagnozy, więc `taker_fee_rate=0.0005` / `slippage_bps=2` / `funding_rate_8h=0.0001`
+  z `config/settings.yaml` warto zweryfikować wobec realnych tierów fee i realistycznego udziału
+  zleceń maker, zanim odrzuci się hipotezę na ich podstawie.
 
 ---
 

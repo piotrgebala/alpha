@@ -63,6 +63,31 @@ def slippage_cost(notional: float, slippage_bps: float = SLIPPAGE_BPS) -> float:
     return notional * (slippage_bps / 10_000.0)
 
 
+def round_trip_cost_fraction(
+    taker_fee_rate: float = TAKER_FEE_RATE,
+    slippage_bps: float = SLIPPAGE_BPS,
+) -> float:
+    """
+    Koszt pełnego obrotu jako UŁAMEK NOMINAŁU, niezależny od wielkości pozycji,
+    kierunku i czasu trzymania:
+
+        fee (2x) + slippage (2x) = 2*taker_fee_rate + 2*(slippage_bps/10_000)
+
+    Świadomie BEZ funding: funding zależy od `direction` i `holding_candles`, więc nie
+    da się go wyrazić jako stały ułamek nominału. Empirycznie (C2c.1, realne transakcje)
+    funding to ~0,0004% nominału wobec ~0,140% dla fee+slippage — pomijalny w roli, do
+    której ta funkcja służy (Commit 2d: porównanie szerokości bariery triple-barrier z
+    kosztem, `agents.risk_controller.is_cost_feasible`). Pełny, dokładny koszt konkretnej
+    transakcji liczy `total_round_trip_cost` — ta funkcja jest jego konserwatywnym
+    (zaniżonym) przybliżeniem do decyzji PRZED wejściem w pozycję, kiedy czas trzymania
+    nie jest jeszcze znany.
+
+    Returns:
+        Ułamek nominału (np. 0.0014 = 0.14%).
+    """
+    return 2.0 * taker_fee_rate + 2.0 * (slippage_bps / 10_000.0)
+
+
 def total_round_trip_cost(
     notional: float,
     holding_candles: float,

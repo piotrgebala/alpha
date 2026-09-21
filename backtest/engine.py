@@ -32,6 +32,24 @@ liczne sygnały kandydujące). Pętla poniżej śledzi `kill_switch_tripped_at` 
 (zamrożonego) equity, dając strategii kolejną szansę zamiast czekać na organiczne
 odzyskanie, które strukturalnie nie może nastąpić w tej architekturze.
 
+BRAMKA WYKONALNOŚCI KOSZTOWEJ (Commit 2d, 2026-09-21, patrz agents/risk_controller.py
+dla pełnego uzasadnienia i liczb): sygnał wchodzi do gry tylko, gdy pełne trafienie
+bariery zysku (ATR_MULTIPLIER * atr_14) daje co najmniej `min_barrier_to_cost_ratio`
+wielokrotność kosztu round-trip. Powód: w reżimie `range` mediana bariery (0,130% ceny)
+jest WĘŻSZA niż koszt round-trip (0,140% nominału), więc break-even wymagałby 103,9%
+trafności kierunku — NO-GO Commitu 2c był w ~94% wynikiem arytmetycznym, nie
+statystycznym (model trafiał kierunek w 54,6% realnych transakcji, a mimo to łączny
+gross wyniósł -569 przy koszcie 9 168).
+
+DECYZJA — bramka kosztowa filtruje KANDYDATURĘ sygnału, nie trafia do trade journalu
+(inaczej niż kill-switch): kill-switch jest zdarzeniem zależnym od equity i historii,
+więc jego moment ma znaczenie w torze transakcji i musi być widoczny w `trades`. Bramka
+kosztowa jest deterministyczną właściwością POJEDYNCZEJ świecy (geometria bariery vs
+koszt), niezależną od equity — jej miejsce jest obok istniejącego filtra
+`direction == 0` w `_collect_candidate_signals`, a licznik odrzuceń w
+`folds_summary["n_signals_cost_gated"]`. Dzięki temu `backtest/metrics.py` (liczenie
+Sharpe) nie wymaga żadnej zmiany ani nowego wyjątku w filtrze realnych transakcji.
+
 DECYZJA — brak modyfikacji agents/labeling.py: PnL wymaga znać cenę wyjścia z pozycji.
 Dla label +1/-1 to trywialne (entry ± atr_multiplier*atr_14). Dla label 0.0 (vertical
 timeout) potrzeba `close` w świecy `t + exit_bar_offset` z PEŁNEGO datasetu — ale
@@ -86,11 +104,13 @@ from agents.ml_optimizer import (
 from agents.risk_controller import (
     KILL_SWITCH_COOLDOWN_DAYS,
     KILL_SWITCH_DRAWDOWN_PCT,
+    MIN_BARRIER_TO_COST_RATIO,
     check_kill_switch,
     compute_sizing,
+    is_cost_feasible,
     should_rearm_kill_switch,
 )
-from backtest.costs import total_round_trip_cost
+from backtest.costs import round_trip_cost_fraction, total_round_trip_cost
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
 # TASKS.md C2.5: "reżim trend może być rzadki"). To engineering safeguard, NIE parametr
@@ -132,12 +152,21 @@ def _collect_candidate_signals(
     early_stopping_rounds: int,
     seed: int,
     min_train_rows: int,
+    min_barrier_to_cost_ratio: float,
 ) -> tuple[list[dict], list[dict]]:
     """
     Trenuje model_momentum/model_reversion per walk-forward fold, generuje sygnały
     na foldach OOS (test). Zwraca (candidate_signals, folds_summary) — sygnały BEZ
     sizingu/PnL jeszcze (patrz decyzja o chronologii w docstringu modułu).
+
+    Commit 2d: tu też wypada bramka wykonalności kosztowej
+    (`agents.risk_controller.is_cost_feasible`) — obok istniejącego filtra
+    `direction == 0`, bo oba są właściwościami POJEDYNCZEJ świecy, niezależnymi od
+    equity i toru transakcji (patrz decyzja w docstringu modułu). Liczba sygnałów
+    odrzuconych przez bramkę trafia do `folds_summary["n_signals_cost_gated"]` —
+    audytowalność bez zaśmiecania trade journalu wierszami zerowymi.
     """
+    cost_fraction = round_trip_cost_fraction()
     candidate_signals: list[dict] = []
     folds_summary: list[dict] = []
 
@@ -162,6 +191,7 @@ def _collect_candidate_signals(
                     "skipped": True,
                     "skip_reason": "regime_df jest puste — brak świec sklasyfikowanych jako ten reżim",
                     "n_signals": 0,
+                    "n_signals_cost_gated": 0,
                     "best_iteration": None,
                     "seed": seed,
                 }
@@ -188,6 +218,7 @@ def _collect_candidate_signals(
                         "skipped": True,
                         "skip_reason": f"n_train_valid={n_train_valid}, n_test_valid={n_test_valid} < min_train_rows={min_train_rows}",
                         "n_signals": 0,
+                        "n_signals_cost_gated": 0,
                         "best_iteration": None,
                         "seed": seed,
                     }
@@ -206,12 +237,26 @@ def _collect_candidate_signals(
             signals = predict_signal(booster, test_df, feature_columns)
 
             n_signals = 0
+            n_signals_cost_gated = 0
             for idx, row in signals.iterrows():
                 direction = row["signal_direction"]
                 if direction == 0.0:
                     continue
                 label = test_df.loc[idx, "label"]
                 if pd.isna(label):
+                    continue
+
+                # Commit 2d — bramka wykonalności kosztowej (patrz docstring tej
+                # funkcji i agents/risk_controller.py). Odrzucenie NIE trafia do
+                # trade journalu: to właściwość świecy, nie zdarzenie w torze equity.
+                if not is_cost_feasible(
+                    atr_14=test_df.loc[idx, "atr_14"],
+                    entry_price=test_df.loc[idx, "close"],
+                    cost_fraction=cost_fraction,
+                    atr_multiplier=ATR_MULTIPLIER,
+                    min_barrier_to_cost_ratio=min_barrier_to_cost_ratio,
+                ):
+                    n_signals_cost_gated += 1
                     continue
 
                 candidate_signals.append(
@@ -241,6 +286,7 @@ def _collect_candidate_signals(
                     "skipped": False,
                     "skip_reason": None,
                     "n_signals": n_signals,
+                    "n_signals_cost_gated": n_signals_cost_gated,
                     "best_iteration": booster.best_iteration,
                     "seed": seed,
                 }
@@ -285,6 +331,7 @@ def run_backtest(
     min_train_rows: int = MIN_TRAIN_ROWS,
     kill_switch_drawdown_pct: float = KILL_SWITCH_DRAWDOWN_PCT,
     kill_switch_cooldown_days: float = KILL_SWITCH_COOLDOWN_DAYS,
+    min_barrier_to_cost_ratio: float = MIN_BARRIER_TO_COST_RATIO,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -316,13 +363,17 @@ def run_backtest(
             peak_equity zostanie zresetowany do bieżącego equity (re-arm) — patrz
             docstring modułu i agents.risk_controller.KILL_SWITCH_COOLDOWN_DAYS.
             Domyślnie 7.0 — nadpisywalne np. do testów (wartość mała -> szybszy re-arm).
+        min_barrier_to_cost_ratio: Commit 2d — minimalny stosunek szerokości bariery
+            zysku do kosztu round-trip, żeby sygnał w ogóle wszedł do gry
+            (agents.risk_controller.is_cost_feasible). Domyślnie 2.0. Wartość 0.0
+            całkowicie wyłącza bramkę (przydatne do odtworzenia baseline'u Commitu 2c).
 
     Returns:
         {
           "equity_curve": pd.DataFrame [timestamp, equity], sortowane chronologicznie,
           "trades": pd.DataFrame z kolumnami TRADE_COLUMNS (trade journal, C5.6),
           "folds_summary": list[dict] (per regime/fold: zakres dat, n_signals,
-              best_iteration, czy pominięty i dlaczego),
+              n_signals_cost_gated, best_iteration, czy pominięty i dlaczego),
           "final_equity": float,
         }
     """
@@ -342,6 +393,7 @@ def run_backtest(
         early_stopping_rounds=early_stopping_rounds,
         seed=seed,
         min_train_rows=min_train_rows,
+        min_barrier_to_cost_ratio=min_barrier_to_cost_ratio,
     )
 
     # Chronologia ponad reżimy — patrz docstring modułu.
