@@ -18,10 +18,13 @@ from agents.risk_controller import (
     KILL_SWITCH_COOLDOWN_DAYS,
     KILL_SWITCH_DRAWDOWN_PCT,
     MAX_LEVERAGE,
+    MIN_BARRIER_TO_COST_RATIO,
     RISK_PER_TRADE,
+    barrier_to_cost_ratio,
     check_kill_switch,
     compute_position_size,
     compute_sizing,
+    is_cost_feasible,
     should_rearm_kill_switch,
 )
 
@@ -312,3 +315,123 @@ def test_should_rearm_kill_switch_false_before_cooldown_elapsed_property(
     tripped_at = pd.Timestamp("2025-01-01T00:00:00Z")
     current_timestamp = tripped_at + pd.Timedelta(days=cooldown_days * fraction_elapsed)
     assert should_rearm_kill_switch(tripped_at, current_timestamp, cooldown_days) is False
+
+
+# ---------------------------------------------------------------------------
+# Commit 2d — bramka wykonalności kosztowej
+# Warstwa 1 (unit) + Warstwa 3 (hypothesis). Uzasadnienie i liczby empiryczne:
+# agents/risk_controller.py (BRAMKA WYKONALNOŚCI KOSZTOWEJ) oraz
+# backtest/diagnose_cost_feasibility.py.
+# ---------------------------------------------------------------------------
+
+COST_FRACTION_STARTOWY = 0.0014  # 2x taker 0.05% + 2x slippage 2bps (backtest/costs.py)
+
+
+def test_barrier_to_cost_ratio_matches_manual_formula() -> None:
+    # entry_price=100, atr_14=1.0, mnożnik 1.5 -> bariera = 1.5% ceny.
+    # 1.5% / 0.14% = 10.714...
+    ratio = barrier_to_cost_ratio(
+        atr_14=1.0, entry_price=100.0, cost_fraction=COST_FRACTION_STARTOWY
+    )
+    expected = (ATR_MULTIPLIER * 1.0 / 100.0) / COST_FRACTION_STARTOWY
+    assert ratio == pytest.approx(expected)
+
+
+def test_barrier_to_cost_ratio_reproduces_range_regime_diagnosis() -> None:
+    # Realia reżimu `range` (BTC 5m, diagnoza Commit 2d): mediana bariery 1.5xATR to
+    # ~0,130% ceny przy koszcie 0,140% -> stosunek < 1, czyli nawet PEŁNE trafienie
+    # bariery nie pokrywa kosztu. To jest dokładnie przypadek, dla którego bramka
+    # powstała — test pilnuje, że formuła nadal go rozpoznaje.
+    entry_price = 100_000.0
+    atr_14 = 0.00130 * entry_price / ATR_MULTIPLIER
+    ratio = barrier_to_cost_ratio(atr_14, entry_price, COST_FRACTION_STARTOWY)
+    assert ratio < 1.0
+    assert not is_cost_feasible(atr_14, entry_price, COST_FRACTION_STARTOWY)
+
+
+def test_is_cost_feasible_accepts_wide_barrier() -> None:
+    # Reżim `trend`: mediana bariery ~0,384% ceny -> stosunek ~2,75 > próg 2.0.
+    entry_price = 100_000.0
+    atr_14 = 0.00384 * entry_price / ATR_MULTIPLIER
+    assert is_cost_feasible(atr_14, entry_price, COST_FRACTION_STARTOWY) is True
+
+
+@pytest.mark.parametrize("entry_price", [0.0, -1.0])
+def test_barrier_to_cost_ratio_fail_safe_on_degenerate_entry_price(entry_price) -> None:
+    # Fail-safe (jak check_kill_switch): zamiast dzielić przez zero -> 0.0, czyli
+    # sygnał ODRZUCONY, nie przepuszczony po cichu.
+    assert barrier_to_cost_ratio(1.0, entry_price, COST_FRACTION_STARTOWY) == 0.0
+    assert is_cost_feasible(1.0, entry_price, COST_FRACTION_STARTOWY) is False
+
+
+def test_barrier_to_cost_ratio_fail_safe_on_zero_cost() -> None:
+    assert barrier_to_cost_ratio(1.0, 100.0, cost_fraction=0.0) == 0.0
+
+
+def test_is_cost_feasible_rejects_nan_atr() -> None:
+    # Świeca bez policzalnego ATR (warmup) -> NaN -> porównanie z progiem False.
+    assert is_cost_feasible(float("nan"), 100.0, COST_FRACTION_STARTOWY) is False
+
+
+def test_min_barrier_to_cost_ratio_startup_value_matches_break_even_arithmetic() -> None:
+    # Próg startowy nie jest dobrany po PnL — wynika z p = 0.5*(1 + 1/ratio).
+    # ratio=2.0 -> wymagana trafność kierunku na break-even = 75%.
+    p_break_even = 0.5 * (1.0 + 1.0 / MIN_BARRIER_TO_COST_RATIO)
+    assert p_break_even == pytest.approx(0.75)
+
+
+@given(
+    atr_14=st.floats(min_value=1e-6, max_value=1e5),
+    entry_price=st.floats(min_value=0.01, max_value=1e6),
+    cost_fraction=st.floats(min_value=1e-6, max_value=0.05),
+    min_ratio=st.floats(min_value=0.0, max_value=10.0),
+)
+@settings(max_examples=100, deadline=None)
+def test_is_cost_feasible_consistent_with_ratio(
+    atr_14, entry_price, cost_fraction, min_ratio
+) -> None:
+    # Niezmiennik: bramka to DOKŁADNIE porównanie stosunku z progiem, nic więcej —
+    # żadnej dodatkowej, ukrytej reguły.
+    ratio = barrier_to_cost_ratio(atr_14, entry_price, cost_fraction)
+    expected = ratio >= min_ratio
+    assert (
+        is_cost_feasible(
+            atr_14, entry_price, cost_fraction, min_barrier_to_cost_ratio=min_ratio
+        )
+        is expected
+    )
+
+
+@given(
+    atr_small=st.floats(min_value=1e-6, max_value=1e4),
+    atr_extra=st.floats(min_value=0.0, max_value=1e4),
+    entry_price=st.floats(min_value=0.01, max_value=1e6),
+    cost_fraction=st.floats(min_value=1e-6, max_value=0.05),
+)
+@settings(max_examples=100, deadline=None)
+def test_barrier_to_cost_ratio_monotonic_nondecreasing_in_atr(
+    atr_small, atr_extra, entry_price, cost_fraction
+) -> None:
+    # Niezmiennik: szersza bariera (większy ATR przy tej samej cenie) NIGDY nie
+    # obniża stosunku — czyli sygnał raz dopuszczony nie staje się nagle odrzucony
+    # przez sam wzrost zmienności.
+    small = barrier_to_cost_ratio(atr_small, entry_price, cost_fraction)
+    large = barrier_to_cost_ratio(atr_small + atr_extra, entry_price, cost_fraction)
+    assert large >= small - 1e-9
+
+
+@given(
+    atr_14=st.floats(min_value=1e-6, max_value=1e5),
+    entry_price=st.floats(min_value=0.01, max_value=1e6),
+    cost_fraction=st.floats(min_value=1e-6, max_value=0.05),
+)
+@settings(max_examples=100, deadline=None)
+def test_is_cost_feasible_always_true_when_threshold_zero(
+    atr_14, entry_price, cost_fraction
+) -> None:
+    # Próg 0.0 = bramka wyłączona (używane przez testy sprzed Commitu 2d oraz do
+    # odtworzenia baseline'u Commitu 2c) — musi przepuszczać każdy poprawny sygnał.
+    assert (
+        is_cost_feasible(atr_14, entry_price, cost_fraction, min_barrier_to_cost_ratio=0.0)
+        is True
+    )

@@ -6,7 +6,7 @@
 > śledzenia postępu na poziomie zadania. Aktualizuj status tutaj na bieżąco; nagłówek/status
 > commitu w `IMPLEMENTATION_PLAN.md` aktualizuj przy zamknięciu całego commitu.
 >
-> Ostatnia aktualizacja: 2026-08-01.
+> Ostatnia aktualizacja: 2026-09-21.
 
 ## Zasada pracy: osobny branch per zadanie
 
@@ -66,12 +66,13 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | Commit 6 — Checkpoint go/no-go (ZROBIONE — wynik NO-GO) | 5 | 0 | 0 | 5 |
 | Commit 2b — Diagnoza NO-GO: przegląd cech `range` (W TRAKCIE — zablokowane) | 2 | 0 | 2 | 4 |
 | Commit 2c — Kill-switch: przyczyna serii strat + cooldown/re-arm (ZROBIONE) | 3 | 0 | 0 | 3 |
+| Commit 2d — Bramka wykonalności kosztowej (ZROBIONE — wynik NO-GO potwierdzony) | 4 | 0 | 0 | 4 |
 | Faza 1 — regime router, funding rate, Compliance Gate | 0 | 0 | 12 | 12 |
 | Faza 2 — LLM offline Q&A + test_mathematics.py | 0 | 0 | 4 | 4 |
 | Faza 3 — paper trading + post_trade_critic.py | 0 | 0 | 4 | 4 |
 | Faza 4 — mały kapitał, skalowanie | 0 | 0 | 2 | 2 |
 | Dokumentacja/workflow (niezależne od fazowania) | 2 | 2 | 1 | 5 |
-| **RAZEM** | **38** | **3** | **26** | **67** |
+| **RAZEM** | **42** | **3** | **26** | **71** |
 
 ---
 
@@ -93,7 +94,7 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C2.2 | `classify_regime()` | ✅ | |
 | C2.3 | `split_by_regime()` | ✅ | |
 | C2.4 | Nieformalny leakage sanity check (9/9 na danych syntetycznych) | ✅ | Nie zastępuje formalnego testu z Commitu 3 |
-| C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ⏳ | Ryzyko z §7: reżim "trend" może być rzadki — sprawdzić po pobraniu prawdziwych danych. CLAUDE.md zasada 1: kalibracja WYŁĄCZNIE wewnątrz walk-forward (Commit 4), nigdy na całym zbiorze naraz |
+| C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ⏳ | **NASTĘPNA RUNDA (uzgodnione 2026-09-21, po Commicie 2d).** Ryzyko z §7 POTWIERDZONE i doprecyzowane przez C2d.0: `direction_persistence_10` jest DYSKRETNA (`|sum(sign)|/10`, wartości `k/10`), a próg 0,7 wpada w lukę jej rozkładu (0,6 → 7% świec, 0,8 → 1,3%) — to on, nie `atr_pctrank_20d`, czyni `trend` prawie pustym (0,53%; przy progu 0,5 → 4,53%). Implikacja: progi nie są ciągłym pokrętłem, muszą snapować do osiągalnych wartości rozkładu. CLAUDE.md zasada 1: kalibracja WYŁĄCZNIE wewnątrz walk-forward, nigdy na całym zbiorze naraz |
 
 ### Commit 3 — Test leakage (`agent_5_compliance/test_leakage.py`) — ✅ ZROBIONE
 
@@ -169,6 +170,20 @@ systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 | C2c.1 | Root-cause diagnostyka serii strat wywołującej kill-switch (`backtest/diagnose_kill_switch_trigger.py`) | ✅ | Read-only skrypt inspekcji 35 realnych transakcji — rozbija koszt na fee/funding/slippage. WYNIK: 100% transakcji `signal_direction=1.0` (long) podczas trwałego spadku ceny BTC (~-3,6% w 3 dni) sklasyfikowanego jako `range`; 26/35 (74%) genuinie zły kierunek, 9/35 koszt > zysk brutto. Kill-switch NIE był wadliwy — poprawnie wykrył realną serię strat. Przyczyna głębsza (jakość sygnału/klasyfikacja reżimu) POZA zakresem tej rundy |
 | C2c.2 | Zaprojektować i zaimplementować mechanizm naprawy deadlocka kill-switcha | ✅ | Cooldown/re-arm: `agents.risk_controller.should_rearm_kill_switch` (nowa czysta funkcja, testowalna w izolacji) + `KILL_SWITCH_COOLDOWN_DAYS=7.0` (domyślnie, `config/settings.yaml` sekcja `risk`) — po N dni ciągłej suppresji, `backtest.engine.run_backtest` resetuje `peak_equity` do bieżącego equity. `check_kill_switch` sam w sobie niezmieniony (nadal czysty/bezstanowy). Testy: 4 jednostkowe + 3 hypothesis property tests w `tests/test_risk_controller.py`, 1 nowy integracyjny (`test_run_backtest_kill_switch_re_arms_after_cooldown`) w `tests/test_engine.py`. Pełny zestaw: **94/94 przechodzi** |
 | C2c.3 | Ponowny checkpoint (`run_checkpoint.py`) po naprawie, porównanie z baseline Commit 6/2b | ✅ | Range: 1/20→**20/20** foldów z policzalnym Sharpe (35→**2 562** transakcji), mean_sharpe=-53,41 (fraction_le_zero=1,0). Trend: 0/20→**3/20** foldów (mean_sharpe=-7,15). Ogólnie: **NO-GO potwierdzone** (23/40 foldów ważnych, wcześniej 1/40), stabilne na 10 seedach (std=0,0000). Naprawa nie zmienia werdyktu, ale czyni go dużo bardziej wiarygodnym — patrz IMPLEMENTATION_PLAN.md §5/§6/§7 |
+
+### Commit 2d — Bramka wykonalności kosztowej — ✅ ZROBIONE
+
+> Zakres uzgodniony z użytkownikiem 2026-09-21. Runda miała być C2.5 (rekalibracja progów regime);
+> read-only diagnostyka przed startem obaliła jej przesłankę, więc zakres zmieniono za zgodą
+> użytkownika na bramkę kosztową, a C2.5 przesunięto na następną, osobną rundę (jedna zmiana na
+> raz). Pełna diagnoza i liczby: `IMPLEMENTATION_PLAN.md` §5 Commit 2d.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| C2d.0 | Diagnostyka wykonalności kosztowej (`backtest/diagnose_cost_feasibility.py`) | ✅ | Read-only skrypt (3 bloki: rozkład reguły reżimu, bariera vs koszt, dekompozycja realnych transakcji), zachowany jako trwałe narzędzie. WYNIKI: (1) `direction_persistence_10` jest DYSKRETNA (`k/10`), próg 0,7 wpada w lukę rozkładu — to on, nie ATR, czyni `trend` prawie pustym (0,53%; przy 0,5 → 4,53%); (2) w `range` mediana bariery 1.5×ATR = **0,130% ceny** < koszt **0,140% nominału** → wymagana trafność break-even **103,9%, arytmetycznie nieosiągalna**, 56,8% świec nie pokrywa kosztu nawet przy pełnym trafieniu; (3) model `range` trafiał kierunek w **54,6%** transakcji, a mimo to 42% transakcji z dobrym kierunkiem kończyło netto ujemnie (gross -569 vs koszt 9 168). Wniosek: NO-GO Commitu 2c był w ~94% wynikiem arytmetycznym, nie statystycznym |
+| C2d.1 | Czysta funkcja bramki + wpięcie w pipeline | ✅ | `agents.risk_controller.is_cost_feasible` (+ rdzeń `barrier_to_cost_ratio`): sygnał dopuszczony tylko gdy `(atr_multiplier*atr_14)/entry_price >= min_barrier_to_cost_ratio * cost_fraction`. Próg startowy **2.0** (`config/settings.yaml` sekcja `risk`) wyprowadzony z break-even `p=0.5*(1+1/ratio)` → 75%, NIE z przeszukiwania po Sharpe (CLAUDE.md zasada 1). `cost_fraction` z nowej `backtest.costs.round_trip_cost_fraction()` — te same stałe co `total_round_trip_cost`, zero duplikacji. Filtruje KANDYDATURĘ sygnału w `_collect_candidate_signals` (nie trafia do trade journalu — to właściwość świecy, nie zdarzenie w torze equity, w odróżnieniu od kill-switcha), licznik w `folds_summary["n_signals_cost_gated"]`; `backtest/metrics.py` bez zmian. NIE jest progiem na `signal_confidence` (docs/rag/03 świadomie taki odrzuca — bramka jest ortogonalna). `atr_multiplier` nietknięty (CLAUDE.md zasada 3) |
+| C2d.2 | Testy jednostkowe + hypothesis + integracyjne (DoD docs/rag/05) | ✅ | 7 jednostkowych + **4 hypothesis** w `tests/test_risk_controller.py` (zgodność bramki ze stosunkiem, monotoniczność niemalejąca w `atr_14`, próg 0.0 przepuszcza wszystko, fail-safe dla `entry_price<=0`/`cost_fraction<=0`/NaN, reprodukcja diagnozy `range`), 3 w `tests/test_costs.py`, 2 integracyjne w `tests/test_engine.py` (księgowanie bez gubienia sygnałów, bramka domyślnie włączona). Trzy testy sprzed 2d dostały jawne `min_barrier_to_cost_ratio=0.0` — ich przedmiotem jest kill-switch. Pełny zestaw: **110/110 przechodzi** (94 + 16) |
+| C2d.3 | Ponowny checkpoint po bramce, porównanie z baseline Commit 2c | ✅ | Bramka odcięła **17 547 z 18 135 sygnałów (96,8%)**, w `range` 97,5%. Foldy z policzalnym Sharpe 23/40→**6/40**, transakcje 2 625→**358**, mean_sharpe -47,38→**-14,31** (range -26,01, trend -8,46, przy czym trend ma teraz 25% foldów z Sharpe>0,5 wobec 0% wcześniej). **Łączny gross -593 → +166** — strata BYŁA kosztowa, diagnoza potwierdzona empirycznie. ALE: trafność kierunku w `range` spada 54,6%→**49,3%** na świecach przechodzących bramkę — edge mieszkał w świecach nieopłacalnych. **Werdykt: NO-GO**, stabilne na 10 seedach (std=0,0000). Regresja kontrolna `min_barrier_to_cost_ratio=0.0` odtwarza baseline Commitu 2c co do ostatniej cyfry (-47,377414474779975, 23/40) |
 
 ---
 

@@ -65,6 +65,33 @@ KILL-SWITCH (docs/rag/03 — "fail-safe nie fail-soft"):
     Decyzja "czy już czas na re-arm" jest jednak wydzielona jako osobna czysta funkcja
     (`should_rearm_kill_switch` poniżej), właśnie żeby dało się ją przetestować
     (hypothesis, DoD Warstwa 3) bez uruchamiania całego run_backtest.
+
+BRAMKA WYKONALNOŚCI KOSZTOWEJ (Commit 2d, 2026-09-21):
+    barrier_fraction = (atr_multiplier * atr_14) / entry_price
+    feasible         = barrier_fraction >= min_barrier_to_cost_ratio * cost_fraction
+
+    Sygnał jest dopuszczany do sizingu TYLKO wtedy, gdy pełne trafienie bariery zysku
+    daje wielokrotność kosztu round-trip. Powód (diagnostyka `backtest/
+    diagnose_cost_feasibility.py`, realne dane BTC 5m 2025-07→2026-07): w reżimie
+    `range` mediana bariery 1.5xATR to 0,130% ceny przy koszcie round-trip 0,140%
+    nominału — wymagana trafność kierunku na break-even wynosi tam 103,9%, czyli jest
+    ARYTMETYCZNIE NIEOSIĄGALNA, niezależnie od jakości modelu. W 56,8% świec `range`
+    nawet pełne trafienie bariery nie pokrywa kosztu. Potwierdzenie na realnych
+    transakcjach Commitu 2c: model `range` trafiał kierunek w 54,6% przypadków (realny,
+    choć słaby edge), a mimo to 42% transakcji z POPRAWNYM kierunkiem kończyło netto
+    pod kreską; łączny gross -569 wobec kosztu 9 168.
+
+    Break-even przy symetrycznych barierach ±B i koszcie C: p*B - (1-p)*B = C, czyli
+    p = 0.5 * (1 + C/B) = 0.5 * (1 + 1/ratio). Stąd mapowanie progu na wymaganą
+    trafność: ratio=1.0 -> 100%, ratio=2.0 -> 75%, ratio=3.0 -> 66.7%. Próg jest więc
+    wyprowadzony z arytmetyki kosztu, nie dobrany przeszukiwaniem po Sharpe (CLAUDE.md
+    zasada 1).
+
+    UWAGA — to NIE jest próg odcięcia po `signal_confidence`. docs/rag/03 świadomie
+    odrzuca próg na confidence ("słabszy sygnał, mniejsza pozycja, nie próg odcięcia");
+    ta bramka jest ortogonalna: dotyczy geometrii bariera-vs-koszt w danej świecy, nie
+    pewności modelu. Nie zmienia też `atr_multiplier` (CLAUDE.md zasada 3 nienaruszona —
+    bariera triple-barrier i stop-loss nadal dzielą tę samą stałą).
 """
 
 from __future__ import annotations
@@ -83,6 +110,12 @@ KILL_SWITCH_DRAWDOWN_PCT = 0.15  # drawdown od peaku equity > 15% -> stop nowych
 # peak_equity do bieżącego (zamrożonego) equity i daje strategii kolejną szansę —
 # patrz UWAGA w docstringu modułu wyżej. Wartość startowa, do kalibracji.
 KILL_SWITCH_COOLDOWN_DAYS = 7.0
+# Commit 2d: minimalny wymagany stosunek szerokości bariery zysku do kosztu round-trip,
+# żeby sygnał w ogóle wszedł do gry — patrz BRAMKA WYKONALNOŚCI KOSZTOWEJ w docstringu
+# modułu. Wartość startowa 2.0 wyprowadzona z wymaganej trafności break-even
+# (p = 0.5*(1 + 1/ratio) -> ratio=2.0 oznacza 75%), NIE z przeszukiwania po wyniku PnL
+# (CLAUDE.md zasada 1). Do kalibracji WYŁĄCZNIE wewnątrz walk-forward.
+MIN_BARRIER_TO_COST_RATIO = 2.0
 
 
 def compute_position_size(
@@ -178,6 +211,86 @@ def compute_sizing(
         "stop_price": stop_price,
         "take_profit_price": take_profit_price,
     }
+
+
+def barrier_to_cost_ratio(
+    atr_14: float,
+    entry_price: float,
+    cost_fraction: float,
+    atr_multiplier: float = ATR_MULTIPLIER,
+) -> float:
+    """
+    Ile razy szerokość bariery zysku przewyższa koszt round-trip (Commit 2d — patrz
+    BRAMKA WYKONALNOŚCI KOSZTOWEJ w docstringu modułu):
+
+        barrier_fraction = (atr_multiplier * atr_14) / entry_price
+        ratio            = barrier_fraction / cost_fraction
+
+    Obie wielkości są ułamkami nominału, więc iloraz jest bezwymiarowy i porównywalny
+    między poziomami ceny i reżimami zmienności.
+
+    `cost_fraction` jest argumentem WYMAGANYM (bez wartości domyślnej) celowo: stałe
+    kosztowe mają jedno źródło prawdy w `backtest/costs.py` + `config/settings.yaml`
+    sekcja `costs`, a `agents/` nie zależy od `backtest/` — caller
+    (`backtest.engine`) liczy je przez `backtest.costs.round_trip_cost_fraction()`
+    i przekazuje tutaj. Zero duplikacji literałów (docs/rag/05, "zero magic numbers").
+
+    Fail-safe (jak `check_kill_switch`): dla zdegenerowanych wejść
+    (`entry_price <= 0` albo `cost_fraction <= 0`) zwraca 0.0 zamiast dzielić przez
+    zero — 0.0 nie przejdzie żadnego dodatniego progu, więc sygnał zostanie odrzucony,
+    a nie przepuszczony po cichu. NaN na wejściu propaguje się do NaN (porównanie z
+    progiem da False — też odrzucenie).
+
+    Args:
+        atr_14: ATR-14 w momencie sygnału (jednostki ceny), > 0.
+        entry_price: cena wejścia, > 0.
+        cost_fraction: koszt round-trip jako ułamek nominału (np. 0.0014 = 0.14%).
+        atr_multiplier: mnożnik ATR bariery — MUSI być ten sam co w triple-barrier
+            (agents.labeling.ATR_MULTIPLIER), CLAUDE.md zasada 3.
+
+    Returns:
+        Stosunek bariera/koszt (bezwymiarowy, >= 0), albo 0.0 dla wejść zdegenerowanych.
+    """
+    if entry_price <= 0 or cost_fraction <= 0:
+        return 0.0
+    barrier_fraction = (atr_multiplier * atr_14) / entry_price
+    return barrier_fraction / cost_fraction
+
+
+def is_cost_feasible(
+    atr_14: float,
+    entry_price: float,
+    cost_fraction: float,
+    atr_multiplier: float = ATR_MULTIPLIER,
+    min_barrier_to_cost_ratio: float = MIN_BARRIER_TO_COST_RATIO,
+) -> bool:
+    """
+    Bramka wykonalności kosztowej (Commit 2d): czy w TEJ świecy pełne trafienie bariery
+    zysku daje wystarczającą wielokrotność kosztu round-trip, żeby transakcja miała
+    sens arytmetyczny — patrz pełne uzasadnienie i liczby w docstringu modułu.
+
+    Deterministyczna, czysta funkcja jednej świecy: nie zależy od equity, historii,
+    ani stanu pętli backtestu (w odróżnieniu od `check_kill_switch`). Dlatego caller
+    (`backtest.engine._collect_candidate_signals`) stosuje ją jako filtr KANDYDATURY
+    sygnału — obok istniejącego filtra `direction == 0` — a nie jako zdarzenie w
+    trade journalu: to właściwość świecy, nie zdarzenie w torze equity.
+
+    NaN w `atr_14` daje NaN w ilorazie, a porównanie NaN >= próg to False — świeca bez
+    policzalnego ATR jest więc odrzucana, nie przepuszczana.
+
+    Args:
+        atr_14/entry_price/cost_fraction/atr_multiplier: patrz `barrier_to_cost_ratio`.
+        min_barrier_to_cost_ratio: minimalny wymagany stosunek (wartość startowa
+            MIN_BARRIER_TO_COST_RATIO=2.0 -> break-even przy 75% trafności kierunku;
+            źródło prawdy: config/settings.yaml sekcja `risk`).
+
+    Returns:
+        True, jeśli sygnał wolno dopuścić do sizingu.
+    """
+    return bool(
+        barrier_to_cost_ratio(atr_14, entry_price, cost_fraction, atr_multiplier)
+        >= min_barrier_to_cost_ratio
+    )
 
 
 def check_kill_switch(

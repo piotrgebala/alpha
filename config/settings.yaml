@@ -61,4 +61,11 @@ risk:
   max_leverage: 3.0                 # konserwatywnie, wartość startowa
   kill_switch_drawdown_pct: 0.15    # drawdown od peaku equity > 15% -> stop nowych sygnałów
   kill_switch_cooldown_days: 7      # Commit 2c: dni ciągłej suppresji przed reset peak_equity/re-arm
+  # Commit 2d — bramka wykonalności kosztowej: sygnał wchodzi do sizingu tylko, gdy
+  # (atr_multiplier * atr_14) / entry_price >= min_barrier_to_cost_ratio * koszt_round_trip.
+  # Wartość startowa 2.0 wyprowadzona z arytmetyki break-even p = 0.5*(1 + 1/ratio):
+  # ratio=1.0 -> 100% wymaganej trafności, 2.0 -> 75%, 3.0 -> 66.7%. NIE dobrana
+  # przeszukiwaniem po Sharpe — do kalibracji WYŁĄCZNIE wewnątrz walk-forward
+  # (CLAUDE.md zasada 1). Uzasadnienie empiryczne: backtest/diagnose_cost_feasibility.py.
+  min_barrier_to_cost_ratio: 2.0
 

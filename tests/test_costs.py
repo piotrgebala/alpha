@@ -14,6 +14,7 @@ import pytest
 from backtest.costs import (
     CANDLE_MINUTES,
     FUNDING_PERIOD_HOURS,
+    round_trip_cost_fraction,
     round_trip_fee_cost,
     slippage_cost,
     total_round_trip_cost,
@@ -86,3 +87,27 @@ def test_total_round_trip_cost_zero_holding_has_no_funding_component() -> None:
     total = total_round_trip_cost(notional=notional, holding_candles=0.0, direction=1)
     expected = round_trip_fee_cost(notional) + 2.0 * slippage_cost(notional)
     assert total == pytest.approx(expected)
+
+
+# ---------------------------------------------------------------------------
+# Commit 2d — round_trip_cost_fraction (bramka wykonalności kosztowej)
+# ---------------------------------------------------------------------------
+
+
+def test_round_trip_cost_fraction_matches_manual_formula() -> None:
+    # 2x taker 0.05% + 2x slippage 2bps = 0.100% + 0.040% = 0.140% nominału.
+    assert round_trip_cost_fraction() == pytest.approx(0.0014)
+
+
+def test_round_trip_cost_fraction_consistent_with_total_round_trip_cost() -> None:
+    # Ta sama liczba co total_round_trip_cost po odjęciu funding (którego ta funkcja
+    # świadomie nie zawiera — zależy od kierunku i czasu trzymania).
+    notional = 50_000.0
+    fee_and_slippage = round_trip_fee_cost(notional) + 2.0 * slippage_cost(notional)
+    assert round_trip_cost_fraction() * notional == pytest.approx(fee_and_slippage)
+
+
+def test_round_trip_cost_fraction_scales_with_inputs() -> None:
+    assert round_trip_cost_fraction(taker_fee_rate=0.0002, slippage_bps=0.0) == pytest.approx(
+        0.0004
+    )
