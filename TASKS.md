@@ -412,6 +412,9 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > realizacji; szczegóły każdej rundy realizacyjnej trafiają jak zwykle do sekcji Commitów +
 > `runs/`.
 >
+> **Stan po Commicie 2.13 (2026-09-21):** program „droga do GO" zatrzymany regułą STOP;
+> nowe ustalenia i zadania Z16–Z24 w sekcji **E** niżej.
+>
 > **Stan po Commicie 2.10 (2026-09-21):** Z1–Z5 i Z11–Z15 zamknięte. **Z5 zrealizowane na
 > Twojej maszynie** (3 lata, 315 648 świec, zero dziur): NO-GO z twardszymi pooled t-statami
 > (range -10,47, trend -5,51), ale odsetek ważnych foldów NIE wzrósł (14,6%) — problem jest
@@ -439,6 +442,55 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | Z8 | Rozdzielić timeframe od horyzontu trzymania | ⏳ | Nierozdzielony confound C2.6: `VERTICAL_BARRIER_CANDLES=12` = 1h @ 5m, ale 48h @ 4h. Przeliczyć proporcjonalnie jako jawnie nazwany eksperyment |
 | Z9 | Walidacja natywnych świec 1h/4h vs resample z 5m | ⏳ | Wymaga maszyny użytkownika (dostęp do Binance); sprawdza, czy agregacja z 5m nie zniekształca wyniku C2.6 |
 | Z10 | **DECYZJA STRATEGICZNA: rewizja hipotezy czy domknięcie Fazy 0** | ⬜ | Po pięciu wynikach w paśmie szumu — decyzja UŻYTKOWNIKA, nie zadanie implementacyjne. Opcje: inna definicja reżimu / inny driver (funding rate) / inny instrument — albo udokumentowany wynik negatywny jako poprawne zamknięcie Fazy 0 |
+
+### E. Backlog II — po programie „droga do GO" (C2.11–C2.13), audyt 2026-09-21
+
+> Powstał po uruchomieniu reguły STOP (C2.13). Podstawa: 5 niezależnych diagnoz + 15
+> adwersarialnych weryfikacji (wszystkie 5 pierwotnych propozycji rund ODRZUCONE — po 2–3
+> głosy na każdą) + własna weryfikacja kluczowych liczb na realnych danych.
+>
+> **USTALENIE PRZEWODNIE (zweryfikowane niezależnie, 315 648 świec):** bramka reżimu i target
+> **mierzą różne horyzonty**. Mediana nieprzerwanego epizodu reżimu to **2 świece (10 min)**
+> dla `trend` i **5 świec (25 min)** dla `range`, podczas gdy `VERTICAL_BARRIER_CANDLES=12`
+> to **60 min**. Tylko **4 z 728** epizodów `trend` jest dość długich, by pomieścić pełne okno
+> etykiety. Praktycznie każda transakcja `trend` jest etykietowana ruchem ceny, który w
+> większości dzieje się POZA reżimem uzasadniającym wejście. To nie jest „brak edge'u" — to
+> **niespójna specyfikacja sygnału**, i wyjaśnia, dlaczego człon `p` był nieruchomy w dwóch
+> niezależnych, pre-rejestrowanych próbach.
+>
+> **KONSEKWENCJA DLA CZŁONU B:** wymagane B = C/(2p−1) = **3,15% ceny** (15,5× obecnego),
+> co implikuje horyzont rzędu dni. Maksymalny epizod `range` w 3 latach to 5h15m; okien 12h/48h
+> w całości wewnątrz reżimu jest **zero**. Z8 nie jest „za mało danych" — jest **niewykonalne
+> przy obecnej definicji reżimu**. W `trend` dodatkowo p=49,86% < 50%, więc (2p−1) < 0 i
+> ŻADNA szerokość bariery nie pomaga.
+
+| ID | Zadanie | Status | Koszt budżetu | Uwagi |
+|---|---|---|---|---|
+| Z16 | **Diagnostyka spójności bramki reżimu z horyzontem etykiety** (`backtest/diagnose_regime_coherence.py` na `checkpoint_lib`) | ⬜ **NASTĘPNE** | **0** | Formalizuje ustalenie przewodnie: rozkład długości epizodów per reżim + udział świec z pełnym oknem etykiety wewnątrz epizodu, dla V ∈ {12, 48, 144, 576}. Zamienia „nie znaleźliśmy edge'u" w mechanizm. **Zamyka Z8 bez wydawania wariantu.** Kryterium: udział `trend` z pełnym oknem < 5% (zmierzone: 0,55%) |
+| Z17 | Naprawa przecieku early stopping (`agents/ml_optimizer.py:130` — `evals=[(dtest,"test")]`) | ⬜ | 0 pod warunkiem adopcji bezwarunkowej | Early stopping wybiera liczbę drzew NA FOLDZIE OOS. Udokumentowane jako „decyzja" w docstringach i `config/settings.yaml:48` — dokumentacja opisuje buga jako wybór. Kierunek obciążenia: **ZAWYŻA `p`**. Wymaga `validation_fraction` (ogon foldu treningowego) + guard na `best_iteration` w 3 miejscach (`ml_optimizer.py:167`, `engine.py:357`, `diagnose_range_signal.py:138` — `AttributeError` na xgboost ≥2.0 bez ES). Zależność: **Z16 najpierw** |
+| Z18 | Jedna definicja `p` | ⬜ | 0 | Dziś w obiegu TRZY niekompatybilne definicje (`gross_pnl>0` z filtrem kill-switcha, `dir*label>0` bez timeoutów, `gross_pnl>0` na pełnej populacji), różniące się o 6–14 pp. Do czasu ujednolicenia każdy przyszły pomiar `p` jest nieporównywalny |
+| Z19 | `z_margin` z `evaluate_confidence_threshold.py:47` do `backtest/metrics.py` + testy | ⬜ | 0 | Statystyka, na której stanął werdykt C2.13, mieszka w jednorazowym skrypcie rundy |
+| Z20 | Warunek „zgodny znak" z `docs/rag/03:103` — zaimplementować albo skorygować docs | ⬜ | 0 | `fraction_positive_sign` (`metrics.py:296,312`) liczone i zwracane, **nigdy nieczytane**. Bramka GO jest ściśle słabsza niż udokumentowana. Uwaga: to NIE podważa dotychczasowego NO-GO (osłabia tylko GO) |
+| Z21 | Purge/embargo w `generate_walk_forward_folds` | ⬜ | 0 | `test_start == train_end`, zero purge w całym repo (grep: 0 trafień). Etykiety ostatnich ≤V świec treningu sięgają w okno testowe: 0,069% wierszy/fold przy V=12, ale **rośnie liniowo z V** (3,33% przy V=576) — blokujące dla każdej rundy z długim horyzontem |
+| Z22 | `run_backtest`: parametry `atr_multiplier` / `vertical_barrier_candles` | ⬜ | 0 | Dziś `compute_triple_barrier_labels(df)` wołane bez argumentów, `ATR_MULTIPLIER` jako stała modułowa (`engine.py:321`). **Blokada metodologiczna:** żadnego eksperymentu na geometrii nie da się zrobić baseline-vs-wariant w jednym procesie. CLAUDE.md zasada 3: mnożnik musi zmienić się JEDNOCZEŚNIE z `risk_controller` |
+| Z23 | Higiena | ⬜ | 0 | `README.md:27` 143→190 testów • `.claude/settings.json` przypadkowo zacommitowany w C2.11 (artefakt narzędzia) — odpiąć za zgodą użytkownika • przywrócenie pełnej tabeli per-fold w `runs/2026-09-21_c2.12-*.md` |
+
+**Zadania HIPOTEZOWE (kosztują budżet, wymagają świadomego nadpisania reguły STOP przez użytkownika).**
+Budżet na nowej bazie danych: **2 warianty wydane** (C2.12, C2.13).
+
+| ID | Zadanie | Status | Koszt | Uwagi |
+|---|---|---|---|---|
+| Z8 | Rozdzielenie timeframe od horyzontu (geometria wypłaty) | ⬜ **ZAMKNĄĆ BEZ URUCHAMIANIA** | 0 | Niewykonalne przy obecnej definicji reżimu (patrz ustalenie przewodnie). Zamknąć jako „ODŁOŻONE — niewykonalne", NIE jako „zmierzone negatywnie" — hipoteza bez uruchomienia nie jest zmierzona |
+| Z7 | Reguła reżimu na `adx_14` | ⬜ przeformułować | screening **0**, potem OOS **1** | W obecnym brzmieniu atakuje nieruchomy człon `p` i jest zwykłym kolejnym wariantem po negatywnym wyniku. Po Z16 da się przeformułować na kryterium **mierzalne bez modelu**: reguła jest dopuszczalna, gdy mediana długości epizodu ≥ horyzont etykiety przy udziale reżimu ≥ 5% świec. Screening kandydatów pod tym kryterium nie dotyka modelu (0 wariantów). **Bez Z16 nie uruchamiać** |
+| Z24 | Porzucenie bramki reżimu — handel na `ambiguous` (77,9% świec) | ⬜ | 1 (NOWA seria) | Empirycznie najlepiej uzasadniona z otwartych, ale to **NOWA hipoteza**, nie wariant obecnej (docs/rag/03 przy NO-GO: „wróć do feature registry — inna hipoteza, NIE tuning tego samego zestawu"). Własna pre-rejestracja, własny licznik, własna reguła STOP. Nie łączyć z Z7 |
+| Z5b | Pełna historia 2019→2026 | ⬜ **ODRZUCONE** | — | Nie domyka żadnego członu. Jedyny nowy deliverable (tabela mocy) liczy się na istniejących danych w sekundy, bo udział reżimu jest własnością REGUŁY, nie epoki rynkowej |
+
+**Rekomendowana kolejność:** Z16 → **decyzja Z10 użytkownika** → jeśli zamknięcie Fazy 0:
+Z18+Z23 do dokumentu zamykającego, Z17 jako adnotacja o skonfundowanym `p`; jeśli kontynuacja:
+Z17, Z18, Z21, Z22, potem Z7 screening (0) i dopiero Z7 OOS (1 wariant).
+**Z16 nie zdejmuje reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
+
+---
 
 ### C. Poprawność jednostek / drobne bugi
 

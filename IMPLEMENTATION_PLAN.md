@@ -1068,8 +1068,70 @@ na nowej bazie: **2**.
 **Z10** (przy użytkowniku): (a) udokumentowane zamknięcie Fazy 0 wynikiem negatywnym,
 (b) świadome nadpisanie STOP i Runda 4 (Z7 — inna definicja reżimu), (c) nowa hipoteza na
 członie `B` (Z8 — geometria wypłaty, jedyny człon nietknięty przez program). Niezależnie
-od kierunku: **`mean_sharpe` i oparte na nim kryteria z docs/rag/03 wymagają rewizji**
+od kierunku: **`mean_sharpe` jako raportowana liczba nagłówkowa wymaga rewizji**
 (patrz ostrzeżenie pomiarowe z C2.12).
+
+**SPROSTOWANIE (2026-09-21, weryfikacja kodu):** sformułowanie „kryteria opierają się na
+`mean_sharpe`" było NIEPRECYZYJNE. `classify_checkpoint` (`backtest/metrics.py:301-307`)
+podejmuje decyzję na `fraction_above_threshold` i `fraction_le_zero` — **`mean_sharpe` jest
+liczone i zwracane, ale NIE wchodzi do gałęzi decyzyjnej**. Fold o Sharpe −189 liczy się
+w tych ułamkach dokładnie tak samo jak fold o Sharpe −0,1, więc patologia annualizowanego
+per-fold Sharpe'a **nie podważa werdyktu NO-GO** (C2.12: `fraction_le_zero` = 0,870 przy
+54 ważnych foldach). Niestabilna jest raportowana liczba nagłówkowa, nie klasyfikacja.
+Realna luka w bramce jest inna i węższa: `fraction_positive_sign` (`metrics.py:296,312`)
+jest liczone i zwracane, ale **nigdy nieczytane** — warunek „zgodny znak" z `docs/rag/03:103`
+nie jest zaimplementowany, więc bramka GO jest ściśle słabsza niż udokumentowana.
+
+---
+
+### Audyt po programie „droga do GO" (2026-09-21) — ustalenie przewodnie: bramka reżimu i target mierzą RÓŻNE HORYZONTY
+
+**Kontekst:** po uruchomieniu reguły STOP (C2.13) wykonano audyt — 5 niezależnych diagnoz
++ 15 adwersarialnych weryfikacji. **Wszystkie 5 zaproponowanych rund zostało odrzuconych**
+(po 2–3 głosy na każdą, m.in. za pre-rejestrację po zobaczeniu liczb, za kryteria
+niefalsyfikowalne z konstrukcji i za test kodujący tautologię). Wartość audytu leży więc
+nie w nowych rundach, tylko w **jednym pomiarze, którego wcześniej nikt nie zrobił**.
+
+**Pomiar (zweryfikowany niezależnie, 315 648 świec, `classify_regime` + długości nieprzerwanych
+epizodów):**
+
+| reżim | epizodów | mediana | p90 | max | epizodów ≥ 12 świec (okno etykiety) |
+|---|---|---|---|---|---|
+| `trend` | 728 | **2 świece (10 min)** | 5 | 15 (75 min) | **4 (0,55%)** |
+| `range` | 9 717 | **5 świec (25 min)** | 16 | 63 (5h15m) | 1 729 (17,8%) |
+
+`VERTICAL_BARRIER_CANDLES = 12` = **60 min**. Czyli mediana epizodu reżimu jest **2–6× krótsza
+niż horyzont etykiety**. Praktycznie każda transakcja `trend` jest etykietowana ruchem ceny,
+który w większości dzieje się POZA reżimem, który uzasadnił wejście.
+
+**Co to zmienia w interpretacji C2.10–C2.13:** dotychczasowy wniosek brzmiał „nie ma edge'u
+kierunkowego". Dokładniejszy jest: **człon `p` był mierzony na sygnale o wewnętrznie
+niespójnej specyfikacji** — bramka kwalifikuje świecę do reżimu trwającego ~10–25 minut,
+a target ocenia, co stanie się przez 60 minut. To wyjaśnia, dlaczego `p` okazał się nieruchomy
+w dwóch niezależnych, pre-rejestrowanych próbach: nie było czego ruszać.
+
+**Co to zamyka (człon B):** wymagane B = C/(2p−1) = **3,15% ceny** (15,5× obecnego), co
+implikuje horyzont rzędu dni. Maksymalny epizod `range` w 3 latach to 5h15m, a okien 12h/48h
+w całości wewnątrz reżimu jest **zero**. Backlog **Z8 jest więc niewykonalny przy obecnej
+definicji reżimu** — nie „za mało danych". W `trend` dodatkowo p=49,86% < 50%, więc (2p−1) < 0
+i żadna szerokość bariery nie pomaga (szersza bariera pogarsza wynik).
+
+**Sprostowanie do C2.12/C2.13:** teza, że „werdykt opiera się na zepsutym przyrządzie", była
+nieprecyzyjna — `classify_checkpoint` decyduje na `fraction_above_threshold`/`fraction_le_zero`,
+nie na `mean_sharpe`. Werdykt NO-GO jest odporny na patologię per-fold Sharpe'a i pozostaje
+w mocy. Realna luka jest węższa: warunek „zgodny znak" z `docs/rag/03:103` nie jest
+zaimplementowany (`fraction_positive_sign` liczone, nigdy nieczytane) → bramka GO jest ściśle
+słabsza niż udokumentowana (osłabia GO, nie NO-GO).
+
+**Długi techniczne potwierdzone w kodzie** (pełna lista: TASKS.md, Backlog II, Z16–Z23):
+przeciek early stopping (`ml_optimizer.py:130` — dobór liczby drzew na foldzie OOS, **zawyża
+`p`**); brak purge/embargo w całym repo (`test_start == train_end`, rośnie liniowo z V);
+`run_backtest` bez parametrów geometrii (blokada dla eksperymentów typu Z8); trzy niekompatybilne
+definicje `p` w obiegu (różnica 6–14 pp).
+
+**Następny krok:** Z16 — diagnostyka spójności bramki z horyzontem (0 wariantów budżetu),
+która formalizuje powyższy pomiar i zamyka Z8 bez wydawania wariantu. **Z16 nie zdejmuje
+reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
 
 ---
 
