@@ -53,6 +53,13 @@ model:
 # docs/rag/04).
 costs:
   taker_fee_rate: 0.0005            # 0.05% za stronę (Binance USDS-M Futures, VIP0 taker)
+  # Commit 2.12 (Backlog Z6) — model wykonania "maker_limit": wejście i take-profit jako
+  # zlecenia limit (maker), stop-loss i timeout jako market (taker; SL musi być market,
+  # inaczej nie ma gwarancji wyjścia). Slippage naliczany TYLKO na nogach taker.
+  # ZAŁOŻENIE JAWNE: noga maker zakłada, że limit się wypełnia — model pomija adverse
+  # selection (limit wypełnia się częściej, gdy rynek idzie przeciw pozycji), więc realny
+  # koszt maker jest wyższy niż modelowany. To ograniczenie modelu, nie wynik.
+  maker_fee_rate: 0.0002            # 0.02% za stronę (Binance USDS-M Futures, VIP0 maker)
   funding_rate_8h: 0.0001           # 0.01% / 8h — przybliżenie, brak jeszcze realnych danych funding
   slippage_bps: 2                   # 2 bps = 0.02%, stała wartość startowa
 

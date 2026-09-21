@@ -28,9 +28,11 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 
 | C2.11 | 2026-09-21 | [2026-09-21_c2.11-edge-instrumentation.md](2026-09-21_c2.11-edge-instrumentation.md) | Instrumentacja edge'u (Runda 1/4 programu „droga do GO"): rozbicie werdyktu na człony nierówności **(2p−1)·B > C** — `compute_hit_rate` (trafność kierunku z `gross_pnl`, z-stat, CI), `break_even_hit_rate`, `summarize_edge_by_regime` wpięte do kanonicznego raportu. Pipeline nietknięty | 0 (instrumentacja pomiaru) | **Werdykt bit-identyczny z C2.10** (regresja baseline'u). Diagnoza zmienia się jakościowo: trafność **51,9% / 50,6%** (z=+0,87 / +0,25 — nieistotnie powyżej monety, ale NIE odwrócona) vs wymagane **75,8% / 64,9%**. Luka **−23,9 pp** (`range`) i **−14,2 pp** (`trend`) → NO-GO jest przesądzone **geometrią wypłaty**, nie błędnym kierunkiem sygnału |
 
+| C2.12 | 2026-09-21 | [2026-09-21_c2.12-execution-cost-model.md](2026-09-21_c2.12-execution-cost-model.md) | Backlog Z6 (Runda 2/4 „droga do GO"): realistyczny model wykonania — maker na wejściu i TP, taker na SL/timeout, slippage tylko na nogach taker; kolumna `exit_reason` w journalu; `execution_model` = `taker_only` / `maker_limit` | 1 | **NO-GO (nadal), ale mechanizm zadziałał:** koszt **−52%** (0,140%→0,067%), foldy ważne **21→54**, transakcje `range` **530→7 155**, zwrot per trade **+35%/+39%**, margines **−23,9→−15,5 pp** (`range`) i **−14,2→−9,1 pp** (`trend`) — ok. połowa luki domknięta. Efekt tłumiony sprzężeniem: tańszy koszt wpuszcza sygnały o **węższej barierze** (B −25%/−19%). **Ostrzeżenie pomiarowe:** `mean_sharpe` rozjechał się (−12,4→−59,6 przy LEPSZEJ ekonomice per trade), fold-jitter σ 3,1→75,7, spójność znaku 100%→80% — per-fold Sharpe przestał być wiarygodnym przyrządem; nośne są pooled t i margin |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
-C2.11 to instrumentacja (0 wariantów), więc licznik nadal 0.
+C2.11 to instrumentacja (0 wariantów); **C2.12 to +1 wariant (model kosztów) => licznik = 1**.
 
 ## Jak dodać nowy wpis
 

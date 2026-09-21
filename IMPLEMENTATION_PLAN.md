@@ -987,6 +987,51 @@ selekcja podzbioru o wyższym p, a nie „lepszy model" w realistycznym zakresie
 
 ---
 
+### Commit 2.12 — Realistyczny model wykonania maker/taker (Backlog Z6) `[ZROBIONE — NO-GO, ale ok. połowa luki do opłacalności domknięta]`
+
+**Kontekst (2026-09-21):** Runda 2/4 programu „droga do GO". C2.11 pokazał, że koszt jest członem
+dominującym nierówności (2p−1)·B > C: 0,14% nominału wobec **1,47 bps** średniego edge'u brutto.
+Tymczasem `costs.py` modelował **wyłącznie takera po obu stronach** — to nie było założenie
+konserwatywne, tylko brak modelu (realna egzekucja limitem kosztuje 0,02%, nie 0,05%).
+Decyzja użytkownika: maker na wejściu i take-proficie, taker na stop-lossie i timeoucie,
+slippage tylko na nogach taker.
+
+**Co zrobiono:** `backtest/costs.py` — `MAKER_FEE_RATE`, `leg_fee_rate`, `exit_leg_for_reason`,
+fee liczone per noga (domyślne taker/taker wstecznie zgodne); `backtest/engine.py` — kolumna
+**`exit_reason`** (z iloczynu `direction * label`; sam `label` nie wystarcza, bo short na
+etykiecie −1 to TP, nie SL), `_execution_legs`, parametr `execution_model`
+(`taker_only` | `maker_limit`). Bramka kosztowa działa przed wejściem, więc nie zna powodu
+wyjścia — dostaje założenie konserwatywne (wyjście taker). Testy: **182/182** (+25), w tym
+regresja baseline'u: `taker_only` odtwarza koszt sprzed C2.12 co do cyfry.
+
+**Wynik (`runs/2026-09-21_c2.12-execution-cost-model.md`):**
+
+| Miara | C2.11 | **C2.12** |
+|---|---|---|
+| Klasyfikacja | NO-GO | **NO-GO** |
+| Foldy ważne / łącznie | 21 / 144 | **54 / 144** |
+| Transakcje `range` / `trend` | 530 / 395 | **7 155 / 355** |
+| Koszt C | 0,140% | **0,067%** (−52%) |
+| break_even_p (`range` / `trend`) | 75,83% / 64,86% | **66,59% / 58,94%** |
+| **margin (`range` / `trend`)** | −23,94 / −14,23 pp | **−15,52 / −9,08 pp** |
+| Zwrot per trade | −0,001001 / −0,000712 | **−0,000686 / −0,000432** |
+
+**Wniosek C2.12:** (a) mechanizm zadziałał zgodnie z przewidywaniem — koszt spadł o połowę,
+bramka przestała blokować 98% sygnałów `range`, liczba ważnych foldów wzrosła 2,6×, a margines
+poprawił się o **+8,4 pp / +5,1 pp**, czyli ok. **połowę** luki; (b) efekt jest tłumiony
+sprzężeniem zwrotnym: tańszy koszt przepuszcza sygnały o **węższej barierze** (B −25%/−19%),
+więc break-even spadł mniej niż proporcjonalnie do kosztu; (c) w `trend` zwrot per trade
+przestał być istotnie ujemny po korekcie N_eff (t_neff = −1,75); (d) **ostrzeżenie pomiarowe:**
+`mean_sharpe` rozjechał się (−12,4 → −59,6 przy JEDNOCZEŚNIE lepszej ekonomice per trade),
+sweep fold-jitter dał σ=75,7 i dwa offsety **dodatnie**, spójność znaku 100%→80%. Per-fold
+Sharpe — podstawa kryteriów z docs/rag/03 — przestał być wiarygodnym przyrządem przy dużej
+liczbie transakcji; nośne są pooled t-staty i margin. Kryteriów NIE zmieniano (docs je zamrażają).
+
+**Status:** ZROBIONE. Backlog: Z1–Z6, Z11–Z15 zamknięte. Następna: Runda 3 (C2.13) — próg
+pewności kalibrowany wewnątrz walk-forward, atakujący człon `p`.
+
+---
+
 ## 6. Zweryfikowane empirycznie (nie tylko zaplanowane)
 
 - TA-Lib (0.7.0) instaluje się i liczy ATR/RSI/EMA poprawnie (zweryfikowane na random walk).
