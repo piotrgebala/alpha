@@ -273,7 +273,14 @@ def train_regime_model(
             # ta sama linia kodu co przed K2 - bit-identycznosc baseline'u jest strukturalna,
             # nie numeryczna (lekcja H3: usuwamy klase watpliwosci, nie jej instancje).
             return xgb.DMatrix(frame[feature_columns], label=labels)
-        weights = np.array([weight_map[int(c)] for c in labels], dtype=np.float32)
+        # `.get(..., 1.0)`, nie `[...]`: mapa wag powstaje z czesci UCZACEJ, a stosuje sie
+        # ja rowniez do czesci WALIDACYJNEJ. Klasa nieobecna w uczacej, ale obecna w
+        # walidacyjnej, wywalalaby KeyError-em caly przebieg — realne w tym projekcie, bo
+        # przy `min_train_rows` rowna 30 fold potrafi nie zawierac wszystkich trzech klas
+        # (rezim `trend` to 0,53% swiec, C2.5). Klasa, ktorej w uczacej nie bylo, NIE MA
+        # czestosci do odwrocenia, wiec jedyna obronna wartoscia jest waga neutralna 1.0;
+        # dotyczy to wylacznie macierzy walidacyjnej (early stopping), nie gradientow.
+        weights = np.array([weight_map.get(int(c), 1.0) for c in labels], dtype=np.float32)
         return xgb.DMatrix(frame[feature_columns], label=labels, weight=weights)
 
     if validation_fraction is None:

@@ -256,3 +256,91 @@ Zapisane teraz, żeby nie zgubić przy projektowaniu `risk_controller.py` dla wi
   instrument) zanim się skaluje na 4 instrumenty jednocześnie.
 - **MPT Optimization i Correlation & Covariance** (odłożone wcześniej jako "nierelewantne przy
   jednym instrumencie") stają się relewantne dopiero na tym etapie — nie wcześniej.
+
+
+## ADR — wagi klas WŁĄCZONE DOMYŚLNIE (adopcja ramienia A1 z K2, 2026-09-22)
+
+**Decyzja.** `DEFAULT_CLASS_WEIGHT_MODE = CLASS_WEIGHT_BALANCED` w `backtest/engine.py`.
+Model uczy się z wagami odwrotnymi do częstości klas, liczonymi **z części treningowej foldu**.
+Wariant `CLASS_WEIGHT_NONE` zostaje jako nazwany wariant odtwarzający baseline sprzed K2.
+
+**Status:** przyjęte decyzją użytkownika po rundzie K2
+(`runs/2026-09-22_k2-naprawa-abstynencji/`).
+
+### Problem
+
+Klasa `timeout` (bariera pionowa, `label == 0`) ma **66,5% masy** w etykietach 4h przy V=3.
+Model wielkoklasowy z celem `multi:softprob` i stratą `mlogloss` minimalizuje surową log-loss
+na tym rozkładzie, więc **argmax na klasę większościową jest dla niego odpowiedzią optymalną**.
+Skutkiem jest nie „słaby sygnał", tylko **odmowa działania**: przy słabym sygnale model nie
+podawał kierunku w **99,6%** świec.
+
+To nie jest problem teoretyczny — to on, a nie brak edge'u, ściął próbę w trzech rundach po
+kolei: S1b (n=345), H2.1 (n=98), K1 (n≈37 na losowanie). Przy takim `n` pasmo „opłacalne, ale
+niewidzialne" ma kilka do kilkunastu punktów procentowych, czyli **przyrząd nie widzi niczego,
+co realnie moglibyśmy znaleźć**.
+
+Ważne rozróżnienie, bez którego diagnoza jest błędna: **abstynencja sama w sobie NIE jest wadą.**
+Przy doskonałej wyroczni wynosi 66,48% wobec 66,51% udziału timeoutów w etykietach — zgodność
+do 0,03 pp. Model przewiduje prawdziwą klasę, a ta w dwóch trzecich świec jest timeoutem. Wadą
+jest **zapaść przy słabym sygnale**: z 66,5% do 99,6%, gdy posterior kolapsuje do klasy
+większościowej.
+
+### Rozważone opcje i dlaczego ta
+
+Zmierzone w K2 na tej samej krzywej wykrywalności (wyrocznia o znanej sile `q`), 12 losowań
+przy q=0 i po 3 na punkt:
+
+| opcja | abstynencja | n (q=0) | najsłabszy wykryty sygnał | werdykt |
+|---|---|---|---|---|
+| bez zmian (A0) | 99,6% | 644 | q = 0,40 | odrzucone — przyrząd zbyt gruboziarnisty |
+| **wagi klas (A1)** | **43,6%** | **97 014** | **q = 0,30** | **PRZYJĘTE** |
+| wymuszony kierunek (A2) | 0,0% | 167 160 | q = 0,40 | odrzucone — patrz niżej |
+
+**Dlaczego nie A2 (wymuszenie kierunku).** Kusi, bo daje największą próbę (n ×260) i najwęższe
+pasmo (0,24 pp). Ale kupuje `n` **bez informacji**: na świecach, których prawdziwa etykieta to
+timeout, poprawny kierunek NIE ISTNIEJE, a wymuszony wygrywa tam w **48,33%** przypadków —
+poniżej rzutu monetą. Te przegrane rozcieńczają sygnał: trafność spada do 50,33%, próg
+opłacalności rośnie do 52,94%, a przy q=0,30 **margines robi się ujemny (−1,31 pp)** — sygnał
+realnie informacyjny staje się nieopłacalny. **Więcej transakcji ≠ lepszy pomiar.**
+
+**Dlaczego wagi, a nie `scale_pos_weight`.** `scale_pos_weight` to parametr celu BINARNEGO i przy
+`multi:softprob` nie robi nic. Jedyną poprawną dźwignią jest wektor `weight` per wiersz na
+`DMatrix`. Zapisane, bo każdy czytelnik sięgnie najpierw po `scale_pos_weight`.
+
+**Dlaczego `w_c = N / (K·n_c)`.** Suma wag po wierszach wynosi `N`, więc skala hesjanów — a przez
+nią `min_child_weight` i `eta` — jest ta sama co bez ważenia. Zmienia się **wyłącznie proporcja
+między klasami**, nie ogólna siła sygnału uczącego. Bez tej normalizacji wagi ruszałyby dwie
+rzeczy naraz i porównanie A0/A1 nie mówiłoby o wagach klas.
+
+### Konsekwencje — w tym niewygodne
+
+1. **Baseline projektu przesunął się.** Ta sama decyzja i ten sam koszt co przy C2.12
+   (`DEFAULT_EXECUTION_MODEL` → `maker_limit`). Zamrożone skrypty rund (zasada 13) wołają
+   `run_backtest` bez tego argumentu, więc **uruchomione dziś dadzą inne liczby** niż zapisane
+   w ich katalogach `runs/`. Źródłem prawdy dla wyników historycznych pozostaje
+   `runs/<katalog>/`; żeby odtworzyć je z kodu, trzeba podać jawnie
+   `class_weight_mode=CLASS_WEIGHT_NONE`. Pilnuje tego test
+   `test_class_weight_none_reproduces_pre_k2_baseline_exactly` (literały: 1 280 transakcji,
+   `final_equity` 95 126,0168131146).
+
+2. **Wagi są niedozwolone na ścieżce sprzed Z17** (`validation_fraction=None`, early stopping
+   mierzony na foldzie OOS). Twardy błąd, nie ciche działanie — inaczej powstałby wariant
+   „Z17 z wagami na wierzchu", wyglądający na ulepszenie, a będący regresją.
+
+3. **Klasa nieobecna w części treningowej dostaje wagę neutralną 1,0.** Mapa wag powstaje
+   z części uczącej, a stosuje się ją również do walidacyjnej; klasa, której w uczącej nie było,
+   nie ma częstości do odwrócenia. Błąd `KeyError` na tej ścieżce **wystąpił realnie** przy
+   adopcji (fold uczący wyłącznie z timeoutami) — patrz „Usterki wykryte przy adopcji" niżej.
+
+4. **OTWARTE, NIEZMIERZONE — najważniejsze zastrzeżenie tego ADR.** A1 schodzi **poniżej**
+   podłogi abstynencji: 43,6% wobec 66,5% udziału timeoutów. Model otwiera więc pozycje również
+   na świecach, które naprawdę kończą się niczym — czyli robi, w mniejszej skali, to samo, co
+   dyskwalifikuje A2. Na wyroczni to nie szkodzi (sygnał jest idealnie zgodny z targetem), ale
+   **realna cecha nie ma takiej struktury**. Do zmierzenia osobną rundą. Dopóki nie jest
+   zmierzone, wynik każdej rundy na A1 trzeba czytać ze świadomością, że część próby to
+   pozycje otwarte „na siłę".
+
+5. **Co to NIE znaczy.** Adopcja A1 nie sprawia, że jakakolwiek hipoteza tradingowa zaczyna
+   działać. Zmienia wyłącznie rozdzielczość przyrządu. Warunek z pre-rejestracji K2 pozostaje
+   w mocy: **żadna liczba z K1/K2 nie może być cytowana jako wynik hipotezy tradingowej.**
