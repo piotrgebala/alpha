@@ -585,3 +585,100 @@ def required_trades(
         z_alpha * np.sqrt(p_null * (1.0 - p_null)) + z_power * np.sqrt(p_true * (1.0 - p_true))
     ) ** 2
     return float(numerator / (delta**2))
+
+
+# --- K2: MIERZALNOŚĆ hipotezy PRZED eksperymentem (CLAUDE.md zasada 18) ---
+#
+# Domyka lukę opisaną we wniosku skumulowanym 19 `runs/INDEX.md`: rachunki mocy w tym
+# projekcie startowały od LICZBY ŚWIEC, a decyduje to, ile z nich model uzna za warte
+# działania. Ciąg S1 → S1b (1 037 → 345) → H2.1 (345 → 98) to trzy zaskoczenia tym samym
+# mechanizmem, mimo że precedens był już w repo.
+#
+# ŚWIADOMIE BEZ STAŁEJ PROGOWEJ. "Próg wykrywalności 58,2%" z K1 jest artefaktem
+# rozdzielczości siatki `q`, nie właściwością przyrządu — właściwością jest
+# `wald_half_width(n)`, która istnieje tu od Z19. Projekt ma już dwa udokumentowane trupy po
+# zamrożonych progach (`MIN_VALIDATION_ROWS = 30`, który po cichu wyłączył early stopping
+# w 92% foldów — Z17b; oraz `std < 0.2` ze sweepu seedów, o którym `checkpoint_lib` pisze
+# wprost, że go nie rejestruje). Trzeciego nie dokładamy.
+
+
+def expected_trades(
+    n_rows_oos: int,
+    abstention_rate: float,
+    admission_rate: float = 1.0,
+) -> float:
+    """
+    Ile TRANSAKCJI da okno testowe — nie ile ma świec.
+
+    Args:
+        n_rows_oos: liczba świec ocenianych przez model (po odsianiu NaN w cechach).
+        abstention_rate: udział świec, na których model ODMÓWI kierunku. To jest człon,
+            którego brakowało we wszystkich dotychczasowych rachunkach mocy. Wartość
+            wyjściowa nie jest kwestią gustu: przy poprawnie działającym modelu podłogę
+            wyznacza UDZIAŁ KLASY DOMINUJĄCEJ w etykietach (K1: przy doskonałej wyroczni
+            abstynencja 66,48% wobec 66,58% timeoutów — zgodność do 0,1 pp).
+        admission_rate: przeżywalność pozostałych bramek (kosztowa, pewności, kill-switch).
+
+    Returns:
+        Oczekiwana liczba transakcji. NaN dla argumentów spoza zakresu.
+    """
+    if n_rows_oos < 0 or pd.isna(abstention_rate) or pd.isna(admission_rate):
+        return float("nan")
+    if not 0.0 <= abstention_rate <= 1.0 or not 0.0 <= admission_rate <= 1.0:
+        return float("nan")
+    return float(n_rows_oos * (1.0 - abstention_rate) * admission_rate)
+
+
+def measurability_report(
+    assumed_hit_rate: float,
+    break_even_p: float,
+    n_trades_expected: float,
+) -> dict:
+    """
+    Czy hipoteza o zakładanej trafności `assumed_hit_rate` jest w ogóle MIERZALNA przy
+    oczekiwanej próbie — pytanie zadawane PRZED uruchomieniem (CLAUDE.md zasada 18).
+
+    Hipoteza jest mierzalna, gdy zakładana trafność przekracza `min_detectable_hit_rate`,
+    czyli leży POZA pasmem „opłacalne, ale niewidzialne" o szerokości `wald_half_width(n)`.
+    Poniżej tego progu eksperyment nie rozstrzygnie niczego NIEZALEŻNIE OD WYNIKU, więc
+    uczciwiej go nie uruchamiać, niż potem interpretować nierozstrzygalną liczbę.
+
+    NIE wprowadza drugiej definicji progu — woła `min_detectable_hit_rate`.
+
+    UWAGA na dwie wielkości, których nie wolno mylić w raporcie rundy: `p_detectable` jest
+    liczone EX ANTE konserwatywnie przy p = 0,5 (`wald_half_width`), a `ci_low`
+    z `compute_hit_rate` jest liczone EX POST z zaobserwowanego `p`. Przy `p` blisko 0,5
+    różnica jest poniżej 2% względnie, ale to NIE są te same wielkości.
+
+    Returns:
+        {p_detectable, band_width_pp, margin_pp, measurable, verdict}
+        `verdict` ∈ {"MIERZALNA", "NIEMIERZALNA", "N/D"}.
+    """
+    n = float(n_trades_expected) if not pd.isna(n_trades_expected) else float("nan")
+    invalid = (
+        pd.isna(assumed_hit_rate)
+        or pd.isna(break_even_p)
+        or pd.isna(n)
+        or n < 1
+        or not 0.0 < assumed_hit_rate < 1.0
+        or not 0.0 < break_even_p < 1.0
+    )
+    if invalid:
+        return {
+            "p_detectable": float("nan"),
+            "band_width_pp": float("nan"),
+            "margin_pp": float("nan"),
+            "measurable": False,
+            "verdict": "N/D",
+        }
+
+    n_int = int(round(n))
+    p_detectable = min_detectable_hit_rate(break_even_p, n_int)
+    measurable = bool(assumed_hit_rate > p_detectable)
+    return {
+        "p_detectable": p_detectable,
+        "band_width_pp": 100.0 * wald_half_width(n_int),
+        "margin_pp": 100.0 * (assumed_hit_rate - p_detectable),
+        "measurable": measurable,
+        "verdict": "MIERZALNA" if measurable else "NIEMIERZALNA",
+    }

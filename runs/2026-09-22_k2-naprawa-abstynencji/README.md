@@ -189,9 +189,60 @@ przypisane szumowi przy n=220 — i **tak trzeba to napisać, bez awansowania na
 
 *(do wypełnienia — werdykt Ready / Caveats / Revision)*
 
+## Odstępstwo od pre-rejestracji — T6 (odnotowane, nie ukryte)
+
+Pre-rejestracja mówi: **„T6 — kill-switch jako źródło obciążenia (ZERO zmian w kodzie)"**,
+z założeniem, że wyłączenie kill-switcha załatwi `kill_switch_drawdown_pct=0.99`.
+Implementacja poszła inaczej: `run_backtest` dostał jawny przełącznik `kill_switch_enabled`.
+
+**Odstępstwo jest zgodne z intencją pre-rejestracji, i dlatego zostało przyjęte.** Ten sam
+akapit nazywa konwencję „0,99 znaczy wyłączony" **klasą błędu, na którą projekt wpadł trzy
+razy** (Z17b, Z9, H3) — cicha umowa zamiast jawnego przełącznika. Wybór między „zero zmian
+w kodzie" a „brak cichej konwencji" rozstrzygnięto na korzyść tego drugiego; przy 0,99
+kill-switch nadal *mógłby* zadziałać przy drawdownie > 99%, więc ramię „off" nie byłoby
+ściśle wyłączone, tylko bardzo mało prawdopodobne.
+
+**Ścieżka odwrotu:** usunąć parametr `kill_switch_enabled` z `run_backtest` i wrócić do
+`kill_switch_drawdown_pct=0.99` w skrypcie rundy. Jedna linia w silniku, dwa testy.
+
 ## Przegląd diffu (zasada 16c)
 
-*(do wypełnienia przed merge)*
+**Stan: implementacja i testy gotowe, przebieg NIE uruchomiony.** Runda ma kod ramion A0/A1/A2
+i T6 oraz komplet testów, ale **nie ma jeszcze skryptu uruchomieniowego** (`backtest/run_*k2*.py`),
+więc sekcje „Wynik" i dalsze pozostają puste zgodnie z pre-rejestracją.
+
+**Werdykt jednym zdaniem: diff jest poprawny i gotowy do merge'u; zamknięto jedną lukę
+(walidacja nazw wariantów dopiero po treningu) i potwierdzono niezależnie bit-identyczność
+ramienia A0.**
+
+Co sprawdzono:
+
+- **Bit-identyczność baseline'u (warunek ramienia A0) — zweryfikowana DRUGĄ DROGĄ**, nie samą
+  asercją w teście. `run_backtest` z domyślnymi argumentami uruchomiono w drzewie **sprzed K2**
+  (`b79795b`) i po K2, a pełne journale porównano bajt po bajcie: **1 280 transakcji,
+  `final_equity = 95 126,0168131146`, identyczne MD5**. Kod K2 nie przesunął baseline'u.
+- **Zamknięta luka: fail fast.** `direction_policy` i `confidence_mode` były walidowane dopiero
+  w `predict_signal`, czyli **po wytrenowaniu pierwszego modelu** — na danych 4h to kilkanaście
+  minut do komunikatu o literówce. Silnik waliduje je teraz w tym samym miejscu i z tego samego
+  powodu co `timeout_leg` od H3. Reguły **nie zostały skopiowane** do silnika: wydzielono
+  `validate_signal_policy` / `validate_class_weight_mode` w `agents/ml_optimizer.py`, z których
+  korzystają oba miejsca (lekcja H3: usuwamy klasę błędu, nie instancję).
+- **Obie asercje OBOWIĄZKOWE dla T6 są w testach**, nie tylko w planie: ramię „off" ma
+  `kill_switch_active.sum() == 0`, a klucz `(regime, fold_idx, timestamp)` daje identyczny zbiór
+  w obu ramionach. Dołożony trzeci test pilnuje drugiego filaru interpretacji T6 — że cena
+  wejścia/wyjścia i kierunek są identyczne na wierszach wykonanych w obu ramionach, więc
+  kill-switch może ruszyć trafność wyłącznie przez skład populacji.
+- **Tabela z sprostowania 1 zakotwiczona w teście** (`wald_half_width`: 13,86 pp przy n=50 →
+  1,12 pp przy n=7 687). Liczby cytowane w tej pre-rejestracji zgadzają się z kodem co do
+  0,01 pp — i od teraz nie mogą się po cichu rozjechać.
+- **Strażnik `validation_fraction`** (wagi klas niedozwolone na przeciekającej ścieżce sprzed
+  Z17) dostał własny test wraz z kontrolą, że baseline na tej ścieżce **nadal działa** — inaczej
+  wyniki C6–C2.13 przestałyby być odtwarzalne.
+
+Czego przegląd NIE obejmuje: jakości samych ramion jako kandydatów do adopcji (to rozstrzyga
+przebieg wg trzech bramek), oraz `ruff`/`black` — niedostępne na maszynie (zadanie T2).
+
+Testy: **364/364**.
 
 ## Wniosek / Rekomendacja
 

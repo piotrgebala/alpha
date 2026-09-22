@@ -98,6 +98,9 @@ from agents.labeling import (
     generate_walk_forward_folds,
 )
 from agents.ml_optimizer import (
+    CLASS_WEIGHT_NONE,
+    CONFIDENCE_MODE_CLASS,
+    DIRECTION_POLICY_ARGMAX3,
     DEFAULT_SEED,
     DEFAULT_VALIDATION_FRACTION,
     EARLY_STOPPING_ROUNDS,
@@ -107,6 +110,8 @@ from agents.ml_optimizer import (
     best_iteration_or_last,
     predict_signal,
     train_regime_model,
+    validate_class_weight_mode,
+    validate_signal_policy,
 )
 from agents.risk_controller import (
     KILL_SWITCH_COOLDOWN_DAYS,
@@ -200,6 +205,9 @@ def _collect_candidate_signals(
     regime_feature_sets: list[tuple[str, list[str]]],
     execution_model: str,
     timeout_leg: str,
+    class_weight_mode: str,
+    direction_policy: str,
+    confidence_mode: str,
     confidence_quantile: float | None,
     validation_fraction: float | None,
     embargo_candles: int,
@@ -240,6 +248,15 @@ def _collect_candidate_signals(
     # Walidacja `timeout_leg` wypada tutaj celowo: to najwcześniejszy punkt przebiegu,
     # czyli PRZED treningiem pierwszego modelu (fail fast, nie po 20 minutach).
     cost_fraction = gate_cost_fraction(execution_model, timeout_leg)
+
+    # K2: nazwy wariantow walidowane w TYM SAMYM miejscu i z tego samego powodu co
+    # `timeout_leg` wyzej - najwczesniejszy punkt przebiegu, przed treningiem pierwszego
+    # modelu. Bez tego literowka w `direction_policy` wyszlaby dopiero z `predict_signal`,
+    # czyli PO treningu; na danych 4h to kilkanascie minut do komunikatu o bledzie.
+    # Silnik NIE ma wlasnej kopii regul - konsumuje walidatory z `agents.ml_optimizer`,
+    # te same, ktorych uzywa `predict_signal` (lekcja H3: jedno zrodlo reguly).
+    validate_class_weight_mode(class_weight_mode)
+    validate_signal_policy(direction_policy, confidence_mode)
     candidate_signals: list[dict] = []
     folds_summary: list[dict] = []
 
@@ -337,11 +354,23 @@ def _collect_candidate_signals(
                 seed=seed,
                 validation_fraction=validation_fraction,
                 embargo_candles=embargo_candles,
+                class_weight_mode=class_weight_mode,
             )
             confidence_threshold = _train_fold_confidence_threshold(
-                booster, train_df, feature_columns, confidence_quantile
+                booster,
+                train_df,
+                feature_columns,
+                confidence_quantile,
+                direction_policy=direction_policy,
+                confidence_mode=confidence_mode,
             )
-            signals = predict_signal(booster, test_df, feature_columns)
+            signals = predict_signal(
+                booster,
+                test_df,
+                feature_columns,
+                direction_policy=direction_policy,
+                confidence_mode=confidence_mode,
+            )
 
             n_signals = 0
             n_signals_cost_gated = 0
@@ -457,6 +486,8 @@ def _train_fold_confidence_threshold(
     train_df: pd.DataFrame,
     feature_columns: list[str],
     confidence_quantile: float | None,
+    direction_policy: str = DIRECTION_POLICY_ARGMAX3,
+    confidence_mode: str = CONFIDENCE_MODE_CLASS,
 ) -> float | None:
     """
     Commit 2.13: prog `signal_confidence` wyznaczony WYLACZNIE na foldzie TRENINGOWYM.
@@ -475,7 +506,16 @@ def _train_fold_confidence_threshold(
     """
     if confidence_quantile is None:
         return None
-    train_signals = predict_signal(booster, train_df, feature_columns)
+    # K2: prog MUSI byc liczony w TEJ SAMEJ przestrzeni pewnosci co sygnaly OOS - inaczej
+    # porownywalibysmy kwantyl rozkladu warunkowego z surowym (albo odwrotnie), czyli prog
+    # z innej skali niz to, co filtruje.
+    train_signals = predict_signal(
+        booster,
+        train_df,
+        feature_columns,
+        direction_policy=direction_policy,
+        confidence_mode=confidence_mode,
+    )
     directional = train_signals.loc[
         train_signals["signal_direction"] != 0.0, "signal_confidence"
     ]
@@ -535,6 +575,10 @@ def run_backtest(
     candle_minutes: int = CANDLE_MINUTES,
     execution_model: str = DEFAULT_EXECUTION_MODEL,
     timeout_leg: str = DEFAULT_TIMEOUT_LEG,
+    class_weight_mode: str = CLASS_WEIGHT_NONE,
+    direction_policy: str = DIRECTION_POLICY_ARGMAX3,
+    confidence_mode: str = CONFIDENCE_MODE_CLASS,
+    kill_switch_enabled: bool = True,
     confidence_quantile: float | None = None,
     validation_fraction: float | None = DEFAULT_VALIDATION_FRACTION,
     embargo_candles: int | None = None,
@@ -662,6 +706,9 @@ def run_backtest(
         regime_feature_sets=active_feature_sets,
         execution_model=execution_model,
         timeout_leg=timeout_leg,
+        class_weight_mode=class_weight_mode,
+        direction_policy=direction_policy,
+        confidence_mode=confidence_mode,
         confidence_quantile=confidence_quantile,
         validation_fraction=validation_fraction,
         embargo_candles=effective_embargo,
@@ -702,7 +749,7 @@ def run_backtest(
             peak_equity = equity
             kill_switch_tripped_at = None
 
-        if check_kill_switch(equity, peak_equity, kill_switch_drawdown_pct):
+        if kill_switch_enabled and check_kill_switch(equity, peak_equity, kill_switch_drawdown_pct):
             if kill_switch_tripped_at is None:
                 kill_switch_tripped_at = signal["timestamp"]
             trades.append(
