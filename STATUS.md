@@ -2283,6 +2283,21 @@ kraniec CI 1,51 pp poniżej progu. Różnica wobec ramienia bez funding: **−0,
 (2,80× → 1,01×), było artefaktem zagłodzonej próby.
 → [runs/f1](runs/2026-09-22_f1-funding-zmierzony/README.md)
 
+#### P2 — sonda wykonalności carry przekrojowego (4A) ⚪ ZAMKNIĘTA 2026-09-22, NIEMIERZALNA
+
+0 wariantów, poza licznikami. Na 20 największych monetach (poprawka 1 — decyzja użytkownika)
+funding pokrywa koszt (F − C = 0,097% na 48h, CI [0,051%; 0,143%]), ale rozrzut wyniku okna
+σ = 5,56% wymaga ~25 850 okien wobec 1 161 dostępnych (0,045×). **Rachunek 4A w tabeli niżej
+(„20 instrumentów = 160 660”) jest OBALONY:** 18 monet ≈ k_eff = 2,0 niezależnych. Hipoteza C
+nie startuje (zasada 18). Otwarte: cash-and-carry ze spotem — inny produkt, decyzja bramkowa.
+→ [runs/p2](runs/2026-09-22_p2-sonda-carry-przekrojowy/README.md)
+
+#### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
+
+`data/collect_positioning.py`: OI + 4 proporcje long/short, 1h, BTC/ETH/SOL/BNB, dopisywane do
+`data/raw/positioning/`. Pierwszy przebieg 2026-09-22 (od 2026-09-01). **Do aktywacji po scaleniu
+do master:** zadanie Harmonogramu Windows (komenda w docstringu modułu). Użyteczne za ~3,4 roku.
+
 #### P1 — sonda wykonalności źródeł danych (2026-09-22)
 
 Przed postawieniem F sprawdzono, co jeszcze jest do wzięcia poza OHLCV. **Wszystkie pięć
@@ -2303,7 +2318,7 @@ Próg opłacalności bez bramki reżimu: **52,93%** (K3). Projekt zmierzył traf
 |---|---|---|---|---|
 | 1 instrument (4C, 4D) | 8 033 | 1,09 pp | **54,02%** | +3,75 pp |
 | 3 instrumenty (4D) | 24 099 | 0,63 pp | 53,56% | +3,29 pp |
-| 20 instrumentów (4A) | 160 660 | 0,24 pp | 53,17% | +2,90 pp |
+| ~~20 instrumentów (4A)~~ | ~~160 660~~ | ~~0,24 pp~~ | ~~53,17%~~ | ~~+2,90 pp~~ — **OBALONE w P2:** 18 monet ≈ k_eff 2,0 niezależnych |
 
 **Ile transakcji trzeba, żeby wykryć efekt danej wielkości (moc 80%):**
 
@@ -2320,7 +2335,10 @@ Próg opłacalności bez bramki reżimu: **52,93%** (K3). Projekt zmierzył traf
   w historii projektu to 50,27%. Nie są niemożliwe, ale wymagają efektu **większego niż
   cokolwiek, co kiedykolwiek zmierzyliśmy** — i nie naprawia tego dokładanie instrumentów,
   bo próg schodzi tylko z 54,02% do 53,17% przy dwudziestokrotnie większej próbie.
-- **4A (carry przekrojowy) jest jedyną ścieżką z wykonalną arytmetyką — teraz liczbowo.**
+- **⚠ SPROSTOWANE przez P2 (2026-09-22):** poniższy punkt zakładał, że przekrój mnoży próbę.
+  Zmierzone: korelacja zwrotów 0,47 ⇒ k_eff ≈ 2, a σ wyniku okna 5,56% wymaga ~25 850 okien
+  wobec 1 161 — 4A (na samych perpetualach) jest **NIEMIERZALNE**.
+- ~~**4A (carry przekrojowy) jest jedyną ścieżką z wykonalną arytmetyką — teraz liczbowo.**~~
   Jego próg opłacalności to **48,13%**, czyli **poniżej rzutu monetą**: wypłata nie wymaga
   przewagi kierunkowej. Przy trafności 50,00% wystarczy **5 606 transakcji**, czyli **0,70×**
   tego, co daje jeden instrument BTC. Wąskim gardłem nie jest liczba świec, tylko liczba

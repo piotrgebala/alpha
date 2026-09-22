@@ -57,10 +57,13 @@ na próbie ok. 8 000 transakcji (wystarczająco dużej, żeby rozstrzygnąć):
 **Co to znaczy:** przewidywanie KIERUNKU ceny BTC na tych danych nie daje przewagi — w każdym
 wariancie model trafia jak rzut monetą. Otwarte zostały tylko kierunki, które zmieniają samo
 założenie projektu (`STATUS.md` §17, ETAP 4). Pierwszy z nich — **carry przekrojowy**
-(zarabianie na samej opłacie funding na wielu parach naraz, bez zgadywania kierunku) — jest
-sprawdzany sondą wykonalności P2 (`runs/INDEX.md`).
+(zarabianie na samej opłacie funding na wielu parach naraz, bez zgadywania kierunku) — został
+sprawdzony sondą [P2](runs/2026-09-22_p2-sonda-carry-przekrojowy/README.md): **sama opłata
+pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test wymagałby ~140 lat
+danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
+(cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **392/392** (2026-09-22).
+Stan testów: **425/425** (2026-09-22).
 
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
@@ -116,6 +119,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **K3 — dwa odłożone pytania znów da się zmierzyć** | 2026-09-22 | **Przyrząd po raz pierwszy jest dokładniejszy niż to, czego szukamy.** Dwa badania zamknięto kiedyś werdyktem „nie da się rozstrzygnąć” — nie dlatego, że coś wyszło źle, tylko dlatego, że model podjął **345** i **35** decyzji. Po włączeniu wag klas te same konfiguracje dają **1 955** i **8 033** decyzje, a dokładność pomiaru poprawia się z 5,3 i 16,6 punktu do **2,2 i 1,1** — przy szukanym efekcie **2,4 punktu**. Sprawdzian wiarygodności: stan „sprzed zmiany” odtworzył liczby z archiwum co do sztuki. **Cena, powiedziana wprost:** model przestał wybierać świece kończące się wyraźnym ruchem, więc poprzeczka opłacalności podniosła się o pół punktu; czy ta selektywność coś wnosiła — ta runda z założenia nie sprawdza | [runs/k3](runs/2026-09-22_k3-mierzalnosc-po-a1/README.md) |
 | **M1 — momentum dostało uczciwy test i go nie przeszło** | 2026-09-22 | **Pierwsza hipoteza postawiona po zamknięciu Fazy 0.** „Momentum” to założenie, że gdy cena rośnie, będzie rosła dalej. Projekt nigdy go porządnie nie sprawdził — filtr przepuszczał takie momenty przez **pół procenta czasu**, zostawało 299 transakcji i nie było czego mierzyć. Po naprawach z ostatnich dni momentum dostało **8 512 transakcji**. **Trafia w 49,74%, a musiałoby w 52,94%** — nawet najbardziej optymistyczny odczyt (50,80%) jest ponad dwa punkty poniżej progu, przy próbie dwukrotnie większej niż wymagana. **Czego NIE wolno z tego wyciągnąć:** że momentum jest gorsze od tego, co testowaliśmy wcześniej — różnica to szum. Jest **tak samo nieobecne**. Sprawdzian wiarygodności: ramię odniesienia odtworzyło historyczny pomiar co do jednej setnej punktu | [runs/m1](runs/2026-09-22_m1-momentum-bez-bramki/README.md) |
 | **P1 + F1 — ostatnie mierzalne źródło informacji sprawdzone** | 2026-09-22 | **Najpierw sprawdziliśmy, co jeszcze da się zmierzyć.** Dane o pozycjonowaniu (ilu graczy stoi po której stronie) to najbardziej oczywisty kandydat na informację spoza wykresu ceny — ale giełda udostępnia je **tylko za 30 dni**, czyli ~112 transakcji wobec potrzebnych 4 500. **Cała klasa źródeł odpada, bo nie ma czego mierzyć.** Został funding — opłata za utrzymanie pozycji, jedyna informacja spoza ceny, którą mamy z siedmioletnią historią. **Trafia w 50,34%, a musiałby w 52,94%**; różnica wobec modelu bez niej to **trzy setne punktu**. **Przy okazji wycofaliśmy własne wcześniejsze ustalenie:** „funding potroił liczbę decyzji modelu” okazało się artefaktem małej próby — na poprawionym pomiarze zmienia ją o procent | [runs/f1](runs/2026-09-22_f1-funding-zmierzony/README.md) |
+| **P2 — carry przekrojowy: niemierzalny** | 2026-09-22 | **Sprawdziliśmy ostatni kierunek z mapy, który nie wymaga zgadywania ceny:** zarabianie na opłacie funding — pozycja krótka tam, gdzie opłata najwyższa, długa tam, gdzie najniższa. Na 20 największych monetach z 6,5 roku **sama opłata pokrywa koszty** (~0,1% na dwa dni, pewnie powyżej zera — pierwszy taki wynik w projekcie), ale **ruchy cen są 57 razy większe od tego zarobku**. Żeby odróżnić zysk od szczęścia, trzeba by ~140 lat danych; mamy 6,5. Przy okazji obaliliśmy własne założenie z planu: 18 monet chodzi razem jak **dwie** niezależne, więc dokładanie monet nie pomaga. Pobieranie pełnego uniwersum przerwane na polecenie użytkownika — wynik dotyczy 20 dzisiejszych największych monet (jawny błąd przeżywalności) | [runs/p2](runs/2026-09-22_p2-sonda-carry-przekrojowy/README.md) |
 
 ## Hipoteza w skrócie
 
