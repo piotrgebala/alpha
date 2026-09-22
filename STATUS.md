@@ -2081,3 +2081,99 @@ Z17, Z18, Z21, Z22, potem Z7 screening (0) i dopiero Z7 OOS (1 wariant).
 | Z14 | Odświeżyć README.md | ✅ C2.9 | Status "Commit 6, 86/86 testów" nieaktualny (128/128, seria C2.5–C2.8), struktura bez `runs/` |
 | Z15 | Test spójności registry↔kod jako pytest czytający YAML | ✅ C2.9 | `test_feature_functions_covers_all_ten` hardkoduje listę zamiast czytać `feature_registry.yaml`; check inline w tests.yml zostaje jako belt-and-suspenders |
 | Z25 | Odchudzenie duplikacji PLAN↔TASKS (19 zduplikowanych sekcji per-commit, 99+69 KB) | ⏳ | Audyt 2026-09-22: PLAN i TASKS to NIE to samo (PLAN: decyzje/ryzyka/roadmapa; TASKS: statusy/zasady/backlog), ale sekcje per-commit są kopiowane 1:1 w 19 przypadkach, a od C2.9 syntezy żyją też w runs/INDEX. Docelowy podział: CLAUDE.md, wytyczna "jedna informacja = jedno miejsce". Odchudzić historyczne sekcje (szczegóły→runs/, w PLAN/TASKS status+2-3 zdania+link); od teraz nowe rundy piszą od razu krótko |
+
+---
+
+## 17. Mapa drogowa po zamknięciu Fazy 0 (ułożona 2026-09-22)
+
+> **Prostym językiem (zasada 17):** Faza 0 sprawdziła, czy da się zarobić, przewidując kierunek
+> ceny z samego wykresu. Nie da się — i to jest odpowiedź mocna, nie wymijająca. Teraz
+> sprawdzamy **ostatnią nieprzetestowaną możliwość**: czy pomoże informacja, która nie jest
+> przetworzoną ceną. Poniżej jest plan tego sprawdzenia i tego, co robimy z każdym możliwym
+> wynikiem — **łącznie z wynikiem „nie pomogło"**, bo on jest najbardziej prawdopodobny.
+
+### Zasada porządkująca całą mapę
+
+Warunek zarobku to `(2p−1)·B + F > C`: trafność `p`, szerokość bariery `B`, przychód z funding
+`F`, koszt `C`. Faza 0 ruszyła `B` i `C` do granic możliwości. **Zostało `p` i `F`** — i to one
+wyznaczają kolejność zadań poniżej.
+
+---
+
+### ETAP 1 — H2.1: czy informacja spoza OHLCV rusza trafność (W TRAKCIE)
+
+**Pytanie:** wszystkie 10 dotychczasowych informacji to przetworzona cena i obrót. Czy dodanie
+czegoś **innego rodzaju** — opłaty za utrzymanie pozycji, publikowanej przez giełdę — podnosi
+trafność ponad próg opłacalności?
+
+**Poprzeczka: `ci_low(p) > 52,69%`** (sprostowana w H3). Dziś mamy **50,27%**, więc potrzeba
+**+2,39 punktu**. Uczciwie: **żadna pojedyncza informacja w historii tego projektu nie dała
+takiego skoku.** Prior jest niski i jest to zapisane przed uruchomieniem.
+
+| ID | zadanie | warianty | uwagi |
+|---|---|---|---|
+| **H2.1a** | Silnik: tryb BEZ bramki reżimu (`regime_feature_sets` z wartownikiem „wszystkie świece") + regresja baseline'u bit-identyczna | 0 (infrastruktura) | Bloker: `engine.py` filtruje `df[df["regime"] == regime_name]`. Zysk uboczny: foldy ~4× większe ⇒ mniej pominiętych (S1 pomijał 22 z 85) i early stopping z sensownym zbiorem walidacyjnym |
+| **H2.1b** | Cecha `funding_*`: złączenie siatki 8h ze świecami 4h + **test leakage PRZED wejściem do modelu** (zasada 2) + wpis w `feature_registry.yaml` | 0 (przygotowanie cechy) | **Bramka STOP: czerwony test leakage = natychmiastowe zatrzymanie.** Próg ABSOLUTNY, nigdy percentylowy (masa punktowa 35,85% — H2.0). Okno statystyk rozszerzające się wstecz, bo autokorelacja 0,797 czyni zwykły `rolling` podatnym na przeciek |
+| **H2.1c** | **Eksperyment**: 4h, bez bramki, 11 cech, V=3, 6,8 roku | **1 — WYCZERPUJE licznik H2 (0/1 → 1/1)** | Kryterium pre-rejestrowane, klauzula `n < 1 000`, reguła STOP po jednym wariancie |
+
+**Poprawka do pre-rejestracji z H2.0, wprowadzona PRZED uruchomieniem czegokolwiek:**
+H2.0 zapisało H2.1 jako jedną rundę zmieniającą naraz **dwie** rzeczy wobec S1b (usunięcie
+bramki + nowa cecha). To łamie zasadę 4 i zaciera atrybucję: przy wyniku negatywnym nie
+wiedzielibyśmy, która zmiana zawiodła. Dlatego **H2.1a mierzy baseline bez bramki na
+niezmienionych 10 cechach** (0 wariantów — charakteryzacja punktu odniesienia, kryterium
+sukcesu NIE jest z nim związane, bo próg 52,69% pochodzi z geometrii kosztu, a nie z obejrzanej
+trafności), a H2.1c mierzy **wyłącznie delta od dodania cechy**. Kryterium sukcesu, klauzula
+nierozstrzygalności i reguła STOP pozostają **niezmienione**.
+
+**Ryzyko rundy:** klauzula `n < 1 000` może wejść w grę, jak w S1b. Szacowana próba bez bramki
+to ~1 200 transakcji, ale lejek (8,03%) zmierzono przy bramce — bez niej może być inny w obie
+strony.
+
+---
+
+### ETAP 2 — rozwidlenie po H2.1 (zależne od wyniku, opisane Z GÓRY)
+
+| wynik H2.1c | co to znaczy | co robimy |
+|---|---|---|
+| **pozytywny** (`ci_low > 52,69%`) | pierwszy dodatni wynik w historii projektu | **NIE wdrażamy.** Replikacja out-of-sample na ETH (zasada 9: BTC do końca, potem generalizacja bez retuningu). Dopiero potem rozmowa o Fazie 1 |
+| **negatywny** | zbiór informacyjny OHLCV + funding **wyczerpany** dla predykcji kierunku na BTC 4h | Reguła STOP zamyka H2. Przejście do Etapu 4 — decyzja użytkownika |
+| **nierozstrzygalny** (`n < 1 000`) | konfiguracja niemierzalna przy dostępnej historii, jak S1b | **Nie interpretujemy w żadną stronę.** Jedyna droga dalej to więcej próby, czyli wymiar przekrojowy (Etap 4B), nie kolejne `V` ani interwał |
+
+---
+
+### ETAP 3 — dług techniczny wart zrobienia NIEZALEŻNIE od H2.1
+
+Te zadania nie zależą od żadnej hipotezy i poprawiają wszystko, co policzymy później.
+
+| ID | zadanie | warianty | dlaczego warto |
+|---|---|---|---|
+| **T1** | **Realny funding w modelu kosztów** zamiast stałej `FUNDING_RATE_8H = 0.0001` | 0 (poprawność) | Mamy 7 457 rekordów od H2.0 i ich **nie używamy**. Zmierzony średni funding to −0,00243% (przychód!), a model zakłada +0,01% kosztu. Dotyczy KAŻDEGO wyniku, jaki policzymy dalej |
+| **T2** | `ruff` + `black` — luka DoD zgłaszana od C2.11 | 0 | Dziś niedostępne na maszynie. Wymaga instalacji = **zgoda użytkownika** |
+| **T3** | Sprzątanie repo: katalog `Claude outputs/`, resztki `runs/*.md`, `.claude/settings.json` w repo | 0 | Zaproponowane trzy razy, nigdy nieautoryzowane. **Operacja nieodwracalna ⇒ decyzja użytkownika** |
+| **T4** | `MIN_VALIDATION_ROWS = 30` i `validation_fraction = 0.2` to **nieskalibrowane wartości startowe** (minus odnotowany w S1b) | 0 (diagnostyka) | Z17b pokazał, że ten próg potrafi po cichu wyłączyć early stopping w 92% foldów. Wymagałby zagnieżdżonego walk-forward |
+
+---
+
+### ETAP 4 — hipotezy otwarte, WYMAGAJĄCE DECYZJI UŻYTKOWNIKA
+
+Żadna nie startuje bez decyzji bramkowej. Każda dostaje **własny licznik od zera**, własną
+pre-rejestrację i własną regułę STOP.
+
+| ID | hipoteza | co mówią liczby | czego wymaga |
+|---|---|---|---|
+| **4A** | **Carry przekrojowy** — ten sam mechanizm funding na 20+ instrumentach naraz | **Jedyna ścieżka, o której wiemy, że jest WYKONALNA statystycznie.** H2.0: na jednym instrumencie brakuje rzędu wielkości próby (0,03–0,12×), bo ogranicza liczba nienakładających się okien 48h w 6,8 roku. Przekrój mnoży próbę przez liczbę instrumentów. Próg opłacalności spada **poniżej 50%** (48,13%) — nie trzeba przewagi kierunkowej | Silnik portfelowy, którego Faza 0 nie ma. Łamie zasadę 9. **To inny projekt, nie kolejna runda** |
+| **4B** | **Target inny niż kierunek** — np. przewidywanie zmienności zamiast kierunku | Zero testów. Zmienność jest znacznie lepiej przewidywalna niż kierunek (fakt powszechnie znany), ale **nie wiadomo, czy da się na tym zarobić bez opcji** | Nowa definicja etykiety, nowa ekonomia wypłaty. Prawdopodobnie poza zakresem perpetuali |
+| **4C** | **Momentum bez bramki reżimu** | **NIEPRZETESTOWANE, ale to nie jest luka do zasypania.** Z16: przy każdej regule reżimu wydłużenie epizodów zapada udział do 0,05–1,5%. Bez bramki „momentum" to po prostu predykcja kierunku z cech OHLCV — czyli dokładnie to, co Faza 0 obaliła na 7 687 transakcjach | Nic nowego — dlatego jest tu, a nie w Etapie 1 |
+| **4D** | **ETH / SOL / BNB** | Zero testów (zasada 9 nigdy nie została spełniona). **Ale:** to test GENERALIZACJI tej samej hipotezy, więc ma sens dopiero, gdy jest co generalizować | Czeka na pozytywny wynik czegokolwiek |
+| **4E** | **Ekonomia dźwigni i sizingu** | Kill-switch testowany mechanicznie (C2c), nigdy jako dźwignia rentowności. **Uwaga: sizing nie tworzy edge'u** — mnoży istniejący. Przy `p` nieodróżnialnym od monety mnoży zero | Niski priorytet z tego powodu |
+
+---
+
+### Czego ta mapa świadomie NIE zawiera
+
+- **Kolejnych wariantów w seriach zamkniętych** (dwureżimowa, jednoreżimowa 4h). Obie reguły
+  STOP są aktywne na stałe.
+- **Powrotu do nogi `timeout`** — H3 zamknął temat; powrót wymaga danych o wypełnieniach
+  zleceń, nie kolejnego założenia.
+- **Budowy czegokolwiek z PRD** (5 agentów, dashboard, Docker) — zasada nadrzędna projektu
+  nie zmieniła się: architektura powstaje PO dowodzie edge'u, nie przed.
