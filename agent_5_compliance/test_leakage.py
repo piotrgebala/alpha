@@ -35,6 +35,7 @@ import pytest
 import yaml
 
 from agents.feature_miner import FEATURE_FUNCTIONS, compute_atr_pctrank_20d
+from agents.funding_features import attach_funding_rate
 from agents.labeling import compute_triple_barrier_labels
 
 FEATURE_REGISTRY_PATH = (
@@ -189,3 +190,139 @@ def test_triple_barrier_no_leakage(synthetic_ohlcv: pd.DataFrame) -> None:
         result_full.iloc[:comparable].reset_index(drop=True),
         check_exact=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# H2.1b -- funding rate jako CECHA (pierwsze zrodlo informacji spoza OHLCV).
+#
+# CLAUDE.md zasada 2: test leakage PRZED wejsciem cechy do modelu, nie po.
+# Ten blok jest bramka - czerwony test zatrzymuje runde H2.1 (regula STOP).
+#
+# Ryzyko jest tu INNE niz przy cechach z feature_miner.py. Tamte licza z OHLCV,
+# wiec przeciek oznaczalby zle okno (centered zamiast trailing). Tutaj zlaczamy
+# DWA ZRODLA o roznych siatkach czasowych (swiece co 4h, funding co 8h), wiec
+# przeciek oznaczalby przypisanie swiecy stawki rozliczonej PO niej. Metoda
+# truncate-vs-extend wykrywa oba, ale dokladamy trzeci test, ktory celuje
+# wprost w ten mechanizm.
+# ---------------------------------------------------------------------------
+
+
+def _make_funding(n_periods: int = 60, start: str = "2020-01-01T00:00:00Z") -> pd.DataFrame:
+    ts = pd.date_range(start, periods=n_periods, freq="8h", tz="UTC")
+    rng = np.random.default_rng(11)
+    return pd.DataFrame({"timestamp": ts, "funding_rate": rng.normal(1e-4, 5e-5, n_periods)})
+
+
+def _make_candles(n: int = 100, start: str = "2020-01-01T00:00:00Z") -> pd.DataFrame:
+    ts = pd.date_range(start, periods=n, freq="4h", tz="UTC")
+    rng = np.random.default_rng(3)
+    close = 100.0 + np.cumsum(rng.normal(0.0, 1.0, n))
+    return pd.DataFrame(
+        {
+            "timestamp": ts,
+            "open": close,
+            "high": close + 1.0,
+            "low": close - 1.0,
+            "close": close,
+            "volume": 1_000.0,
+        }
+    )
+
+
+def test_funding_feature_no_leakage_truncate_vs_extend() -> None:
+    """
+    Metoda 1 (ta sama co dla cech OHLCV): wartosci na df[:T] musza byc bit-identyczne
+    z wartosciami na pelnym df do indeksu T-1.
+    """
+    candles, funding = _make_candles(), _make_funding()
+    cut = 60
+
+    full = attach_funding_rate(candles, funding)
+    truncated = attach_funding_rate(candles.iloc[:cut], funding)
+
+    pd.testing.assert_series_equal(
+        full["funding_rate"].iloc[:cut],
+        truncated["funding_rate"],
+        check_names=False,
+    )
+
+
+def test_funding_feature_ignores_future_funding_records() -> None:
+    """
+    Metoda 2 (mutate-the-future), celowana w mechanizm zlaczenia dwoch zrodel:
+    podmiana WSZYSTKICH rozliczen funding PO punkcie odciecia na zupelnie inne
+    wartosci nie moze ruszyc ani jednej swiecy przed tym punktem.
+    """
+    candles, funding = _make_candles(), _make_funding()
+    cutoff = candles["timestamp"].iloc[50]
+
+    sabotaged = funding.copy()
+    future = sabotaged["timestamp"] > cutoff
+    assert future.any(), "fikstura musi zawierac rozliczenia po punkcie odciecia"
+    sabotaged.loc[future, "funding_rate"] = 999.0
+
+    before = attach_funding_rate(candles, funding)
+    after = attach_funding_rate(candles, sabotaged)
+    mask = candles["timestamp"] <= cutoff
+
+    pd.testing.assert_series_equal(
+        before.loc[mask.values, "funding_rate"],
+        after.loc[mask.values, "funding_rate"],
+        check_names=False,
+    )
+
+
+def test_funding_feature_never_uses_rate_settled_after_candle() -> None:
+    """
+    Metoda 3 (bezposrednia): dla KAZDEJ swiecy przypisana stawka musi pochodzic
+    z rozliczenia o znaczniku <= znacznik swiecy. To jest dowod wprost, nie przez
+    porownanie przebiegow.
+    """
+    candles, funding = _make_candles(), _make_funding()
+    out = attach_funding_rate(candles, funding)
+    lookup = dict(zip(funding["timestamp"], funding["funding_rate"]))
+
+    for ts, value in zip(out["timestamp"], out["funding_rate"]):
+        if pd.isna(value):
+            continue
+        zrodla = [t for t, v in lookup.items() if v == value]
+        assert any(t <= ts for t in zrodla), f"swieca {ts} dostala stawke z przyszlosci"
+
+
+def test_funding_feature_nan_before_first_settlement() -> None:
+    """
+    Swiece sprzed pierwszego rozliczenia dostaja NaN, a nie wsteczne wypelnienie.
+
+    Wsteczne wypelnienie byloby przeciekiem najgorszego rodzaju: cicho podstawialoby
+    przyszlosc w miejsce nieistniejacej jeszcze informacji.
+    """
+    funding = _make_funding(start="2020-01-05T00:00:00Z")
+    candles = _make_candles(start="2020-01-01T00:00:00Z")
+    out = attach_funding_rate(candles, funding)
+
+    przed = out["timestamp"] < funding["timestamp"].min()
+    assert przed.any(), "fikstura musi miec swiece sprzed pierwszego rozliczenia"
+    assert out.loc[przed.values, "funding_rate"].isna().all()
+
+
+def test_funding_feature_rejects_unsorted_input() -> None:
+    """
+    `merge_asof` na nieposortowanym wejsciu daje BLEDNE wyniki po cichu - a to jest
+    dokladnie ten rodzaj usterki, ktory w tym projekcie produkowal falszywe liczby.
+    """
+    candles, funding = _make_candles(), _make_funding()
+    with pytest.raises(ValueError):
+        attach_funding_rate(candles.iloc[::-1], funding)
+    with pytest.raises(ValueError):
+        attach_funding_rate(candles, funding.iloc[::-1])
+
+
+def test_funding_feature_preserves_candle_index() -> None:
+    """
+    Silnik POLEGA na zachowanym oryginalnym indeksie (patrz docstring backtest/engine.py) -
+    `merge_asof` domyslnie go resetuje, wiec to jest realna pulapka, nie teoretyczna.
+    """
+    candles, funding = _make_candles(), _make_funding()
+    przyciete = candles.iloc[20:60]
+    out = attach_funding_rate(przyciete, funding)
+    assert list(out.index) == list(przyciete.index)

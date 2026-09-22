@@ -39,12 +39,15 @@ from backtest.costs import (
     gate_cost_fraction,
     total_round_trip_cost,
 )
+from agents.feature_miner import compute_all_features
 from backtest.engine import (
     DEFAULT_CANDLES_PER_DAY,
     DEFAULT_TREND_THRESHOLD,
     EXECUTION_MAKER_LIMIT,
     EXECUTION_TAKER_ONLY,
     PREREGISTERED_CONFIDENCE_QUANTILE,
+    REGIME_ALL,
+    REGIME_FEATURE_SETS,
     TRADE_COLUMNS,
     _execution_legs,
     _resolve_exit_reason,
@@ -1019,3 +1022,88 @@ def test_run_backtest_rejects_unknown_timeout_leg() -> None:
     """
     with pytest.raises(ValueError):
         run_backtest(_make_pipeline_test_ohlcv(seed=7), timeout_leg="limit", **_H3_KWARGS)
+
+
+# --- H2.1a: tryb BEZ bramki rezimu (wartownik REGIME_ALL) ---
+
+
+def test_regime_all_sentinel_cannot_collide_with_real_regime() -> None:
+    """
+    Wartownik nie moze byc nazwa, ktora `classify_regime` potrafi wyprodukowac - inaczej
+    dane mogly by przypadkiem w niego trafic i wylaczyc bramke po cichu.
+    """
+    from agents.feature_miner import classify_regime
+
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    df = compute_all_features(raw)
+    regimes = set(classify_regime(df).dropna().unique())
+    assert REGIME_ALL not in regimes
+    assert regimes <= {"trend", "range", "ambiguous"}
+
+
+def test_regime_all_evaluates_every_candle_not_just_one_regime() -> None:
+    """
+    Sedno H2.1a: bez bramki model oglada WSZYSTKIE swiece, nie podzbior.
+
+    Faza 0 udokumentowala dwukrotnie, ze bramka zagladza probe (`trend` = 0,53% swiec;
+    skrajny funding = 1,2-11,9%), a rachunek mocy odrzucil z tego powodu dwa sformulowania.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+
+    gated = run_backtest(raw, regime_feature_sets=[("range", REVERSION_FEATURES)], **kwargs)
+    ungated = run_backtest(raw, regime_feature_sets=[(REGIME_ALL, REVERSION_FEATURES)], **kwargs)
+
+    rows_gated = sum(f["n_rows_evaluated"] for f in gated["folds_summary"] if not f["skipped"])
+    rows_ungated = sum(f["n_rows_evaluated"] for f in ungated["folds_summary"] if not f["skipped"])
+    assert rows_ungated > rows_gated, "brak bramki musi dac WIECEJ ocenionych swiec"
+
+
+def test_regime_all_produces_fewer_skipped_folds() -> None:
+    """
+    Zysk uboczny, ktory ma znaczenie: bez bramki foldy sa wielokrotnie wieksze, wiec rzadziej
+    wpadaja ponizej MIN_TRAIN_ROWS. W S1 pominietych bylo 22 z 85 foldow, i walidacja wykazala,
+    ze NIE byly losowe - to systematycznie okna szybkich ruchow (Mann-Whitney p=4,9e-03).
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+
+    gated = run_backtest(raw, regime_feature_sets=[("range", REVERSION_FEATURES)], **kwargs)
+    ungated = run_backtest(raw, regime_feature_sets=[(REGIME_ALL, REVERSION_FEATURES)], **kwargs)
+
+    frac_skipped_gated = sum(f["skipped"] for f in gated["folds_summary"]) / len(
+        gated["folds_summary"]
+    )
+    frac_skipped_ungated = sum(f["skipped"] for f in ungated["folds_summary"]) / len(
+        ungated["folds_summary"]
+    )
+    assert frac_skipped_ungated <= frac_skipped_gated
+
+
+def test_regime_all_journal_records_sentinel_explicitly() -> None:
+    """Journal ma zapisywac, ze przebieg NIE byl bramkowany - audytowalnosc bez domyslow."""
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    result = run_backtest(
+        raw,
+        regime_feature_sets=[(REGIME_ALL, REVERSION_FEATURES)],
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        min_barrier_to_cost_ratio=0.0,
+    )
+    assert set(result["trades"]["regime"].unique()) == {REGIME_ALL}
+
+
+def test_regime_gated_run_reproduces_baseline_after_sentinel_added() -> None:
+    """
+    REGRESJA BASELINE'U: dodanie wartownika nie moze ruszyc zadnego dotychczasowego wyniku.
+
+    Domyslne `regime_feature_sets` (bramkowane trend+range) musi dac wynik bit-identyczny
+    z jawnym podaniem tych samych zestawow.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+    base = run_backtest(raw, **kwargs)
+    explicit = run_backtest(raw, regime_feature_sets=REGIME_FEATURE_SETS, **kwargs)
+    assert base["final_equity"] == explicit["final_equity"]
+    pd.testing.assert_frame_equal(base["trades"], explicit["trades"])

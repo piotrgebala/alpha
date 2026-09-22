@@ -154,6 +154,13 @@ DEFAULT_EXECUTION_MODEL = EXECUTION_MAKER_LIMIT
 # hiperparametrów XGBoost albo kosztów, to nie jest coś do kalibracji w walk-forward).
 MIN_TRAIN_ROWS = 30
 
+# H2.1a: wartownik dla `regime_feature_sets` oznaczający BRAK bramki reżimu — wszystkie
+# świece kandydują. Celowo nie jest to nazwa mogąca wyjść z `classify_regime`
+# ("trend"/"range"/"ambiguous"), żeby nie dało się go pomylić z prawdziwym reżimem ani
+# przypadkiem trafić w niego danymi. W journalu transakcji pojawia się w kolumnie `regime`
+# jako jawny zapis, że ten przebieg nie był bramkowany.
+REGIME_ALL = "__all__"
+
 DEFAULT_INITIAL_EQUITY = 10_000.0
 
 TRADE_COLUMNS = [
@@ -238,7 +245,14 @@ def _collect_candidate_signals(
     for regime_name, feature_columns in regime_feature_sets:
         # Świadomie NIE agents.feature_miner.split_by_regime() — patrz decyzja w
         # docstringu modułu (potrzebujemy zachowanego oryginalnego indexu).
-        regime_df = df[df["regime"] == regime_name]
+        #
+        # H2.1a: wartownik REGIME_ALL wyłącza bramkę reżimu — WSZYSTKIE świece kandydują.
+        # To nie jest „jeszcze jeden reżim", tylko brak podziału: `classify_regime` nadal
+        # liczy kolumnę `regime` (cecha zostaje w danych), ale nie steruje już tym, które
+        # świece trafiają do modelu. Powód: Faza 0 udokumentowała dwukrotnie, że bramka
+        # ZAGŁADZA PRÓBĘ (`trend` = 0,53% świec; skrajny funding = 1,2–11,9% — H2.0),
+        # a rachunek mocy przed eksperymentem odrzucił z tego powodu dwa sformułowania.
+        regime_df = df if regime_name == REGIME_ALL else df[df["regime"] == regime_name]
 
         # Zabezpieczenie: regime_df puste (np. reżim "trend" nigdy nie wystąpił w tym
         # oknie danych — STATUS.md C2.5 wyraźnie flaguje to jako realne ryzyko).

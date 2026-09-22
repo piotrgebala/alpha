@@ -120,8 +120,29 @@ regime_rule:
   ambiguous_action: "wyklucz świecę z Testu 1 i Testu 2"
   calibration_status: "wartości startowe — kalibrowane w walk-forward (Commit 4), nie finalne"
 
-# Cechy planowane, NIE dodane teraz (protokół: jedna na raz, po Fazie 0 — patrz ustalenia)
-planned_not_added:
+# Cechy ZEWNETRZNE - nie liczone z OHLCV, wiec NIE w `features:` powyzej.
+#
+# `features:` ma kontrakt: compute_*(df: OHLCV) -> Series, pilnowany testem CI
+# (agent_5_compliance/test_leakage.py::test_feature_functions_matches_registry).
+# Funding przychodzi z gieldy i ma WLASNA siatke czasowa (co 8h), wiec tego kontraktu
+# nie spelnia - zlaczenie robi agents/funding_features.py, nie feature_miner.
+external_features:
   funding_rate:
-    target: "model_reversion (Test 2) — mechanistycznie pasuje do tezy przegrzanego pozycjonowania"
-    reason_deferred: "Faza 1, dodawana metodycznie po walidacji minimalnego zestawu"
+    formula: "Ostatnia stawka funding rozliczona w momencie swiecy LUB WCZESNIEJ (merge_asof backward)"
+    source: "Binance USDS-M Futures, data/fetch_funding.py (cache: data/raw/*_funding_*.parquet)"
+    grid: "co 8h: 00:00 / 08:00 / 16:00 UTC"
+    implementation: "agents/funding_features.py::attach_funding_rate"
+    role: signal
+    test_group: range
+    leakage_risk: "SREDNIE - zlaczenie dwoch zrodel o roznych siatkach czasowych; przeciek
+      oznaczalby przypisanie swiecy stawki rozliczonej PO niej. Trzy testy w
+      agent_5_compliance/test_leakage.py: truncate-vs-extend, mutate-the-future oraz
+      dowod wprost (kazda przypisana stawka pochodzi z rozliczenia <= znacznik swiecy)."
+    added: "2026-09-22"
+    round: "H2.1 - pierwsze w projekcie zrodlo informacji spoza OHLCV (uzasadnienie:
+      runs/2026-09-22_z10-zamkniecie-fazy-0/ - waskie gardlo Fazy 0 bylo INFORMACYJNE)"
+    raw_not_normalized: "SUROWA stawka, bez z-score. XGBoost jest drzewiasty, wiec
+      niewrazliwy na monotoniczne przeskalowanie pojedynczej cechy; kazdy wybor okna
+      normalizacji bylby wolnym parametrem bez mozliwosci kalibracji (pulapka unikniecia
+      w H3). Masa punktowa 35,85% na stawce bazowej (H2.0) przestaje byc problemem, bo
+      drzewo dzieli po wartosci, nie po percentylu."
