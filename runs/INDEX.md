@@ -36,8 +36,8 @@ podsumowanie pod tabelą.
 | Z19 | 2026-09-22 | [z19-statistical-power](2026-09-22_z19-statistical-power/README.md) | Rachunek MOCY STATYSTYCZNEJ przed eksperymentem — `wald_half_width`, `min_detectable_hit_rate`, `required_trades` + tabela wykonalności per interwał/reżim | 0 (wykonalność przed eksperymentem) | **Rekomendacja z Z9 OBALONA zanim kosztowała eksperyment:** 4h `range` na 3 latach niewykonalne (foldy 21,5 świec < 30; n≤1 551 < wymagane 2 608). Jedyna wykonalna konfiguracja na 3 latach: **1h `range`** (trzeba zmierzyć 58,08% vs dzisiejsze 50,38%) |
 | Z5b | 2026-09-22 | [z5b-long-history-4h-preregistration](2026-09-22_z5b-long-history-4h-preregistration/README.md) | Pełna historia 4h (2019-09→2026-07, **14 916 świec, 6,8 roku**, zero dziur) + okna walk-forward skalowane per interwał + pomiar konfliktu spójność↔ekonomia per horyzont. **PRE-REJESTRACJA** eksperymentu (nieuruchomionego) | 0 (dane + wybór specyfikacji) | **4h przeszło z „niewykonalne" na WYKONALNE** (foldy 21,5→48,0; próba 1 551→4 076). Korekta Z19: przy V=3 **60,8% transakcji to timeouty** → próg 52,30%→**54,60%**. Wybrano V=3 (spójność = wymóg poprawności). Margines mocy 4,3×. **Kryterium sukcesu: trafność ≥ 56,15%** |
 | S1 | 2026-09-22 | [s1-single-regime-4h](2026-09-22_s1-single-regime-4h/README.md) | **NOWA SERIA:** architektura jednoreżimowa (`range`, bez `trend`) na natywnych świecach 4h, historia 6,8 roku, V=3, walk-forward 60/28/28. Konfiguracja ZAMROŻONA w pre-rejestracji Z5b przed uruchomieniem | 1 (nowa seria) | **KRYTERIUM NIESPEŁNIONE, rozstrzygająco.** n=1 037 (>925, klauzula nierozstrzygalności nie weszła). Trafność **48,60%**, CI [45,56%; 51,64%] — **górny kraniec PONIŻEJ progu 53,07%**, więc z 95% pewnością trafność jest niższa od progu opłacalności. Bramka kosztowa odrzuciła **0%** sygnałów (geometria naprawiona — nie pomogło). `mean_sharpe` −0,59 zamiast −60, co potwierdza, że patologia z C2.12 była artefaktem małych foldów. **REGUŁA STOP URUCHOMIONA** — koniec tej linii hipotezy. **Walidacja (zasada 16a, po fakcie): CAVEATS** — liczby potwierdzone co do cyfry przez 3 niezależne przeliczenia, werdykt odporny (kryterium przepada o 9,04 pp), ale „z zapasem"/„z 95% pewnością" WYCOFANE; `48,60%` to trafność na **6,95% historii** (22 pominięte foldy to systematycznie okna szybkich ruchów, p=4,9e-03; krach COVID poza zbiorem) |
-
 | S1b | 2026-09-22 | [s1b-early-stopping-naprawiony](2026-09-22_s1b-early-stopping-naprawiony/README.md) | Powtórzenie S1 po naprawie Z17b (early stopping faktycznie załącza się: 5/63 → 53/63 foldów). Konfiguracja i kryterium NIEZMIENIONE, adopcja zadeklarowana bezwarunkowo przed uruchomieniem | 0 (naprawa błędu) | **WYNIK NIEROZSTRZYGALNY** — klauzula pre-rejestrowana (`n < 925`) weszła w grę: **n spadło 1 037 → 345**, bo early stopping czyni model ostrożniejszym (abstynencja 70,9% → **90,5%**). Trafność 47,54%, CI [42,27%; 52,81%] — nieodróżnialna i od monety, i od progu. **Konsekwencja:** werdykt S1 zapadł na pipelinie z martwym early stoppingiem; po naprawie konfiguracja 4h/V=3 jest **NIETESTOWALNA** — na `n=925` brakuje **11,4 lat danych, których nie ma** (18,2 potrzebne vs 6,8 dostępne) |
+| **Z10** | 2026-09-22 | [z10-zamkniecie-fazy-0](2026-09-22_z10-zamkniecie-fazy-0/README.md) | **DECYZJA BRAMKOWA UŻYTKOWNIKA: zamknięcie Fazy 0 wynikiem negatywnym.** Liczba zbiorcza policzona od zera z `raw_output.txt` wszystkich rund (nie z syntez w write-upach) | 0 (decyzja + synteza) | **DOWÓD BRAKU, nie brak dowodu.** Pooled `p` na 3 najczystszych pomiarach (po naprawie Z17+Z21): **50,27%**, n=**7 687**, CI95 **[49,15%; 51,38%]**, z=+0,47 — nieodróżnialne od monety. **Górny kraniec CI leży 1,30 pp PONIŻEJ najniższego progu opłacalności zmierzonego w projekcie (52,69%)** przy mocy **2,8×** wymaganej próby. Obalone: specyfikacja dwureżimowa + jednoreżimowa `range`. **NIEPRZETESTOWANE (jawnie): momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni, target≠kierunek, informacja spoza OHLCV.** Walidacja (16a): **READY** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -54,6 +54,11 @@ podsumowanie pod tabelą.
   naprawie pomiar jest NIEROZSTRZYGALNY (n=345 < 925), a konfiguracja okazuje się
   **nietestowalna** przy dostępnej historii (brakuje 11,4 lat). Reguła STOP pozostaje
   aktywna — to doprecyzowanie, czego NIE wykazano, nie zaproszenie do kolejnych prób.
+
+> **ZAMKNIĘCIE FAZY 0 (Z10, decyzja użytkownika 2026-09-22).** Suma budżetu zużytego w Fazie 0:
+> **10 wariantów** (7 + 2 + 1). Oba liczniki są **ZAMKNIĘTE NA STAŁE** — żadna przyszła runda
+> nie dopisuje się do nich ani ich nie wznawia. Nowa hipoteza (H2) zakłada **osobny licznik
+> od zera** i nie dziedziczy niczego po powyższych: ani budżetu, ani progów, ani kryteriów.
 
 ## Wnioski skumulowane (stan wiedzy — aktualizowany po KAŻDEJ rundzie)
 
@@ -96,12 +101,29 @@ podsumowanie pod tabelą.
    **48,60%**, CI [45,56%; 51,64%] — górny kraniec poniżej progu 53,07%. Każda kolejna
    naprawa pomiaru zostawiała `p` niezmienione albo gorsze — ani razu lepsze: spójny obraz
    braku sygnału kierunkowego. Reguła STOP uruchomiona (licznik 1/1).
-10. **STAN PO S1: obie architektury (dwureżimowa 5m/1h/4h i jednoreżimowa 4h) wyczerpane.**
-   Rekomendacja: **Z10 opcja 1 — udokumentowane zamknięcie Fazy 0 wynikiem negatywnym**
-   (decyzja bramkowa przy użytkowniku). Ewentualne NOWE hipotezy (funding rate jako sygnał,
-   inny instrument, target inny niż kierunek — np. zmienność) wymagają własnej pre-rejestracji,
-   własnego licznika i własnej reguły STOP — żadna nie startuje bez decyzji użytkownika,
-   bo reguła STOP właśnie zadziałała.
+10. **FAZA 0 ZAMKNIĘTA wynikiem negatywnym — decyzja użytkownika 2026-09-22 (Z10).**
+   Liczba zamykająca, policzona od zera ze źródeł: pooled `p` = **50,27%** (n=7 687,
+   CI95 [49,15%; 51,38%], z=+0,47) na trzech najczystszych pomiarach projektu. **Górny kraniec
+   CI leży 1,30 pp poniżej najniższego progu opłacalności (52,69%), przy mocy 2,8× wymaganej
+   próby** — to **dowód braku**, nie brak dowodu. Obie architektury (dwureżimowa 5m/1h/4h
+   i jednoreżimowa 4h) zamknięte na stałe; obie reguły STOP pozostają aktywne.
+11. **Wąskie gardło Fazy 0 było INFORMACYJNE, nie inżynieryjne** (Z10). Projekt naprawił po
+   kolei geometrię wypłaty, model kosztów, spójność bramki z horyzontem, jakość danych,
+   przeciek w treningu i metodologię pomiaru — po każdej naprawie `p` zostawało przy 50%.
+   **Wszystkie 10 cech to transformacje ceny i wolumenu**; projekt nigdy nie sprawdził innego
+   zbioru informacyjnego. To kieruje H2: zmianą zdolną ruszyć `p` jest **nowy zbiór
+   informacyjny**, nie kolejna transformacja OHLCV ani nowa architektura nad tymi samymi cechami.
+12. **Czego Faza 0 NIE wykazała** (Z10, lista jawna — nie wolno cytować zamknięcia jako
+   dowodu w tych sprawach): **momentum** (próba zagłodzona przez samą bramkę: 0,53% świec,
+   0,49% z etykietą wewnątrz reżimu — niewykonalność pomiaru, nie brak edge'u),
+   **konfiguracja 4h po naprawie** (nietestowalna, brak 11,4 lat danych), **ETH/SOL/BNB**
+   (zero testów), **funding rate jako sygnał** (nigdy nie zaimplementowany — tylko stała
+   kosztowa), **ekonomia dźwigni/sizingu**, **target inny niż kierunek**.
+13. **NOWE hipotezy startują od zera:** własna pre-rejestracja, **własny licznik wariantów**,
+   własna reguła STOP i **rachunek mocy PRZED uruchomieniem**. Nie dziedziczą budżetu ani
+   progów po Fazie 0. Trzy wymogi przeniesione z minusów Z10, bo w Fazie 0 zawiodły: moc
+   przed eksperymentem, walidacja write-upu **przed** publikacją (zasada 16a), aktualizacja
+   `docs/rag` **w tej samej rundzie** co zmiana w kodzie (DoD punkt 6).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11 i 14)
 

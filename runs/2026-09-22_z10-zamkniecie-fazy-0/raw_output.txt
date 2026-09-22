@@ -1,0 +1,28 @@
+Komenda: py scratchpad/z10_bilans.py
+Data: 2026-09-22
+
+================================================================================
+BILANS ZAMKNIECIA FAZY 0 — trafnosc kierunku na najczystszych pomiarach
+================================================================================
+  5m  range (Z17+Z21)    n= 7043  wygranych= 3548  p= 50.38%  CI95=[49.21%; 51.54%]
+  5m  trend (Z17+Z21)    n=  299  wygranych=  152  p= 50.84%  CI95=[45.17%; 56.50%]
+  4h  range (S1b)        n=  345  wygranych=  164  p= 47.54%  CI95=[42.27%; 52.81%]
+--------------------------------------------------------------------------------
+  POOLED                 n= 7687  wygranych= 3864  p= 50.27%  CI95=[49.15%; 51.38%]
+  z wobec H0: p = 50%    z = +0.4676  -> NIEODROZNIALNE od monety
+  polowa szerokosci CI   = 1.12 pp
+
+================================================================================
+WOBEC PROGOW OPLACALNOSCI ZMIERZONYCH W PROJEKCIE
+================================================================================
+  5m  range (C2.11, taker)       prog= 82.81%  luka od pooled p = +32.54 pp
+  1h  range (Z9)                 prog= 56.77%  luka od pooled p =  +6.50 pp
+  4h  range (S1b, maker/taker)   prog= 52.69%  luka od pooled p =  +2.42 pp
+
+  Najnizszy prog oplacalnosci w projekcie: 52.69%
+  Gorny kraniec CI95 dla pooled p:         51.38%
+  >>> CI NIE SIEGA najnizszego progu (roznica +1.30 pp)
+
+  Transakcji na wykrycie p=52.69% wobec H0=50% (moc 80%): 2717
+  Zmierzono lacznie w projekcie:                                   7687
+  >>> moc WYSTARCZAJACA (2.8x wymaganej proby)
