@@ -312,3 +312,46 @@ def test_validation_split_is_chronological_tail_not_random(monkeypatch) -> None:
     n_val = 50
     assert seen["fit"] == expected[: 200 - n_val]
     assert seen["val"] == expected[200 - n_val :]
+
+
+# ---------------------------------------------------------------------------
+# Z17b: early stopping musi sie ZALACZAC takze na malych foldach
+# ---------------------------------------------------------------------------
+
+
+def test_small_fold_still_gets_early_stopping(monkeypatch) -> None:
+    """
+    REGRESJA na wade wykryta w walidacji S1: przy n=105 i frac=0.2 stara formula dawala
+    n_val=21 < MIN_VALIDATION_ROWS=30 i CALKOWICIE wylaczala early stopping. Nowa bierze
+    max(30, 21) = 30, zostawiajac 75 wierszy na trening — wiec early stopping DZIALA.
+    """
+    captured = _spy_xgb_train(monkeypatch)
+    train_regime_model(
+        _labelled_frame(105, seed=1), _labelled_frame(50, seed=2),
+        FEATURE_COLUMNS, validation_fraction=0.2, embargo_candles=0,
+    )
+    assert captured["eval_rows"] == [MIN_VALIDATION_ROWS]
+    assert captured["fit_rows"] == 105 - MIN_VALIDATION_ROWS
+    assert captured["early_stopping_rounds"] is not None
+
+
+def test_large_fold_unaffected_by_minimum(monkeypatch) -> None:
+    """Na duzych foldach max() jest operacja pusta — wyniki na 5m musza zostac bez zmian."""
+    captured = _spy_xgb_train(monkeypatch)
+    train_regime_model(
+        _labelled_frame(1000, seed=1), _labelled_frame(200, seed=2),
+        FEATURE_COLUMNS, validation_fraction=0.2, embargo_candles=0,
+    )
+    assert captured["eval_rows"] == [200]  # round(1000*0.2), nie MIN_VALIDATION_ROWS
+    assert captured["fit_rows"] == 800
+
+
+def test_fold_too_small_for_any_split_still_skips_early_stopping(monkeypatch) -> None:
+    """Granica pozostaje: gdy po wydzieleniu walidacji nie zostaje dosc na trening."""
+    captured = _spy_xgb_train(monkeypatch)
+    train_regime_model(
+        _labelled_frame(MIN_VALIDATION_ROWS + 5, seed=1), _labelled_frame(50, seed=2),
+        FEATURE_COLUMNS, validation_fraction=0.2,
+    )
+    assert captured["eval_rows"] == []
+    assert captured["early_stopping_rounds"] is None

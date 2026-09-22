@@ -1,0 +1,25 @@
+# Surowy output — S1b (powtorzenie S1 po naprawie Z17b)
+# Komenda: przebieg run_and_summarize z konfiguracja S1, pipeline po naprawie.
+
+==========================================================================================
+S1b — ten sam eksperyment po naprawie Z17b (early stopping faktycznie zalacza sie)
+==========================================================================================
+foldy aktywne z early stoppingiem: 53/63 (84.1%)
+  [przed naprawa bylo 5/63 = 7,9%]
+abstynencja modelu: 3297 z 3642 ocenionych swiec
+
+{'classification': 'NO-GO', 'n_valid_folds': 18, 'n_total_folds': 85, 'fraction_above_threshold': 0.2777777777777778, 'fraction_le_zero': 0.6111111111111112, 'fraction_positive_sign': 0.3888888888888889, 'mean_sharpe': -0.811894939800959}
+regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat      n_eff  t_stat_neff
+ range       345    -0.000167    0.002354          -0.07084 -1.315802 207.606603    -1.020709
+regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+ range       345  0.475362 -0.915249 0.422666 0.528059            0.6          0.543478          0.429952     0.014276  0.000767      0.526862 -0.051499
+
+==========================================================================================
+WERDYKT wobec PRE-REJESTROWANEGO kryterium (Z5b, niezmienione)
+==========================================================================================
+  n                     = 345
+  trafnosc              = 47.54%
+  95% CI                = [42.27%; 52.81%]
+  prog pre-rejestrowany = 54.60%
+  trzeba bylo zmierzyc  = 59.88%
+  >>> NIEROZSTRZYGALNE: n=345 < 925

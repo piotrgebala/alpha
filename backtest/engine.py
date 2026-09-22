@@ -275,6 +275,7 @@ def _collect_candidate_signals(
                         "n_signals_confidence_gated": 0,
                         "n_signals_no_direction": 0,
                         "n_rows_evaluated": 0,
+                        "early_stopping_used": None,
                         "confidence_threshold": None,
                         "best_iteration": None,
                         "seed": seed,
@@ -372,6 +373,10 @@ def _collect_candidate_signals(
                     "n_signals_confidence_gated": n_signals_confidence_gated,
                     "n_signals_no_direction": n_signals_no_direction,
                     "n_rows_evaluated": n_rows_evaluated,
+                    # Z17b: bez tego pola fakt, ze early stopping sie nie zalaczyl, byl
+                    # NIEWIDOCZNY w raporcie (wykryty dopiero walidacja S1). `best_iteration`
+                    # istnieje TYLKO wtedy, gdy early stopping faktycznie zadzialal.
+                    "early_stopping_used": getattr(booster, "best_iteration", None) is not None,
                     "confidence_threshold": confidence_threshold,
                     "best_iteration": best_iteration_or_last(booster),
                     "seed": seed,
