@@ -1,0 +1,37 @@
+================================================================================================
+T1 SONDA — funding jako UŁAMEK NOMINAŁU, trzy modele na tej samej populacji
+================================================================================================
+  transakcji: 8033  |  srednie trzymanie: 10.7h (2.66 swiecy)
+  rozliczen funding w oknie: srednio 1.33, rozklad {0: np.int64(433), 1: np.int64(4533), 2: np.int64(3067)}
+  udzial long: 49.96%  short: 50.04%
+  stala w modelu: 0.0001  |  realna srednia stawka: 0.00010705 | mediana: 0.00010000
+
+                               wariant |      srednia |      mediana |    |srednia|
+  --------------------------------------------------------------------------------
+   (0) stala, ulamkowo  [MODEL OBECNY] |     0.00002% |    -0.00500% |     0.01331%
+                  (1) realne, ulamkowo |     0.00056% |     0.00025% |     0.01627%
+     (2) realne, dyskretnie [POPRAWNE] |     0.00063% |     0.00000% |     0.01628%
+
+================================================================================================
+WPLYW NA CALKOWITY KOSZT I PROG OPLACALNOSCI
+================================================================================================
+  bariera srednia B = 1.3824% nominalu
+
+                               wariant |    koszt C |  break-even |   delta BE
+  ----------------------------------------------------------------------------
+   (0) stala, ulamkowo  [MODEL OBECNY] |   0.08108% |     52.933% |    +0.000 pp
+                  (1) realne, ulamkowo |   0.08161% |     52.952% |    +0.019 pp
+     (2) realne, dyskretnie [POPRAWNE] |   0.08168% |     52.954% |    +0.022 pp
+
+================================================================================================
+KONTROLA PREMISY T1 zapisanej w STATUS.md
+================================================================================================
+  STATUS.md twierdzi: 'Zmierzony sredni funding to -0,00243% (przychod!), a model
+  zaklada +0,01% kosztu'.
+
+  -0,00243% to SIGNOWANY koszt per transakcja, policzony JUZ ZE STALA 0,0001
+  i z mieszanka kierunkow. Tutaj ten sam rachunek daje 0.00002%.
+  +0,01% to STAWKA za okres 8h, nie koszt per transakcja.
+  To sa DWIE ROZNE WIELKOSCI — porownywanie ich jest bledem kategorii.
+
+  Wlasciwe porownanie stawek: model 0.000100 vs realna srednia 0.000107 (+7.1%), mediana 0.000100.
