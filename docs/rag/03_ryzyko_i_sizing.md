@@ -333,7 +333,7 @@ rzeczy naraz i porównanie A0/A1 nie mówiłoby o wagach klas.
    nie ma częstości do odwrócenia. Błąd `KeyError` na tej ścieżce **wystąpił realnie** przy
    adopcji (fold uczący wyłącznie z timeoutami) — patrz „Usterki wykryte przy adopcji" niżej.
 
-4. **OTWARTE, NIEZMIERZONE — najważniejsze zastrzeżenie tego ADR.** A1 schodzi **poniżej**
+4. **~~OTWARTE, NIEZMIERZONE~~ → ZMIERZONE w K3 (2026-09-22), patrz dopisek pod listą.** A1 schodzi **poniżej**
    podłogi abstynencji: 43,6% wobec 66,5% udziału timeoutów. Model otwiera więc pozycje również
    na świecach, które naprawdę kończą się niczym — czyli robi, w mniejszej skali, to samo, co
    dyskwalifikuje A2. Na wyroczni to nie szkodzi (sygnał jest idealnie zgodny z targetem), ale
@@ -344,3 +344,25 @@ rzeczy naraz i porównanie A0/A1 nie mówiłoby o wagach klas.
 5. **Co to NIE znaczy.** Adopcja A1 nie sprawia, że jakakolwiek hipoteza tradingowa zaczyna
    działać. Zmienia wyłącznie rozdzielczość przyrządu. Warunek z pre-rejestracji K2 pozostaje
    w mocy: **żadna liczba z K1/K2 nie może być cytowana jako wynik hipotezy tradingowej.**
+
+### Dopisek po K3 (2026-09-22) — konsekwencja 4 jest ZMIERZONA
+
+`runs/2026-09-22_k3-mierzalnosc-po-a1/` sprawdziło zastrzeżenie z punktu 4 na realnych cechach.
+Wynik **potwierdza je w obie strony**, więc przestaje być ryzykiem, a staje się znaną
+właściwością:
+
+- **Działa tam, gdzie miało.** Abstynencja spada na realnych cechach nawet mocniej niż na
+  wyroczni: 90,53% → 46,32% (z bramką reżimu) i 99,76% → 43,84% (bez niej). Próba rośnie
+  z 345 do 1 955 i z 35 do 8 033, a rozdzielczość przyrządu z 5,28/16,56 pp do 2,22/1,09 pp.
+- **Cena jest realna i zmierzona.** Model traci **selektywność**: przed adopcją brał świece
+  kończące się na barierze (37,1% timeoutów wobec 66,5% w populacji), po adopcji bierze po
+  równo z populacją (65,11%). Bariera na transakcję maleje, więc próg opłacalności rośnie
+  o ~0,5 pp (52,43% → 52,93%).
+- **Czego nadal nie wiemy:** czy utracona selektywność niosła informację. K3 z założenia nie
+  patrzy na trafność (obie konfiguracje należą do serii zamkniętych), więc pytanie zostaje
+  otwarte — ale jest teraz **konkretne i wykonalne** jako osobna runda na nowej hipotezie.
+
+**Co to zmienia w praktyce:** wynik rundy prowadzonej na A1 należy czytać ze świadomością, że
+próba jest mniej wyselekcjonowana niż przed adopcją, a poprzeczka opłacalności odpowiednio
+wyższa. To nie jest powód, żeby A1 wycofać — to powód, żeby nie porównywać liczb sprzed
+i po adopcji bez tej poprawki.
