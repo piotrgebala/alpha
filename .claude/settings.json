@@ -9,5 +9,8 @@
       "Bash(git merge --no-ff task/C2.11-edge-instrumentation -m 'Merge Commit 2.11: instrumentacja edge'\\\\''u - rozbicie werdyktu na \\(2p-1\\)*B vs C *)",
       "Bash(git push *)"
     ]
+  },
+  "enabledPlugins": {
+    "code-review@claude-plugins-official": true
   }
 }
