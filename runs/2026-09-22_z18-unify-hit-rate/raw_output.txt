@@ -1,0 +1,23 @@
+# Surowy output — 2026-09-22_z18-unify-hit-rate
+# Wyekstrahowany z README.md 2026-09-22 (CLAUDE.md zasada 11: raw_output.txt
+# jest obowiazkowy dla nowych rund). Tresc bez zmian.
+
+[data] 315648 świec: 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+[data] brak dziur.
+=== Rozbicie trafnosci per typ wyjscia (Z18) ===
+regime  n_trades  hit_rate   z_stat  share_timeout  hit_rate_barrier  hit_rate_timeout  break_even_p    margin
+ range      7043  0.503763 0.631534       0.114156          0.505049          0.493781      0.666961 -0.163199
+ trend       299  0.508361 0.289157       0.147157          0.501961          0.545455      0.580843 -0.072482
+
+=== Liczebnosci per exit_reason ===
+regime  exit_reason
+range   sl             3088
+        timeout         804
+        tp             3151
+trend   sl              127
+        timeout          44
+        tp              128
+
+=== Ile bylaby trafnosc wg BLEDNEJ definicji (dir*label>0, czyli tylko tp) ===
+range  kanoniczna=50.38%  naiwna(tylko tp)=44.74%  roznica=+5.64 pp
+trend  kanoniczna=50.84%  naiwna(tylko tp)=42.81%  roznica=+8.03 pp

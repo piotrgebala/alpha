@@ -50,7 +50,7 @@ rozstrzygający.**
 | trafność na barierach / timeoutach | 51,28% / 46,71% |
 | sygnały odrzucone przez bramkę kosztową | **0** |
 
-**Kryterium niespełnione, i to nie „o włos".** Górny kraniec przedziału ufności (51,64%)
+**Kryterium niespełnione.** (⚠️ Pierwotnie stało tu „i to nie »o włos«” — sformułowanie WYCOFANE, patrz sekcja „Walidacja write-upu” niżej.) Górny kraniec przedziału ufności (51,64%)
 leży **poniżej** zmierzonego progu opłacalności (53,07%). Można więc powiedzieć z 95%
 pewnością, że trafność jest niższa od progu — to mocniejsze stwierdzenie niż „nie udało się
 wykazać", które padało w poprzednich rundach.
@@ -94,7 +94,7 @@ wykazać", które padało w poprzednich rundach.
 
 Architektura jednoreżimowa na 4h ze spójnym horyzontem etykiety **nie wykazuje edge'u
 kierunkowego**. Trafność 48,60% przy 95% CI [45,56%; 51,64%] i progu opłacalności 53,07%
-oznacza, że hipoteza jest odrzucona z zapasem, a nie na granicy.
+oznacza, że hipoteza jest odrzucona. (⚠️ Pierwotnie: „z zapasem, a nie na granicy" — WYCOFANE; przy korekcie o `n_eff` i progu z samych barier margines dotyka zera. Odporne jest kryterium pre-rejestrowane: przepada o 9,04 pp. Patrz „Walidacja write-upu".)
 
 Ta runda usunęła **wszystkie** znane wady pomiaru naraz:
 
@@ -130,6 +130,108 @@ jako kandydata na Fazę 1), inny instrument, albo inny target niż kierunek (np.
 Każda z nich wymaga własnej pre-rejestracji, własnego licznika i własnej reguły STOP —
 i żadnej z nich nie uruchamiam bez wyraźnej decyzji użytkownika, bo reguła STOP właśnie
 zadziałała.
+
+## Walidacja write-upu (CLAUDE.md zasada 16a) — werdykt: **CAVEATS**
+
+> **Dopisane 2026-09-22, PO publikacji rundy.** To jest naruszenie zasady 16(a), która wymaga
+> walidacji PRZED publikacją write-upu. Runda została opublikowana i zmergowana bez tej bramki;
+> walidację uruchomiono dopiero na żądanie użytkownika — i natychmiast wyłapała przesadzone
+> sformułowania. Odnotowuję to jako błąd procesu, nie tylko jako uzupełnienie.
+>
+> Zakres walidacji: 3 niezależne przeliczenia kluczowej liczby + 3 audyty wykluczeń
+> („kogo NIE ma w zbiorze") + synteza. Pełne wyniki w `raw_output.txt`, sekcja „Walidacja".
+
+### Co się potwierdziło — wszystko, co rachunkowe
+
+Trzy niezależne ścieżki (z journalu bez `compute_hit_rate`; z definicji `dir·(exit−entry)`;
+rekonstrukcja `exit_price` od zera z surowych świec) dały **504/1 037 = 48,6017%** co do cyfry.
+Rekonstrukcja od zera: 0 rozbieżności, max |diff| = 1,5e-11. Identycznie odtworzyły się
+`z = −0,900552`, CI [45,5597%; 51,6438%], `break_even = 0,530736`, `margin = −0,044719`,
+`t = −2,244801`, `n_eff = 620,00031`, foldy 85/63/22, `mean_sharpe = −0,5894676087080075`.
+
+**Żadna liczba w tym write-upie nie jest błędna rachunkowo. Werdykt jest odporny.**
+
+### Co było przesadzone — korekty do tekstu wyżej
+
+| sformułowanie | problem | korekta |
+|---|---|---|
+| „odrzucona **z zapasem**, a nie na granicy" | Zapas 1,43 pp znika przy złożeniu dwóch zastrzeżeń, które sam zgłaszam: CI skorygowane o `n_eff=620` → [44,67%; 52,54%], a próg liczony z samych barier = 51,90%. Block bootstrap marginesu (blok 5): CI95 [−8,88; +0,92] pp, **P(margin>0) = 5,3%** | **Wycofuję „z zapasem".** Odporne jest co innego: dolny kraniec CI **45,56%** wobec pre-rejestrowanych **>54,60%** — kryterium przepada o **9,04 pp**, niezależnie od estymatora progu i korekty na autokorelację |
+| „z 95% pewnością trafność jest niższa od progu" | Porównuje zmienną losową (CI dla `p`) z **punktową** estymatą progu, policzoną z **tych samych** 1 037 transakcji, w dodatku **post hoc** | Wniosek opieram na progu **pre-rejestrowanym** (54,60%) — ten sam werdykt, bez wielkości dobranej po obejrzeniu danych |
+| break-even **53,07%** jako „próg" | Wzór `0,5·(1+C/B)` zakłada symetryczną wypłatę ±B — prawdziwą tylko dla **41,4%** transakcji. `barrier_pct = 0,012609` to mieszanka (bariery 2,036% vs timeouty 0,714%), której nie odpowiada żadna realna wypłata. Kontrola: `(2p−1)·B = −0,000353` wobec faktycznego `E[gross/nominał] = −0,000243` — wzór myli się o **45%** | Traktować jako **miarę diagnostyczną, nie próg**. Poprawny przy asymetrii: `(L+C)/(W+L) = 52,64%`. Spektrum legalnych estymatorów: **51,75%–54,60%** |
+| „trzeba było zmierzyć 57,64%" | Stoi pod wierszem „break-even (zmierzony) 53,07%", ale liczone jest z progu **pre-rejestrowanego** 54,60% (z progu zmierzonego byłoby 56,12%) | Doprecyzowane w tabeli wyżej |
+| „NO-GO (59 ważnych foldów z 85)" obok „22 pominięte z 85" | Brakuje stopnia pośredniego — czytelnik wyprowadza 85−59=26 | **85 = 22 pominięte + 63 aktywne**; z 63 aktywnych **4 (foldy 8, 9, 21, 41) dały 0 transakcji** → 59 z policzalnym Sharpe'em |
+| `hit_rate_barrier = 51,28%` | **Miara tautologiczna.** `_resolve_exit_price` rekonstruuje cenę wyjścia z etykiety, a `_resolve_exit_reason` nadaje `tp`/`sl` z **tej samej** etykiety → `tp` ma `gross_pnl>0` w 100%, `sl` w 0%, więc 220/429 = dokładnie udział `tp`. Nie niesie informacji o wykonaniu ani geometrii | Jedyne **608 transakcji z realną ceną rynkową** na wyjściu to timeouty, gdzie `p = 46,71%` |
+| „to lekko ujemny edge" | Brutto: `E[gross/nominał] = −0,000243`, **`t = −0,48` — nieodróżnialne od zera** | Istotność wyniku netto (`t = −2,24`) robią **koszty**, nie odwrócony sygnał |
+
+### Kogo NIE ma w zbiorze — kaskada 14 916 → 1 037
+
+Bilans domyka się **co do sztuki**, potwierdzony trzykrotnie niezależnie:
+
+| etap | odpadło | zostało | kierunek obciążenia `p` |
+|---|---|---|---|
+| świece 4h w pliku | — | 14 916 | — |
+| reżim `ambiguous` (w tym 133 warmup `atr_pctrank_20d`) | 10 619 | 4 297 | **zawyża** (wycina szybkie ruchy) |
+| reżim `trend` — poza architekturą S1 | 85 | 4 212 | neutralne |
+| `range` poza jakimkolwiek oknem testowym (106 rozbieg + 39 ogon) | 145 | 4 067 | neutralne |
+| `range` w oknach **22 pominiętych foldów** (wszystkie przez `n_test_valid < 30`) | 425 | 3 642 | **zawyża** |
+| NaN w cechach / etykiecie | 0 / 0 | 3 642 | kanały puste |
+| **`signal_direction == 0`** — model odmawia kierunku | **2 582 (70,9%)** | 1 060 | neutralne |
+| bramka pewności (wyłączona) / bramka kosztowa | 0 / 0 | 1 060 | twierdzenie „0% odrzuceń" potwierdzone |
+| **kill-switch** | **23** | **1 037** | **zawyża o +0,30 pp** |
+
+Embargo (V=3) nie występuje w kaskadzie — tnie wyłącznie ogon treningu (189 wierszy), zero transakcji.
+
+**Różnica 1 060 vs 1 037, której write-up nie wyjaśniał:** 23 sygnały stłumione przez kill-switch,
+wszystkie z **jednego foldu (75)** i jednego tygodnia **2025-09-08 → 2025-09-15 UTC** (drawdown
+15,14% > progu 15%; wyjście przez 7-dniowy re-arm, nie przez odbicie equity). W journalu mają
+`position_size=0`, `gross_pnl=0`, `exit_price=NaN`. Odtworzone z etykiet: **8/23 = 34,78%** —
+grupa gorsza od reszty, więc ich wykluczenie **zawyża** raportowane `p` o +0,30 pp.
+Słowo „kill-switch" nie padło w tym write-upie ani razu. To luka dokumentacyjna.
+
+### Na jakiej populacji ten wynik obowiązuje
+
+Najważniejsze ustalenie audytu, nieobecne w pierwotnym write-upie: **22 pominięte foldy nie są
+losowe.** Mediana |zwrotu okna| **23,34%** wobec **8,01%** w foldach aktywnych (Mann-Whitney
+p = 4,9e-03), mediana udziału świec `range` 13,10% vs 32,14% (p = 3,7e-12), przy **braku** różnicy
+w zmienności (p = 0,33). Selekcja idzie więc po **szybkości ruchu kierunkowego**, nie po zmienności.
+
+Wypadają: krach COVID (90 dni bez ani jednej transakcji, 2019-12-29 → 2020-03-28), halving 05/2020,
+wybicie 11/2020, krach 05/2021, rajd po spot ETF 02–03/2024, rajd powyborczy 11/2024. **Cztery
+największe ruchy 12-godzinne w całej historii (−23,9%, −21,1%, −20,2%, −18,4%, marzec 2020) mają
+reżim `ambiguous` — żaden nie jest w zbiorze.**
+
+> **`48,60%` to trafność na 6,95% historii, 12,67% czasu w pozycji i 13,28% sumy |ruchu| rynku.**
+
+Uczciwie w drugą stronę: hipoteza „wypadła bessa 2022" jest **sfalsyfikowana** — 2022 to
+najlepiej reprezentowany rok (1 pominięty fold na 13).
+
+### Wada pipeline'u wykryta przy okazji
+
+**Early stopping nie załącza się na 4h.** `train_regime_model` liczy `n_val = round(len(train)*0,2)`
+i wymaga `n_val >= MIN_VALIDATION_ROWS = 30`. Na 4h mediana `n_val` to **21**, więc **58 z 63
+foldów (92,1%) trenowało się BEZ early stoppingu**, do pełnych 200 rund boostingu. Zweryfikowane
+niezależnym przebiegiem z instrumentacją. Naprawa Z17+Z21 formalnie jest w kodzie, ale na tej
+konfiguracji jest **martwa** — modele nie są wcześnie zatrzymywane, co działa na niekorzyść
+jakości modelu (przeuczenie), a więc konserwatywnie wobec hipotezy.
+
+### Przegląd diffu rundy naprawczej (zasada 16c)
+
+Zmiany naniesione na tę walidację: 3 pliki kodu (`engine.py` — licznik abstynencji modelu
++ bilans lejka; `metrics.py` — oznaczenie `hit_rate_barrier` jako tautologicznego, ujednolicona
+stała `Z_TWO_SIDED_95`, udokumentowane ograniczenie symetrii ±B; `ml_optimizer.py` — ostrzeżenie
+o martwym early stoppingu przy małych foldach), 2 nowe testy pilnujące, że bilans lejka domyka
+się w każdym foldzie, oraz `raw_output.txt` dla 6 rund, w których brakowało go wbrew zasadzie 11.
+**Werdykt: zmiany są addytywne (żadna nie dotyka logiki decyzyjnej pipeline'u), 248/248 testów
+przechodzi, werdykty żadnej z zamkniętych rund nie ulegają zmianie.**
+
+### Werdykt: CAVEATS
+
+Liczby poprawne, werdykt odporny na każdą pojedynczą i łączną korektę (kryterium przepada
+o 9,04 pp), ale **retoryka była przesadzona, a zakres wniosku niedoraportowany**. Powyższe
+korekty są wiążące; zdania „z zapasem" i „z 95% pewnością" w sekcjach wyżej należy czytać
+przez pryzmat tej sekcji.
+
+---
 
 ## Pełny surowy output
 

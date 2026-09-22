@@ -79,6 +79,12 @@ EARLY_STOPPING_ROUNDS = 20
 DEFAULT_VALIDATION_FRACTION = 0.2
 MIN_VALIDATION_ROWS = 30  # spójne z backtest.engine.MIN_TRAIN_ROWS
 
+# UWAGA (walidacja S1, 2026-09-22): przy małych foldach ten próg powoduje, że early stopping
+# NIE ZAŁĄCZA SIĘ WCALE. Na 4h (okno testowe 28 dni) mediana n_val wyniosła 21, więc 58 z 63
+# foldów (92,1%) trenowało się bez early stoppingu, do pełnych num_boost_round. Naprawa Z17+Z21
+# jest wtedy formalnie obecna, ale martwa. `folds_summary` nie raportuje tego faktu — jeśli
+# runda zależy od early stoppingu, policz udział foldów z walidacją PRZED interpretacją wyniku.
+
 
 def best_iteration_or_last(booster: xgb.Booster, num_boost_round: int = NUM_BOOST_ROUND) -> int:
     """

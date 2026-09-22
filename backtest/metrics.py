@@ -50,6 +50,11 @@ DAYS_PER_YEAR = 365.25
 # szumem, więc raportujemy NaN zamiast liczby udającej informację. Próg metodologiczny
 # raportowania, NIE parametr strategii — świadomie poza config/settings.yaml (jak
 # MIN_TRAIN_ROWS w backtest/engine.py i progi klasyfikacji niżej).
+# Kwantyle rozkładu normalnego — wpisane jako stałe, bo repo nie ma scipy w zależnościach,
+# a to jedyne dwie wartości, których potrzebujemy. z dla 95% dwustronnego i 80% mocy.
+Z_TWO_SIDED_95 = 1.959964
+Z_POWER_80 = 0.841621
+
 MIN_TRADES_FOR_N_EFF = 10
 
 # Commit 2.11: minimalna liczba transakcji, przy której raportujemy z-stat i przedział
@@ -327,6 +332,16 @@ def break_even_hit_rate(cost_fraction: float, barrier_fraction: float) -> float:
     zgadzał się z etykietą. Stąd cały werdykt GO/NO-GO redukuje się do nierówności
     (2p - 1) * B > C — a ta funkcja podaje jej punkt równowagi.
 
+    OGRANICZENIE (walidacja S1, 2026-09-22): wzór zakłada wypłatę SYMETRYCZNĄ ±B. To jest
+    prawda wyłącznie dla wyjść po barierze poziomej. Dla wyjść po barierze PIONOWEJ (timeout)
+    ruch jest dowolny — w S1 dotyczyło to 58,6% transakcji, a średnie |ruch| wynosiło tam
+    0,714% wobec 2,036% na barierach. Gdy timeouty stanowią istotną część populacji, `B`
+    uśrednione po wszystkich transakcjach nie odpowiada żadnej realnej wypłacie, a wynik tej
+    funkcji jest MIARĄ DIAGNOSTYCZNĄ (rząd wielkości, kierunek zmian między rundami), NIE
+    progiem opłacalności. Próg uwzględniający asymetrię: (L + C) / (W + L), gdzie W/L to
+    średnia wygrana/przegrana. Dlatego ta funkcja świadomie NIE wchodzi do kryteriów
+    klasyfikacji z docs/rag/03.
+
     Zwraca NaN dla niedodatniej bariery (brak sensownego punktu odniesienia) — celowo
     NIE +inf, spójnie z konwencją NaN w compute_sharpe_ratio/compute_t_stat.
     """
@@ -384,8 +399,10 @@ def compute_hit_rate(trades: pd.DataFrame) -> dict:
 
     # z wobec H0: p=0.5 -> se pod hipotezą zerową = sqrt(0.25/n), NIE sqrt(p(1-p)/n).
     z_stat = float((hit_rate - 0.5) / np.sqrt(0.25 / n))
-    # CI Walda wokół ESTYMATY -> tu już se z obserwowanego p.
-    half_width = 1.96 * np.sqrt(hit_rate * (1.0 - hit_rate) / n)
+    # CI Walda wokół ESTYMATY -> tu już se z obserwowanego p. Stała wspólna z
+    # wald_half_width/min_detectable_hit_rate (walidacja S1: były dwie różne stałe
+    # na ten sam kwantyl w jednym module).
+    half_width = Z_TWO_SIDED_95 * np.sqrt(hit_rate * (1.0 - hit_rate) / n)
     return {
         "n_trades": n,
         "hit_rate": hit_rate,
@@ -408,7 +425,13 @@ def summarize_edge_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
     Kolumny per regime:
         n_trades, hit_rate, ci_low, ci_high, z_stat  - trafność kierunku (compute_hit_rate)
         share_timeout      - udział wyjść po barierze PIONOWEJ (label==0)
-        hit_rate_barrier   - trafność na wyjściach po barierze poziomej (tp/sl)
+        hit_rate_barrier   - UWAGA, MIARA TAUTOLOGICZNA (walidacja S1, 2026-09-22): dla wyjść
+                             tp/sl `engine._resolve_exit_price` REKONSTRUUJE cenę wyjścia
+                             z etykiety, a `_resolve_exit_reason` nadaje typ z TEJ SAMEJ
+                             etykiety, więc każde `tp` ma gross_pnl>0, a każde `sl` gross_pnl<0.
+                             Ta kolumna zawsze równa się udziałowi `tp` wśród wyjść barierowych
+                             i NIE niesie informacji o wykonaniu ani geometrii wypłaty.
+                             Niezależną informację niosą wyłącznie timeouty (hit_rate_timeout)
         hit_rate_timeout   - trafność na timeoutach; różnica wobec hit_rate_barrier
                              pokazuje, czy edge (jeśli jest) siedzi w trafieniach bariery
                              czy w ruchu do zamknięcia
@@ -499,10 +522,6 @@ def summarize_by_regime(fold_metrics: pd.DataFrame) -> pd.DataFrame:
 
 # --- Z19 (Backlog II): moc statystyczna pomiaru trafności ---
 
-# Kwantyle rozkładu normalnego — wpisane jako stałe, bo repo nie ma scipy w zależnościach,
-# a to jedyne dwie wartości, których potrzebujemy. z dla 95% dwustronnego i 80% mocy.
-Z_TWO_SIDED_95 = 1.959964
-Z_POWER_80 = 0.841621
 
 
 def wald_half_width(n_trades: int, z: float = Z_TWO_SIDED_95) -> float:

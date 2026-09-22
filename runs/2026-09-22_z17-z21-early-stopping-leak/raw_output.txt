@@ -1,0 +1,27 @@
+# Surowy output — 2026-09-22_z17-z21-early-stopping-leak
+# Wyekstrahowany z README.md 2026-09-22 (CLAUDE.md zasada 11: raw_output.txt
+# jest obowiazkowy dla nowych rund). Tresc bez zmian.
+
+[data] 315648 świec: 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+[data] brak dziur.
+==========================================================================================
+PRZED Z17 (early stopping na OOS, bez embargo)
+==========================================================================================
+{'classification': 'NO-GO', 'n_valid_folds': 54, 'n_total_folds': 144, 'fraction_above_threshold': 0.09259259259259259, 'fraction_le_zero': 0.8703703703703703, 'fraction_positive_sign': 0.12962962962962962, 'mean_sharpe': -59.639681477704926}
+regime  n_trades  hit_rate    z_stat   ci_low  ci_high  barrier_pct  cost_pct  break_even_p    margin
+ range      7155  0.510692  1.808784 0.499109 0.522275     0.002031  0.000674      0.665873 -0.155181
+ trend       355  0.498592 -0.053074 0.446579 0.550604     0.003834  0.000685      0.589387 -0.090796
+regime  n_trades  mean_return  std_return  sharpe_per_trade     t_stat       n_eff  t_stat_neff
+ range      7155    -0.000686    0.002500         -0.274276 -23.200278 2348.959930   -13.293097
+ trend       355    -0.000432    0.002743         -0.157399  -2.965616  123.418175    -1.748600
+
+==========================================================================================
+PO Z17+Z21 (walidacja z ogona train, embargo=12)
+==========================================================================================
+{'classification': 'NO-GO', 'n_valid_folds': 54, 'n_total_folds': 144, 'fraction_above_threshold': 0.09259259259259259, 'fraction_le_zero': 0.9074074074074074, 'fraction_positive_sign': 0.09259259259259259, 'mean_sharpe': -78.81612177344358}
+regime  n_trades  hit_rate   z_stat   ci_low  ci_high  barrier_pct  cost_pct  break_even_p    margin
+ range      7043  0.503763 0.631534 0.492086 0.515440     0.002024  0.000676      0.666961 -0.163199
+ trend       299  0.508361 0.289157 0.451694 0.565028     0.004246  0.000687      0.580843 -0.072482
+regime  n_trades  mean_return  std_return  sharpe_per_trade     t_stat       n_eff  t_stat_neff
+ range      7043    -0.000726    0.002530         -0.286996 -24.085472 2293.839060   -13.745413
+ trend       299    -0.000517    0.003934         -0.131467  -2.273270  221.680993    -1.957401

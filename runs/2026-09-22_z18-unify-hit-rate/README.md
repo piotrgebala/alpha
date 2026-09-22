@@ -82,6 +82,28 @@ Nie ma podzbioru transakcji — ani trafień bariery, ani timeoutów — w któr
 lepszy. To zamyka przypuszczenie, że `p` jest zaniżone przez mieszanie różnych typów
 wypłat, i wzmacnia wniosek z Z17: po usunięciu przecieku model nie odróżnia kierunku.
 
+## SPROSTOWANIE (walidacja S1, 2026-09-22) — wniosek o składowych WYCOFANY
+
+> Kluczowy wniosek tej rundy — **„trafność na samych barierach poziomych to 50,50%, więc edge
+> nie chowa się w żadnej składowej"** — opierał się na mierze, która **nie mogła pokazać nic
+> innego**.
+>
+> `hit_rate_barrier` jest **tautologiczne**: `backtest/engine.py::_resolve_exit_price`
+> rekonstruuje cenę wyjścia z etykiety (`entry ± ATR_MULTIPLIER × atr_14`), a
+> `_resolve_exit_reason` nadaje `tp`/`sl` z **tej samej** etykiety. Skutek: każde `tp` ma
+> `gross_pnl > 0`, każde `sl` ma `gross_pnl < 0`, więc `hit_rate_barrier` ≡ udział `tp`
+> wśród wyjść barierowych. Zweryfikowane na S1: 0,512821 × 429 = **dokładnie 220 = liczba `tp`**.
+>
+> Miara opisuje **zgodność kierunku z etykietą**, a nie jakość wykonania czy geometrię wypłaty.
+> Jedyne transakcje z **realną ceną rynkową** na wyjściu to **timeouty**.
+>
+> **Co pozostaje w mocy:** rozjazd definicji `p` (naiwna zaniżała o +5,6/+8,0 pp) — to ustalenie
+> jest niezależne od powyższego i nadal obowiązuje. **Co wypada:** twierdzenie o braku edge'u
+> „w każdej składowej". Na timeoutach (608 transakcji w S1, jedyna składowa z niezależną
+> informacją) trafność wynosi 46,71%.
+
+---
+
 ## Rekomendacja
 
 Zadania naprawcze z Backlog II są w tym momencie wyczerpane w części, która mogła

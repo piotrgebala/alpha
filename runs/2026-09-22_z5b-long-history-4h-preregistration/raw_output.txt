@@ -1,0 +1,71 @@
+# Surowy output — 2026-09-22_z5b-long-history-4h-preregistration
+# Wyekstrahowany z README.md 2026-09-22 (CLAUDE.md zasada 11: raw_output.txt
+# jest obowiazkowy dla nowych rund). Tresc bez zmian.
+
+--- wykonalnosc po wydluzeniu historii ---
+====================================================================================================
+Z19 — czy eksperyment na grubszym interwale może cokolwiek rozstrzygnąć?
+====================================================================================================
+koszt C = 0.0900%  |  walk-forward 60/14/14 dni  |  MIN_TRAIN_ROWS = 30
+
+interwał  lat  okno test reżim  świec reżimu  n (górne ogr.)  na fold fold >= 30? break_even trzeba zmierzyć  n dla mocy 80% moc wystarcza?
+      5m  3.0         14 range         66996           62105    862.6         tak     82.81%           83.2%              16            tak
+      5m  3.0         14 trend          1636            1516     21.1         NIE     60.96%          63.47%             161            tak
+      1h  3.0         14 range          6042            5600     77.8         tak     56.77%          58.08%             425            tak
+      1h  3.0         14 trend            96              88      1.2         NIE     53.44%          63.89%            1652            NIE
+      4h  6.8         28 range          4212            4076     48.0         tak      52.3%          53.84%            3700            tak
+      4h  6.8         28 trend            85              82      1.0         NIE     51.27%           62.1%           12079            NIE
+
+[legenda]
+  n (górne ogr.)  - wszystkie świece reżimu w oknach testowych; REALNE n będzie MNIEJSZE
+                    (odpadają brak sygnału, bramka kosztowa, foldy < MIN_TRAIN_ROWS)
+  na fold         - średnio świec reżimu na jeden fold testowy; poniżej MIN_TRAIN_ROWS
+                    fold jest POMIJANY przez backtest.engine
+  trzeba zmierzyć - trafność, przy której DOLNY kraniec 95% CI przekracza break_even,
+                    czyli minimum, by uczciwie orzec rentowność
+  n dla mocy 80%  - liczba transakcji potrzebna, by odróżnić break_even od 50%
+
+====================================================================================================
+WNIOSEK — wykonalność per konfiguracja
+====================================================================================================
+  5m  range  -> WYKONALNE
+      trzeba zmierzyć trafność >= 83.20% (break-even 82.81%)
+  5m  trend  -> NIEWYKONALNE: foldy za małe (21.1 < 30 świec/fold)
+      trzeba zmierzyć trafność >= 63.47% (break-even 60.96%)
+  1h  range  -> WYKONALNE
+      trzeba zmierzyć trafność >= 58.08% (break-even 56.77%)
+  1h  trend  -> NIEWYKONALNE: foldy za małe (1.2 < 30 świec/fold); za mała próba (n<=88 vs wymagane 1652)
+      trzeba zmierzyć trafność >= 63.89% (break-even 53.44%)
+  4h  range  -> WYKONALNE
+      trzeba zmierzyć trafność >= 53.84% (break-even 52.30%)
+  4h  trend  -> NIEWYKONALNE: foldy za małe (1.0 < 30 świec/fold); za mała próba (n<=82 vs wymagane 12079)
+      trzeba zmierzyć trafność >= 62.10% (break-even 51.27%)
+
+--- konflikt spojnosc vs ekonomia per horyzont ---
+koszt C = 0.0900%
+
+==============================================================================================
+1h — reżim range: 6042 świec, 26304 łącznie
+==============================================================================================
+ horizon_candles  median_length  share_windows_inside  coherent
+               3            4.0              0.712512      True
+               6            4.0              0.448361     False
+              12            4.0              0.188679     False
+
+  V  timeout%  |ruch| med   B_efekt  break-even  trzeba zmierz.
+  3     63.7%     0.3067%   0.3067%      64.67%          65.97%
+  6     39.2%     0.4869%   0.4869%      59.24%          60.54%
+ 12     17.9%     0.5934%   0.5934%      57.58%          58.88%
+
+==============================================================================================
+4h — reżim range: 4212 świec, 14916 łącznie
+==============================================================================================
+ horizon_candles  median_length  share_windows_inside  coherent
+               3            3.0              0.701804      True
+               6            3.0              0.445157     False
+              12            3.0              0.195394     False
+
+  V  timeout%  |ruch| med   B_efekt  break-even  trzeba zmierz.
+  3     60.8%     0.9779%   0.9779%      54.60%          56.15%
+  6     34.4%     1.5181%   1.5181%      52.96%          54.51%
+ 12     10.7%     1.8224%   1.8224%      52.47%          54.02%
