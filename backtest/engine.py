@@ -119,10 +119,16 @@ from agents.risk_controller import (
 )
 from backtest.costs import (
     CANDLE_MINUTES,
+    DEFAULT_TIMEOUT_LEG,
+    EXECUTION_MAKER_LIMIT,
+    EXECUTION_TAKER_ONLY,
+    EXIT_REASON_SL,
+    EXIT_REASON_TIMEOUT,
+    EXIT_REASON_TP,
     MAKER,
     TAKER,
-    exit_leg_for_reason,
-    round_trip_cost_fraction,
+    execution_legs,
+    gate_cost_fraction,
     total_round_trip_cost,
 )
 
@@ -137,8 +143,9 @@ from backtest.costs import (
 # pozostal odtwarzalny co do cyfry.
 PREREGISTERED_CONFIDENCE_QUANTILE = 0.75
 
-EXECUTION_TAKER_ONLY = "taker_only"
-EXECUTION_MAKER_LIMIT = "maker_limit"
+# H3: definicje `EXECUTION_*` przeniesione do `backtest/costs.py` (model wykonania jest
+# pojęciem kosztowym). Tutaj zostaje re-eksport, żeby importy z `backtest.engine`
+# w testach i skryptach działały bez zmian.
 DEFAULT_EXECUTION_MODEL = EXECUTION_MAKER_LIMIT
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
@@ -184,6 +191,7 @@ def _collect_candidate_signals(
     min_barrier_to_cost_ratio: float,
     regime_feature_sets: list[tuple[str, list[str]]],
     execution_model: str,
+    timeout_leg: str,
     confidence_quantile: float | None,
     validation_fraction: float | None,
     embargo_candles: int,
@@ -209,11 +217,21 @@ def _collect_candidate_signals(
     `candles_per_day` w C2.5/C2.6).
     """
     # Bramka kosztowa działa PRZED wejściem w pozycję, więc nie zna powodu wyjścia, a ten
-    # decyduje o typie nogi wyjścia. Zakładamy więc wyjście TAKER (jakby każda transakcja
-    # kończyła się stopem/timeoutem) — konserwatywnie, bo zaniżony koszt przepuszczałby
-    # sygnały, których bariera go nie pokrywa. Patrz docstring round_trip_cost_fraction.
-    entry_leg_for_gate = MAKER if execution_model == EXECUTION_MAKER_LIMIT else TAKER
-    cost_fraction = round_trip_cost_fraction(entry_leg=entry_leg_for_gate, exit_leg=TAKER)
+    # decyduje o typie nogi wyjścia. Bierze więc MAKSIMUM po osiągalnych powodach —
+    # konserwatywnie, bo zaniżony koszt przepuszczałby sygnały, których bariera go nie
+    # pokrywa (dokładnie ten błąd, który bramka ma łapać, Commit 2d).
+    #
+    # H3: do tej rundy stała tu ręczna kopia reguły wejścia plus literał `exit_leg=TAKER`.
+    # Nic nie wiązało tej wartości z kosztem w journalu, więc rozjazd był kwestią czasu.
+    # Teraz bramka nie ma własnej wiedzy o nogach — konsumuje `gate_cost_fraction`, która
+    # przechodzi przez tę samą `execution_legs` co journal. Wartość jest niezmieniona
+    # (0,0009 dla `maker_limit`, 0,0014 dla `taker_only`) i NIEWRAŻLIWA na `timeout_leg`,
+    # bo maksimum realizuje `sl` — dzięki czemu lejek sygnałów jest identyczny w obu
+    # wariantach pasma i porównanie jest "jabłka do jabłek" z konstrukcji.
+    #
+    # Walidacja `timeout_leg` wypada tutaj celowo: to najwcześniejszy punkt przebiegu,
+    # czyli PRZED treningiem pierwszego modelu (fail fast, nie po 20 minutach).
+    cost_fraction = gate_cost_fraction(execution_model, timeout_leg)
     candidate_signals: list[dict] = []
     folds_summary: list[dict] = []
 
@@ -451,28 +469,21 @@ def _resolve_exit_reason(direction: float, label: float) -> str:
     z etykietą -1 to TP, ten sam short na etykiecie +1 to SL.
     """
     if label == 0.0 or pd.isna(label):
-        return "timeout"
-    return "tp" if direction * label > 0 else "sl"
+        return EXIT_REASON_TIMEOUT
+    return EXIT_REASON_TP if direction * label > 0 else EXIT_REASON_SL
 
 
-def _execution_legs(execution_model: str, exit_reason: str) -> tuple[str, str]:
+def _execution_legs(
+    execution_model: str, exit_reason: str, timeout_leg: str = DEFAULT_TIMEOUT_LEG
+) -> tuple[str, str]:
     """
-    Typy zleceń (maker/taker) nogi wejścia i wyjścia dla danego modelu wykonania.
+    Cienka delegacja do `backtest.costs.execution_legs`.
 
-        taker_only  - obie nogi market. Model Commitów 5-2.11, zachowany do regresji
-                      baseline'u (odtwarza wynik C2.10/C2.11 co do cyfry).
-        maker_limit - wejście jako limit (maker); wyjście zależnie od powodu:
-                      TP limit (maker), SL i timeout market (taker). Decyzja
-                      użytkownika 2026-09-21, uzasadnienie w costs.exit_leg_for_reason.
+    H3: logika przeniesiona do `costs.py`, żeby bramka kosztowa i journal miały JEDNO
+    źródło wiedzy o nogach (patrz `gate_cost_fraction`). Ta funkcja zostaje jako punkt
+    wejścia dla testów i skryptów importujących z `backtest.engine`.
     """
-    if execution_model == EXECUTION_TAKER_ONLY:
-        return TAKER, TAKER
-    if execution_model == EXECUTION_MAKER_LIMIT:
-        return MAKER, exit_leg_for_reason(exit_reason)
-    raise ValueError(
-        f"execution_model musi być jednym z "
-        f"{(EXECUTION_TAKER_ONLY, EXECUTION_MAKER_LIMIT)}, dostałem: {execution_model!r}"
-    )
+    return execution_legs(execution_model, exit_reason, timeout_leg)
 
 
 def run_backtest(
@@ -497,6 +508,7 @@ def run_backtest(
     fold_start_offset_days: float = 0.0,
     candle_minutes: int = CANDLE_MINUTES,
     execution_model: str = DEFAULT_EXECUTION_MODEL,
+    timeout_leg: str = DEFAULT_TIMEOUT_LEG,
     confidence_quantile: float | None = None,
     validation_fraction: float | None = DEFAULT_VALIDATION_FRACTION,
     embargo_candles: int | None = None,
@@ -567,6 +579,17 @@ def run_backtest(
             (timeframe 5m); przy danych 1h/4h MUSI być nadpisane na 60/240, inaczej
             funding jest liczony 12×/48× za nisko (materialnie mały efekt, ~0,0004%
             nominału, ale to bug jednostek, nie świadome uproszczenie).
+        timeout_leg: H3 — typ zlecenia nogi WYJŚCIA dla transakcji kończących się
+            barierą pionową (`"taker"` domyślnie, `"maker"` jako drugi kraniec pasma).
+            NAZWANY WARIANT do analizy wrażliwości, NIE pokrętło do strojenia — ta sama
+            konwencja co `execution_model`. Domyślne `"taker"` odtwarza baseline co do
+            bitu i **runda H3 go nie zmieniła** (reguła D1): wariant `"maker"` jest
+            optymistyczny nie tylko na opłatach, ale i na CENIE, bo `_resolve_exit_price`
+            liczy wyjście timeoutu jako `close` świecy timeoutu — a tego `close` nie da
+            się dostać zleceniem limit bez lookaheadu. Ignorowane przy
+            `execution_model="taker_only"`. Uzasadnienie: `backtest.costs.exit_leg_for_reason`
+            i `docs/rag/04`. Wartość pośrednia (ciągła stopa wypełnienia) wymaga źródła
+            danych o fillach — bez niego nie wchodzi do repo.
 
     Returns:
         {
@@ -612,6 +635,7 @@ def run_backtest(
         min_barrier_to_cost_ratio=min_barrier_to_cost_ratio,
         regime_feature_sets=active_feature_sets,
         execution_model=execution_model,
+        timeout_leg=timeout_leg,
         confidence_quantile=confidence_quantile,
         validation_fraction=validation_fraction,
         embargo_candles=effective_embargo,
@@ -694,7 +718,7 @@ def run_backtest(
         gross_pnl = direction * (exit_price - entry_price) * position_size
 
         exit_reason = _resolve_exit_reason(direction, signal["label"])
-        entry_leg, exit_leg = _execution_legs(execution_model, exit_reason)
+        entry_leg, exit_leg = _execution_legs(execution_model, exit_reason, timeout_leg)
 
         notional = position_size * entry_price
         cost = total_round_trip_cost(

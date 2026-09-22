@@ -27,6 +27,12 @@ from agents.risk_controller import (
     is_cost_feasible,
     should_rearm_kill_switch,
 )
+from backtest.costs import (
+    EXECUTION_MAKER_LIMIT,
+    TAKER,
+    gate_cost_fraction,
+    round_trip_cost_fraction,
+)
 
 # ---------------------------------------------------------------------------
 # Warstwa 1: unit tests — compute_position_size / compute_sizing
@@ -352,7 +358,17 @@ def test_should_rearm_kill_switch_false_before_cooldown_elapsed_property(
 # backtest/diagnose_cost_feasibility.py.
 # ---------------------------------------------------------------------------
 
-COST_FRACTION_STARTOWY = 0.0014  # 2x taker 0.05% + 2x slippage 2bps (backtest/costs.py)
+# H3: wyprowadzone, nie literał (DoD punkt 5 — zero magic numbers). Wartość liczbowa
+# BEZ ZMIAN (0,0014), więc żadna asercja poniżej się nie rusza.
+#
+# UWAGA — to jest KOTWICA HISTORYCZNA, nie wartość produkcyjna. Diagnoza Commitu 2d
+# powstała w erze modelu `taker_only` (2× taker + 2× slippage). PRODUKCYJNA bramka to
+# dziś `gate_cost_fraction(EXECUTION_MAKER_LIMIT)` = 0,0009 — od Commitu 2.12 koszt jest
+# o 36% niższy. Podmiana tej stałej na produkcyjną ZMIENIŁABY wniosek testu niżej
+# (`ratio` skoczyłby z 0,93 na 1,44), więc historyczny zapis zostaje, a stan dzisiejszy
+# dopisuje osobny test `test_range_regime_still_rejected_at_production_gate_value`.
+COST_FRACTION_TAKER_ONLY = round_trip_cost_fraction(entry_leg=TAKER, exit_leg=TAKER)
+COST_FRACTION_STARTOWY = COST_FRACTION_TAKER_ONLY  # alias historyczny
 
 
 def test_barrier_to_cost_ratio_matches_manual_formula() -> None:
@@ -375,6 +391,27 @@ def test_barrier_to_cost_ratio_reproduces_range_regime_diagnosis() -> None:
     ratio = barrier_to_cost_ratio(atr_14, entry_price, COST_FRACTION_STARTOWY)
     assert ratio < 1.0
     assert not is_cost_feasible(atr_14, entry_price, COST_FRACTION_STARTOWY)
+
+
+def test_range_regime_still_rejected_at_production_gate_value() -> None:
+    """
+    H3: ten sam reżim `range`, ale przy koszcie PRODUKCYJNYM (model maker/taker od C2.12).
+
+    Do tej rundy stała w tym pliku po cichu rozjechała się z bramką w silniku — test wyżej
+    twierdził `ratio < 1.0`, podczas gdy produkcja liczyła już `ratio ≈ 1,44`. Wniosek
+    Commitu 2d („range odrzucony") nadal obowiązuje, ale **z innego powodu**: nie dlatego,
+    że bariera nie pokrywa kosztu, tylko dlatego, że nie pokrywa go DWUKROTNIE, czego
+    wymaga `MIN_BARRIER_TO_COST_RATIO`. Ten test zamienia cichy rozjazd w zapisany fakt.
+    """
+    entry_price = 100_000.0
+    atr_14 = 0.00130 * entry_price / ATR_MULTIPLIER
+    gate = gate_cost_fraction(EXECUTION_MAKER_LIMIT)
+    ratio = barrier_to_cost_ratio(atr_14, entry_price, gate)
+
+    assert ratio == pytest.approx(1.444, abs=0.01)
+    assert ratio > 1.0, "przy tańszym koszcie bariera JUŻ pokrywa koszt jednokrotnie"
+    assert ratio < MIN_BARRIER_TO_COST_RATIO
+    assert not is_cost_feasible(atr_14, entry_price, gate)
 
 
 def test_is_cost_feasible_accepts_wide_barrier() -> None:
