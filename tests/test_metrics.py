@@ -23,6 +23,7 @@ from backtest.metrics import (
     expected_trades,
     measurability_report,
     min_detectable_hit_rate,
+    observed_wald_ci,
     required_trades,
     wald_half_width,
     MIN_TRADES_FOR_N_EFF,
@@ -979,3 +980,61 @@ def test_measurability_chain_reproduces_h21_verdict_ex_ante() -> None:
     raport = measurability_report(assumed_hit_rate=0.55, break_even_p=0.5269, n_trades_expected=n)
     assert raport["verdict"] == "NIEMIERZALNA"
     assert raport["band_width_pp"] > 9.0
+
+
+# --- K2: jedno zrodlo wzoru na przedzial Walda wokol zaobserwowanej proporcji ---
+
+
+def test_observed_wald_ci_is_the_single_source_used_by_compute_hit_rate() -> None:
+    """
+    `compute_hit_rate` NIE moze miec wlasnej kopii tej algebry.
+
+    Do K2 wzor `z*sqrt(p(1-p)/n)` stal w dwoch miejscach: w `compute_hit_rate` (per przebieg)
+    i w kodzie pool-ujacym w skrypcie rundy (12 losowan w jedna liczbe). Dwie kopie tego
+    samego rachunku moga sie rozjechac bez sladu w diffie - ta sama klasa bledu, ktora H3
+    usunelo przy bramce kosztowej.
+    """
+    n, hits = 400, 216
+    trades = pd.DataFrame(
+        {
+            "gross_pnl": [1.0] * hits + [-1.0] * (n - hits),
+            "kill_switch_active": [False] * n,
+        }
+    )
+    z_journalu = compute_hit_rate(trades)
+    wprost = observed_wald_ci(hits, n)
+
+    assert z_journalu["hit_rate"] == pytest.approx(wprost["hit_rate"])
+    assert z_journalu["ci_low"] == pytest.approx(wprost["ci_low"])
+    assert z_journalu["ci_high"] == pytest.approx(wprost["ci_high"])
+
+
+def test_observed_wald_ci_equals_conservative_band_exactly_at_half() -> None:
+    """
+    Przy p = 0,5 obie wielkosci sie spotykaja - i tylko tam. Test pilnuje, ze nie zaczely
+    byc traktowane jako to samo (walidacja S1 zlapala juz raz dwie stale na ten sam kwantyl).
+    """
+    assert observed_wald_ci(500, 1000)["half_width"] == pytest.approx(wald_half_width(1000))
+    # Poza p=0,5 wariant obserwowany jest WEZSZY niz konserwatywny.
+    assert observed_wald_ci(700, 1000)["half_width"] < wald_half_width(1000)
+
+
+def test_observed_wald_ci_reproduces_k2_pooled_row() -> None:
+    """
+    KOTWICA na liczbe opublikowana w `runs/2026-09-22_k2-naprawa-abstynencji/README.md`:
+    ramie A2 na czystym szumie, 12 losowan zsumowanych.
+
+    Gdyby ktos zmienil wzor albo `Z_TWO_SIDED_95`, tabela w write-upie przestalaby sie
+    zgadzac z kodem - a tego rodzaju rozjazd jest dokladnie tym, co ta kotwica ma zlapac.
+    """
+    ci = observed_wald_ci(84_132, 167_160)
+    assert 100 * ci["hit_rate"] == pytest.approx(50.33, abs=0.01)
+    assert 100 * ci["ci_low"] == pytest.approx(50.09, abs=0.01)
+    assert 100 * ci["ci_high"] == pytest.approx(50.57, abs=0.01)
+
+
+@pytest.mark.parametrize("n", [0, -1])
+def test_observed_wald_ci_returns_nan_for_empty_sample(n: int) -> None:
+    ci = observed_wald_ci(0, n)
+    assert math.isnan(ci["hit_rate"])
+    assert math.isnan(ci["ci_low"])

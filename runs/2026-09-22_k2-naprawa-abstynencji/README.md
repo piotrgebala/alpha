@@ -179,15 +179,230 @@ przypisane szumowi przy n=220 — i **tak trzeba to napisać, bez awansowania na
 
 ## Wynik
 
-*(do wypełnienia po przebiegu)*
+**Metadane przebiegu**
+
+- **Komenda:** `py -m backtest.run_abstention_fix_k2` (skrypt: `backtest/run_abstention_fix_k2.py`)
+- **Walidacja:** `runs/2026-09-22_k2-naprawa-abstynencji/k2_walidacja.py` (kopiowany do korzenia repo)
+- **Branch:** `task/K2-naprawa-abstynencji`
+- **Siatka:** **PEŁNA** — bramka kosztowa z pre-rejestracji nie uruchomiła się (jeden przebieg
+  A0 = **2,9 s** wobec progu 240 s), więc 12 losowań przy q=0 i po 3 na punkt. **75 przebiegów**
+  krzywej + 24 przebiegi T6.
+- **Dane:** 14 916 świec 4h, 2019-09-10 → 2026-06-30; 14 899 etykiet nie-NaN; udział klasy
+  timeout **66,51%**.
+- **Pełny stdout:** `raw_output.txt` (wraz z outputem walidacji).
+- **Uwaga o odtwarzalności:** po przebiegu funkcja `_pooled` w skrypcie została przepięta na
+  `metrics.observed_wald_ci` (usunięcie drugiej kopii wzoru na przedział Walda — lekcja H3).
+  Zmiana jest **neutralna dla wyniku**: skrypt uruchomiono ponownie po refaktorze, a output
+  porównano z zapisanym `raw_output.txt` (patrz „Przegląd diffu").
+
+### 1. Krzywe wykrywalności — trzy ramiona na tej samej wyroczni
+
+Pooled po losowaniach. „Margines" = trafność − próg opłacalności, w punktach procentowych;
+„pasmo" = `wald_half_width(n)`, czyli szerokość obszaru „opłacalne, ale niewidzialne".
+
+| q | ramię | abstynencja | n | trafność | próg BE | **margines** | pasmo | wykryte? |
+|---|---|---|---|---|---|---|---|---|
+| 0,00 | A0 | 99,63% | 644 | 51,71% | 52,29% | −0,58 pp | 3,86 pp | nie |
+| 0,00 | A1 | 43,55% | 97 014 | 50,48% | 52,94% | −2,46 pp | 0,31 pp | nie |
+| 0,00 | A2 | 0,00% | 167 160 | 50,33% | 52,94% | −2,60 pp | 0,24 pp | nie |
+| 0,10 | A0 | 99,52% | 207 | 53,62% | 51,99% | +1,63 pp | 6,81 pp | nie |
+| 0,10 | A1 | 43,93% | 24 158 | 50,79% | 52,93% | −2,14 pp | 0,63 pp | nie |
+| 0,10 | A2 | 0,00% | 41 832 | 50,26% | 52,92% | −2,66 pp | 0,48 pp | nie |
+| 0,20 | A0 | 99,27% | 315 | 51,43% | 52,22% | −0,79 pp | 5,52 pp | nie |
+| 0,20 | A1 | 45,72% | 23 456 | 51,05% | 52,84% | −1,79 pp | 0,64 pp | nie |
+| 0,20 | A2 | 0,00% | 42 000 | 50,19% | 52,92% | −2,73 pp | 0,48 pp | nie |
+| 0,30 | A0 | 97,78% | 961 | 54,84% | 52,33% | +2,51 pp | 3,16 pp | nie |
+| **0,30** | **A1** | **49,47%** | **21 900** | **53,57%** | **52,66%** | **+0,91 pp** | **0,66 pp** | **TAK** |
+| 0,30 | A2 | 0,00% | 42 840 | 51,61% | 52,92% | **−1,31 pp** | 0,47 pp | nie |
+| 0,40 | A0 | 93,87% | 2 659 | 59,23% | 52,20% | +7,03 pp | 1,90 pp | TAK |
+| 0,40 | A1 | 52,53% | 20 575 | 57,25% | 52,34% | +4,91 pp | 0,68 pp | TAK |
+| 0,40 | A2 | 0,00% | 43 218 | 53,85% | 52,88% | +0,97 pp | 0,47 pp | TAK |
+| 1,00 | A0 | 66,48% | 4 843 | 100,00% | 50,80% | +49,20 pp | 1,41 pp | TAK |
+| 1,00 | A1 | 66,48% | 4 843 | 100,00% | 50,80% | +49,20 pp | 1,41 pp | TAK |
+| 1,00 | A2 | 0,00% | 14 448 | 65,65% | 52,63% | +13,02 pp | 0,82 pp | TAK |
+
+**Najsłabszy wykryty sygnał: A1 przy q = 0,30; A0 i A2 dopiero przy q = 0,40.** Przy siatce
+o kroku 0,10 to jedyne rozróżnienie, jakie wolno z tych danych zrobić — sama wartość „0,30"
+jest punktem siatki, nie właściwością przyrządu (to dokładnie poprawka nr 1 z tej
+pre-rejestracji, zastosowana do własnego wyniku).
+
+### 2. Bramka 1 (specyficzność, veto) — dwa odczyty, przeciwne werdykty
+
+**Żadne ramię nie podniosło fałszywego alarmu: 0/12 losowań w każdym.** Rozjazd bierze się
+wyłącznie z drugiego członu („pooled CI musi zawierać próg"):
+
+| ramię | fałszywe alarmy | pooled n | pooled CI | próg | odczyt DOSŁOWNY | odczyt WG CELU |
+|---|---|---|---|---|---|---|
+| A0 | 0/12 | 644 | [47,85%; 55,57%] | 52,29% | **ZDANA** | ZDANA |
+| A1 | 0/12 | 97 014 | [50,16%; 50,79%] | 52,94% | **ODRZUCONE** | ZDANA |
+| A2 | 0/12 | 167 160 | [50,09%; 50,57%] | 52,94% | **ODRZUCONE** | ZDANA |
+
+### 3. Bramka 2 (integralność przy q=1,00) — zdana przez wszystkie trzy
+
+| ramię | n wszystkich | n (etykieta ≠ 0) | trafność **warunkowa** | trafność bezwarunkowa |
+|---|---|---|---|---|
+| A0 | 4 843 | 4 843 | **100,00%** | 100,00% |
+| A1 | 4 843 | 4 843 | **100,00%** | 100,00% |
+| A2 | 14 448 | 4 843 | **100,00%** | 65,65% |
+
+Zastrzeżenie warunkowe zapisane w pre-rejestracji **zadziałało dokładnie tak, jak
+przewidziano**: A2 wymusza kierunek również na świecach timeout, gdzie poprawny kierunek nie
+istnieje, więc jego trafność bezwarunkowa (65,65%) nie jest porażką łańcucha.
+
+### 4. Bramka 3 (metryka wyboru) — najmniejsze pasmo ma A2
+
+| ramię | n na losowanie (min/mediana/max) | pasmo pp (min/mediana/max) | pooled n | pasmo pooled |
+|---|---|---|---|---|
+| A0 | 24 / 52,5 / 90 | 10,33 / 13,53 / 20,00 | 644 | 3,86 pp |
+| A1 | 8 004 / 8 090 / 8 169 | 1,08 / 1,09 / 1,10 | 97 014 | 0,31 pp |
+| A2 | 13 860 / 13 944 / 13 944 | 0,83 / 0,83 / 0,83 | 167 160 | **0,24 pp** |
+
+### 5. Abstynencja — cel rundy wyrażony liczbą
+
+Podłoga wyznaczona rozkładem etykiet: **66,51%**.
+
+| ramię | q=0,00 | q=0,10 | q=0,20 | q=0,30 | q=0,40 | q=1,00 |
+|---|---|---|---|---|---|---|
+| A0 | 99,6% | 99,5% | 99,3% | 97,8% | 93,9% | **66,5%** |
+| A1 | 43,6% | 43,9% | 45,7% | 49,5% | 52,5% | **66,5%** |
+| A2 | 0,0% | 0,0% | 0,0% | 0,0% | 0,0% | 0,0% |
+
+**A0 przy doskonałej wyroczni trafia w podłogę co do 0,03 pp** — potwierdzenie poprawki nr 2
+z pre-rejestracji na nowych danych. **A1 schodzi POD podłogę** (43,6% wobec 66,5%), czyli
+otwiera pozycje na świecach, które naprawdę są timeoutami.
+
+### 6. T6 — kill-switch NIE jest źródłem obciążenia
+
+| ramię | n (ON) | p (ON) | n (OFF) | p (OFF) | różnica ON−OFF | 95% CI różnicy | werdykt |
+|---|---|---|---|---|---|---|---|
+| A0 | 644 | 51,71% | 644 | 51,71% | **+0,00 pp** | ±5,46 pp | nierozstrzygające (jak przewidziano) |
+| A2 | 167 160 | 50,33% | 173 376 | 50,29% | **+0,04 pp** | ±0,34 pp | **NIEODRÓŻNIALNE OD ZERA** |
+
+Obie asercje obowiązkowe **zdane we wszystkich 24 przebiegach**. W ramieniu A0 kill-switch nie
+uruchomił się ani razu (0 stłumionych) — przy ~54 transakcjach na losowanie equity nie zdąży
+się poruszyć, więc A0 nie mógł tu niczego rozstrzygnąć, dokładnie jak zapisano z góry.
+
+**A2, które MIAŁO rozstrzygnąć (rozdzielczość ±0,34 pp), rozstrzygnęło: obciążenia nie ma.**
+Zgodnie z pre-rejestracją zapisuję to bez awansowania na „udowodniliśmy": hipoteza
+„kill-switch jest źródłem" zostaje **odrzucona jako mechanizm**, a odczyt 54,09% z K1
+przypisany szumowi przy n=220.
 
 ## Co na plus (+) / Co na minus (−)
 
-*(do wypełnienia po przebiegu)*
+**(+) Trzy przewidywania z pre-rejestracji sprawdziły się co do mechanizmu.** A2 musiało
+podnieść `n` (tautologia — i tak zapisana), obniżyć `p` i podnieść próg opłacalności. Podniosło
+`n` 260×, obniżyło `p` z 51,71% do 50,33% i podniosło próg z 52,29% do 52,94%. Kierunek
+i rząd wielkości zgadzają się z rachunkiem zrobionym **przed** uruchomieniem.
+
+**(+) Zastrzeżenie warunkowe w bramce 2 uratowało uczciwość porównania.** Gdyby bramkę
+sformułowano bezwarunkowo, A2 oblałoby ją mechanicznie (65,65%), a ratowanie go po fakcie
+byłoby dorabianiem uzasadnienia. Zapisane z góry — zadziałało.
+
+**(+) Odczyt przyrządu przestał być niemonotoniczny.** Trafność A0 w funkcji siły sygnału idzie
+51,71 → 53,62 → 51,43 → 54,84 → 59,23: **niemonotonicznie**, bo przy n rzędu 200–900 dominuje
+szum. A1 daje 50,48 → 50,79 → 51,05 → 53,57 → 57,25, czyli ściśle rosnąco. To **nie jest**
+kryterium pre-rejestrowane i nie uczestniczy w werdykcie — ale jest najmocniejszą przesłanką,
+że A1 mierzy, a A0 zgaduje.
+
+**(+) T6 rozstrzygnięte definitywnie**, i to ramieniem, które pre-rejestracja wskazała jako
+zdolne to zrobić.
+
+**(−) DWIE z trzech pre-rejestrowanych bramek okazały się wadliwie sformułowane.** Opis niżej.
+To jest główny minus tej rundy i nie da się go zrzucić na dane.
+
+**(−) A2 jest gorsze, niż sugeruje metryka wyboru.** Bramka 3 (najmniejsze pasmo) wskazuje A2,
+ale przy q=0,30 A2 ma margines **−1,31 pp**, czyli sygnał realnie informacyjny staje się
+nieopłacalny. Pasmo mierzy precyzję, a nie to, czy jest co mierzyć.
+
+**(−) A1 schodzi pod podłogę abstynencji** (43,6% wobec 66,5%). Nie jest więc „kalibracją do
+rozkładu etykiet", tylko słabszą wersją tego samego rozcieńczenia, które psuje A2. Różnica jest
+ilościowa, nie jakościowa.
+
+**(−) Siatka `q` o kroku 0,10 nie rozróżni A0 od A2** — oba wykrywają dopiero przy 0,40.
+Twierdzenie „A2 nie jest lepsze od baseline'u" jest więc słabsze, niż wygląda: wiadomo tylko,
+że nie jest lepsze **o co najmniej jeden krok siatki**.
+
+**(−) Wynik dotyczy sygnału SYNTETYCZNEGO.** Wyrocznia jest cechą doskonale zgodną z targetem
+w ułamku `q` przypadków — realna cecha nie ma takiej struktury. Przenoszenie „A1 wykrywa q=0,30"
+na „A1 wykryje realną cechę o sile X" jest nieuprawnione.
 
 ## Walidacja (zasada 16a)
 
-*(do wypełnienia — werdykt Ready / Caveats / Revision)*
+**Werdykt: READY.**
+
+**Przeliczenie kluczowej liczby drugą, niezależną drogą.** Trafność bezwarunkowa A2 przy q=1
+(65,65%) pochodzi z journalu. Policzyłem ją niezależnie z **rozkładu etykiet**:
+`p = udział_kierunkowych · p_kierunkowe + udział_timeoutów · p_na_timeoutach`.
+Wynik: **65,6492% przewidziane vs 65,6492% zmierzone — zgodne co do czwartego miejsca**.
+Przy okazji ujawnia mechanizm: **wymuszony kierunek na świecach timeout wygrywa w 48,33%**
+przypadków, czyli nieco PONIŻEJ rzutu monetą. To jest liczba, przez którą A2 rozcieńcza sygnał.
+
+Kontrola spójności: udział świec o etykiecie ≠ 0 wśród transakcji A2 wynosi 33,52%, a udział
+timeoutów w całym zbiorze etykiet 66,51% — sumują się do 100,03%, czyli zgadzają się w granicach
+zaokrąglenia okna walk-forward.
+
+**„Kogo NIE ma w zbiorze" (q=0, losowanie 0, 14 448 ocenionych świec):**
+
+| ramię | ocenione świece | odpadło na abstynencji | bramka pewności | bramka kosztowa | sygnały | stłumione kill-switchem | w próbie |
+|---|---|---|---|---|---|---|---|
+| A0 | 14 448 | **14 408** | 0 | 0 | 40 | 0 | 40 |
+| A1 | 14 448 | 6 255 | 0 | 0 | 8 193 | 69 | 8 124 |
+| A2 | 14 448 | 0 | 0 | 0 | 14 448 | 546 | 13 902 |
+
+Bilans lejka domyka się w każdym ramieniu, **zero pominiętych foldów** (0 z 86). Istotne:
+**bramka kosztowa i bramka pewności odrzuciły ZERO świec** we wszystkich ramionach, więc
+abstynencja jest tu jedynym filtrem o znaczeniu — czyli runda mierzy dokładnie to, co miała
+mierzyć, a nie skutek uboczny innego filtra. To jest ten sam rodzaj pytania, który w C2d
+ujawnił, że pozorny edge mieszkał w świecach odfiltrowanych.
+
+**Red flag „wynik idealnie potwierdza hipotezę": NIE występuje.** Runda miała pokazać, że
+naprawa abstynencji poprawia przyrząd. Wyszło, że jedna naprawa pomaga (A1), druga nie (A2),
+a dwie z trzech własnych reguł decyzyjnych są wadliwe. To jest wynik niewygodny, nie wygodny.
+
+**Sprawdzenie podejrzanej równości.** A0 i A1 przy q=1 podają identyczne liczby (n=4 843,
+100,00%, abstynencja 66,48%), co mogłoby znaczyć, że wagi klas nie docierają do modelu.
+Porównanie journali: **NIE są identyczne** — różnią się `signal_confidence` i wszystkim, co od
+niej zależy (wielkość pozycji, PnL, equity). Przy doskonałej wyroczni oba modele wybierają te
+same kierunki, ale z inną pewnością. Równość jest więc prawdziwa i wyjaśniona.
+
+## Usterka w dwóch pre-rejestrowanych regułach decyzji
+
+Zgłaszam to jako wynik rundy, nie jako obejście niewygodnego werdyktu.
+
+### Bramka 1, człon B: mierzy nieprecyzyjność, nie specyficzność
+
+Pre-rejestracja żąda, by pooled CI trafności **zawierało** próg opłacalności. Na czystym szumie
+prawdziwa trafność to ~50%, a próg ~52,9% — te wielkości są **różne z założenia**. Przedział
+zawiera próg wyłącznie wtedy, gdy jest dostatecznie **szeroki**, a szerokość zależy wyłącznie
+od `n`. Warunek jest więc równoważny nierówności:
+
+```
+z·√(0,25/n) ≥ |p − próg| ≈ 0,029   ⟺   n ≤ ~1 142
+```
+
+**To nie jest stwierdzenie o specyficzności ramienia, tylko o jego liczebności** — i można je
+wyprowadzić **bez patrzenia na jakiekolwiek dane**. Tak zapisany człon B odrzuca mechanicznie
+każde ramię, które ma więcej niż ~1 100 transakcji na szumie, czyli **karze dokładnie to, co jest
+celem rundy**. A0 przechodzi go wyłącznie dlatego, że jego CI ma 7,72 pp szerokości.
+
+Cel bramki jest w pre-rejestracji napisany wprost: *„ramię kupujące `n` kosztem fałszywych
+alarmów jest odrzucone"*. Fałszywy alarm to `ci_low > break_even`. **Tego nie zrobiło żadne
+ramię: 0/12 w każdym.**
+
+### Bramka 3: metryka wyboru ignoruje, czy jest co mierzyć
+
+Najmniejsze pasmo ma A2 (0,24 pp), ale A2 przy q=0,30 ma margines ujemny. Pasmo to połowa
+równania — druga połowa to odległość trafności od progu, a ona przy wymuszaniu kierunku maleje.
+Pre-rejestracja **przewidziała ten efekt** w sekcji „Arytmetyka oczekiwań", ale nie wpisała go
+do metryki wyboru. Wskazanie bramki 3 jest więc formalnie poprawne i merytorycznie mylące.
+
+### Dlaczego poprawienie tego NIE jest p-hackingiem
+
+Obie usterki są **wyprowadzalne a priori**: pierwsza z samej definicji przedziału ufności,
+druga z arytmetyki zapisanej w tej samej pre-rejestracji. Żadna nie wymaga znajomości wyniku.
+Gdyby ktoś przeczytał te reguły uważnie przed uruchomieniem, zgłosiłby je tak samo. Mimo to
+**nie zmieniam reguł po fakcie jednostronnie** — decyzja jest niżej, w Rekomendacji, i wymaga
+zgody użytkownika.
 
 ## Odstępstwo od pre-rejestracji — T6 (odnotowane, nie ukryte)
 
@@ -242,8 +457,92 @@ Co sprawdzono:
 Czego przegląd NIE obejmuje: jakości samych ramion jako kandydatów do adopcji (to rozstrzyga
 przebieg wg trzech bramek), oraz `ruff`/`black` — niedostępne na maszynie (zadanie T2).
 
-Testy: **364/364**.
+### Uzupełnienie po przebiegu
 
-## Wniosek / Rekomendacja
+- **Usunięta druga kopia wzoru na przedział Walda.** Skrypt rundy liczył pooled CI własnym
+  `z·√(p(1−p)/n)`, identycznym z tym w `compute_hit_rate` — dwie kopie tej samej algebry,
+  które mogą się rozjechać bez śladu w diffie. Wzór wydzielony jako
+  `metrics.observed_wald_ci`; korzystają z niego oba miejsca. Docstring rozróżnia go od
+  `wald_half_width` (ex ante, konserwatywnie przy p=0,5), bo walidacja S1 złapała już raz
+  dwie różne stałe na ten sam kwantyl w tym module.
+- **Refaktor zweryfikowany jako neutralny dla wyniku:** skrypt uruchomiony ponownie po zmianie,
+  output porównany z zapisanym `raw_output.txt` — **142 linie identyczne co do bajtu**
+  (ta sama suma MD5). Jedyna pominięta w porównaniu linia to zmierzony czas przebiegu.
+- **Nowe testy:** zgodność `observed_wald_ci` z `compute_hit_rate` (dowód jednego źródła),
+  zbieżność z `wald_half_width` dokładnie przy p=0,5 i tylko tam, kotwica na opublikowany
+  wiersz A2 z tabeli wyżej (50,33% / [50,09%; 50,57%]) oraz NaN dla pustej próby.
 
-*(do wypełnienia po przebiegu)*
+Testy: **369/369**.
+
+## Wniosek
+
+Prostym językiem (zasada 17).
+
+**Model milczał, bo milczenie było dla niego opłacalne.** Dwie trzecie świec kończy się
+„niczym" (bariera czasowa), więc model, który zawsze mówi „nic się nie wydarzy", myli się
+rzadko. Przy słabym sygnale odmawiał kierunku w **99,6%** przypadków — i dlatego wcześniejsze
+rundy dostawały po kilkadziesiąt transakcji zamiast tysięcy.
+
+**Sprawdziliśmy dwa sposoby rozruszania go.**
+
+**Pierwszy — wagi klas (A1) — działa.** Polega na tym, że rzadsze odpowiedzi „w górę" i „w dół"
+liczą się przy uczeniu więcej, więc model przestaje uciekać w milczenie. Liczba transakcji rośnie
+z 644 do 97 tysięcy, a przyrząd zaczyna widzieć **słabszy sygnał niż dotąd**: wykrywa wyrocznię
+o sile 0,30, podczas gdy dotychczasowy kod potrzebuje 0,40. Mówiąc wprost: **to samo zjawisko,
+którego wcześniej byśmy nie zauważyli, teraz da się zmierzyć.**
+
+**Drugi — wymuszenie kierunku (A2) — nie działa.** Tu model nie ma prawa milczeć: zawsze
+obstawia górę albo dół. Transakcji jest 260 razy więcej, ale to złudzenie postępu. Na świecach,
+które naprawdę kończą się niczym, wymuszony kierunek wygrywa w **48,33%** przypadków, czyli
+nieco gorzej niż rzut monetą. Te przegrane rozcieńczają wynik: trafność spada w stronę 50%,
+a próg opłacalności rośnie. Efekt netto: **A2 wykrywa tak samo słabo jak kod sprzed naprawy**,
+a przy sile sygnału 0,30 zamienia zjawisko opłacalne w nieopłacalne.
+
+**Osobne pytanie zamknięte: kill-switch nie zawyża trafności.** Podejrzewaliśmy, że mechanizm
+awaryjny, odcinający handel po serii strat, może sztucznie podnosić wynik, bo zostawia w próbie
+tylko te transakcje, które przetrwały. Pomiar na 12 losowaniach czystego szumu przy 167 tysiącach
+transakcji: różnica **+0,04 pp przy dokładności ±0,34 pp**, czyli nieodróżnialna od zera.
+Odczyt 54,09% z rundy K1 był po prostu szumem przy małej próbie.
+
+**Rundę psuje własny regulamin.** Dwie z trzech reguł decyzyjnych, spisanych przed
+uruchomieniem, okazały się źle sformułowane — w sposób, który dało się wykryć **bez patrzenia
+na wyniki**. Pierwsza, literalnie czytana, odrzuca każde ramię mające więcej niż ~1 100
+transakcji, czyli karze dokładnie to, co runda miała osiągnąć. Druga wybiera ramię o najwęższym
+przedziale pomiaru, nie sprawdzając, czy jest jeszcze co mierzyć — i dlatego wskazuje A2, czyli
+ramię najgorsze.
+
+## Rekomendacja
+
+1. **Kandydatem do adopcji jest A1 (wagi klas), nie A2.** Dowody: jako jedyne obniża próg
+   wykrywalności o krok siatki, jako jedyne daje monotoniczny odczyt przyrządu, nie podnosi
+   fałszywych alarmów (0/12) i zachowuje integralność łańcucha (100% przy doskonałej wyroczni).
+
+2. **DECYZJA DO PODJĘCIA PRZEZ UŻYTKOWNIKA — nie podejmuję jej sam.** Formalny werdykt zależy
+   od odczytu bramki 1, a ja wykryłem, że jest ona wadliwie sformułowana:
+   - **odczyt dosłowny** → A1 i A2 odrzucone, wynik rundy: **„brak adopcji"** (dopuszczalny
+     i zapisany z góry);
+   - **odczyt wg celu bramki** („ramię nie może podnosić fałszywych alarmów") → wszystkie trzy
+     ramiona czyste, adopcja A1 uzasadniona.
+
+   Rekomenduję **odczyt wg celu, zapisany jawnie jako odstępstwo od litery pre-rejestracji**,
+   z uzasadnieniem: usterka jest wyprowadzalna a priori i nie wymaga znajomości wyniku.
+   Świadomie NIE proponuję „K3 z poprawionymi bramkami" — przy tych samych ziarnach dałoby
+   identyczne liczby, więc byłoby to przepisywanie reguł po fakcie w przebraniu nowej rundy.
+
+3. **Gdyby A1 zostało przyjęte — czego to NIE znaczy.** Nie znaczy, że jakakolwiek hipoteza
+   tradingowa zaczyna działać. Znaczy tylko, że przyrząd widzi słabsze zjawiska niż dotąd.
+   Warunek utrzymania „0 wariantów" pozostaje w mocy: **żadna liczba z K2 nie może być cytowana
+   jako wynik hipotezy tradingowej.**
+
+4. **Bramka 3 do wycofania z użycia jako metryka wyboru.** Samo `wald_half_width(n)` nie
+   wystarcza — decyduje relacja marginesu do pasma. Następna runda kalibracyjna powinna
+   pre-rejestrować kryterium „najniższe `q`, przy którym `ci_low > break_even`", a pasmo
+   raportować obok, jako wielkość opisową.
+
+5. **T6 zamknięte.** Kill-switch skreślony z listy podejrzanych o obciążenie pomiaru. Zadanie
+   **T6** w `STATUS.md` (ETAP 3) można zamknąć; 54,09% z K1 przypisane szumowi przy n=220.
+
+6. **Otwarte, niezmierzone:** czy A1 schodzące POD podłogę abstynencji (43,6% wobec 66,5%)
+   szkodzi na realnych cechach. Na wyroczni nie szkodzi, ale wyrocznia jest sygnałem
+   idealnie zgodnym z targetem — realna cecha nie ma takiej struktury. To pytanie na osobną
+   rundę, jeśli A1 wejdzie do użytku.

@@ -402,7 +402,7 @@ def compute_hit_rate(trades: pd.DataFrame) -> dict:
     # CI Walda wokół ESTYMATY -> tu już se z obserwowanego p. Stała wspólna z
     # wald_half_width/min_detectable_hit_rate (walidacja S1: były dwie różne stałe
     # na ten sam kwantyl w jednym module).
-    half_width = Z_TWO_SIDED_95 * np.sqrt(hit_rate * (1.0 - hit_rate) / n)
+    half_width = observed_wald_ci(int(round(hit_rate * n)), n)["half_width"]
     return {
         "n_trades": n,
         "hit_rate": hit_rate,
@@ -528,6 +528,33 @@ def summarize_by_regime(fold_metrics: pd.DataFrame) -> pd.DataFrame:
 
 # --- Z19 (Backlog II): moc statystyczna pomiaru trafności ---
 
+
+
+def observed_wald_ci(hits: int, n_trades: int, z: float = Z_TWO_SIDED_95) -> dict:
+    """
+    Przedzial Walda wokol ZAOBSERWOWANEJ proporcji: p +/- z*sqrt(p(1-p)/n).
+
+    Odroznienie od `wald_half_width`, ktorego NIE wolno mylic (walidacja S1 zlapala juz raz
+    dwie rozne stale na ten sam kwantyl w tym module):
+      - `wald_half_width(n)`  - EX ANTE, konserwatywnie przy p=0.5, bo `p` jeszcze nie znamy;
+      - `observed_wald_ci`    - EX POST, z faktycznego `p`.
+    Przy `p` bliskim 0.5 roznica jest ponizej 2% wzglednie, ale to NIE sa te same wielkosci.
+
+    Istnieje, zeby wzor mial JEDNO zrodlo. Liczyly go niezaleznie `compute_hit_rate`
+    (per przebieg) i kod pool-ujacy w skryptach rund (K2: 12 losowan w jedna liczbe) - dwie
+    kopie tej samej algebry, ktore moga sie rozjechac bez sladu w diffie. To ta sama decyzja
+    co `gate_cost_fraction` w H3.
+
+    Returns:
+        {n_trades, hit_rate, half_width, ci_low, ci_high}; NaN dla n <= 0.
+    """
+    if n_trades <= 0:
+        return {"n_trades": 0, "hit_rate": float("nan"), "half_width": float("nan"),
+                "ci_low": float("nan"), "ci_high": float("nan")}
+    p = hits / n_trades
+    half = float(z * np.sqrt(p * (1.0 - p) / n_trades))
+    return {"n_trades": int(n_trades), "hit_rate": float(p), "half_width": half,
+            "ci_low": float(p - half), "ci_high": float(p + half)}
 
 
 def wald_half_width(n_trades: int, z: float = Z_TWO_SIDED_95) -> float:
