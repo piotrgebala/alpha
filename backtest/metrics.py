@@ -438,8 +438,14 @@ def summarize_edge_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
         barrier_pct  - średnia |exit - entry| / entry, czyli B jako ułamek ceny
         cost_pct     - średni koszt round-trip jako ułamek nominału, czyli C
         break_even_p - 0.5 * (1 + C/B), wymagana trafność (break_even_hit_rate)
-        margin       - hit_rate - break_even_p; DODATNI margines to warunek konieczny
-                       (nie wystarczający) dodatniej wartości oczekiwanej transakcji
+        margin       - hit_rate - break_even_p, w PUNKTACH TRAFNOŚCI. DODATNI margines to
+                       warunek konieczny (nie wystarczający) dodatniej wartości oczekiwanej.
+                       UWAGA NA NAZEWNICTWO (2026-09-22): to NIE jest ta sama wielkość co
+                       „margines (2p−1)·B − C" z CLAUDE.md zasada 12, który jest wyrażony
+                       w JEDNOSTKACH ZWROTU. Dla S1: −0,0447 (ta kolumna) vs −0,00113
+                       (margines zwrotu) — ta sama nazwa, dwie różne skale. Ta kolumna
+                       odpowiada na „o ile punktów trafności brakuje do progu", tamta na
+                       „ile tracimy na transakcji"
 
     UWAGA metodologiczna: `barrier_pct` i `cost_pct` są liczone jako średnie po
     transakcjach, więc `break_even_p` z ich ilorazu to przybliżenie pierwszego rzędu

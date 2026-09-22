@@ -1,10 +1,38 @@
 ---
-status: active
-last_verified: 2026-08-01
+status: superseded
+last_verified: 2026-09-22
 depends_on: []
 ---
 
 # 01 — Hipoteza tradingowa i architektura
+
+> **STATUS: SUPERSEDED (2026-09-22).** Ten dokument opisuje hipotezę dwureżimową jako
+> **do przetestowania**. Została przetestowana i ten opis jest nieaktualny jako stan projektu —
+> pozostaje jako **zapis uzasadnienia pierwotnego wyboru**, nie jako opis tego, co obowiązuje.
+>
+> **Co zostało obalone:**
+> - **specyfikacja dwureżimowa** (trend+range na 5m) — C2.5–C2.13, NO-GO odporne na fold-jitter,
+>   pooled t istotnie ujemny w obu reżimach;
+> - **architektura jednoreżimowa na `range`** (4h, V=3, 6,8 roku) — S1, kryterium przepadło
+>   o 9,04 pp.
+>
+> **Czego NIE obalono — ważne rozróżnienie:**
+> - **teza momentum pozostaje NIEPRZETESTOWANA.** Werdykt dla reżimu `trend` opiera się na próbie
+>   zagłodzonej przez samą regułę reżimu: 0,53% świec, n=355, a tylko **0,49%** świec ma okno
+>   etykiety wewnątrz własnego reżimu (Z16) — czyli niemal każda transakcja była oceniana ruchem
+>   dziejącym się POZA reżimem, który ją uzasadnił. Najczystszy pomiar projektu (S1) testował
+>   **wyłącznie `range`**. To jest niewykonalność pomiaru, nie dowód braku edge'u;
+> - **konfiguracja 4h po naprawie pipeline'u jest NIETESTOWALNA** (S1b): przy poprawnie działającym
+>   early stoppingu próba spada do n=345 wobec wymaganych 925 — brakuje 11,4 lat danych, których
+>   Binance nie ma;
+> - **ETH/SOL/BNB** — zero testów, wszystko na BTC (zasada 9 CLAUDE.md);
+> - **funding rate jako CECHA/sygnał** (kandydat wskazany niżej w tym dokumencie na Fazę 1) —
+>   nigdy nie zaimplementowany; modelowany wyłącznie jako składnik kosztu;
+> - **ekonomia sizingu i dźwigni** — kill-switch testowany mechanicznie (C2c), nigdy jako
+>   dźwignia rentowności.
+>
+> Aktualny stan: `runs/INDEX.md` („Wnioski skumulowane") i `STATUS.md`. Decyzja o dalszym
+> kierunku (Z10) należy do użytkownika.
 
 ## Dlaczego nie realizujemy oryginalnego PRD wprost
 

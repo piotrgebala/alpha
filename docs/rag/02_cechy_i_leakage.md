@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-08-01
+last_verified: 2026-09-22
 depends_on: [01_hipoteza_i_architektura.md]
 ---
 
@@ -31,7 +31,8 @@ Pełny manifest: `agents/feature_registry.yaml`. Każdy wpis: wzór, biblioteka,
 (`base`/`regime_filter`/`signal`), grupa testowa (`shared`/`trend`/`range`), ryzyko leakage, data
 dodania.
 
-**9 cech w Fazie 0** (zaimplementowane w `agents/feature_miner.py`):
+**10 cech w Fazie 0** (zaimplementowane w `agents/feature_miner.py`; `adx_14` dodane
+w C2.7/C2.8 — przeszło screening, **NIE zostało promowane** do żadnego modelu):
 
 | Cecha | Wzór | Rola |
 |---|---|---|
@@ -68,6 +69,21 @@ wiarygodny wynik, rozważ złagodzenie `trend_threshold`.
 Dla każdej funkcji `compute_*`: policz cechę na `df[:T]` i `df[:T+k]`, sprawdź identyczność
 wartości do indeksu T w obu przypadkach. Formalna wersja: `agent_5_compliance/test_leakage.py`
 (pytest, parametryzowany po wszystkich funkcjach w `FEATURE_FUNCTIONS`).
+
+> **OGRANICZENIE STRUKTURALNE (2026-09-22, po Z17+Z21).** Powyższa metodologia działa **wyłącznie
+> na poziomie POJEDYNCZEJ CECHY**. Jest z definicji ślepa na dwie inne warstwy, w których przeciek
+> wystąpił realnie w tym projekcie:
+>
+> | warstwa | przykład znaleziony empirycznie | czy łapie to test per-cecha |
+> |---|---|---|
+> | cecha | `atr_pctrank_20d` z oknem centered zamiast trailing | **tak** |
+> | **model** | early stopping dobierający liczbę drzew na foldzie OOS (Z17 — zawyżało `p` o 0,7 pp) | **nie** |
+> | **podział** | brak embarga na granicy train/test: etykiety ostatnich `V` świec treningu sięgają w okno testowe (Z21) | **nie** |
+>
+> Obie wykryto dopiero przez ręczny audyt kodu, nie przez piramidę testów z
+> `05_metodologia_wytwarzania_i_testow.md`. **Wniosek: „testy leakage przechodzą" NIE znaczy
+> „nie ma przecieku".** Przy każdej zmianie dotykającej treningu albo podziału walk-forward
+> trzeba osobno zapytać: czy cokolwiek z okna testowego wpływa na to, jak powstaje model?
 
 **Priorytet:** `atr_pctrank_20d` — największe ryzyko leakage w całym zestawie, bo rolling window
 musi być trailing (kończący się na aktualnej świecy), nigdy centered. Zaimplementowane przez

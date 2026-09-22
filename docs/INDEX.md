@@ -4,7 +4,7 @@
 > jednozdaniowym opisem każdego. Nie zastępuje żadnego z nich — `STATUS.md` zostaje
 > jedynym źródłem aktualnego statusu, `docs/rag/*.md` jedynym źródłem pełnych uzasadnień decyzji.
 >
-> Ostatnia aktualizacja: 2026-08-01.
+> Ostatnia aktualizacja: 2026-09-22.
 
 ## Dokumenty nadrzędne (root)
 
@@ -12,8 +12,8 @@
 |---|---|
 | [`README.md`](../README.md) | Wejście do repo dla ludzi (GitHub) — czym jest projekt, szybki start, zastrzeżenia |
 | [`CLAUDE.md`](../CLAUDE.md) | Krótkie, stabilne instrukcje/zasady dla Claude Code, czytane automatycznie na starcie sesji |
-| [`STATUS.md`](../STATUS.md) | Aktualny status commitów, decyzje, znane ryzyka — żywy dokument, zmienia się często |
-| [`STATUS.md`](../STATUS.md) | Granularny, statusowalny rozkład `STATUS.md` na pojedyncze zadania z ID i statusem |
+| [`STATUS.md`](../STATUS.md) | Plan, historia rund, ryzyka (§7), zadania z ID i statusem, backlog — żywy dokument (scalone IMPLEMENTATION_PLAN+TASKS, 2026-09-22) |
+| [`runs/INDEX.md`](../runs/INDEX.md) | Księga eksperymentów: wyniki rund, wnioski skumulowane, liczniki budżetu multiple-testing |
 
 ## `docs/rag/` — pełne uzasadnienia decyzji
 
