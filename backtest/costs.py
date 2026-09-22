@@ -22,7 +22,15 @@ from __future__ import annotations
 # Źródło prawdy: config/settings.yaml, sekcja `costs`. Wartości startowe.
 TAKER_FEE_RATE = 0.0005  # 0.05% za stronę (Binance USDS-M Futures, VIP0 taker)
 MAKER_FEE_RATE = 0.0002  # 0.02% za stronę (Binance USDS-M Futures, VIP0 maker) — Commit 2.12/Z6
-FUNDING_RATE_8H = 0.0001  # 0.01% / 8h — przybliżenie, brak jeszcze realnych danych funding
+# 0.01% / 8h. Do T1-diag (2026-09-22) stal tu dopisek "brak jeszcze realnych danych" — dane
+# sa od H2.0 (7 457 rozliczen, 2019-09 → 2026-06) i przyblizenie zostalo na nich SPRAWDZONE:
+# realna MEDIANA stawki to dokladnie 0.0001, srednia 0.000107 (+7,1%). Przejscie na realne
+# stawki z dyskretnym harmonogramem rozliczen przesuwa prog oplacalnosci o **+0,022 pp** —
+# przy niepewnosci pomiaru 1,09 pp i szukanym efekcie 2,42 pp. Dlatego stala ZOSTAJE.
+# WARUNEK WAZNOSCI: wniosek trzyma sie na tym, ze pozycje long/short sa po polowie (49,96/50,04),
+# wiec signowany funding nettuje sie do zera. STRATEGIA JEDNOSTRONNA UNIEWAZNILABY GO.
+# Pelny rachunek: runs/2026-09-22_t1-diag-realny-funding/
+FUNDING_RATE_8H = 0.0001
 SLIPPAGE_BPS = 2.0  # 2 bps = 0.02%, stała wartość startowa
 
 CANDLE_MINUTES = 5  # timeframe — config/settings.yaml data.timeframe="5m"
