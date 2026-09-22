@@ -78,6 +78,18 @@ jako źródło stałych zasad.
     średniej, zawsze w kontekście licznika multiple-testing (zasada 11);
     (c) **PRZED merge rundy do master** — przegląd diffu (korektność/edge-case'y/testy/
     czytelność) z werdyktem jednym zdaniem w README rundy.
+    **Pełna ściąga „jak dokładnie"** (listy kontrolne, pułapki z naszych rund, wzory do
+    przeliczeń, format werdyktów) — `docs/skills/bramki-jakosci.md`; działa bez pluginów.
+17. **Rozmowa z użytkownikiem toczy się prostym, zrozumiałym językiem.** Odpowiedzi na czacie
+    i raporty z rund mają być zrozumiałe dla osoby, która nie zna żargonu statystyki, tradingu
+    ani programowania: krótkie zdania, bez skrótów myślowych. Jeśli fachowe pojęcie jest
+    naprawdę potrzebne (np. „przedział ufności", „walk-forward", „edge"), wyjaśnij je przy
+    pierwszym użyciu jednym prostym zdaniem w nawiasie. Każdą kluczową liczbę podawaj z
+    tłumaczeniem, co z niej wynika dla decyzji — np. „trafność 48,6% przy progu 53,1% =
+    strategia trafia rzadziej, niż musiałaby, żeby wyjść na zero po kosztach". To samo dotyczy
+    sekcji **Wniosek** i **Rekomendacja** w README każdej rundy. Techniczna precyzja (wzory,
+    pełne tabele, kod) zostaje w sekcjach technicznych i w `raw_output.txt` — prosty język ją
+    TŁUMACZY, nie zastępuje.
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 
@@ -122,7 +134,7 @@ kapitał) i wszystko nieodwracalne (usuwanie danych/historii).
 > i bez sieci, sesja lokalna ma oba. **Niezmienne pozostaje to, co wyżej:** decyzje bramkowe
 > i operacje nieodwracalne zawsze wymagają zgody użytkownika.
 
-**Claude — pełna autonomia badawcza W RAMACH zasad 1–16:** samodzielnie wybiera i uruchamia
+**Claude — pełna autonomia badawcza W RAMACH zasad 1–17:** samodzielnie wybiera i uruchamia
 kolejne eksperymenty (w tym z backlogu w `STATUS.md`), może wprowadzać wynikające z wyników
 zmiany parametrów/cech/configu — **raportując po fakcie, w tej samej rundzie** (plik `runs/` +
 `STATUS.md` §5/§7 + `STATUS.md`). Autonomia nie uchyla dyscypliny: jedna zmiana na

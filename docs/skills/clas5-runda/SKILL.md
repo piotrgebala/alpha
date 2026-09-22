@@ -6,7 +6,7 @@ description: "Procedura rundy badawczej w projekcie CLAS-5 (repo alpha): przed e
 # Runda badawcza CLAS-5
 
 Procedura obowiązuje przy KAŻDEJ rundzie w repo `alpha` (eksperyment, checkpoint, kalibracja,
-screening, diagnostyka na realnych danych). Nadrzędne źródło zasad: `CLAUDE.md` (zasady 1–16).
+screening, diagnostyka na realnych danych). Nadrzędne źródło zasad: `CLAUDE.md` (zasady 1–17).
 
 ## 0. Synchronizacja (dwa środowiska!)
 
@@ -15,7 +15,7 @@ Na repo pracują sesja chmurowa i lokalna sesja Claude Code. Przed rundą:
 - sprawdź mtime plików, które zamierzasz pisać — jeśli na dysku są nowsze niż twoja kopia,
   NAJPIERW zmerguj, nigdy nie nadpisuj;
 - jeśli druga sesja aktywnie pracuje (pliki zmieniają się na bieżąco), wstrzymaj zapis
-  współdzielonych plików (INDEX/TASKS/PLAN/README) do zakończenia jej rundy.
+  współdzielonych plików (runs/INDEX, STATUS, README, CLAUDE.md) do zakończenia jej rundy.
 
 ## 1. Przeczytaj przebyte runy (CLAUDE.md zasada 14)
 
@@ -56,10 +56,14 @@ Utwórz katalog `runs/YYYY-MM-DD_<id>-<slug>/`:
 Następnie: wiersz w tabeli `runs/INDEX.md` + aktualizacja WŁAŚCIWEGO licznika wariantów
 (per baza/hipoteza) + aktualizacja "Wnioski skumulowane". Potem synteza (tylko synteza +
 link — CLAUDE.md, wytyczna "jedna informacja = jedno miejsce") w `STATUS.md`
-§5/§7 i `STATUS.md`. Jeśli runda zamyka KAMIEŃ MILOWY — zaktualizuj tabelę "Kamienie milowe"
+(§5/§7 historia rund, §13–§16 zadania/backlog). Jeśli runda zamyka KAMIEŃ MILOWY —
+zaktualizuj tabelę "Kamienie milowe"
 i sekcję "Status" w `README.md` (CLAUDE.md zasada 15).
 
 ## 5. Bramki jakości przed publikacją
+
+Pełna, dopasowana do projektu ściąga (listy kontrolne, pułapki z naszych rund, wzory,
+format werdyktów): `docs/skills/bramki-jakosci.md` — czytaj ją w tym kroku. Poniżej skrót.
 
 - **Walidacja write-upu** — wg skilla `data:validate-data`: przelicz ≥ 1 kluczową liczbę
   niezależną drugą drogą; zapytaj "kogo NIE ma w zbiorze" (filtry/bramki — por. C2d, gdzie
@@ -79,3 +83,6 @@ i sekcję "Status" w `README.md` (CLAUDE.md zasada 15).
 - Lint: ruff + black na plikach dotykanych; skrypty historyczne ZAMROŻONE (zasada 13).
 - Raport dla użytkownika: wynik, decyzje podjęte autonomicznie z uzasadnieniem, ścieżka
   revertu, co czeka na jego decyzję (operacje git, decyzje bramkowe faz — po jego stronie).
+- **Język raportu i rozmowy — PROSTY (CLAUDE.md zasada 17):** bez żargonu; pojęcie fachowe
+  wyjaśnione jednym zdaniem przy pierwszym użyciu; każda kluczowa liczba z tłumaczeniem, co
+  z niej wynika dla decyzji. Dotyczy też sekcji Wniosek i Rekomendacja w README rundy.

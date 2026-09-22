@@ -27,6 +27,13 @@
 | [`06_llm_nadzorczy_i_baza_wiedzy.md`](rag/06_llm_nadzorczy_i_baza_wiedzy.md) | Projekt trzech komponentów LLM offline/nadzorczo (`ai_interpreter`, `post_trade_critic`, `test_mathematics`) i `docs/rag/` jako baza wiedzy |
 | [`07_notatki_spotkania_i_szersza_wizja_systemu.md`](rag/07_notatki_spotkania_i_szersza_wizja_systemu.md) | Analiza rozbieżności między notatkami ze spotkania (pełny zakres PRD, zespoły z terminami) a dyscypliną Fazy 0 — otwarte pytania |
 
+## `docs/skills/` — procedury pracy (wersjonowane z repo, niezależne od pluginów)
+
+| Plik | Jednozdaniowy opis |
+|---|---|
+| [`clas5-runda/SKILL.md`](skills/clas5-runda/SKILL.md) | Procedura rundy badawczej krok po kroku (synchronizacja, czytanie runów, pre-rejestracja, dokumentacja, bramki, DoD) — kopiowana do `.claude/skills/` jako skill projektowy |
+| [`bramki-jakosci.md`](skills/bramki-jakosci.md) | Pełna ściąga trzech bramek jakości z CLAUDE.md zasady 16: walidacja write-upu, standard statystyk, przegląd kodu — listy kontrolne, pułapki z naszych rund, wzory, format werdyktów |
+
 ## Legenda `status` (YAML frontmatter w `docs/rag/*.md`)
 
 | Status | Znaczenie |
