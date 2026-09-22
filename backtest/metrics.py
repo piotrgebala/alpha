@@ -341,8 +341,16 @@ def compute_hit_rate(trades: pd.DataFrame) -> dict:
     """
     Commit 2.11: trafność kierunku PRZED kosztami — czy model w ogóle wie cokolwiek.
 
-    "Trafienie" = `gross_pnl > 0`, czyli kierunek pozycji zgodny z etykietą (albo, dla
-    wyjść po barierze pionowej, z ruchem ceny do zamknięcia). Świadomie liczone na
+    DEFINICJA KANONICZNA (Z18, Backlog II): "trafienie" = `gross_pnl > 0`.
+
+    Dlaczego nie `direction * label > 0` (kusząca alternatywa, bo nie wymaga journalu):
+    obie definicje są RÓWNOWAŻNE dla wyjść po barierze poziomej (tp/sl), ale rozjeżdżają
+    się na wyjściach po barierze pionowej (`exit_reason == "timeout"`, `label == 0`).
+    Tam `direction * label > 0` jest ZAWSZE fałszywe, więc liczy każdy timeout jako
+    porażkę — także ten zamknięty z zyskiem. Zaniża to trafność o ułamek rzędu połowy
+    udziału timeoutów (empirycznie: ~9% transakcji w `range`, ~14% w `trend`).
+    `gross_pnl > 0` opisuje to, co faktycznie stało się z pieniędzmi, więc to ona jest
+    miarą kanoniczną; rozbicie per `exit_reason` daje `summarize_edge_by_regime`. Świadomie liczone na
     `gross_pnl`, nie `net_pnl`: `net_pnl` miesza jakość sygnału z modelem kosztów, a
     właśnie ich rozdzielenie jest celem tej miary (cały werdykt C2.10 liczył się z netto,
     `gross_pnl` było zapisywane i nigdy nieczytane przez ten moduł).
@@ -399,6 +407,11 @@ def summarize_edge_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
 
     Kolumny per regime:
         n_trades, hit_rate, ci_low, ci_high, z_stat  - trafność kierunku (compute_hit_rate)
+        share_timeout      - udział wyjść po barierze PIONOWEJ (label==0)
+        hit_rate_barrier   - trafność na wyjściach po barierze poziomej (tp/sl)
+        hit_rate_timeout   - trafność na timeoutach; różnica wobec hit_rate_barrier
+                             pokazuje, czy edge (jeśli jest) siedzi w trafieniach bariery
+                             czy w ruchu do zamknięcia
         barrier_pct  - średnia |exit - entry| / entry, czyli B jako ułamek ceny
         cost_pct     - średni koszt round-trip jako ułamek nominału, czyli C
         break_even_p - 0.5 * (1 + C/B), wymagana trafność (break_even_hit_rate)
@@ -425,6 +438,27 @@ def summarize_edge_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
         ) if len(real_trades) else float("nan")
         cost_pct = float((real_trades["cost"] / notional).mean()) if len(real_trades) else float("nan")
 
+        # Z18: rozbicie trafności per typ wyjścia. Bariera pozioma (tp/sl) i pionowa
+        # (timeout) mają inny rozkład wypłat — pierwsza zawsze ±B, druga dowolny ruch
+        # do zamknięcia. Mieszanie ich w jednej liczbie ukrywa, GDZIE siedzi (lub nie
+        # siedzi) edge.
+        if "exit_reason" in real_trades.columns and len(real_trades):
+            is_timeout = real_trades["exit_reason"] == "timeout"
+            n_timeout = int(is_timeout.sum())
+            share_timeout = n_timeout / len(real_trades)
+            barrier_trades = real_trades.loc[~is_timeout]
+            timeout_trades = real_trades.loc[is_timeout]
+            hit_rate_barrier = (
+                float((barrier_trades["gross_pnl"] > 0).mean()) if len(barrier_trades) else float("nan")
+            )
+            hit_rate_timeout = (
+                float((timeout_trades["gross_pnl"] > 0).mean()) if n_timeout else float("nan")
+            )
+        else:
+            share_timeout = float("nan")
+            hit_rate_barrier = float("nan")
+            hit_rate_timeout = float("nan")
+
         break_even_p = break_even_hit_rate(cost_pct, barrier_pct)
         margin = (
             hit["hit_rate"] - break_even_p
@@ -436,6 +470,9 @@ def summarize_edge_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
             {
                 "regime": regime,
                 **hit,
+                "share_timeout": share_timeout,
+                "hit_rate_barrier": hit_rate_barrier,
+                "hit_rate_timeout": hit_rate_timeout,
                 "barrier_pct": barrier_pct,
                 "cost_pct": cost_pct,
                 "break_even_p": break_even_p,
