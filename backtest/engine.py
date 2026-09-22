@@ -482,7 +482,8 @@ def run_backtest(
     execution_model: str = DEFAULT_EXECUTION_MODEL,
     confidence_quantile: float | None = None,
     validation_fraction: float | None = DEFAULT_VALIDATION_FRACTION,
-    embargo_candles: int = VERTICAL_BARRIER_CANDLES,
+    embargo_candles: int | None = None,
+    vertical_barrier_candles: int = VERTICAL_BARRIER_CANDLES,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -566,13 +567,21 @@ def run_backtest(
         range_threshold=range_threshold,
         candles_per_day=candles_per_day,
     )
-    labels = compute_triple_barrier_labels(df)
+    # Z22: horyzont etykiety jest parametrem, bo eksperyment na innym interwale wymaga
+    # innego V (Z16/Z5b: na 4h spójny jest wyłącznie V=3). ATR_MULTIPLIER celowo NIE jest
+    # parametryzowany — musiałby zmienić się JEDNOCZEŚNIE w risk_controller (CLAUDE.md
+    # zasada 3), a ta runda go nie rusza.
+    labels = compute_triple_barrier_labels(df, vertical_barrier_candles=vertical_barrier_candles)
     df["label"] = labels["label"]
     df["exit_bar_offset"] = labels["exit_bar_offset"]
 
     active_feature_sets = (
         REGIME_FEATURE_SETS if regime_feature_sets is None else regime_feature_sets
     )
+    # Embargo MUSI iść za horyzontem etykiety: to dokładnie te wiersze treningu, których
+    # etykieta sięga w okno testowe (Z17+Z21). Domyślne None wiąże je z V automatycznie,
+    # żeby nie dało się ich rozjechać przez przeoczenie — ten sam typ ryzyka co mnożnik ATR.
+    effective_embargo = vertical_barrier_candles if embargo_candles is None else embargo_candles
     candidate_signals, folds_summary = _collect_candidate_signals(
         df,
         train_days=train_days,
@@ -588,7 +597,7 @@ def run_backtest(
         execution_model=execution_model,
         confidence_quantile=confidence_quantile,
         validation_fraction=validation_fraction,
-        embargo_candles=embargo_candles,
+        embargo_candles=effective_embargo,
         fold_start_offset_days=fold_start_offset_days,
     )
 

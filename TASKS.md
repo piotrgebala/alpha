@@ -341,6 +341,25 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 
 ---
 
+### Seria S — architektura jednoreżimowa 4h (NOWA hipoteza) — ❌ ZAMKNIĘTA regułą STOP
+
+> Nowa hipoteza wobec dwureżimowej z `docs/rag/01`: jeden reżim (`range`), natywne świece 4h,
+> 6,8 roku historii, spójny horyzont V=3. Własny licznik wariantów, własna reguła STOP.
+> Konfiguracja zamrożona w pre-rejestracji (Z5b) PRZED uruchomieniem.
+
+| ID | Zadanie | Status | Uwagi |
+|---|---|---|---|
+| S1 | Pomiar trafności na architekturze jednoreżimowej 4h | ❌ **WYNIK NEGATYWNY** | n=1 037 (>925, wynik rozstrzygający). Trafność **48,60%**, CI [45,56%; 51,64%] — **górny kraniec poniżej progu 53,07%**, czyli z 95% pewnością trafność jest NIŻSZA od progu opłacalności. Bramka kosztowa odrzuciła 0% sygnałów (geometria naprawiona, nie pomogło). Testy 246/246. **REGUŁA STOP URUCHOMIONA — seria zamknięta, licznik 1/1.** `runs/2026-09-22_s1-single-regime-4h.md` |
+
+**Stan hipotezy po S1:** runda usunęła wszystkie znane wady pomiaru naraz (przeciek early
+stopping, brak embargo, niespójność bramka↔horyzont, zepsuty wolumen z resampla, bariera
+zjadana przez koszt, za mała próba, patologia per-fold Sharpe). Po ich usunięciu trafność
+wynosi **48,60%**. Każda naprawa zostawiała `p` niezmienione albo nieznacznie gorsze — ani
+razu lepsze. **Uczciwa rekomendacja: Z10 opcja 1 — udokumentowane zamknięcie Fazy 0 wynikiem
+negatywnym.** Decyzja przy użytkowniku.
+
+---
+
 ## Faza 1 — regime router, funding rate, Compliance Gate
 
 > Start dopiero po wyniku GO/WARUNKOWY z Commitu 6.
@@ -472,7 +491,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | Z19 | Moc statystyczna przed eksperymentem + `z_margin` do `metrics.py` | ✅ **ZROBIONE (moc)** | 0 | `wald_half_width`, `min_detectable_hit_rate`, `required_trades` + 11 testów. WYNIK: **4h NIEWYKONALNE** (foldy 21,5 < 30; próba 1 551 < 2 608), **1h `range` jedyna wykonalna** (n<=5 600 vs 425; próg 56,77%, trzeba zmierzyć 58,08%). Obaliło rekomendację z Z9 przed wydaniem budżetu. `runs/2026-09-22_z19-statistical-power.md`. Przeniesienie `z_margin` — nadal otwarte. Pierwotny opis: Statystyka, na której stanął werdykt C2.13, mieszka w jednorazowym skrypcie rundy |
 | Z20 | Warunek „zgodny znak" z `docs/rag/03:103` — zaimplementować albo skorygować docs | ⬜ | 0 | `fraction_positive_sign` (`metrics.py:296,312`) liczone i zwracane, **nigdy nieczytane**. Bramka GO jest ściśle słabsza niż udokumentowana. Uwaga: to NIE podważa dotychczasowego NO-GO (osłabia tylko GO) |
 | Z21 | Purge/embargo na granicy train/test | ✅ **ZROBIONE** (w Z17 — walidacja z ogona treningu wymagała embargo, inaczej naprawa byłaby pozorna) | 0 | `test_start == train_end`, zero purge w całym repo (grep: 0 trafień). Etykiety ostatnich ≤V świec treningu sięgają w okno testowe: 0,069% wierszy/fold przy V=12, ale **rośnie liniowo z V** (3,33% przy V=576) — blokujące dla każdej rundy z długim horyzontem |
-| Z22 | `run_backtest`: parametry `atr_multiplier` / `vertical_barrier_candles` | ⬜ | 0 | Dziś `compute_triple_barrier_labels(df)` wołane bez argumentów, `ATR_MULTIPLIER` jako stała modułowa (`engine.py:321`). **Blokada metodologiczna:** żadnego eksperymentu na geometrii nie da się zrobić baseline-vs-wariant w jednym procesie. CLAUDE.md zasada 3: mnożnik musi zmienić się JEDNOCZEŚNIE z `risk_controller` |
+| Z22 | `run_backtest`: parametr `vertical_barrier_candles` | ✅ **ZROBIONE** (w S1) | 0 | Horyzont etykiety jest parametrem; `embargo_candles=None` domyślnie **wiąże się z V**, więc nie da się ich rozjechać przez przeoczenie (to samo zabezpieczenie co zasada 3 dla mnożnika ATR). `atr_multiplier` celowo NIE parametryzowany — musiałby zmienić się jednocześnie w `risk_controller`. 4 testy. Pierwotny opis: Dziś `compute_triple_barrier_labels(df)` wołane bez argumentów, `ATR_MULTIPLIER` jako stała modułowa (`engine.py:321`). **Blokada metodologiczna:** żadnego eksperymentu na geometrii nie da się zrobić baseline-vs-wariant w jednym procesie. CLAUDE.md zasada 3: mnożnik musi zmienić się JEDNOCZEŚNIE z `risk_controller` |
 | Z23 | Higiena | ⬜ | 0 | `README.md:27` 143→190 testów • `.claude/settings.json` przypadkowo zacommitowany w C2.11 (artefakt narzędzia) — odpiąć za zgodą użytkownika • przywrócenie pełnej tabeli per-fold w `runs/2026-09-21_c2.12-*.md` |
 
 **Zadania HIPOTEZOWE (kosztują budżet, wymagają świadomego nadpisania reguły STOP przez użytkownika).**

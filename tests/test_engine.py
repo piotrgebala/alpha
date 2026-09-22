@@ -31,6 +31,7 @@ import pytest
 from agents.labeling import ATR_MULTIPLIER
 from agents.ml_optimizer import REVERSION_FEATURES
 from agents.risk_controller import MIN_BARRIER_TO_COST_RATIO
+import backtest.engine as engine_module
 from backtest.costs import MAKER, TAKER, total_round_trip_cost
 from backtest.engine import (
     DEFAULT_CANDLES_PER_DAY,
@@ -694,3 +695,79 @@ def test_run_backtest_confidence_gate_accounting_is_consistent() -> None:
     assert sum(f["n_signals_confidence_gated"] for f in active) > 0
     for fold in active:
         assert fold["confidence_threshold"] is not None
+
+
+# ---------------------------------------------------------------------------
+# Z22 (Backlog II): horyzont etykiety jako parametr run_backtest
+# ---------------------------------------------------------------------------
+
+
+def test_run_backtest_vertical_barrier_changes_timeout_share() -> None:
+    """
+    Krótszy horyzont => cena rzadziej zdąża trafić barierę => WIĘCEJ timeoutów.
+    Niezmiennik kierunkowy, nie konkretna liczba.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+
+    def timeout_share(v: int) -> float:
+        result = run_backtest(raw, vertical_barrier_candles=v, **kwargs)
+        real = result["trades"].loc[~result["trades"]["kill_switch_active"]]
+        assert len(real) > 0
+        return float((real["exit_reason"] == "timeout").mean())
+
+    assert timeout_share(3) > timeout_share(12)
+
+
+def test_run_backtest_embargo_follows_vertical_barrier_by_default() -> None:
+    """
+    Embargo musi iść za horyzontem etykiety — inaczej ogon treningu z etykietami
+    sięgającymi w okno testowe wróciłby do walidacji (regres Z17+Z21).
+    """
+    captured: dict = {}
+    original = engine_module._collect_candidate_signals
+
+    def spy(*args, **kwargs):
+        captured["embargo"] = kwargs["embargo_candles"]
+        return original(*args, **kwargs)
+
+    engine_module._collect_candidate_signals = spy
+    try:
+        run_backtest(
+            _make_pipeline_test_ohlcv(seed=7),
+            train_days=5, test_days=2, step_days=2,
+            min_barrier_to_cost_ratio=0.0, vertical_barrier_candles=7,
+        )
+    finally:
+        engine_module._collect_candidate_signals = original
+    assert captured["embargo"] == 7
+
+
+def test_run_backtest_explicit_embargo_overrides_default() -> None:
+    captured: dict = {}
+    original = engine_module._collect_candidate_signals
+
+    def spy(*args, **kwargs):
+        captured["embargo"] = kwargs["embargo_candles"]
+        return original(*args, **kwargs)
+
+    engine_module._collect_candidate_signals = spy
+    try:
+        run_backtest(
+            _make_pipeline_test_ohlcv(seed=7),
+            train_days=5, test_days=2, step_days=2,
+            min_barrier_to_cost_ratio=0.0, vertical_barrier_candles=7, embargo_candles=0,
+        )
+    finally:
+        engine_module._collect_candidate_signals = original
+    assert captured["embargo"] == 0
+
+
+def test_run_backtest_single_regime_produces_only_that_regime() -> None:
+    """Architektura jednoreżimowa: przekazanie jednego zestawu cech => tylko ten reżim."""
+    result = run_backtest(
+        _make_pipeline_test_ohlcv(seed=7),
+        train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0,
+        regime_feature_sets=[("range", REVERSION_FEATURES)],
+    )
+    assert {f["regime"] for f in result["folds_summary"]} == {"range"}
