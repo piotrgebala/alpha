@@ -1,7 +1,8 @@
 # F1 — funding po raz pierwszy na próbie zdolnej cokolwiek rozstrzygnąć (2026-09-22)
 
-> **STATUS: PRE-REJESTRACJA.** Sekcje „Wynik" i dalsze są celowo puste. Wszystko do sekcji
-> „Czego ta runda NIE rozstrzygnie" włącznie zapisano **przed napisaniem linijki kodu**.
+> **STATUS: ZAMKNIĘTA — WYNIK NEGATYWNY.** Wszystko do sekcji „Czego ta runda NIE
+> rozstrzygnie" włącznie zapisano **przed napisaniem linijki kodu** (osobny commit `dbd92bc`).
+> **Licznik F: 1/1 — WYCZERPANY, reguła STOP.**
 
 ## ID testu
 
@@ -125,3 +126,164 @@ gdy różnica jest szumem.
 - **Inne transformacje funding** (z-score, okna) — H2.0 zawęziło do surowej stawki
   z trzech powodów; reguła STOP zamyka serię po jednym wariancie.
 - **ETH/SOL/BNB, inny target, dźwignia** — poza zakresem.
+
+---
+
+## Wynik
+
+**Komenda:** `py -m backtest.run_funding_measured_f1`. Dane: 14 916 świec 4h, 7 457 rozliczeń
+funding, 2 świece z NaN (sprzed pierwszego rozliczenia). Pełny stdout: `raw_output.txt`.
+
+| ramię | cechy | `n` | trafność | CI 95% | próg BE | margines |
+|---|---|---|---|---|---|---|
+| **A** (odniesienie) | 4 OHLCV | 8 033 | 50,37% | [49,27%; 51,46%] | 52,93% | −2,57 pp |
+| **B** (kandydat) | 4 + **funding** | **8 127** | **50,34%** | **[49,25%; 51,43%]** | 52,94% | **−2,60 pp** |
+
+### Werdykt wg kryterium zapisanego PRZED uruchomieniem
+
+| | |
+|---|---|
+| wymagane `n` do orzeczenia negatywu (moc 80%) | 4 481 |
+| zmierzone `n` w ramieniu B | **8 127 — 1,81× wymaganej** |
+| górny kraniec CI ramienia B | **51,43%** |
+| próg opłacalności | **52,94%** |
+
+> ### ❌ **F1: WYNIK NEGATYWNY**
+>
+> `ci_high(51,43%) < break_even(52,94%)` — górny kraniec przedziału leży **1,51 pp poniżej
+> progu opłacalności**, przy próbie 1,81× wymaganej. **Dowód braku, nie brak dowodu.**
+>
+> **Licznik F: 1/1 wyczerpany. Reguła STOP — seria F zamknięta.**
+
+### Obserwacja (NIE kryterium): różnica między ramionami
+
+**B − A = −0,03 pp**, 95% CI **[−1,57; +1,51]**, z = **−0,04**. Nieistotna.
+Funding **nie zmienia trafności w żadną stronę**.
+
+### Lejek
+
+| etap | ramię A | ramię B |
+|---|---|---|
+| ocenione świece | 14 448 | 14 448 |
+| odpadło na abstynencji | 6 334 | 6 252 |
+| bramka pewności / kosztowa | 0 / 0 | 0 / 0 |
+| sygnały | 8 114 | 8 196 |
+| stłumione kill-switchem | 81 | 69 |
+| **w próbie** | **8 033** | **8 127** |
+
+Zero pominiętych foldów (0/86) w obu ramionach, bilans lejka domyka się.
+
+## Runda OBALA jedyne ustalenie, jakie zgłosiło H2.1
+
+H2.1 nie rozstrzygnęło pytania o trafność, ale zgłosiło jedno ustalenie:
+**„funding POTROIŁ liczbę decyzji modelu (35 → 98) — czyli został uznany za informacyjny"**.
+Trafiło ono do `runs/INDEX.md` i do `STATUS.md`.
+
+**Nie odtwarza się.**
+
+| przyrząd | ramię A | ramię B | krotność |
+|---|---|---|---|
+| przed A1 (H2.1) | 35 sygnałów | 98 | **2,80×** |
+| **po A1 (F1)** | **8 114** | **8 196** | **1,01×** |
+
+**Wyjaśnienie mechaniczne:** przy abstynencji 99,3% model podejmował 35 decyzji. Przy takiej
+liczbie **każde drobne zaburzenie posteriora mnoży ją wielokrotnie** — dołożenie dowolnej
+cechy, która cokolwiek zmienia, daje „potrojenie". Przy 8 000 decyzji ten sam funding zmienia
+ją o **jeden procent**.
+
+„Potrojenie" było **artefaktem zagłodzonej próby**, a nie miarą informacyjności cechy.
+To ten sam rodzaj pułapki co „A2 kupuje `n`" z K2 i „liczba obserwacji to nie liczba
+transakcji" z wniosku 19 — trzeci wariant tego samego błędu.
+
+## Co na plus (+) / Co na minus (−)
+
+**(+) Pytanie postawione w H2.0 wreszcie ma odpowiedź.** Funding jako cecha nie wynosi
+trafności do progu opłacalności — zmierzone na 8 127 transakcjach zamiast 98.
+
+**(+) Wycofane fałszywe ustalenie.** „Funding potraja liczbę decyzji" było jedyną rzeczą,
+którą H2 zostawiło po sobie jako pozytywną, i okazało się artefaktem. Bez tej rundy zostałoby
+w księdze jako fakt.
+
+**(+) Potrójna kontrola odtwarzalności.** Ramię A dało `n = 8 033`, trafień `4 046`,
+`p = 50,3672%` — **identycznie** jak w M1 i identycznie niezależnie od tego, czy do ramki
+doklejono nieużywaną kolumnę funding. Dwa niezależne skrypty, trzy przebiegi, ta sama liczba
+co do czwartego miejsca po przecinku.
+
+**(+) Runda dostarczyła dokładnie to, co obiecała.** Pre-rejestracja mówiła, że odpowiedzi
+„funding działa" obiecywać nie wolno i że wzrost `n` nie będzie wynikiem. Drugi zapis wręcz
+uratował przed powtórzeniem błędu H2.1.
+
+**(−) Wykrywalność nadal zaczyna się od ~54%.** Gdyby funding dawał +1 pp trafności, ta runda
+by tego nie zobaczyła. Zapisane w pre-rejestracji, nie dopisane po wyniku.
+
+**(−) To jedno sformułowanie funding, nie „funding" w ogóle.** Surowa stawka jako cecha.
+H2.0 odrzuciło rachunkiem mocy bramkę na skrajny funding i carry; ten ostatni żyje wyłącznie
+w wymiarze przekrojowym (4A).
+
+**(−) BTC, 4h, V=3.** Jak wszystko w tym projekcie.
+
+## Walidacja (zasada 16a)
+
+**Werdykt: READY.**
+
+- **Trafność przeliczona wprost z journalu** (zliczenie `gross_pnl > 0`) wobec wartości
+  z `summarize_edge_by_regime`: **różnica 0,000000 pp** w obu ramionach.
+- **Kontrola determinizmu:** ramię A policzone na ramce **bez** kolumny funding i **z** nią
+  (nieużywaną) daje identyczne `n = 8 033` i `trafienia = 4 046`. Dołożenie niewykorzystanej
+  kolumny nie wpływa na pipeline — warunek konieczny, żeby porównanie ramion mierzyło JEDNĄ
+  zmienną (zasada 4).
+- **Zgodność z M1:** ta sama konfiguracja w innym skrypcie dała tę samą liczbę.
+- **„Kogo NIE ma w zbiorze":** bramka kosztowa i bramka pewności odrzuciły **zero** świec,
+  zero pominiętych foldów, 2 świece z NaN funding wypadły jak rozbieg wskaźnika.
+- **Red flag:** runda potwierdziła oczekiwanie zapisane z góry i **obaliła** ustalenie
+  z poprzedniej rundy. To nie jest wynik wygodny.
+
+## Przegląd diffu (zasada 16c)
+
+**Werdykt: diff poprawny — dwa skrypty analityczne, zero zmian w kodzie produkcyjnym.**
+`run_funding_measured_f1.py` buduje na `checkpoint_lib`, konsumuje `measurability_report`,
+`required_trades` i `wald_half_width` bez własnych kopii wzorów; próg `N_WYMAGANE_DO_NEGATYWU`
+wpisany, nie liczony po wyniku. Testy 390/390, ruff czysty.
+
+## Wniosek
+
+Prostym językiem (zasada 17).
+
+**Opłata za utrzymanie pozycji nie pomaga przewidzieć kierunku.**
+
+Funding to jedyna informacja w tym projekcie, która nie pochodzi z wykresu ceny — giełda
+publikuje ją co osiem godzin, mamy jej prawie siedem lat. Dołożyliśmy ją do modelu już raz
+i **nie dowiedzieliśmy się niczego**, bo model podjął wtedy 98 decyzji. Dziś podejmuje 8 127.
+
+**Trafia w 50,34%. Musiałby w 52,94%.** Najbardziej optymistyczny odczyt to 51,43% — półtora
+punktu poniżej progu. Różnica wobec modelu bez funding: **trzy setne punktu**, przy marginesie
+błędu półtora punktu w każdą stronę. Czyli **zero**.
+
+**Przy okazji trzeba wycofać rzecz, którą zapisaliśmy wcześniej jako ustalenie.** H2.1
+stwierdziło, że funding „potroił liczbę decyzji modelu", i uznaliśmy to za dowód, że model
+uznał go za informacyjny. To był artefakt: przy 35 decyzjach dowolna zmiana mnoży tę liczbę
+wielokrotnie. Przy 8 000 decyzji funding zmienia ją o procent. **Nie potroił niczego — po
+prostu było za mało danych, żeby cokolwiek zobaczyć.**
+
+## Rekomendacja
+
+1. **Zamknąć funding jako sygnał kierunkowy.** Licznik F wyczerpany, reguła STOP.
+
+2. **Wycofać ustalenie „funding potraja liczbę decyzji"** z `runs/INDEX.md` (wniosek 14
+   i wiersz H2.1) oraz ze `STATUS.md`. Nie jest prawdziwe.
+
+3. **Stan zbioru informacyjnego po M1, P1 i F1 — do zapisania wprost.** Projekt zmierzył
+   z zapasem mocy: **obie rodziny cech OHLCV** (mean-reversion 50,37%, momentum 49,74%)
+   i **jedyne dostępne źródło spoza OHLCV** (funding 50,34%). Wszystkie przy 50%, wszystkie
+   przy próbie ~8 000. Dane o pozycjonowaniu są **niemierzalne** (P1: 30 dni historii).
+   **To nie jest brak pomysłów — to wyczerpanie tego, co da się zmierzyć tą metodologią
+   na tych danych.**
+
+4. **Co pozostaje otwarte i wymaga decyzji bramkowej:** inny target niż kierunek (nowa
+   definicja wypłaty), carry przekrojowy (silnik portfelowy — inny projekt), ETH/SOL/BNB
+   (nadal nie ma czego generalizować), zbieranie danych pozycjonowania od dziś na przyszłość
+   (~3,4 roku do użyteczności).
+
+5. **Nie proponuję kolejnej rundy.** Po F1 każda hipoteza na obecnych danych i obecnym
+   targecie byłaby czwartym podejściem do tej samej ściany. **Decyzja o kierunku — albo
+   o zamknięciu programu — jest bramkowa i należy do użytkownika.**

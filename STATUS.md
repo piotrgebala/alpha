@@ -2013,7 +2013,7 @@ negatywnym.** Decyzja przy użytkowniku.
 | Z8 | Rozdzielić timeframe od horyzontu trzymania | ⏳ | Nierozdzielony confound C2.6: `VERTICAL_BARRIER_CANDLES=12` = 1h @ 5m, ale 48h @ 4h. Przeliczyć proporcjonalnie jako jawnie nazwany eksperyment |
 | Z9 | Walidacja natywnych świec 1h/4h vs resample z 5m | ✅ **ZROBIONE** | WYNIK: ceny zgodne co do grosza, ale **wolumen rozjezdza sie w 11% swiec 1h i 6% swiec 4h** (bledy do 284%) — a `volume_zscore_20` jest cecha obu modeli, wiec C2.6 dostawal czesciowo zepsute wejscie. Dane 1h/4h pobrane i odlozone w `data/raw/` (cache trwaly). **Dodatkowo:** prog oplacalnosci `range` spada 82,81% (5m) -> 56,77% (1h) -> **52,74% (4h)** — pierwszy realistyczny prog w projekcie. `runs/2026-09-22_z9-timeframe-geometry/README.md`. Pierwotny opis: Wymaga maszyny użytkownika (dostęp do Binance); sprawdza, czy agregacja z 5m nie zniekształca wyniku C2.6 |
 | Z10 | **DECYZJA STRATEGICZNA: rewizja hipotezy czy domknięcie Fazy 0** | ✅ **ROZSTRZYGNIĘTE 2026-09-22** | **Decyzja użytkownika: ZAMKNĄĆ Fazę 0 wynikiem negatywnym ORAZ otworzyć nową hipotezę (H2) jako osobny byt.** Liczba zamykająca (policzona od zera z `raw_output.txt`, nie z syntez): pooled `p` = **50,27%**, n=7 687, CI95 [49,15%; 51,38%], z=+0,47 — **górny kraniec CI leży 1,30 pp poniżej najniższego progu opłacalności (52,69%) przy mocy 2,8×**, czyli dowód braku, nie brak dowodu. Wąskie gardło **informacyjne** (wszystkie 10 cech to transformacje ceny/wolumenu). Jawnie NIEPRZETESTOWANE: momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni, target≠kierunek. Obie reguły STOP **aktywne na stałe**; H2 ma własny licznik od zera. → [runs/z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md) |
-| **H2** | **NOWA HIPOTEZA: funding rate jako źródło informacji spoza OHLCV** | ⚪ **ZAMKNIĘTA 2026-09-22, bez rozstrzygnięcia** | Licznik **1/1 wyczerpany**, reguła STOP zamknęła serię. H2.0: dane pobrane (7 457 rekordów, 0 dziur) + rachunek mocy odrzucił 2 z 3 sformułowań za 0 wariantów. H3: próg sprostowany 53,12% → 52,69%. **[H2.1](runs/2026-09-22_h2.1-funding-jako-cecha/README.md) — NIEROZSTRZYGNIĘTY** (`n = 98 < 1 000`): zdjęcie bramki podniosło udział klasy dominującej 60,83% → 66,58%, model odmawia kierunku w **99,3%** świec. Funding **potroił liczbę decyzji** (35 → 98) — jedyne ustalenie rundy. Bramka leakage ZIELONA (19/19) przed eksperymentem |
+| **H2** | **NOWA HIPOTEZA: funding rate jako źródło informacji spoza OHLCV** | ⚪ **ZAMKNIĘTA 2026-09-22, bez rozstrzygnięcia** | Licznik **1/1 wyczerpany**, reguła STOP zamknęła serię. H2.0: dane pobrane (7 457 rekordów, 0 dziur) + rachunek mocy odrzucił 2 z 3 sformułowań za 0 wariantów. H3: próg sprostowany 53,12% → 52,69%. **[H2.1](runs/2026-09-22_h2.1-funding-jako-cecha/README.md) — NIEROZSTRZYGNIĘTY** (`n = 98 < 1 000`): zdjęcie bramki podniosło udział klasy dominującej 60,83% → 66,58%, model odmawia kierunku w **99,3%** świec. ~~Funding potroił liczbę decyzji (35 → 98) — jedyne ustalenie rundy.~~ **⚠ USTALENIE WYCOFANE 2026-09-22 (F1):** „potrojenie” NIE odtwarza się na naprawionym przyrządzie — przy n ~8 000 funding zmienia liczbę decyzji o **1%** (8 114 → 8 196), a nie trzykrotnie. Był to artefakt zagłodzonej próby: przy 35 decyzjach dowolne zaburzenie posteriora mnoży tę liczbę wielokrotnie → [runs/f1](runs/2026-09-22_f1-funding-zmierzony/README.md). Bramka leakage ZIELONA (19/19) przed eksperymentem |
 | **H3** | Model kosztów: analiza wrażliwości na nogę `timeout` | ✅ **ZAMKNIĘTE 2026-09-22** | **Teza obalona przez własną rundę.** Kryterium: noga maker wymaga znanej CENY, a przy barierze pionowej znamy tylko CZAS ⇒ `taker` jest POPRAWNE. Zmierzone pasmo progu **[51,64%; 52,69%]** (60,00% timeoutów) — **D3: niepewność nieistotna decyzyjnie**, domyślna `TAKER` bez zmian. Naprawiona usterka strukturalna: bramka kosztowa miała własną kopię reguły nóg i literał, teraz wyprowadzana z tej samej funkcji co journal (**usunięta klasa błędu**). Sprostowane dwie moje liczby: próg H2.1 **53,12% → 52,69%** i ostrzeżenie o funding (błędne co do znaku). Testy 308/308. → [runs/h3](runs/2026-09-22_h3-noga-timeout-pasmo/README.md) |
 | **H4** | Carry przekrojowy na wielu instrumentach | ⬜ | Wykonalny statystycznie przy ~20+ instrumentach (H2.0: ograniczeniem jest liczba nienakładających się okien w CZASIE, nie próg). Wymaga silnika portfelowego, którego Faza 0 nie ma, i łamie zasadę 9. Odnotowane jako kierunek, nie propozycja rundy |
 
@@ -2260,6 +2260,28 @@ próbę z 299 do 8 512.
 poniżej progu, próba 1,90× wymaganej do orzeczenia negatywu. **Dowód braku, nie brak dowodu.**
 Ramię odniesienia odtworzyło historyczny pomiar projektu co do 0,01 pp.
 → [runs/m1](runs/2026-09-22_m1-momentum-bez-bramki/README.md)
+
+#### Hipoteza F — funding jako cecha, ZMIERZONY ⚪ ZAMKNIĘTA 2026-09-22, wynik NEGATYWNY
+
+Druga hipoteza postawiona po zamknięciu Fazy 0. Własny licznik: **1/1 wyczerpany**, reguła STOP.
+H2 **nie zostało wznowione** — pytanie wróciło jako nowa hipoteza, tą samą drogą co momentum (M).
+Uzasadnienie: H2.1 dało werdykt NIEROZSTRZYGNIĘTY wyłącznie z powodu `n = 98`, a przeszkoda była
+instrumentalna (abstynencja 99,32%), nie informacyjna — i została zmierzona oraz usunięta (K3).
+
+**Wynik:** funding **50,34%** przy progu **52,94%**, `n = 8 127` (1,81× wymaganej próby); górny
+kraniec CI 1,51 pp poniżej progu. Różnica wobec ramienia bez funding: **−0,03 pp** (z = −0,04).
+**Runda obaliła też jedyne ustalenie H2.1** — „funding potraja liczbę decyzji" nie odtwarza się
+(2,80× → 1,01×), było artefaktem zagłodzonej próby.
+→ [runs/f1](runs/2026-09-22_f1-funding-zmierzony/README.md)
+
+#### P1 — sonda wykonalności źródeł danych (2026-09-22)
+
+Przed postawieniem F sprawdzono, co jeszcze jest do wzięcia poza OHLCV. **Wszystkie pięć
+endpointów pozycjonowania Binance** (open interest, long/short ratio, pozycje top traderów)
+oddaje **30,8 dnia** historii; jawny `startTime` sprzed lat zwraca **HTTP 400**. To ~112
+transakcji wobec wymaganych 4 481 — **brakuje 40×**. Kontrola: `klines` i `fundingRate` przy
+tym samym zapytaniu oddają dane od 2020. **Cała klasa źródeł odpada mechanicznie**, nie
+merytorycznie. → [runs/p1](runs/2026-09-22_p1-sonda-zrodel-danych/README.md)
 
 #### Rachunek mierzalności (zasada 18) — policzony 2026-09-22 na `n` ZMIERZONYM w K3
 

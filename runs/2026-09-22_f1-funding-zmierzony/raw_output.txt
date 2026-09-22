@@ -1,0 +1,117 @@
+========================================================================================================
+F1 — FUNDING jako cecha, na przyrzadzie po adopcji A1 (konfiguracja ZAMROZONA)
+========================================================================================================
+dane      : 14916 swiec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+funding   : 7457 rozliczen; swiec ze stawka 14914, NaN 2 (sprzed 1. rozliczenia — wypadna jak rozbieg wskaznika)
+pipeline  : BEZ bramki rezimu, V=3, wagi klas `balanced` (A1),
+            walk-forward 60/28/28, seed 42
+JEDNA zmienna: obecnosc cechy `funding_rate` (zasada 4).
+
+  policzone: ramie A (odniesienie: 4 cechy OHLCV)
+  policzone: ramie B (kandydat: 4 cechy + funding_rate)
+
+========================================================================================================
+1. WYNIK — trafnosc wobec progu oplacalnosci
+========================================================================================================
+   ramie |       n |  trafnosc |               CI 95% |  prog BE |   margines
+  ------------------------------------------------------------------------------
+       A |    8033 |    50.37% | [  49.27%;   51.46%] |   52.93% |     -2.57 pp
+       B |    8127 |    50.34% | [  49.25%;   51.43%] |   52.94% |     -2.60 pp
+
+========================================================================================================
+2. LEJEK — kogo NIE ma w zbiorze
+========================================================================================================
+                        etap |    ramie A |    ramie B
+  ----------------------------------------------------
+             ocenione swiece |      14448 |      14448
+      odpadlo na abstynencji |       6334 |       6252
+             bramka pewnosci |          0 |          0
+             bramka kosztowa |          0 |          0
+                     sygnaly |       8114 |       8196
+     stlumione kill-switchem |         81 |         69
+                W PROBIE (n) |       8033 |       8127
+    ramie A: foldy pominiete 0/86, bilans lejka domyka sie: True
+    ramie B: foldy pominiete 0/86, bilans lejka domyka sie: True
+
+========================================================================================================
+3. KRYTERIUM — zapisane PRZED uruchomieniem
+========================================================================================================
+  wymagane n do orzeczenia NEGATYWU (moc 80%) : 4,481
+  zmierzone n w ramieniu B                    : 8,127  (1.81x)  -> moc WYSTARCZA
+  pasmo przy tym n                            : 1.09 pp
+
+  >>> WERDYKT F1: NEGATYWNY — ci_high < prog. Funding NIE wynosi trafnosci do progu
+
+========================================================================================================
+4. OBSERWACJA (NIE kryterium) — czy ramiona sie od siebie roznia
+========================================================================================================
+  trafnosc A = 50.37%   trafnosc B = 50.34%
+  roznica B - A = -0.03 pp, 95% CI [-1.57; +1.51] pp, z = -0.04
+  >>> ROZNICA NIEISTOTNA
+
+  LICZBA DECYZJI: A = 8,114, B = 8,196 (1.01x).
+  H2.1 ustalilo, ze funding POTRAJA liczbe decyzji (35 -> 98). Pre-rejestracja F1
+  mowi wprost: to NIE jest wynik. 'Model chetniej dziala' != 'model dziala lepiej'.
+
+========================================================================================================
+5. MIERZALNOSC ex post (zasada 18)
+========================================================================================================
+  ramie A: prog wykrywalnosci 54.03%, zmierzone 50.37% -> NIEMIERZALNA
+  ramie B: prog wykrywalnosci 54.03%, zmierzone 50.34% -> NIEMIERZALNA
+
+  required_trades(50.34% vs prog 52.94%) = 2,892
+
+========================================================================================================
+6. GEOMETRIA I PELNE TABELE (do raw_output)
+========================================================================================================
+   ramie |   bariera B |    koszt C |      C/B
+       A |     1.3824% |    0.0811% |   0.0587
+       B |     1.3677% |    0.0804% |   0.0588
+
+  --- ramie A: odniesienie: 4 cechy OHLCV ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      8033  0.503672 0.658284 0.492739 0.514606       0.651064          0.512665          0.498853     0.013824  0.000811      0.529325 -0.025653
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.36046511627906974, 'fraction_le_zero': 0.6395348837209303, 'fraction_positive_sign': 0.36046511627906974, 'mean_sharpe': -1.7663058600955661}
+  UWAGA: `classification` NIE jest kryterium (wniosek skumulowany 24).
+
+  --- ramie B: kandydat: 4 cechy + funding_rate ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      8127  0.503384 0.610095 0.492513 0.514254       0.649809           0.51019          0.499716     0.013677  0.000804      0.529401 -0.026017
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.37209302325581395, 'fraction_le_zero': 0.6046511627906976, 'fraction_positive_sign': 0.3953488372093023, 'mean_sharpe': -1.6835867942351885}
+  UWAGA: `classification` NIE jest kryterium (wniosek skumulowany 24).
+
+
+
+########################################################################################################
+# WALIDACJA (CLAUDE.md zasada 16a)
+# komenda: PYTHONPATH=. py runs/2026-09-22_f1-funding-zmierzony/f1_walidacja.py
+########################################################################################################
+================================================================================================
+1. KONTROLA DETERMINIZMU — ramie A liczone BEZ kolumny funding w danych
+================================================================================================
+  Ramie A w F1 biegnie na ramce Z DOKLEJONA kolumna funding (choc jej nie uzywa).
+  M1 liczylo to samo ramie na ramce BEZ tej kolumny. Jesli wyniki sa identyczne,
+  dokleJenie niewykorzystanej kolumny nie wplywa na pipeline — czego wymaga zasada 4.
+
+  ramie A bez kolumny funding : n = 8033, trafien = 4046, p = 50.3672%
+  ramie A z  kolumna  funding : n = 8033, trafien = 4046, p = 50.3672%
+  >>> IDENTYCZNE — niewykorzystana kolumna nie wplywa na wynik
+  Kontrola wobec M1 (ramie A tamze): n = 8033, trafien = 4046, p = 50.3672%
+
+================================================================================================
+2. TRAFNOSC Z JOURNALU vs Z TABELI
+================================================================================================
+  ramie A: z journalu 50.3672%  z tabeli 50.3672%  roznica 0.000000 pp
+  ramie B: z journalu 50.3384%  z tabeli 50.3384%  roznica 0.000000 pp
+
+================================================================================================
+3. CZY USTALENIE H2.1 SIE ODTWARZA? ('funding POTRAJA liczbe decyzji')
+================================================================================================
+  H2.1 (przyrzad sprzed A1): ramie A = 35 sygnalow, ramie B = 98  ->  2.80x
+  F1   (przyrzad po   A1)  : ramie A = 8,114 sygnalow, ramie B = 8,196  ->  1.01x
+
+  >>> NIE ODTWARZA SIE.
+  Odczyt: przy abstynencji 99,3% model podejmowal 35 decyzji, wiec KAZDE drobne
+  zaburzenie posteriora mnozylo te liczbe wielokrotnie. Przy 8 000 decyzji ten sam
+  funding zmienia ja o procent. 'Potrojenie' bylo artefaktem zaglodzonej proby,
+  a nie miara informacyjnosci cechy.
