@@ -6,7 +6,7 @@
 > treść `TASKS.md` weszła jako §13–§16.
 >
 > **Podział odpowiedzialności między trzy pliki w korzeniu** (świadomie nie jeden):
-> - `CLAUDE.md` — zasady nienaruszalne 1–16. **Jedyne źródło.** Ładowany automatycznie
+> - `CLAUDE.md` — zasady nienaruszalne 1–17. **Jedyne źródło.** Ładowany automatycznie
 >   do kontekstu Claude'a w każdej sesji, więc musi zostać krótki.
 > - `README.md` — wizytówka projektu dla człowieka wchodzącego z zewnątrz.
 > - `STATUS.md` (ten plik) — plan, historia rund, ryzyka, zadania, backlog.
@@ -1394,7 +1394,7 @@ STOP, rachunek mocy PRZED uruchomieniem. Nie dziedziczy budżetu ani progów po 
 > nienaruszalnych z `CLAUDE.md`, które od tamtej pory urosły do 16 i są jedynym źródłem.
 > Numer sekcji zachowany, żeby odniesienia „§8" nie wskazywały w pustkę.
 >
-> **Zasady 1–16: `CLAUDE.md`.** Zasady operacyjne (branch per zadanie, konwencja `runs/`,
+> **Zasady 1–17: `CLAUDE.md`.** Zasady operacyjne (branch per zadanie, konwencja `runs/`,
 > zarządzanie zużyciem): §13 niżej.
 
 ---
@@ -1548,7 +1548,7 @@ W `clas5_core/`, gotowe do wklejenia w VS Code:
 
 ## 13. Zasady pracy operacyjne (z TASKS.md)
 
-> Zasady NIENARUSZALNE (1–16) są w `CLAUDE.md`. Poniżej wyłącznie zasady operacyjne:
+> Zasady NIENARUSZALNE (1–17) są w `CLAUDE.md`. Poniżej wyłącznie zasady operacyjne:
 > jak prowadzić branche, jak dokumentować rundy, jak zarządzać zużyciem.
 
 ### Zasada pracy: osobny branch per zadanie
@@ -2013,6 +2013,9 @@ negatywnym.** Decyzja przy użytkowniku.
 | Z8 | Rozdzielić timeframe od horyzontu trzymania | ⏳ | Nierozdzielony confound C2.6: `VERTICAL_BARRIER_CANDLES=12` = 1h @ 5m, ale 48h @ 4h. Przeliczyć proporcjonalnie jako jawnie nazwany eksperyment |
 | Z9 | Walidacja natywnych świec 1h/4h vs resample z 5m | ✅ **ZROBIONE** | WYNIK: ceny zgodne co do grosza, ale **wolumen rozjezdza sie w 11% swiec 1h i 6% swiec 4h** (bledy do 284%) — a `volume_zscore_20` jest cecha obu modeli, wiec C2.6 dostawal czesciowo zepsute wejscie. Dane 1h/4h pobrane i odlozone w `data/raw/` (cache trwaly). **Dodatkowo:** prog oplacalnosci `range` spada 82,81% (5m) -> 56,77% (1h) -> **52,74% (4h)** — pierwszy realistyczny prog w projekcie. `runs/2026-09-22_z9-timeframe-geometry/README.md`. Pierwotny opis: Wymaga maszyny użytkownika (dostęp do Binance); sprawdza, czy agregacja z 5m nie zniekształca wyniku C2.6 |
 | Z10 | **DECYZJA STRATEGICZNA: rewizja hipotezy czy domknięcie Fazy 0** | ✅ **ROZSTRZYGNIĘTE 2026-09-22** | **Decyzja użytkownika: ZAMKNĄĆ Fazę 0 wynikiem negatywnym ORAZ otworzyć nową hipotezę (H2) jako osobny byt.** Liczba zamykająca (policzona od zera z `raw_output.txt`, nie z syntez): pooled `p` = **50,27%**, n=7 687, CI95 [49,15%; 51,38%], z=+0,47 — **górny kraniec CI leży 1,30 pp poniżej najniższego progu opłacalności (52,69%) przy mocy 2,8×**, czyli dowód braku, nie brak dowodu. Wąskie gardło **informacyjne** (wszystkie 10 cech to transformacje ceny/wolumenu). Jawnie NIEPRZETESTOWANE: momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni, target≠kierunek. Obie reguły STOP **aktywne na stałe**; H2 ma własny licznik od zera. → [runs/z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md) |
+| **H2** | **NOWA HIPOTEZA: funding rate jako źródło informacji spoza OHLCV** | 🔵 **OTWARTA** | Otwarta decyzją użytkownika 2026-09-22 wraz z zamknięciem Fazy 0. **Własny licznik od zera (0/1), własna reguła STOP, rachunek mocy przed eksperymentem.** [H2.0](runs/2026-09-22_h2.0-funding-wykonalnosc/README.md) — dane pobrane (7 457 rekordów, 6,8 roku, 0 dziur, `data/fetch_funding.py` + 14 testów); **rachunek mocy odrzucił 2 z 3 sformułowań za 0 wariantów** (bramka: 0,05–0,44×; carry: 0,03–0,12× mimo progu poniżej 50%). Wykonalne: **funding jako 11. cecha bez bramki, 4h** ⇒ pre-rejestracja **H2.1**, kryterium `ci_low > 53,12%`, klauzula `n < 1 000`, 1 wariant |
+| **H3** | Model kosztów: `timeout → maker` zamiast `taker` | ⬜ | **Kandydat o najwyższej dźwigni** (H2.0): timeout to wyjście ZAPLANOWANE, więc dałoby się je obsłużyć zleceniem limit. Przy 60% timeoutów koszt 0,0900% → ~0,0600%, próg na 4h **53,12% → 52,08%**. Osobna runda — NIE mieszana z testem nowej cechy (zasada 4) |
+| **H4** | Carry przekrojowy na wielu instrumentach | ⬜ | Wykonalny statystycznie przy ~20+ instrumentach (H2.0: ograniczeniem jest liczba nienakładających się okien w CZASIE, nie próg). Wymaga silnika portfelowego, którego Faza 0 nie ma, i łamie zasadę 9. Odnotowane jako kierunek, nie propozycja rundy |
 
 ### E. Backlog II — po programie „droga do GO" (C2.11–C2.13), audyt 2026-09-21
 

@@ -1,0 +1,235 @@
+H2.0 - WYKONALNOSC hipotezy funding (5 analiz, ZERO spojrzen na target)
+Data: 2026-09-22   Komenda: PYTHONPATH=. py <kazdy skrypt ponizej>
+
+################################################################################
+### h2_wykonalnosc.py
+################################################################################
+========================================================================================
+1. DANE
+========================================================================================
+  swiece 4h :  14916  2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+  funding   :   7457  2019-09-10 08:00:00+00:00 -> 2026-06-30 16:00:00+00:00
+  historia  : 6.80 lat;  funding/rok = 1096 (oczekiwane 1095,75)
+
+========================================================================================
+2. ROZKLAD FUNDING RATE (opisowy, bez targetu)
+========================================================================================
+  srednia   = +0.01071%   mediana = +0.01000%   sd = 0.02093%
+  udzial ujemnych = 14.64%   |  dokladnie 0,01% (stawka bazowa) = 35.85%
+  percentyle (w % za 8h):
+    p0.1   = -0.05999%
+    p1     = -0.01880%
+    p5     = -0.00570%
+    p10    = -0.00188%
+    p25    = +0.00267%
+    p50    = +0.01000%
+    p75    = +0.01000%
+    p90    = +0.02323%
+    p95    = +0.04684%
+    p99    = +0.10574%
+    p99.9  = +0.17077%
+
+  ZAKOTWICZENIE KOSZTOWE: stala uzywana w Fazie 0 jako koszt = +0,01000%
+    -> udzial obserwacji ODBIEGAJACYCH od niej: 64.15%
+    -> annualizowany funding przy medianie: +10.96%/rok
+
+========================================================================================
+3. TRWALOSC SYGNALU (czy funding jest informacja, czy szumem 8-godzinnym)
+========================================================================================
+  autokorelacja lag= 1 (  8h): +0.7969
+  autokorelacja lag= 2 ( 16h): +0.7357
+  autokorelacja lag= 3 ( 24h): +0.6933
+  autokorelacja lag= 6 ( 48h): +0.6489
+  autokorelacja lag=21 (168h): +0.4587
+
+========================================================================================
+4. MASA PUNKTOWA — pulapka dyskretna (jak direction_persistence_10 w C2.5)
+========================================================================================
+  udzial obserwacji DOKLADNIE rownych stawce bazowej 0.01%: 35.85%
+  -> percentyle p20 i p80 obie wynosza +0.00145% / +0.01000%
+  -> PROGI PERCENTYLOWE SA TU NIEUZYWALNE: maska (r>=p80)|(r<=p20) lapie 70,2% obserwacji.
+     To dokladnie ten sam blad, ktory C2.5 wykryl w `direction_persistence_10`.
+     Wniosek dla H2: prog musi byc ABSOLUTNY (odchylenie od stawki bazowej), nie percentylowy.
+
+========================================================================================
+4b. LICZEBNOSC PROBY PRZY PROGACH ABSOLUTNYCH (dwustronnie)
+========================================================================================
+      prog |f| | n zdarzen |  % obs |  na rok |  dodatnie |  ujemne | mediana epizodu
+  --------------------------------------------------------------------------------------------
+        0.020% |       884 |  11.9% |     130 |       818 |      66 |             2.0
+        0.030% |       656 |   8.8% |      96 |       624 |      32 |             2.0
+        0.050% |       346 |   4.6% |      51 |       333 |      13 |             1.0
+        0.080% |       158 |   2.1% |      23 |       153 |       5 |             1.5
+        0.100% |        92 |   1.2% |      14 |        89 |       3 |             1.0
+
+========================================================================================
+5. GEOMETRIA BARIERA-vs-KOSZT na 4h (ta sama metodologia co Z9/Z5b)
+========================================================================================
+  mediana bariery B = 1.5 x ATR_14 / cena = 2.3646% ceny
+
+   V (swiec 4h) |  horyzont | okresow funding |   koszt C | break-even p
+  --------------------------------------------------------------------------
+  koszt round-trip C (maker wejscie / taker wyjscie, jak bramka kosztowa) = 0.0900%
+  UWAGA: C nie zalezy od V (funding celowo poza ta funkcja, backtest/costs.py:126).
+  Od V zalezy EFEKTYWNE B: im krotszy horyzont, tym wiekszy udzial timeoutow,
+  ktore wychodza po cenie rynkowej, a nie na barierze (Z5b: przy V=3 to 60,8%).
+
+  break-even p przy PELNEJ barierze B=2.3646%: 51.90%
+
+   udzial timeoutow | efektywne B | break-even p
+  ------------------------------------------------
+                 0% |     2.3646% |       51.90%
+                30% |     1.9035% |       52.36%
+                60% |     1.4424% |       53.12%
+                80% |     1.1350% |       53.96%
+
+========================================================================================
+6. MOC STATYSTYCZNA (Z19 / Z10 pkt 4: liczone PRZED eksperymentem)
+========================================================================================
+  Zalozenie konserwatywne: 60% timeoutow (zmierzone w Z5b), B_eff = 1.4424%
+  break-even p = 53.12%
+  Wymagana proba na wykrycie p=break-even wobec H0=50% przy mocy 80%: 2014
+
+      prog |f| | n zdarzen | margines mocy |          werdykt
+  ------------------------------------------------------------
+        0.020% |       884 |         0.44x |     NIEWYKONALNE
+        0.030% |       656 |         0.33x |     NIEWYKONALNE
+        0.050% |       346 |         0.17x |     NIEWYKONALNE
+        0.080% |       158 |         0.08x |     NIEWYKONALNE
+        0.100% |        92 |         0.05x |     NIEWYKONALNE
+
+  UWAGA: powyzsze n to liczba ZDARZEN funding, nie transakcji. Realna proba bedzie
+  MNIEJSZA o abstynencje modelu (w S1b siegala 90,5%) i o foldy pominiete przez
+  MIN_TRAIN_ROWS. To gorna granica, nie prognoza.
+
+################################################################################
+### h2_bez_bramki.py
+################################################################################
+======================================================================================
+LEJEK ODNIESIENIA (zmierzony w S1b, early stopping dzialajacy)
+======================================================================================
+  swiec kandydujacych -> w oknach testowych :  84.8%
+  w oknach testowych  -> transakcji         :   9.5%  (abstynencja 90,5%)
+  lacznie: 8.03% swiec kandydujacych staje sie transakcja
+
+======================================================================================
+WYKONALNOSC per interwal — formulowanie BEZ BRAMKI (wszystkie swiece kandyduja)
+======================================================================================
+  interwal |   swiec | B mediana |    B_eff | break-even |  n_req |  n_szac | margines
+  ------------------------------------------------------------------------------------
+        4h |   14902 |   2.3646% |  1.4424% |     53.12% |   2014 |    1196 |    0.59x
+        1h |   26290 |   0.9422% |  0.5747% |     57.83% |    318 |    2111 |    6.64x
+        5m |  315634 |   0.2299% |  0.1402% |     82.09% |     16 |   25342 | 1538.18x
+
+  n_req  = proba na wykrycie p=break-even wobec H0=50% przy mocy 80%
+  n_szac = liczba swiec x lejek z S1b (udzial okien x udzial transakcji)
+  Margines >= 1,0x = wykonalne. Ponizej = eksperyment nie moze rozstrzygnac.
+
+################################################################################
+### h2_krzywa.py
+################################################################################
+================================================================================================
+KRZYWA WYKONALNOSCI: prog oplacalnosci vs to, co da sie zmierzyc
+================================================================================================
+  koszt round-trip C = 0.0900% (maker wejscie / taker wyjscie)
+  lejek swieca->transakcja = 8.03% (zmierzony w S1b)
+
+  interwal | swiec/6,8l |    B_eff | break-even |  n_szac | min wykryw. |   zapas |       werdykt
+  ----------------------------------------------------------------------------------------------
+        1h |      59590 |  0.5747% |     57.83% |    4784 |      51.42% |  +6.41 pp |     WYKONALNE
+        2h |      29779 |  0.8278% |     55.44% |    2391 |      52.00% |  +3.43 pp |     WYKONALNE
+        3h |      19842 |  1.0219% |     54.40% |    1593 |      52.46% |  +1.95 pp |     WYKONALNE
+        4h |      14902 |  1.4424% |     53.12% |    1196 |      52.83% |  +0.29 pp |     WYKONALNE
+        8h |       7444 |  2.1245% |     52.12% |     598 |      54.01% |  -1.89 pp |  NIEWYKONALNE
+       12h |       4958 |  2.6496% |     51.70% |     398 |      54.91% |  -3.21 pp |  NIEWYKONALNE
+        1d |       2472 |  3.8721% |     51.16% |     198 |      56.96% |  -5.79 pp |  NIEWYKONALNE
+        2d |       1229 |  5.5414% |     50.81% |      99 |      59.87% |  -9.05 pp |  NIEWYKONALNE
+        3d |        815 |  6.6316% |     50.68% |      65 |      62.11% | -11.44 pp |  NIEWYKONALNE
+
+  B_eff       = mediana 1,5xATR/cena, skorygowana o 60% timeoutow (Z5b)
+  break-even  = trafnosc, od ktorej strategia zarabia po kosztach
+  min wykryw. = najnizsza trafnosc, jaka przy n_szac da sie odroznic od 50% (95%/80%)
+  zapas > 0   => prog oplacalnosci jest W ZASIEGU pomiaru
+  swiece 1h przeskalowane z 3 lat na 6,8 roku (wymagalyby dociagniecia historii)
+
+################################################################################
+### h2_carry.py
+################################################################################
+====================================================================================================
+FUNDING JAKO PRZYCHOD — prog oplacalnosci p* = 0,5*(1 + (C-F)/B)
+====================================================================================================
+  B_eff = 1.4424%   C = 0.0900%   (prog bez funding: 53.12%)
+
+   prog |f| | okr. | n zdarzen |    F sr. |       F-C |  prog p* | min wykryw. |       werdykt
+  ------------------------------------------------------------------------------------------------
+     0.010% |    1 |      3932 |  0.0203% |  +0.0697% |   52.42% |      51.56% |     w zasiegu
+     0.010% |    3 |      3932 |  0.0609% |  +0.0291% |   51.01% |      52.71% |  NIEWYKONALNE
+     0.010% |    6 |      3932 |  0.1218% |  -0.0318% |   48.90% |      53.83% |    PROG < 50%
+     0.015% |    1 |      1046 |  0.0482% |  +0.0418% |   51.45% |      53.03% |  NIEWYKONALNE
+     0.015% |    3 |      1046 |  0.1447% |  -0.0547% |   48.10% |      55.25% |    PROG < 50%
+     0.015% |    6 |      1046 |  0.2893% |  -0.1993% |   43.09% |      57.42% |    PROG < 50%
+     0.020% |    1 |       884 |  0.0539% |  +0.0361% |   51.25% |      53.30% |  NIEWYKONALNE
+     0.020% |    3 |       884 |  0.1617% |  -0.0717% |   47.51% |      55.71% |    PROG < 50%
+     0.020% |    6 |       884 |  0.3235% |  -0.2335% |   41.91% |      58.07% |    PROG < 50%
+     0.030% |    1 |       656 |  0.0641% |  +0.0259% |   50.90% |      53.83% |  NIEWYKONALNE
+     0.030% |    3 |       656 |  0.1924% |  -0.1024% |   46.45% |      56.63% |    PROG < 50%
+     0.030% |    6 |       656 |  0.3848% |  -0.2948% |   39.78% |      59.37% |    PROG < 50%
+     0.050% |    1 |       346 |  0.0865% |  +0.0035% |   50.12% |      55.27% |  NIEWYKONALNE
+     0.050% |    3 |       346 |  0.2594% |  -0.1694% |   44.13% |      59.13% |    PROG < 50%
+     0.050% |    6 |       346 |  0.5187% |  -0.4287% |   35.14% |      62.90% |    PROG < 50%
+
+  okr.        = liczba okresow funding trzymania pozycji (1 = 8h, 3 = 24h, 6 = 48h)
+  F           = sredni otrzymany funding = |stawka| x liczba okresow
+  prog p*     = trafnosc, od ktorej strategia zarabia PO uwzglednieniu przychodu z funding
+  min wykryw. = najnizsza trafnosc odrozialna od 50% przy n_zdarzen/okresow transakcji
+
+  UWAGA: n_tx = n_zdarzen/okresow to GORNA granica — zaklada, ze zdarzenia nie
+  nakladaja sie i kazde daje transakcje. Realnie mniej (abstynencja, foldy, nakladanie).
+
+################################################################################
+### h2_truncation.py
+################################################################################
+====================================================================================
+ILE SWIEC 4h PRZEZYWA POZYCJA, ZANIM DOTKNIE BARIERY +/-1,5xATR
+====================================================================================
+  V= 3 ( 12h): mediana trwania =  3.0 swiec (1.50 okresow funding), srednia =  2.7 (1.34 okr.), timeoutow =  77.9%
+  V= 6 ( 24h): mediana trwania =  5.0 swiec (2.50 okresow funding), srednia =  4.4 (2.20 okr.), timeoutow =  48.3%
+  V=12 ( 48h): mediana trwania =  5.0 swiec (2.50 okresow funding), srednia =  6.2 (3.10 okr.), timeoutow =  20.0%
+  V=18 ( 72h): mediana trwania =  5.0 swiec (2.50 okresow funding), srednia =  6.9 (3.47 okr.), timeoutow =   8.2%
+
+====================================================================================
+SKUTEK DLA ARYTMETYKI CARRY (prog p* = 0,5*(1 + (C-F)/B))
+====================================================================================
+   prog |f| |   V | okr. ZAKL. | okr. REAL |  F zakl. |   F real | p* zakl. |  p* real
+  ----------------------------------------------------------------------------------
+     0.020% |   6 |        3.0 |      2.20 |  0.1617% |  0.1187% |   47.79% |   49.12%
+     0.020% |  12 |        6.0 |      3.10 |  0.3235% |  0.1671% |   44.33% |   48.13%
+     0.030% |   6 |        3.0 |      2.20 |  0.1924% |  0.1411% |   46.84% |   48.42%
+     0.030% |  12 |        6.0 |      3.10 |  0.3848% |  0.1987% |   42.84% |   47.36%
+     0.050% |   6 |        3.0 |      2.20 |  0.2594% |  0.1903% |   44.78% |   46.91%
+     0.050% |  12 |        6.0 |      3.10 |  0.5187% |  0.2679% |   39.58% |   45.67%
+
+################################################################################
+### h2_optimum.py
+################################################################################
+==============================================================================================
+OPTIMUM CARRY — V=12 (48h), realne trwanie 6.2 swiec = 3.10 okresow
+B_eff = 2.0571%   C = 0.0900%
+==============================================================================================
+   prog |f| | zdarzen |   F real |  prog p* | zapas do 50% | n bez naklad. | n wymagane |  margines
+  ------------------------------------------------------------------------------------------
+     0.010% |    3932 |  0.0629% |   50.66% |       -0.66 pp |           655 |        n/d |     0.00x
+     0.012% |    1163 |  0.1386% |   48.82% |       +1.18 pp |           194 |       6888 |     0.03x
+     0.015% |    1046 |  0.1495% |   48.55% |       +1.45 pp |           174 |       4599 |     0.04x
+     0.020% |     884 |  0.1671% |   48.13% |       +1.87 pp |           147 |       2736 |     0.05x
+     0.025% |     748 |  0.1848% |   47.70% |       +2.30 pp |           125 |       1810 |     0.07x
+     0.030% |     656 |  0.1987% |   47.36% |       +2.64 pp |           109 |       1375 |     0.08x
+     0.040% |     475 |  0.2332% |   46.52% |       +3.48 pp |            79 |        793 |     0.10x
+     0.050% |     346 |  0.2679% |   45.67% |       +4.33 pp |            58 |        513 |     0.11x
+     0.080% |     158 |  0.3579% |   43.49% |       +6.51 pp |            26 |        226 |     0.12x
+
+  n wymagane = proba, przy ktorej dolny kraniec CI95 przebija p* przy prawdziwym p = 50%
+  (czyli: ile trzeba, zeby POKAZAC oplacalnosc nawet bez przewagi kierunkowej)
+
+  NAJLEPSZA KOMORKA: prog |f| >= 0.080%, n=26, wymagane 226, margines 0.12x -> NIEWYKONALNE
+

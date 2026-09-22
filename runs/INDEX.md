@@ -38,6 +38,7 @@ podsumowanie pod tabelą.
 | S1 | 2026-09-22 | [s1-single-regime-4h](2026-09-22_s1-single-regime-4h/README.md) | **NOWA SERIA:** architektura jednoreżimowa (`range`, bez `trend`) na natywnych świecach 4h, historia 6,8 roku, V=3, walk-forward 60/28/28. Konfiguracja ZAMROŻONA w pre-rejestracji Z5b przed uruchomieniem | 1 (nowa seria) | **KRYTERIUM NIESPEŁNIONE, rozstrzygająco.** n=1 037 (>925, klauzula nierozstrzygalności nie weszła). Trafność **48,60%**, CI [45,56%; 51,64%] — **górny kraniec PONIŻEJ progu 53,07%**, więc z 95% pewnością trafność jest niższa od progu opłacalności. Bramka kosztowa odrzuciła **0%** sygnałów (geometria naprawiona — nie pomogło). `mean_sharpe` −0,59 zamiast −60, co potwierdza, że patologia z C2.12 była artefaktem małych foldów. **REGUŁA STOP URUCHOMIONA** — koniec tej linii hipotezy. **Walidacja (zasada 16a, po fakcie): CAVEATS** — liczby potwierdzone co do cyfry przez 3 niezależne przeliczenia, werdykt odporny (kryterium przepada o 9,04 pp), ale „z zapasem"/„z 95% pewnością" WYCOFANE; `48,60%` to trafność na **6,95% historii** (22 pominięte foldy to systematycznie okna szybkich ruchów, p=4,9e-03; krach COVID poza zbiorem) |
 | S1b | 2026-09-22 | [s1b-early-stopping-naprawiony](2026-09-22_s1b-early-stopping-naprawiony/README.md) | Powtórzenie S1 po naprawie Z17b (early stopping faktycznie załącza się: 5/63 → 53/63 foldów). Konfiguracja i kryterium NIEZMIENIONE, adopcja zadeklarowana bezwarunkowo przed uruchomieniem | 0 (naprawa błędu) | **WYNIK NIEROZSTRZYGALNY** — klauzula pre-rejestrowana (`n < 925`) weszła w grę: **n spadło 1 037 → 345**, bo early stopping czyni model ostrożniejszym (abstynencja 70,9% → **90,5%**). Trafność 47,54%, CI [42,27%; 52,81%] — nieodróżnialna i od monety, i od progu. **Konsekwencja:** werdykt S1 zapadł na pipelinie z martwym early stoppingiem; po naprawie konfiguracja 4h/V=3 jest **NIETESTOWALNA** — na `n=925` brakuje **11,4 lat danych, których nie ma** (18,2 potrzebne vs 6,8 dostępne) |
 | **Z10** | 2026-09-22 | [z10-zamkniecie-fazy-0](2026-09-22_z10-zamkniecie-fazy-0/README.md) | **DECYZJA BRAMKOWA UŻYTKOWNIKA: zamknięcie Fazy 0 wynikiem negatywnym.** Liczba zbiorcza policzona od zera z `raw_output.txt` wszystkich rund (nie z syntez w write-upach) | 0 (decyzja + synteza) | **DOWÓD BRAKU, nie brak dowodu.** Pooled `p` na 3 najczystszych pomiarach (po naprawie Z17+Z21): **50,27%**, n=**7 687**, CI95 **[49,15%; 51,38%]**, z=+0,47 — nieodróżnialne od monety. **Górny kraniec CI leży 1,30 pp PONIŻEJ najniższego progu opłacalności zmierzonego w projekcie (52,69%)** przy mocy **2,8×** wymaganej próby. Obalone: specyfikacja dwureżimowa + jednoreżimowa `range`. **NIEPRZETESTOWANE (jawnie): momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni, target≠kierunek, informacja spoza OHLCV.** Walidacja (16a): **READY** |
+| **H2.0** | 2026-09-22 | [h2.0-funding-wykonalnosc](2026-09-22_h2.0-funding-wykonalnosc/README.md) | **NOWA HIPOTEZA (H2): wykonalność funding rate.** Nowe dane (7 457 rekordów funding, 0 dziur, 6,8 roku) + 5 analiz: rozkład, trwałość, liczebność, geometria, moc. **ZERO spojrzeń na target** (zaostrzenie wobec C2.7 — powód: C2.13) | 0 (wykonalność przed eksperymentem) | **RACHUNEK MOCY ODRZUCIŁ 2 z 3 SFORMUŁOWAŃ ZA 0 WARIANTÓW.** (a) **bramka na skrajny funding — ODRZUCONA**, moc 0,05–0,44× (bramka zagładza próbę, jak `trend` w Fazie 0); (b) **funding carry — ODRZUCONY**, moc 0,03–0,12%, choć próg opłacalności spada **poniżej 50%** (`p*`=48,13% po kontroli ucięcia barierą) — ogranicza liczba nienakładających się okien 48h, nie próg; żyje w formule PRZEKROJOWEJ; (c) **funding jako 11. cecha bez bramki, 4h — JEDYNE WYKONALNE**, zapas mocy +0,29 pp, wymagany przyrost `p` **+2,85 pp**. **Odkrycia:** masa punktowa 35,85% obserwacji na stawce bazowej ⇒ progi percentylowe nieużywalne (pułapka C2.5 powtórzona); autokorelacja funding lag=1 **+0,797** (sygnał trwały, nie szum); `timeout→taker` w modelu kosztów może być błędem — naprawa dałaby próg 53,12%→52,08%. Walidacja (16a): **READY** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -54,6 +55,8 @@ podsumowanie pod tabelą.
   naprawie pomiar jest NIEROZSTRZYGALNY (n=345 < 925), a konfiguracja okazuje się
   **nietestowalna** przy dostępnej historii (brakuje 11,4 lat). Reguła STOP pozostaje
   aktywna — to doprecyzowanie, czego NIE wykazano, nie zaproszenie do kolejnych prób.
+
+- **NOWA HIPOTEZA H2 — funding rate (od H2.0, decyzja użytkownika 2026-09-22): 0/1 ZUŻYTYCH.** Licznik startuje OD ZERA i nie dziedziczy niczego po Fazie 0. H2.0 to **0 wariantów** (wykonalność, zero spojrzeń na target). Pre-rejestracja H2.1: **1 wariant, reguła STOP po nim** — bez drugiego progu, drugiego `V` i drugiego interwału. Kryterium `ci_low > 53,12%`, klauzula nierozstrzygalności `n < 1 000`.
 
 > **ZAMKNIĘCIE FAZY 0 (Z10, decyzja użytkownika 2026-09-22).** Suma budżetu zużytego w Fazie 0:
 > **10 wariantów** (7 + 2 + 1). Oba liczniki są **ZAMKNIĘTE NA STAŁE** — żadna przyszła runda
@@ -124,6 +127,23 @@ podsumowanie pod tabelą.
    progów po Fazie 0. Trzy wymogi przeniesione z minusów Z10, bo w Fazie 0 zawiodły: moc
    przed eksperymentem, walidacja write-upu **przed** publikacją (zasada 16a), aktualizacja
    `docs/rag` **w tej samej rundzie** co zmiana w kodzie (DoD punkt 6).
+14. **Hipoteza funding rozpada się na TRZY sformułowania, nie jedno** (H2.0) — i rachunek
+   mocy odrzucił dwa **przed** eksperymentem, za 0 wariantów. Bramkowanie na skrajny funding
+   powtarza błąd Fazy 0 (zagładza próbę: 1,2–11,9% obserwacji). Carry zmienia rządzącą
+   nierówność na `(2p−1)·B + F > C` i przy `F > C` spycha próg **poniżej 50%** (48,13% po
+   kontroli ucięcia barierą) — ale ogranicza go **liczba nienakładających się okien 48h
+   w 6,8 roku** (maks. 1 240), więc żyje w formule PRZEKROJOWEJ (20+ instrumentów), nie
+   czasowej. Wykonalne zostaje jedno: **funding jako 11. cecha, bez bramki, 4h**.
+15. **Funding ma MASĘ PUNKTOWĄ: 35,85% obserwacji to dokładnie stawka bazowa 0,0100%** (H2.0)
+   ⇒ progi percentylowe są nieużywalne (maska p20/p80 łapie 70,2% obserwacji). To ta sama
+   pułapka, którą C2.5 wykrył w `direction_persistence_10`. **Progi na funding muszą być
+   ABSOLUTNE.** Sygnał jest za to silnie trwały: autokorelacja lag=1 (8h) = **+0,797**.
+16. **Podejrzenie w modelu kosztów (H2.0, niezweryfikowane):** `exit_leg_for_reason` mapuje
+   `timeout → taker`, ale timeout to wyjście ZAPLANOWANE (świeca znana z góry), więc dałoby
+   się je obsłużyć zleceniem limit. Przy 60% timeoutów koszt spadłby 0,0900% → ~0,0600%,
+   a próg na 4h **53,12% → 52,08%**. Najwyżej dźwigniowa pojedyncza zmiana w projekcie —
+   osobna runda, NIE mieszana z testem nowej cechy (zasada 4).
+
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11 i 14)
 
