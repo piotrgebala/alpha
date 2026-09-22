@@ -43,6 +43,17 @@ from backtest.diagnose_timeframe_geometry import CANDLES_PER_DAY, _load, _load_c
 
 REGIME_WINDOW_DAYS = 20  # atr_pctrank_20d — warmup, w którym reżim jest nieokreślony
 
+# Z5b: okna walk-forward SKALOWANE do interwału. Stałe 60/14/14 dni są zdefiniowane w dniach,
+# więc na 4h dają tylko 84 świece testowe na fold (~22 świec `range`) — poniżej MIN_TRAIN_ROWS,
+# czyli fold byłby pomijany. To artefakt jednostek, nie właściwość rynku, więc okno testowe
+# na 4h rośnie do 28 dni. Okno treningowe zostaje: 60 dni na 4h to 360 świec (~94 `range`),
+# czyli powyżej progu. Wartości NIE są strojone pod wynik — wynikają z MIN_TRAIN_ROWS.
+WALK_FORWARD = {
+    "5m": (TRAIN_WINDOW_DAYS, TEST_WINDOW_DAYS, STEP_DAYS),
+    "1h": (TRAIN_WINDOW_DAYS, TEST_WINDOW_DAYS, STEP_DAYS),
+    "4h": (TRAIN_WINDOW_DAYS, 28, 28),
+}
+
 
 def main() -> None:
     cfg = _load_cfg()
@@ -71,11 +82,12 @@ def main() -> None:
         )
         atr_over_price = atr / df["close"]
 
+        train_days, test_window_days, step_days = WALK_FORWARD[timeframe]
         span_days = (df["timestamp"].max() - df["timestamp"].min()).total_seconds() / 86400.0
         # Okna testowe pokrywają wszystko po warmupie i po PIERWSZYM oknie treningowym.
-        test_days = max(0.0, span_days - REGIME_WINDOW_DAYS - TRAIN_WINDOW_DAYS)
+        test_days = max(0.0, span_days - REGIME_WINDOW_DAYS - train_days)
         test_coverage = test_days / span_days if span_days else 0.0
-        n_folds = int(test_days // STEP_DAYS)
+        n_folds = int(test_days // step_days)
 
         for name in ("range", "trend"):
             mask = valid & (regime == name)
@@ -92,6 +104,8 @@ def main() -> None:
             rows.append(
                 {
                     "interwał": timeframe,
+                    "lat": round(span_days / 365.25, 1),
+                    "okno test": test_window_days,
                     "reżim": name,
                     "świec reżimu": regime_candles,
                     "n (górne ogr.)": n_upper,

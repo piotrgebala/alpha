@@ -16,6 +16,14 @@ data:
   # każdy interwał ściągany jest RAZ — `data/raw/` to jedno miejsce na wszystkie dane.
   # 1h/4h służą walidacji, czy agregacja z 5m (C2.6) nie zniekształca wyniku.
   timeframes: ["5m", "1h", "4h"]
+  # Z5b (2026-09-22): 4h dostaje PEŁNĄ dostępną historię (pierwsza świeca BTC perp na
+  # Binance USDS-M to 2019-09-08; 2019-09-10 omija dni z cenami placeholderowymi).
+  # Powód jest konkretny, nie "więcej danych = lepiej": Z19 pokazał, że na 4h wiążącym
+  # ograniczeniem jest LICZEBNOŚĆ PRÓBY (1 551 świec `range` wobec wymaganych 2 608),
+  # a 4h ma najniższy próg opłacalności w projekcie (52,74%). Pliki cache są kluczowane
+  # zakresem, więc krótki i długi wariant 4h współistnieją.
+  timeframe_start_overrides:
+    "4h": "2019-09-10T00:00:00Z"
   # Commit 2.10 (Backlog Z5): 3 lata historii. Poprzednie okno 2025-07-01→2026-07-01 to
   # zamrożone źródło wyników C6–C2.9 (runs/); jego parquet ZOSTAJE w data/raw nietknięty
   # (nazwa pliku koduje zakres, więc nowy zakres = nowy plik, bez nadpisywania).

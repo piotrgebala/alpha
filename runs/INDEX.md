@@ -42,10 +42,14 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 
 | Z19 | 2026-09-22 | [2026-09-22_z19-statistical-power.md](2026-09-22_z19-statistical-power.md) | Backlog II: rachunek MOCY STATYSTYCZNEJ przed eksperymentem — `wald_half_width`, `min_detectable_hit_rate`, `required_trades` w `metrics.py` + tabela wykonalności per interwał/reżim | 0 (wykonalność przed eksperymentem) | **Rekomendacja z Z9 OBALONA zanim kosztowała eksperyment.** 4h `range` ma najlepszy próg (52,74%), ale jest NIEWYKONALNE z dwóch powodów naraz: foldy 21,5 świec < MIN_TRAIN_ROWS=30 oraz próba n<=1 551 wobec wymaganych **2 608**. **Jedyna konfiguracja wykonalna i sensowna: 1h `range`** — n<=5 600 (wymagane 425), 77,8 świec/fold, próg 56,77%, trzeba zmierzyć **58,08%** (dziś najczystszy pomiar to 50,38%) |
 
+| Z5b | 2026-09-22 | [2026-09-22_z5b-long-history-4h-preregistration.md](2026-09-22_z5b-long-history-4h-preregistration.md) | Backlog II: pełna historia 4h (2019-09→2026-07, **14 916 świec, 6,8 roku**, zero dziur) do trwałego cache + okna walk-forward skalowane per interwał + pomiar konfliktu spójność↔ekonomia per horyzont. **PRE-REJESTRACJA** eksperymentu (nieuruchomionego) | 0 (dane + wybór specyfikacji) | **4h przeszło z „niewykonalne" na WYKONALNE** (foldy 21,5→48,0; próba 1 551→4 076). **Nowy pomiar koryguje Z19:** przy V=3 aż **60,8% transakcji to timeouty**, więc efektywne B spada i próg rośnie 52,30%→**54,60%** (Z19 zakładał, że każda transakcja trafia barierę). Wybrano **V=3** mimo wyższego progu — spójność to wymóg poprawności, nie preferencja. Margines mocy **4,3×**. Kryterium sukcesu: trafność **≥ 56,15%** |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
 C2.11 to instrumentacja (0 wariantów); C2.12 to +1 wariant (model kosztów); C2.13 to +1 wariant
-(próg pewności) => **licznik = 2**. Z16, Z17+Z21, Z18, Z9 i Z19 to 0 wariantów (pomiar/naprawa/walidacja/wykonalność) — licznik nadal **2**.
+(próg pewności) => **licznik = 2**. Z16, Z17+Z21, Z18, Z9, Z19 i Z5b to 0 wariantów (pomiar/naprawa/walidacja/wykonalność/dane) — licznik na tej bazie nadal **2**.
+
+**Nowa seria — architektura jednoreżimowa 4h (od Z5b):** to NOWA hipoteza wobec dwureżimowej z docs/rag/01, więc własny licznik. Eksperyment pre-zarejestrowany, jeszcze nieuruchomiony: **0/1**.
 
 ## Jak dodać nowy wpis
 

@@ -59,11 +59,17 @@ def _load_cfg() -> dict:
 
 
 def _load(cfg: dict, timeframe: str) -> pd.DataFrame:
-    """Z trwałego cache — bez sieci, jeśli plik już jest (patrz data/fetch_ohlcv.py)."""
+    """
+    Z trwałego cache — bez sieci, jeśli plik już jest (patrz data/fetch_ohlcv.py).
+
+    Respektuje `timeframe_start_overrides` (Z5b): 4h ma dłuższą historię niż 5m/1h, bo
+    tam wiążącym ograniczeniem eksperymentu jest liczebność próby (Z19).
+    """
+    start = (cfg.get("timeframe_start_overrides") or {}).get(timeframe, cfg["start"])
     return get_ohlcv_cached(
         symbol=cfg["primary_symbol"],
         timeframe=timeframe,
-        start=cfg["start"],
+        start=start,
         end=cfg["end"],
         cache_dir=cfg["cache_dir"],
         exchange_id=cfg["exchange_id"],
