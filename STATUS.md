@@ -2100,7 +2100,11 @@ wyznaczają kolejność zadań poniżej.
 
 ---
 
-### ETAP 1 — H2.1: czy informacja spoza OHLCV rusza trafność (W TRAKCIE)
+### ETAP 1 — H2.1: czy informacja spoza OHLCV rusza trafność — ⚪ **ZAMKNIĘTY 2026-09-22**
+
+> **Status:** H2.1 wykonane, wynik **NIEROZSTRZYGNIĘTY** (`n = 98 < 1 000`), licznik H2
+> **wyczerpany (1/1)**, reguła STOP zamknęła serię. Sekcja niżej opisuje plan sprzed
+> uruchomienia i zostaje jako zapis tego, co zaplanowano — nie jako zadanie do zrobienia.
 
 **Pytanie:** wszystkie 10 dotychczasowych informacji to przetworzona cena i obrót. Czy dodanie
 czegoś **innego rodzaju** — opłaty za utrzymanie pozycji, publikowanej przez giełdę — podnosi
@@ -2137,7 +2141,7 @@ strony.
 |---|---|---|
 | **pozytywny** (`ci_low > 52,69%`) | pierwszy dodatni wynik w historii projektu | **NIE wdrażamy.** Replikacja out-of-sample na ETH (zasada 9: BTC do końca, potem generalizacja bez retuningu). Dopiero potem rozmowa o Fazie 1 |
 | **negatywny** | zbiór informacyjny OHLCV + funding **wyczerpany** dla predykcji kierunku na BTC 4h | Reguła STOP zamyka H2. Przejście do Etapu 4 — decyzja użytkownika |
-| **nierozstrzygalny** (`n < 1 000`) | konfiguracja niemierzalna przy dostępnej historii, jak S1b | **Nie interpretujemy w żadną stronę.** Jedyna droga dalej to więcej próby, czyli wymiar przekrojowy (Etap 4B), nie kolejne `V` ani interwał |
+| **nierozstrzygalny** (`n < 1 000`) | konfiguracja niemierzalna przy dostępnej historii, jak S1b | **Nie interpretujemy w żadną stronę.** Jedyna droga dalej to więcej próby, czyli wymiar przekrojowy (Etap **4A**, nie 4B — sprostowane 2026-09-22), nie kolejne `V` ani interwał |
 
 ---
 
@@ -2154,9 +2158,17 @@ strony.
 | **`classify_checkpoint` zdegradowany** | wystawił **GO czystemu szumowi** — nie jest kryterium werdyktu |
 | **Otwarte** | trafność na szumie 54,09% (z=+1,21, nieistotne, ale n=220 nie wyklucza obciążenia ~7 pp) |
 
-**Skutek dla mapy:** każda przyszła runda musi podać, czy zakładana trafność jej hipotezy
-przekracza **~58%**. Poniżej tego progu hipoteza jest **niemierzalna z góry**, niezależnie od
-ilości danych. → [runs/k1](runs/2026-09-22_k1-kontrola-pozytywna/README.md)
+**Skutek dla mapy — SPROSTOWANY po K2 (2026-09-22).** Pierwotnie zapisano tu, że każda
+przyszła runda musi podać, czy zakładana trafność przekracza **~58%**. **To była zła liczba:**
+58,20% to trafność w pierwszym punkcie siatki `q`, w którym zapaliło się kryterium — przy
+siatce zawierającej q=0,30 ta sama konfiguracja podałaby inną wartość, bez jednej zmiany
+w kodzie. Właściwością przyrządu jest `wald_half_width(n)`, czyli szerokość pasma „opłacalne,
+ale niewidzialne", zależna **wyłącznie od `n`**.
+
+**Obowiązujące brzmienie:** każda przyszła runda liczy PRZED uruchomieniem
+`metrics.measurability_report(zakładana_trafność, break_even, oczekiwane_n)` i podaje wynik
+w pre-rejestracji. Nie ma tu zamrożonego progu i **świadomie się go nie dokłada** — projekt ma
+już dwa trupy po zamrożonych progach (`MIN_VALIDATION_ROWS = 30`, `std < 0.2`). → [runs/k1](runs/2026-09-22_k1-kontrola-pozytywna/README.md)
 
 ### ETAP 3 — dług techniczny wart zrobienia NIEZALEŻNIE od H2.1
 
