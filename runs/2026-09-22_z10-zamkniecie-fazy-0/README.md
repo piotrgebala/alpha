@@ -4,6 +4,44 @@
 
 **Z10** — decyzja bramkowa fazy, nie eksperyment. Patrz `runs/INDEX.md`.
 
+## W skrócie — prostym językiem (CLAUDE.md zasada 17, dopisane po fakcie)
+
+**Co sprawdzaliśmy przez całą Fazę 0:** czy da się zarobić, przewidując kierunek ceny bitcoina
+na podstawie samego wykresu ceny i obrotu.
+
+**Odpowiedź: nie da się. I to jest mocna odpowiedź, nie wymijająca.**
+
+Różnica jest ważna. „Nie znaleźliśmy" znaczyłoby tylko tyle, że mogliśmy szukać za słabo.
+Tutaj jest inaczej: **zebraliśmy prawie trzy razy więcej danych, niż było potrzeba**, żeby taki
+zysk wykryć — więc gdyby istniał, zobaczylibyśmy go.
+
+Liczby w jednym zdaniu: system trafiał w **50,27%** przypadków (na 7 687 transakcjach), a żeby
+wyjść na zero po opłatach giełdowych, musiałby trafiać w **52,69%**. Margines błędu pomiaru
+sięga najwyżej 51,38% — czyli **nawet najbardziej optymistyczny odczyt nie dobija do progu
+opłacalności**. Dla porównania: rzut monetą to 50%.
+
+**Gdzie leży problem:** nie w programie i nie w metodzie. Po kolei naprawiliśmy sześć rzeczy —
+sposób liczenia zysku, model opłat, dopasowanie filtrów, jakość danych, błąd w uczeniu modelu
+i samą metodę pomiaru. **Po każdej naprawie trafność wracała do 50%.** Powód jest prostszy:
+wszystkie 10 informacji, którymi karmiliśmy model, to **przetworzona cena i obrót**. Czyli
+ciągle to samo, w dziesięciu wariantach. Nie wyczerpaliśmy metod — wyczerpaliśmy **jedno źródło
+informacji**.
+
+**Czego ta Faza 0 NIE udowodniła** (i nie wolno tego mylić z powyższym):
+- **momentum** — czyli „gdy cena rośnie, będzie rosła dalej" — **nigdy nie dostało uczciwego
+  testu.** Filtr, który miał wyłapywać takie momenty, przepuszczał ich tak mało (pół procenta
+  czasu), że nie było czego mierzyć;
+- **nie testowaliśmy ETH, SOL ani BNB** — wszystko robiliśmy na bitcoinie;
+- **nie testowaliśmy opłaty za utrzymanie pozycji jako sygnału** — traktowaliśmy ją wyłącznie
+  jako koszt;
+- **nie testowaliśmy, czy da się zarobić na dźwigni i wielkości pozycji** zamiast na kierunku.
+
+**Co z tego wynika praktycznie:** Faza 0 zrobiła dokładnie to, do czego była. Jej zadaniem było
+**sprawdzić, zanim zbudujemy** — i sprawdziła. Nie powstał ani jeden z pięciu planowanych
+agentów, dashboard ani Docker. Zaoszczędzone: cała budowa systemu wokół sygnału, którego nie ma.
+
+---
+
 ## Metadane
 
 - **Typ:** decyzja bramkowa (CLAUDE.md, „Podział ról" — **wyłączna kompetencja użytkownika**)
