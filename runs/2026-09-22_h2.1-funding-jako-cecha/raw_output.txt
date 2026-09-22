@@ -1,0 +1,75 @@
+Komenda: py -m backtest.run_funding_feature_h21
+Data: 2026-09-22
+Branch: task/H2.1-funding-jako-cecha   Testy: 319/319
+
+C:\Users\pitge\AppData\Local\Programs\Python\Python314\Lib\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\pitge\AppData\Local\Programs\Python\Python314\Lib\site-packages\numpy\lib\_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+C:\Users\pitge\AppData\Local\Programs\Python\Python314\Lib\site-packages\numpy\lib\_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+==================================================================================================
+H2.1c — funding jako 11. cecha, BEZ bramki rezimu (konfiguracja ZAMROZONA)
+==================================================================================================
+dane      : 14916 swiec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+funding   : 7457 rekordow, swiec ze stawka 14914, NaN 2 (sprzed 1. rozliczenia)
+bramka    : BRAK (REGIME_ALL)  |  V = 3  |  walk-forward 60/28/28  |  seed 42
+KRYTERIUM : ci_low > 52.69%   KLAUZULA: n < 1000
+
+--- uruchamiam: A baseline (4 cechy OHLCV) (4 cech) ---
+--- uruchamiam: B kandydat (4 + funding) (5 cech) ---
+
+==================================================================================================
+LEJEK SYGNALOW
+==================================================================================================
+                         licznik |   A baseline |   B kandydat
+  ------------------------------------------------------------
+                n_rows_evaluated |        14448 |        14448
+          n_signals_no_direction |        14413 |        14350
+            n_signals_cost_gated |            0 |            0
+                       n_signals |           35 |           98
+  A baseline (4 cechy OHLCV): foldy 86, pominiete 0, z early stoppingiem 86
+  B kandydat (4 + funding): foldy 86, pominiete 0, z early stoppingiem 86
+
+==================================================================================================
+ROZBICIE EDGE'U
+==================================================================================================
+
+--- A baseline (4 cechy OHLCV) ---
+ regime  n_trades  hit_rate   z_stat  ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p  margin
+__all__        35  0.571429 0.845154 0.40748 0.735377       0.371429          0.636364          0.461538     0.015017  0.000729      0.524259 0.04717
+ regime  n_trades  mean_return  std_return  sharpe_per_trade   t_stat  n_eff  t_stat_neff
+__all__        35     0.000179    0.002119          0.084442 0.499568    NaN          NaN
+{'classification': 'GO', 'n_valid_folds': 3, 'n_total_folds': 86, 'fraction_above_threshold': 0.6666666666666666, 'fraction_le_zero': 0.3333333333333333, 'fraction_positive_sign': 0.6666666666666666, 'mean_sharpe': 2.283637669189181}
+
+--- B kandydat (4 + funding) ---
+ regime  n_trades  hit_rate    z_stat  ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+__all__        98  0.469388 -0.606092 0.37058 0.568195       0.602041          0.512821          0.440678      0.01657  0.000826      0.524925 -0.055537
+ regime  n_trades  mean_return  std_return  sharpe_per_trade   t_stat     n_eff  t_stat_neff
+__all__        98    -0.000161    0.001785         -0.090064 -0.89159 35.024539    -0.533014
+{'classification': 'GO', 'n_valid_folds': 11, 'n_total_folds': 86, 'fraction_above_threshold': 0.6363636363636364, 'fraction_le_zero': 0.36363636363636365, 'fraction_positive_sign': 0.6363636363636364, 'mean_sharpe': 21.313114061520732}
+
+==================================================================================================
+DELTA — czy cecha spoza OHLCV ruszyla trafnosc
+==================================================================================================
+                   miara |   A baseline |   B kandydat |      delta
+  ------------------------------------------------------------------
+            n transakcji |           35 |           98 |     +63.00
+              trafnosc % |        57.14 |        46.94 |     -10.20
+                ci_low % |        40.75 |        37.06 |      -3.69
+               ci_high % |        73.54 |        56.82 |     -16.72
+            break-even % |        52.43 |        52.49 |      +0.07
+             margines pp |         4.72 |        -5.55 |     -10.27
+
+==================================================================================================
+WERDYKT wobec PRE-REJESTROWANEGO kryterium (ramie B)
+==================================================================================================
+  n                       = 98
+  trafnosc zmierzona      = 46.94%
+  95% CI                  = [37.06%; 56.82%]
+  prog pre-rejestrowany   = 52.69%
+  trzeba bylo zmierzyc    = 62.59%
+  przyrost nad projektem  = -3.33 pp (zbiorcza trafnosc projektu: 50.27%, Z10)
+
+  >>> NIEROZSTRZYGNIETE: n=98 < 1000
+      Klauzula pre-rejestrowana. Wyniku NIE interpretuje w zadna strone.

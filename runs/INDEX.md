@@ -40,6 +40,7 @@ podsumowanie pod tabelą.
 | **Z10** | 2026-09-22 | [z10-zamkniecie-fazy-0](2026-09-22_z10-zamkniecie-fazy-0/README.md) | **DECYZJA BRAMKOWA UŻYTKOWNIKA: zamknięcie Fazy 0 wynikiem negatywnym.** Liczba zbiorcza policzona od zera z `raw_output.txt` wszystkich rund (nie z syntez w write-upach) | 0 (decyzja + synteza) | **DOWÓD BRAKU, nie brak dowodu.** Pooled `p` na 3 najczystszych pomiarach (po naprawie Z17+Z21): **50,27%**, n=**7 687**, CI95 **[49,15%; 51,38%]**, z=+0,47 — nieodróżnialne od monety. **Górny kraniec CI leży 1,30 pp PONIŻEJ najniższego progu opłacalności zmierzonego w projekcie (52,69%)** przy mocy **2,8×** wymaganej próby. Obalone: specyfikacja dwureżimowa + jednoreżimowa `range`. **NIEPRZETESTOWANE (jawnie): momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni, target≠kierunek, informacja spoza OHLCV.** Walidacja (16a): **READY** |
 | **H2.0** | 2026-09-22 | [h2.0-funding-wykonalnosc](2026-09-22_h2.0-funding-wykonalnosc/README.md) | **NOWA HIPOTEZA (H2): wykonalność funding rate.** Nowe dane (7 457 rekordów funding, 0 dziur, 6,8 roku) + 5 analiz: rozkład, trwałość, liczebność, geometria, moc. **ZERO spojrzeń na target** (zaostrzenie wobec C2.7 — powód: C2.13) | 0 (wykonalność przed eksperymentem) | **RACHUNEK MOCY ODRZUCIŁ 2 z 3 SFORMUŁOWAŃ ZA 0 WARIANTÓW.** (a) **bramka na skrajny funding — ODRZUCONA**, moc 0,05–0,44× (bramka zagładza próbę, jak `trend` w Fazie 0); (b) **funding carry — ODRZUCONY**, moc 0,03–0,12%, choć próg opłacalności spada **poniżej 50%** (`p*`=48,13% po kontroli ucięcia barierą) — ogranicza liczba nienakładających się okien 48h, nie próg; żyje w formule PRZEKROJOWEJ; (c) **funding jako 11. cecha bez bramki, 4h — JEDYNE WYKONALNE**, zapas mocy +0,29 pp, wymagany przyrost `p` **+2,85 pp**. **Odkrycia:** masa punktowa 35,85% obserwacji na stawce bazowej ⇒ progi percentylowe nieużywalne (pułapka C2.5 powtórzona); autokorelacja funding lag=1 **+0,797** (sygnał trwały, nie szum); `timeout→taker` w modelu kosztów może być błędem — naprawa dałaby próg 53,12%→52,08%. Walidacja (16a): **READY** |
 | **H3** | 2026-09-22 | [h3-noga-timeout-pasmo](2026-09-22_h3-noga-timeout-pasmo/README.md) | Analiza WRAZLIWOSCI na noge wyjscia `timeout` (pasmo maker/taker) + naprawa usterki strukturalnej: bramka kosztowa miala wlasna kopie reguly nog i literal, nic nie wiazalo jej z journalem. Pre-rejestracja w OSOBNYM commicie PRZED kodem | 0 (poprawnosc modelu kosztow, warunek D5) | **RUNDA OBALILA TEZE, KTORA JA ZAMOWILA.** Podejrzenie z H2.0 (`timeout->taker` to blad) NIE broni sie: **noga maker wymaga znanej CENY, a przy barierze pionowej znamy tylko CZAS**; wariant maker bylby tez niespojny z `_resolve_exit_price` (`close` swiecy timeoutu nieosiagalny limitem bez lookaheadu). **Pasmo progu [51,64%; 52,69%], szerokosc 1,05 pp** przy 60,00% timeoutow. **D3: niepewnosc NIEISTOTNA decyzyjnie** — oba krance wymagaja przyrostu trafnosci (+1,37/+2,39 pp nad 50,27% z Z10) wiekszego niz cokolwiek, co dala kiedykolwiek pojedyncza cecha. **Domyslna `TAKER` bez zmian (D1), poprzeczka NIE obnizona (D2), licznik H2 nadal 0/1 (D5).** Walidacja (16a): **READY** — koszt z journalu = policzony z mieszanki wyjsc co do 8. miejsca |
+| **H2.1** | 2026-09-22 | [h2.1-funding-jako-cecha](2026-09-22_h2.1-funding-jako-cecha/README.md) | **JEDYNY EKSPERYMENT HIPOTEZY H2:** funding jako cecha (pierwsze zrodlo informacji SPOZA OHLCV), bez bramki rezimu, 4h, V=3, 6,8 roku. Dwa ramiona (4 cechy vs 4+funding) | **1 — LICZNIK H2 WYCZERPANY (1/1)** | **NIEROZSTRZYGNIETY** (klauzula `n < 1 000`): **n = 98**. Przyczyna NIE jest funding ani dlugosc historii, tylko STRUKTURA ZADANIA UCZENIA: zdjecie bramki podnioslo udzial klasy dominujacej (timeout) **60,83% -> 66,58%**, wiec model z dzialajacym early stoppingiem **odmawia kierunku w 99,32%** swiec. Zdjecie bramki zadzialalo (ocenionych swiec 4x wiecej, **zero pominietych foldow** wobec 22/85 w S1), ale proba spadla 345 -> 98. **Jedyne ustalenie:** funding POTROIL liczbe decyzji modelu (35 -> 98), czyli zostal uznany za informacyjny — ale o trafnosci nie mowi nic (CI szerokie na 20 pp). **UWAGA: `classify_checkpoint` zwrocil GO dla obu ramion — to ARTEFAKT** `mean_sharpe` przy 3 i 11 waznych foldach (21,3 przy skali 1-3), patologia z C2.12. Walidacja (16a): **CAVEATS** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -58,7 +59,7 @@ podsumowanie pod tabelą.
   aktywna — to doprecyzowanie, czego NIE wykazano, nie zaproszenie do kolejnych prób.
 
 - **Model kosztow / wykonanie — POZA licznikami hipotez: 0 wariantow.** C2.12 policzono jako **1 wariant**, bo raportowal werdykt klasyfikacyjny na tych samych danych. H3 **nie** — pre-rejestracja (regula D5) zakazala raportowania trafnosci, CI, z_stat, marginesu i klasyfikacji jako wyniku; liczby te sa w `raw_output.txt` z jawna adnotacja, ze nie uczestnicza w decyzji. Uzasadnienie mechaniczne: koszt moze ruszyc trafnosc WYLACZNIE przez selekcje (inny moment kill-switcha), czyli bylby to szum selekcyjny.
-- **NOWA HIPOTEZA H2 — funding rate (od H2.0, decyzja użytkownika 2026-09-22): 0/1 ZUŻYTYCH.** Licznik startuje OD ZERA i nie dziedziczy niczego po Fazie 0. H2.0 to **0 wariantów** (wykonalność, zero spojrzeń na target). Pre-rejestracja H2.1: **1 wariant, reguła STOP po nim** — bez drugiego progu, drugiego `V` i drugiego interwału. Kryterium `ci_low > 53,12%`, klauzula nierozstrzygalności `n < 1 000`.
+- **NOWA HIPOTEZA H2 — funding rate (od H2.0, decyzja użytkownika 2026-09-22): 1/1 ZUŻYTY — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Licznik startował OD ZERA i nie dziedziczy niczego po Fazie 0. H2.0 to **0 wariantów** (wykonalność, zero spojrzeń na target). **H2.1 zużył ten wariant i wyszedł NIEROZSTRZYGNIĘTY** (`n = 98 < 1 000`) — wariant jest zużyty niezależnie od tego, bo porównanie wykonano na tych danych. Reguła STOP zamyka serię: żadnego drugiego `V`, interwału ani wariantu cechy.
 
 > **ZAMKNIĘCIE FAZY 0 (Z10, decyzja użytkownika 2026-09-22).** Suma budżetu zużytego w Fazie 0:
 > **10 wariantów** (7 + 2 + 1). Oba liczniki są **ZAMKNIĘTE NA STAŁE** — żadna przyszła runda
@@ -162,6 +163,23 @@ podsumowanie pod tabelą.
    (~17% bramki), jest **bledne co do znaku i rzedu wielkosci**: zmierzone **-0,00243%** = 2,7%
    bramki, ze znakiem UJEMNYM (short otrzymuje funding). Bramka jest lekko KONSERWATYWNA.
 
+
+19. **Liczba OBSERWACJI to nie liczba TRANSAKCJI — trzeci raz ten sam blad** (H2.1).
+   Rachunki mocy w tym projekcie szacowaly probe z liczby swiec, a decyduje to, ile z nich
+   model uzna za warte dzialania. Ciag: S1 -> S1b (1 037 -> 345, naprawa early stoppingu),
+   S1b -> H2.1 (345 -> 98, zdjecie bramki). **Za kazdym razem zaskoczenie, mimo ze precedens
+   byl juz w repo.** WYMOG na przyszlosc: rachunek mocy PRZED eksperymentem musi obejmowac
+   **rozklad klasy docelowej**, nie tylko liczebnosc danych.
+20. **Zdjecie bramki rezimu POGARSZA proporcje klas** (H2.1): przy V=3 na 4h udzial timeoutow
+   rosnie **60,83% -> 66,58%**, bo `range` to swiece o niskim ATR (waskie bariery, czesciej
+   dotykane), a bez bramki wchodza swiece o barierach zbyt szerokich na 12h. Skutek: model
+   z dzialajacym early stoppingiem uczy sie przewidywac klase wiekszosciowa i **odmawia
+   kierunku w 99,3%** przypadkow. Bramka zagladza probe PRZEZ FILTR, brak bramki zagladza ja
+   PRZEZ NIERONOWAGE KLAS — oba konce tego kompromisu sa teraz zmierzone.
+21. **`classify_checkpoint` potrafi zwrocic GO na smieciach** (H2.1): oba ramiona dostaly GO
+   przy 3 i 11 waznych foldach i `mean_sharpe` = 21,3 (typowa skala 1-3). To ta sama patologia
+   co w C2.12. **Zadnego werdyktu klasyfikacyjnego nie wolno cytowac bez podania
+   `n_valid_folds`** — inaczej runda nierozstrzygnieta daje sie przeczytac jako sukces.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11 i 14)
 
