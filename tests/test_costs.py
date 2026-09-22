@@ -3,23 +3,40 @@ test_costs.py
 
 Warstwa 1 (unit, algebraiczne) testy dla backtest/costs.py — proste sprawdzenie
 wzorów kosztów transakcyjnych (docs/rag/04_narzedzia_zewnetrzne.md). Brak testu
-leakage (koszty nie zależą od przyszłości) i brak wymogu hypothesis (DoD,
-docs/rag/05: property-based testy wymagane tylko dla risk_controller.py/labeling.py).
+leakage (koszty nie zależą od przyszłości).
+
+H3: property-based testy WCHODZĄ tutaj mimo zapisu w docs/rag/05 ("wymagane tylko dla
+risk_controller.py/labeling.py"). Powód: runda wprowadza niezmiennik MIĘDZY DWIEMA
+ŚCIEŻKAMI KOSZTU (bramka `gate_cost_fraction` musi dominować każdy koszt journalowy
+`round_trip_cost_fraction`), a takiego przykłady wymyślone ręcznie nie pilnują — trzeba
+go sprawdzić przy DOWOLNYCH stawkach, żeby przeżył przyszłą zmianę fee.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
+
 from backtest.costs import (
     CANDLE_MINUTES,
+    EXECUTION_MAKER_LIMIT,
+    EXECUTION_TAKER_ONLY,
+    EXIT_REASON_SL,
+    EXIT_REASON_TIMEOUT,
+    EXIT_REASON_TP,
     FUNDING_PERIOD_HOURS,
     MAKER,
     MAKER_FEE_RATE,
     SLIPPAGE_BPS,
     TAKER,
     TAKER_FEE_RATE,
+    VALID_EXECUTION_MODELS,
+    VALID_EXIT_REASONS,
+    execution_legs,
     exit_leg_for_reason,
+    gate_cost_fraction,
     leg_fee_rate,
     round_trip_cost_fraction,
     round_trip_fee_cost,
@@ -225,3 +242,208 @@ def test_maker_model_is_strictly_cheaper_than_taker_only() -> None:
     maker_sl = total_round_trip_cost(entry_leg=MAKER, exit_leg=TAKER, **kwargs)
     maker_tp = total_round_trip_cost(entry_leg=MAKER, exit_leg=MAKER, **kwargs)
     assert maker_tp < maker_sl < taker_only
+
+
+# --- H3: noga "timeout" jako nazwany wariant + bramka wyprowadzana z journalu ---
+#
+# Dwie asercje sprzed H3 (`test_exit_leg_follows_exit_reason` z wariantem ("timeout", TAKER)
+# i `test_execution_legs_maker_limit_depends_on_exit_reason` w test_engine.py) ZOSTAJA
+# nietkniete - przypinaja domyslny argument. To bezposrednia konsekwencja wyboru "mierzymy
+# pasmo" zamiast "przerzucamy flage": gdyby zmieniac domyslna, trzeba by je przepisac.
+
+
+def test_exit_leg_timeout_maker_variant_changes_only_timeout() -> None:
+    """Drugi kraniec pasma rusza WYLACZNIE noge timeout - tp i sl sa nietkniete."""
+    assert exit_leg_for_reason(EXIT_REASON_TP, timeout_leg=MAKER) == MAKER
+    assert exit_leg_for_reason(EXIT_REASON_SL, timeout_leg=MAKER) == TAKER
+    assert exit_leg_for_reason(EXIT_REASON_TIMEOUT, timeout_leg=MAKER) == MAKER
+
+
+@pytest.mark.parametrize("timeout_leg", [MAKER, TAKER])
+def test_timeout_leg_never_makes_stop_loss_maker(timeout_leg: str) -> None:
+    """
+    Niezmiennik ekonomiczny: stop-loss MUSI byc market przy kazdej wartosci wariantu.
+
+    Zlecenie limit nie daje gwarancji wyjscia, a stop-loss bez gwarancji wyjscia nie jest
+    stop-lossem. Gdyby ktos kiedys rozszerzyl `timeout_leg` na "wszystkie nogi maker",
+    ten test zapali sie pierwszy.
+    """
+    assert exit_leg_for_reason(EXIT_REASON_SL, timeout_leg=timeout_leg) == TAKER
+
+
+@pytest.mark.parametrize("bad_reason", ["TP", "tp ", "stop", "", "vertical", "Timeout"])
+def test_exit_leg_for_reason_rejects_unknown_reason(bad_reason: str) -> None:
+    """
+    Whitelist zamiast `else`. Do H3 stalo tu `return MAKER if reason == "tp" else TAKER`,
+    wiec KAZDA z tych literowek cicho wybierala TAKER - blad niewidoczny w wyniku.
+    """
+    with pytest.raises(ValueError):
+        exit_leg_for_reason(bad_reason)
+
+
+def test_exit_leg_for_reason_rejects_unknown_timeout_leg() -> None:
+    with pytest.raises(ValueError):
+        exit_leg_for_reason(EXIT_REASON_TIMEOUT, timeout_leg="limit")
+
+
+@pytest.mark.parametrize("exit_reason", VALID_EXIT_REASONS)
+@pytest.mark.parametrize("timeout_leg", [MAKER, TAKER])
+def test_execution_legs_taker_only_ignores_timeout_leg(exit_reason, timeout_leg) -> None:
+    """Regresja baseline'u C2.10/C2.11: model taker_only jest gluchy na oba warianty."""
+    assert execution_legs(EXECUTION_TAKER_ONLY, exit_reason, timeout_leg) == (TAKER, TAKER)
+
+
+def test_execution_legs_rejects_unknown_execution_model() -> None:
+    with pytest.raises(ValueError):
+        execution_legs("maker_only", EXIT_REASON_TP)
+
+
+def test_execution_legs_validates_reason_even_when_model_ignores_it() -> None:
+    """
+    taker_only nie czyta `exit_reason`, ale literowka i tak musi byc glosna - inaczej
+    blad przechodzi cicho tylko dlatego, ze akurat wybrano model, ktory tego nie uzywa.
+    """
+    with pytest.raises(ValueError):
+        execution_legs(EXECUTION_TAKER_ONLY, "vertical")
+
+
+def _journal_cost(execution_model: str, exit_reason: str, timeout_leg: str) -> float:
+    entry_leg, exit_leg = execution_legs(execution_model, exit_reason, timeout_leg)
+    return round_trip_cost_fraction(entry_leg=entry_leg, exit_leg=exit_leg)
+
+
+@pytest.mark.parametrize("execution_model", VALID_EXECUTION_MODELS)
+@pytest.mark.parametrize("timeout_leg", [MAKER, TAKER])
+def test_gate_cost_fraction_equals_max_over_exit_reasons(execution_model, timeout_leg) -> None:
+    """Bramka to DOKLADNIE maksimum po osiagalnych powodach wyjscia, nie osobna formula."""
+    expected = max(_journal_cost(execution_model, r, timeout_leg) for r in VALID_EXIT_REASONS)
+    assert gate_cost_fraction(execution_model, timeout_leg) == expected
+
+
+def test_gate_cost_fraction_baseline_values() -> None:
+    """
+    Regresja dwoch liczb cytowanych w runs/INDEX.md i w write-upie H2.0.
+
+    0,0009 to DOKLADNIE wartosc, ktora do H3 produkowal literal w engine.py - dowod, ze
+    przeniesienie bramki na `gate_cost_fraction` nie zmienilo niczego liczbowo.
+    """
+    assert gate_cost_fraction(EXECUTION_MAKER_LIMIT) == round_trip_cost_fraction(
+        entry_leg=MAKER, exit_leg=TAKER
+    )
+    assert gate_cost_fraction(EXECUTION_MAKER_LIMIT) == pytest.approx(0.0009)
+    assert gate_cost_fraction(EXECUTION_TAKER_ONLY) == pytest.approx(0.0014)
+
+
+def test_gate_cost_fraction_is_invariant_to_timeout_leg() -> None:
+    """
+    KLUCZOWE dla uczciwosci pomiaru H3: maksimum realizuje `sl` (maker/taker), niezaleznie
+    od nogi timeout. Dzieki temu bramka przepuszcza DOKLADNIE te same sygnaly w obu
+    wariantach pasma, a roznica w wyniku nie moze pochodzic z innego lejka.
+    """
+    for model in VALID_EXECUTION_MODELS:
+        assert gate_cost_fraction(model, MAKER) == gate_cost_fraction(model, TAKER)
+
+
+def test_timeout_maker_saves_exactly_taker_minus_maker_plus_slippage() -> None:
+    """Oszczednosc na nodze timeout to dokladnie (taker - maker) + slippage, nie 'mniej wiecej'."""
+    notional = 10_000.0
+    kwargs = dict(notional=notional, holding_candles=6, direction=1, entry_leg=MAKER)
+    cost_taker = total_round_trip_cost(
+        exit_leg=exit_leg_for_reason(EXIT_REASON_TIMEOUT, TAKER), **kwargs
+    )
+    cost_maker = total_round_trip_cost(
+        exit_leg=exit_leg_for_reason(EXIT_REASON_TIMEOUT, MAKER), **kwargs
+    )
+    expected = notional * (TAKER_FEE_RATE - MAKER_FEE_RATE + SLIPPAGE_BPS / 10_000.0)
+    assert cost_taker - cost_maker == pytest.approx(expected)
+    assert expected == pytest.approx(notional * 0.0005)
+
+
+# --- property (hypothesis): niezmiennik MIEDZY sciezkami kosztu ---
+
+_RATES = st.floats(min_value=0.0, max_value=0.01, allow_nan=False, allow_infinity=False)
+_SLIP = st.floats(min_value=0.0, max_value=50.0, allow_nan=False, allow_infinity=False)
+
+
+@settings(max_examples=100, deadline=None)
+@given(
+    execution_model=st.sampled_from(VALID_EXECUTION_MODELS),
+    exit_reason=st.sampled_from(VALID_EXIT_REASONS),
+    timeout_leg=st.sampled_from([MAKER, TAKER]),
+    maker_fee=_RATES,
+    taker_fee=_RATES,
+    slippage_bps=_SLIP,
+)
+def test_gate_cost_fraction_dominates_every_journal_cost_property(
+    execution_model, exit_reason, timeout_leg, maker_fee, taker_fee, slippage_bps
+) -> None:
+    """
+    NIEZMIENNIK RUNDY: bramka nigdy nie jest tansza niz koszt, ktory realnie obciazy
+    journal. Sprawdzany przy DOWOLNYCH stawkach, zeby przezyl przyszla zmiane fee -
+    przyklady wymyslone recznie pilnuja tego tylko dla dzisiejszych wartosci.
+    """
+    entry_leg, exit_leg = execution_legs(execution_model, exit_reason, timeout_leg)
+    journal = round_trip_cost_fraction(
+        taker_fee_rate=taker_fee,
+        slippage_bps=slippage_bps,
+        entry_leg=entry_leg,
+        exit_leg=exit_leg,
+        maker_fee_rate=maker_fee,
+    )
+    gate = gate_cost_fraction(
+        execution_model,
+        timeout_leg,
+        taker_fee_rate=taker_fee,
+        slippage_bps=slippage_bps,
+        maker_fee_rate=maker_fee,
+    )
+    assert journal <= gate + 1e-15
+
+
+@settings(max_examples=100, deadline=None)
+@given(
+    execution_model=st.sampled_from(VALID_EXECUTION_MODELS),
+    timeout_leg=st.sampled_from([MAKER, TAKER]),
+    maker_fee=_RATES,
+    taker_fee=_RATES,
+    slippage_bps=_SLIP,
+)
+def test_gate_cost_fraction_is_attained_property(
+    execution_model, timeout_leg, maker_fee, taker_fee, slippage_bps
+) -> None:
+    """
+    Bramka jest OSIAGANA przez co najmniej jeden powod wyjscia.
+
+    Bez tego poprzedni test daloby sie "naprawic" zawyzeniem bramki dowolna stala -
+    bylaby wtedy bezpieczna, ale odrzucalaby sygnaly bez powodu.
+    """
+    rates = dict(taker_fee_rate=taker_fee, slippage_bps=slippage_bps, maker_fee_rate=maker_fee)
+    gate = gate_cost_fraction(execution_model, timeout_leg, **rates)
+    costs = []
+    for r in VALID_EXIT_REASONS:
+        entry_leg, exit_leg = execution_legs(execution_model, r, timeout_leg)
+        costs.append(
+            round_trip_cost_fraction(entry_leg=entry_leg, exit_leg=exit_leg, **rates)
+        )
+    assert any(abs(c - gate) <= 1e-15 for c in costs)
+
+
+@settings(max_examples=100, deadline=None)
+@given(maker_fee=_RATES, taker_fee=_RATES, slippage_bps=_SLIP)
+def test_timeout_maker_never_costs_more_than_timeout_taker_property(
+    maker_fee, taker_fee, slippage_bps
+) -> None:
+    """
+    Kraniec "maker" jest faktycznie OGRANICZENIEM GORNYM korzysci, przy zalozeniu
+    maker_fee <= taker_fee. Gdyby stawki sie odwrocily, nazwy krancow pasma przestalyby
+    opisywac to, co opisuja - dlatego zalozenie jest tu jawne, a nie milczace.
+    """
+    assume(maker_fee <= taker_fee)
+    kwargs = dict(taker_fee_rate=taker_fee, slippage_bps=slippage_bps, maker_fee_rate=maker_fee)
+    c_maker = round_trip_cost_fraction(
+        entry_leg=MAKER, exit_leg=exit_leg_for_reason(EXIT_REASON_TIMEOUT, MAKER), **kwargs
+    )
+    c_taker = round_trip_cost_fraction(
+        entry_leg=MAKER, exit_leg=exit_leg_for_reason(EXIT_REASON_TIMEOUT, TAKER), **kwargs
+    )
+    assert c_maker <= c_taker + 1e-15

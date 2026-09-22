@@ -40,6 +40,25 @@ MAKER = "maker"
 TAKER = "taker"
 _VALID_LEGS = (MAKER, TAKER)
 
+# --- H3: powody wyjścia i modele wykonania mieszkają TUTAJ, nie w engine.py ---
+#
+# Do H3 stałe `EXECUTION_*` żyły w `backtest/engine.py`, a bramka kosztowa miała WŁASNĄ,
+# ręczną kopię reguły "maker_limit ⇒ wejście maker". Dwie kopie tej samej wiedzy w dwóch
+# modułach są powodem, dla którego bramka mogła po cichu rozjechać się z journalem.
+# "Model wykonania" jest pojęciem KOSZTOWYM — jego miejsce jest w tym module.
+EXIT_REASON_TP = "tp"
+EXIT_REASON_SL = "sl"
+EXIT_REASON_TIMEOUT = "timeout"
+VALID_EXIT_REASONS = (EXIT_REASON_TP, EXIT_REASON_SL, EXIT_REASON_TIMEOUT)
+
+EXECUTION_TAKER_ONLY = "taker_only"
+EXECUTION_MAKER_LIMIT = "maker_limit"
+VALID_EXECUTION_MODELS = (EXECUTION_TAKER_ONLY, EXECUTION_MAKER_LIMIT)
+
+# Wartość BASELINE. Patrz `exit_leg_for_reason` — dlaczego to jest wartość domyślna
+# i dlaczego runda H3 jej NIE zmieniła (reguła D1 w runs/2026-09-22_h3-noga-timeout-pasmo/).
+DEFAULT_TIMEOUT_LEG = TAKER
+
 
 def leg_fee_rate(
     leg: str,
@@ -53,20 +72,87 @@ def leg_fee_rate(
     return maker_fee_rate if leg == MAKER else taker_fee_rate
 
 
-def exit_leg_for_reason(exit_reason: str) -> str:
+def exit_leg_for_reason(exit_reason: str, timeout_leg: str = DEFAULT_TIMEOUT_LEG) -> str:
     """
     Typ zlecenia nogi WYJŚCIA wynika z powodu wyjścia — to nie jest wybór strategii,
-    tylko mechanika giełdy:
+    tylko mechanika giełdy.
 
-        tp      -> maker: take-profit to zlecenie limit spoczywające w księdze
-        sl      -> taker: stop-loss MUSI być market, inaczej nie ma gwarancji wyjścia
-        timeout -> taker: wyjście po barierze pionowej to zamknięcie "po rynku"
+    KRYTERIUM (H3, `docs/rag/04`): **noga maker jest dobrze zdefiniowana tylko wtedy,
+    gdy CENA zlecenia jest znana w momencie jego składania.** Zlecenie limit to para
+    (cena, czas ważności) — nie da się złożyć limitu "na tę świecę, po cenie jaka wyjdzie".
+
+        tp      -> maker: cena ZNANA w chwili wejścia (`entry ± ATR_MULTIPLIER × ATR`);
+                   brak wypełnienia = po prostu nie było TP, transakcja trwa dalej
+        sl      -> taker: cena znana, ale wyjście PRZYMUSOWE — stop-loss musi być market,
+                   inaczej nie ma gwarancji wyjścia
+        timeout -> `timeout_leg`: jedyna noga, gdzie znamy CZAS (świeca t+V), a NIE cenę
 
     Stąd asymetria kosztu: wygrana transakcja jest TAŃSZA niż przegrana. To realistyczne
     i działa na niekorzyść strategii o niskiej trafności — czyli konserwatywnie wobec
     naszej hipotezy, nie na jej korzyść.
+
+    `timeout_leg` to NAZWANY WARIANT do analizy wrażliwości, nie pokrętło do strojenia
+    (ta sama konwencja co `execution_model`). Domyślne `TAKER` odtwarza baseline co do bitu.
+    Runda H3 zmierzyła oba krańce i **domyślnej nie zmieniła** — bo `MAKER` jest tu
+    optymistyczny nie tylko na opłatach, ale i na CENIE: `engine._resolve_exit_price`
+    liczy wyjście timeoutu jako `close` świecy timeoutu, a żeby dostać *ten* `close`
+    zleceniem limit, trzeba by znać go z wyprzedzeniem albo skrosować księgę. Naliczenie
+    stawki maker za cenę osiągalną wyłącznie taker-em to policzenie tej samej korzyści
+    dwa razy.
+
+    Trzecia wartość albo ciągła stopa wypełnienia wymaga ŹRÓDŁA DANYCH o fillach.
+    Bez niego nie wchodzi do repo (`docs/rag/04`).
+
+    Raises:
+        ValueError: na nieznanym `exit_reason` albo `timeout_leg`. Do H3 była tu
+            konstrukcja `else`, więc KAŻDY string ≠ "tp" (w tym literówka `"TP"` czy
+            `"vertical"`) cicho zwracał TAKER.
     """
-    return MAKER if exit_reason == "tp" else TAKER
+    if exit_reason not in VALID_EXIT_REASONS:
+        raise ValueError(
+            f"exit_reason musi być jednym z {VALID_EXIT_REASONS}, dostałem: {exit_reason!r}"
+        )
+    if timeout_leg not in _VALID_LEGS:
+        raise ValueError(f"timeout_leg musi być jednym z {_VALID_LEGS}, dostałem: {timeout_leg!r}")
+    if exit_reason == EXIT_REASON_TP:
+        return MAKER
+    if exit_reason == EXIT_REASON_SL:
+        return TAKER
+    return timeout_leg
+
+
+def execution_legs(
+    execution_model: str,
+    exit_reason: str,
+    timeout_leg: str = DEFAULT_TIMEOUT_LEG,
+) -> tuple[str, str]:
+    """
+    Para (noga wejścia, noga wyjścia) dla danego modelu wykonania i powodu wyjścia.
+
+    JEDNO źródło prawdy o nogach — zarówno dla kosztu w journalu, jak (pośrednio, przez
+    `gate_cost_fraction`) dla bramki kosztowej. Do H3 ta wiedza była zduplikowana:
+    `engine._execution_legs` znało ją w całości, a `engine._collect_candidate_signals`
+    miało własną, ręczną kopię dla wejścia i literał `TAKER` dla wyjścia.
+
+        taker_only   — wszystko market; IGNORUJE `timeout_leg` (regresja baseline'u
+                       C2.10/C2.11 sprzed wprowadzenia modelu maker/taker)
+        maker_limit  — wejście limit, wyjście wg `exit_leg_for_reason`
+
+    Raises:
+        ValueError: na nieznanym `execution_model` (albo, z `exit_leg_for_reason`,
+            na nieznanym `exit_reason`/`timeout_leg`).
+    """
+    if execution_model == EXECUTION_TAKER_ONLY:
+        # Walidujemy mimo nieużywania, żeby literówka nie przechodziła cicho tylko
+        # dlatego, że akurat wybrano model, który tego argumentu nie czyta.
+        exit_leg_for_reason(exit_reason, timeout_leg)
+        return TAKER, TAKER
+    if execution_model == EXECUTION_MAKER_LIMIT:
+        return MAKER, exit_leg_for_reason(exit_reason, timeout_leg)
+    raise ValueError(
+        f"execution_model musi być jednym z {VALID_EXECUTION_MODELS}, "
+        f"dostałem: {execution_model!r}"
+    )
 
 
 def funding_cost(
@@ -142,6 +228,52 @@ def round_trip_cost_fraction(
         if leg == TAKER:
             total += slip_per_leg
     return total
+
+
+def gate_cost_fraction(
+    execution_model: str,
+    timeout_leg: str = DEFAULT_TIMEOUT_LEG,
+    taker_fee_rate: float = TAKER_FEE_RATE,
+    slippage_bps: float = SLIPPAGE_BPS,
+    maker_fee_rate: float = MAKER_FEE_RATE,
+) -> float:
+    """
+    Koszt dla BRAMKI KOSZTOWEJ: **maksimum** `round_trip_cost_fraction` po wszystkich
+    osiągalnych powodach wyjścia przy danym modelu wykonania.
+
+    Bramka działa PRZED wejściem w pozycję, więc nie zna powodu wyjścia — a ten decyduje
+    o typie nogi. Musi więc założyć **najdroższy osiągalny**. To nie jest ostrożność
+    z dyscypliny, tylko z konstrukcji: gdyby liczyła koszt OCZEKIWANY (tańszy, bo `tp`
+    kosztuje mniej), przepuszczałaby świece, na których stop-out jest arytmetycznie nie
+    do pokrycia — dokładnie ten błąd, który bramka ma łapać (Commit 2d).
+
+    Do H3 `engine._collect_candidate_signals` liczyło to samo literałem `exit_leg=TAKER`,
+    obok własnej kopii reguły wejścia. Nic nie wiązało tej wartości z journalem, więc
+    rozjazd był kwestią czasu. Teraz bramka **nie ma własnej wiedzy o nogach** —
+    konsumuje wyjście tej samej funkcji co journal, a dodanie czwartego powodu wyjścia
+    albo zmiana mapowania automatycznie ją przesuwa.
+
+    Wartości baseline: `maker_limit` → **0,0009**, `taker_only` → **0,0014**.
+
+    Uwaga na asymetrię, którą ta funkcja DZIEDZICZY (zmierzona w H3, osobny kandydat
+    na rundę): bramka jest konserwatywna na nogach, ale pomija funding — na 5m/V=12
+    słusznie (~0,0004% nominału), na 4h/V=3 już nie (~0,015% wobec bramki 0,090%).
+
+    Returns:
+        Ułamek nominału — górne oszacowanie kosztu obrotu, bez funding.
+    """
+    return max(
+        round_trip_cost_fraction(
+            taker_fee_rate=taker_fee_rate,
+            slippage_bps=slippage_bps,
+            entry_leg=entry_leg,
+            exit_leg=exit_leg,
+            maker_fee_rate=maker_fee_rate,
+        )
+        for entry_leg, exit_leg in (
+            execution_legs(execution_model, reason, timeout_leg) for reason in VALID_EXIT_REASONS
+        )
+    )
 
 
 def total_round_trip_cost(

@@ -32,7 +32,13 @@ from agents.labeling import ATR_MULTIPLIER
 from agents.ml_optimizer import REVERSION_FEATURES
 from agents.risk_controller import MIN_BARRIER_TO_COST_RATIO
 import backtest.engine as engine_module
-from backtest.costs import MAKER, TAKER, total_round_trip_cost
+from backtest.costs import (
+    MAKER,
+    TAKER,
+    funding_cost,
+    gate_cost_fraction,
+    total_round_trip_cost,
+)
 from backtest.engine import (
     DEFAULT_CANDLES_PER_DAY,
     DEFAULT_TREND_THRESHOLD,
@@ -804,3 +810,212 @@ def test_skipped_folds_report_zero_funnel_counters() -> None:
         if fold["skipped"]:
             assert fold["n_signals_no_direction"] == 0
             assert fold["n_rows_evaluated"] == 0
+
+
+# --- H3: noga "timeout" jako pasmo + bramka niemogaca rozjechac sie z journalem ---
+
+_H3_KWARGS = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+_FUNNEL_KEYS = (
+    "n_rows_evaluated",
+    "n_signals_no_direction",
+    "n_signals_confidence_gated",
+    "n_signals_cost_gated",
+    "n_signals",
+)
+
+
+def test_execution_legs_threads_timeout_leg() -> None:
+    """Wariant dociera przez cienka delegacje w engine do costs.execution_legs."""
+    assert _execution_legs(EXECUTION_MAKER_LIMIT, "timeout", MAKER) == (MAKER, MAKER)
+    assert _execution_legs(EXECUTION_MAKER_LIMIT, "timeout", TAKER) == (MAKER, TAKER)
+    assert _execution_legs(EXECUTION_MAKER_LIMIT, "tp", MAKER) == (MAKER, MAKER)
+    assert _execution_legs(EXECUTION_MAKER_LIMIT, "sl", MAKER) == (MAKER, TAKER)
+
+
+def test_execution_legs_rejects_unknown_exit_reason() -> None:
+    """Do H3 literowka w `exit_reason` cicho wybierala TAKER."""
+    with pytest.raises(ValueError):
+        _execution_legs(EXECUTION_MAKER_LIMIT, "vertical")
+
+
+@pytest.mark.parametrize("execution_model", [EXECUTION_MAKER_LIMIT, EXECUTION_TAKER_ONLY])
+@pytest.mark.parametrize("timeout_leg", [MAKER, TAKER])
+def test_cost_gate_value_equals_gate_cost_fraction(execution_model, timeout_leg) -> None:
+    """
+    TEST SPOJNOSCI BRAMKA<->JOURNAL na poziomie pipeline'u.
+
+    Przechwytuje `cost_fraction`, ktory silnik realnie wstrzykuje do `is_cost_feasible`,
+    i porownuje z `gate_cost_fraction`. Do H3 ta wartosc byla literalem w engine.py, nie
+    zwiazanym z niczym. Ten test PEKA NATYCHMIAST, gdyby ktos do literalu wrocil.
+    """
+    captured: dict = {}
+    original = engine_module.is_cost_feasible
+
+    def spy(*args, **kwargs):
+        captured["cost_fraction"] = kwargs["cost_fraction"]
+        return original(*args, **kwargs)
+
+    engine_module.is_cost_feasible = spy
+    try:
+        run_backtest(
+            _make_pipeline_test_ohlcv(seed=7),
+            execution_model=execution_model,
+            timeout_leg=timeout_leg,
+            **_H3_KWARGS,
+        )
+    finally:
+        engine_module.is_cost_feasible = original
+
+    assert captured["cost_fraction"] == gate_cost_fraction(execution_model, timeout_leg)
+
+
+@pytest.mark.parametrize("timeout_leg", [MAKER, TAKER])
+def test_journal_cost_never_exceeds_gate_cost_fraction(timeout_leg) -> None:
+    """
+    Integracyjny odpowiednik property testu z test_costs.py: na REALNYCH wierszach
+    journalu koszt (bez funding) nigdy nie przekracza tego, co zalozyla bramka.
+
+    Funding odejmowany, bo bramka swiadomie go nie zawiera (costs.round_trip_cost_fraction).
+    """
+    result = run_backtest(
+        _make_pipeline_test_ohlcv(seed=7), timeout_leg=timeout_leg, **_H3_KWARGS
+    )
+    trades = result["trades"]
+    real = trades[~trades["kill_switch_active"].astype(bool)]
+    assert len(real) > 0, "fikstura musi produkowac transakcje, inaczej test nic nie sprawdza"
+    gate = gate_cost_fraction(EXECUTION_MAKER_LIMIT, timeout_leg)
+    for _, row in real.iterrows():
+        notional = row["position_size"] * row["entry_price"]
+        funding = funding_cost(
+            notional=notional,
+            holding_candles=row["exit_bar_offset"],
+            direction=row["signal_direction"],
+        )
+        assert (row["cost"] - funding) / notional <= gate + 1e-12
+
+
+def test_run_backtest_timeout_leg_default_reproduces_baseline() -> None:
+    """
+    BRAMA RUNDY: domyslny `timeout_leg` musi dac wynik BIT-IDENTYCZNY z baseline'em.
+
+    Bez tego H3 nie jest analiza wrazliwosci, tylko cicha zmiana pipeline'u - a wszystkie
+    wczesniejsze rundy przestalyby byc porownywalne.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    base = run_backtest(raw, **_H3_KWARGS)
+    explicit = run_backtest(raw, timeout_leg=TAKER, **_H3_KWARGS)
+    assert base["final_equity"] == explicit["final_equity"]
+    pd.testing.assert_frame_equal(base["trades"], explicit["trades"])
+    assert base["folds_summary"] == explicit["folds_summary"]
+
+
+def test_run_backtest_timeout_leg_does_not_change_signal_funnel() -> None:
+    """
+    UCZCIWOSC POROWNANIA, wymuszona konstrukcja: bramka bierze MAKSIMUM po powodach
+    wyjscia, a maksimum realizuje `sl` niezaleznie od nogi timeout. Wiec oba warianty
+    pasma ogladaja DOKLADNIE te same sygnaly, a roznica w wyniku nie moze pochodzic
+    z innego lejka - tylko z kosztu.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    taker = run_backtest(raw, timeout_leg=TAKER, **_H3_KWARGS)
+    maker = run_backtest(raw, timeout_leg=MAKER, **_H3_KWARGS)
+    for key in _FUNNEL_KEYS:
+        assert sum(f[key] for f in taker["folds_summary"]) == sum(
+            f[key] for f in maker["folds_summary"]
+        ), f"lejek rozjechal sie na {key}"
+
+
+def _merged_real_rows(raw):
+    """
+    Zlacza oba przebiegi pasma i zostawia wiersze REALNE W OBU.
+
+    Kill-switch jest sciezkowo zalezny: tanszy koszt -> inna krzywa equity -> inny moment
+    zadzialania (zmierzone na fiksturze: 152 vs 120 wierszy stlumionych, 32 rozjazdu).
+    Wiersze stlumione maja exit_price=NaN i exit_reason=None, wiec porownywanie ich
+    mierzyloby selekcje, nie koszt.
+    """
+    taker = run_backtest(raw, timeout_leg=TAKER, **_H3_KWARGS)["trades"]
+    maker = run_backtest(raw, timeout_leg=MAKER, **_H3_KWARGS)["trades"]
+    merged = taker.merge(maker, on=["timestamp", "regime", "fold_idx"], suffixes=("_t", "_m"))
+    both_real = ~merged["kill_switch_active_t"].astype(bool) & ~merged[
+        "kill_switch_active_m"
+    ].astype(bool)
+    return merged[both_real]
+
+
+def test_run_backtest_timeout_maker_cheaper_only_on_timeout_rows() -> None:
+    """
+    Wariant maker obniza koszt WYLACZNIE wierszy `timeout`, i to o dokladna wartosc
+    (taker - maker + slippage) = 0,0005 nominalu.
+
+    Porownanie w UDZIALE NOMINALU, nie w kwocie: nominal zalezy od wielkosci pozycji,
+    a ta od equity, ktora rozjezdza sie miedzy przebiegami. Koszt jako ulamek nominalu
+    jest od tego wolny.
+    """
+    merged = _merged_real_rows(_make_pipeline_test_ohlcv(seed=7))
+    assert len(merged) > 0
+    assert (merged["exit_reason_t"] == "timeout").any(), "fikstura musi zawierac timeouty"
+
+    for _, row in merged.iterrows():
+        frac_t = row["cost_t"] / (row["position_size_t"] * row["entry_price_t"])
+        frac_m = row["cost_m"] / (row["position_size_m"] * row["entry_price_m"])
+        if row["exit_reason_t"] == "timeout":
+            assert frac_t - frac_m == pytest.approx(0.0005)
+        else:
+            assert frac_t - frac_m == pytest.approx(0.0)
+
+
+def test_run_backtest_gross_return_per_unit_identical_across_timeout_leg() -> None:
+    """
+    Dowod, ze runda rusza WYLACZNIE koszt.
+
+    Niezmiennikiem jest ZWROT BRUTTO NA JEDNOSTKE, nie `gross_pnl` w kwocie: kwota skaluje
+    sie z wielkoscia pozycji, ta z equity, a equity zalezy od kosztu. To wlasnie dlatego
+    H3 nie raportuje trafnosci - trafnosc moze sie tu ruszyc wylacznie przez SELEKCJE
+    (inny moment kill-switcha), czyli bylaby szumem selekcyjnym, nie sygnalem.
+
+    Gdyby ktos kiedys dolozyl model CENY wyjscia dla zlecenia limit, ten test zapali sie
+    pierwszy - i slusznie, bo to juz nie bylaby zmiana samego kosztu.
+    """
+    merged = _merged_real_rows(_make_pipeline_test_ohlcv(seed=7))
+    assert len(merged) > 0
+    for side in ("entry_price", "exit_price", "exit_reason", "exit_bar_offset"):
+        assert (merged[f"{side}_t"] == merged[f"{side}_m"]).all(), f"{side} sie rozjechalo"
+
+    ret_t = (
+        merged["signal_direction_t"]
+        * (merged["exit_price_t"] - merged["entry_price_t"])
+        / merged["entry_price_t"]
+    )
+    ret_m = (
+        merged["signal_direction_m"]
+        * (merged["exit_price_m"] - merged["entry_price_m"])
+        / merged["entry_price_m"]
+    )
+    assert (ret_t - ret_m).abs().max() < 1e-15
+
+
+def test_run_backtest_timeout_leg_changes_trade_set_only_via_kill_switch() -> None:
+    """
+    Dokumentuje ZNANA sciezkowa zaleznosc: tanszy koszt zmienia krzywa equity, a przez nia
+    momenty zadzialania kill-switcha - wiec ZBIOR wykonanych transakcji sie rozni, mimo
+    identycznego lejka sygnalow. To jest jedyny kanal, ktorym pasmo moze ruszyc trafnosc,
+    i powod, dla ktorego regula D5 rundy H3 zakazuje jej raportowania.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    taker = run_backtest(raw, timeout_leg=TAKER, **_H3_KWARGS)["trades"]
+    maker = run_backtest(raw, timeout_leg=MAKER, **_H3_KWARGS)["trades"]
+    merged = taker.merge(maker, on=["timestamp", "regime", "fold_idx"], suffixes=("_t", "_m"))
+    assert len(merged) == len(taker) == len(maker), "lejek sygnalow musi byc identyczny"
+    n_killed_t = merged["kill_switch_active_t"].astype(bool).sum()
+    n_killed_m = merged["kill_switch_active_m"].astype(bool).sum()
+    assert n_killed_m <= n_killed_t, "tanszy koszt nie moze zwiekszac liczby stlumien"
+
+
+def test_run_backtest_rejects_unknown_timeout_leg() -> None:
+    """
+    Walidacja musi padac PRZED treningiem pierwszego modelu (fail fast), a nie po
+    dwudziestu minutach przebiegu.
+    """
+    with pytest.raises(ValueError):
+        run_backtest(_make_pipeline_test_ohlcv(seed=7), timeout_leg="limit", **_H3_KWARGS)
