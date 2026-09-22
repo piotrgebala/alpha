@@ -125,3 +125,14 @@ def test_bad_symbol_is_recorded_as_empty_not_fatal(tmp_path):
     assert r["empty"] == ["ZUSDT"]
     f_path, k_path = fu.cache_paths(tmp_path, "ZUSDT")
     assert f_path.exists() and k_path.exists()
+
+
+def test_bad_request_symbol_status_is_recorded_as_empty(tmp_path):
+    class _Pending(_StubExchange):
+        def fapiPublicGetKlines(self, params):
+            raise ccxt.BadRequest("Invalid symbol status.")
+
+    r = fu.fetch_universe_cached(
+        ["PUSDT"], "2021-01-01T00:00:00Z", "2021-01-10T00:00:00Z", tmp_path, _Pending(), pacing_s=0
+    )
+    assert r["empty"] == ["PUSDT"]

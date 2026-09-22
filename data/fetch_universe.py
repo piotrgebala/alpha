@@ -272,10 +272,13 @@ def fetch_universe_cached(
             time.sleep(pacing_s)
             kl = fetch_klines_1d_raw(exchange, sym, start_ms, end_ms, pacing_s)
             time.sleep(pacing_s)
-        except ccxt.BadSymbol:
-            # Symbol z archiwum, którego giełda nie rozpoznaje (np. przemianowany) — zapisany
-            # jako pusty, żeby było widać, kogo NIE ma w zbiorze.
-            print(f"[universe] {sym}: giełda nie rozpoznaje symbolu — pusty", flush=True)
+        except ccxt.ExchangeError as e:
+            # Symbol z archiwum, którego giełda nie obsługuje (przemianowany: "Invalid symbol";
+            # oczekujący na start: "Invalid symbol status") — zapisany jako pusty, żeby było
+            # widać, kogo NIE ma w zbiorze. Błędy SIECI nie trafiają tutaj — są ponawiane.
+            print(
+                f"[universe] {sym}: odrzucony przez gielde ({type(e).__name__}) - pusty", flush=True
+            )
             fund, kl = _empty_funding(), _empty_klines()
         fund.to_parquet(f_path, index=False)
         kl.to_parquet(k_path, index=False)
