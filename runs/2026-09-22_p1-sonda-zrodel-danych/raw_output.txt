@@ -1,0 +1,26 @@
+====================================================================================================
+SONDA API — ile historii oddaja endpointy POZYCJONOWANIA (okres 4h, limit 500)
+====================================================================================================
+
+1. NAJSTARSZY PUNKT W DOMYSLNEJ ODPOWIEDZI
+
+                openInterestHist |  186 pkt | 2026-08-22 20:00 -> 2026-09-22 16:00 |    30.8 dni
+        topLongShortAccountRatio |  186 pkt | 2026-08-22 20:00 -> 2026-09-22 16:00 |    30.8 dni
+       topLongShortPositionRatio |  186 pkt | 2026-08-22 20:00 -> 2026-09-22 16:00 |    30.8 dni
+     globalLongShortAccountRatio |  186 pkt | 2026-08-22 20:00 -> 2026-09-22 16:00 |    30.8 dni
+             takerlongshortRatio |  186 pkt | 2026-08-22 16:00 -> 2026-09-22 12:00 |    30.8 dni
+
+2. PROBA SIEGNIECIA WSTECZ JAWNYM startTime
+
+                openInterestHist | startTime=2020 -> HTTP 400
+        topLongShortAccountRatio | startTime=2020 -> HTTP 400
+       topLongShortPositionRatio | startTime=2020 -> HTTP 400
+     globalLongShortAccountRatio | startTime=2020 -> HTTP 400
+             takerlongshortRatio | startTime=2020 -> HTTP 400
+
+3. DLA POROWNANIA — dane, ktore JUZ MAMY
+
+               klines (OHLCV) 4h |  500 pkt | 2026-07-01 12:00 -> 2026-09-22 16:00 |    83.2 dni
+               klines (OHLCV) 4h | startTime=2020 -> 500 pkt od 2020-01-01 00:00
+                     fundingRate |  500 pkt | 2026-04-09 08:00 -> 2026-09-22 16:00 |   166.3 dni
+                     fundingRate | startTime=2020 -> 500 pkt od 2020-01-01 00:00
