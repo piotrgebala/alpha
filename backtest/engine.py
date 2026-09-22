@@ -2,7 +2,7 @@
 engine.py
 
 Backtest Fazy 0: pętla sygnał -> risk_controller -> PnL z kosztami -> equity curve
-(IMPLEMENTATION_PLAN.md §5 Commit 5). Orkiestruje cały pipeline na surowym OHLCV:
+(STATUS.md §5 Commit 5). Orkiestruje cały pipeline na surowym OHLCV:
 cechy (agents.feature_miner) -> triple-barrier labels (agents.labeling) -> split po
 reżimie -> walk-forward foldy (agents.labeling) -> trening + predykcja per fold
 (agents.ml_optimizer) -> sizing (risk_controller_fn) -> koszty (backtest.costs) ->
@@ -142,7 +142,7 @@ EXECUTION_MAKER_LIMIT = "maker_limit"
 DEFAULT_EXECUTION_MODEL = EXECUTION_MAKER_LIMIT
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
-# TASKS.md C2.5: "reżim trend może być rzadki"). To engineering safeguard, NIE parametr
+# STATUS.md C2.5: "reżim trend może być rzadki"). To engineering safeguard, NIE parametr
 # strategii/modelu — świadomie NIE w config/settings.yaml (w przeciwieństwie do
 # hiperparametrów XGBoost albo kosztów, to nie jest coś do kalibracji w walk-forward).
 MIN_TRAIN_ROWS = 30
@@ -223,7 +223,7 @@ def _collect_candidate_signals(
         regime_df = df[df["regime"] == regime_name]
 
         # Zabezpieczenie: regime_df puste (np. reżim "trend" nigdy nie wystąpił w tym
-        # oknie danych — TASKS.md C2.5 wyraźnie flaguje to jako realne ryzyko).
+        # oknie danych — STATUS.md C2.5 wyraźnie flaguje to jako realne ryzyko).
         # generate_walk_forward_folds() zakłada niepuste df (Commit 4, nie modyfikujemy) —
         # ochrona przed IndexError na .iloc[-1] pustej serii timestamp.
         if len(regime_df) == 0:

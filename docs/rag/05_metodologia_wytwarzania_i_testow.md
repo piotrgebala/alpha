@@ -64,7 +64,7 @@ equity), których autor testu by nie pomyślał samodzielnie.
 
 ## Definicja "zrobione" (Definition of Done) per Commit
 
-Commit z `IMPLEMENTATION_PLAN.md` nie jest "zrobiony", gdy kod działa raz na dev maszynie. Jest
+Commit z `STATUS.md` nie jest "zrobiony", gdy kod działa raz na dev maszynie. Jest
 zrobiony, gdy:
 
 1. Kod ma docstring z wzorem/uzasadnieniem, nie tylko `# TODO: wyjaśnić później`.
@@ -78,7 +78,7 @@ zrobiony, gdy:
    kalibracji" tam, gdzie dotyczy.
 6. `docs/rag/` zaktualizowane, jeśli commit zmienia albo doprecyzowuje decyzję architektoniczną
    (nie tylko implementuje coś, co już było ustalone).
-7. `IMPLEMENTATION_PLAN.md` status zaktualizowany (`TODO` → `DONE`, z krótką notatką co
+7. `STATUS.md` status zaktualizowany (`TODO` → `DONE`, z krótką notatką co
    zweryfikowano empirycznie).
 
 ## Konwencje kodu
@@ -106,7 +106,7 @@ zrobiony, gdy:
 
 ## Konwencja "Commitu" w tym projekcie
 
-Jeden "Commit" z `IMPLEMENTATION_PLAN.md` (np. "Commit 4 — Target + walk-forward split") to
+Jeden "Commit" z `STATUS.md` (np. "Commit 4 — Target + walk-forward split") to
 jedna logiczna, kompletna jednostka pracy: kod + testy + aktualizacja rejestru/configu +
 aktualizacja `docs/rag`, jeśli dotyczy. Nie "commituj", żeby zapisać postęp w połowie — commit
 niekompletny wg checklisty wyżej zostaje w gałęzi roboczej, nie w `main`.

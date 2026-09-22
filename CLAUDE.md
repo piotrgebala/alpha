@@ -7,7 +7,7 @@ niezależnie trenowane modele XGBoost, nie jeden połączony.
 
 **Cel Fazy 0:** udowodnić edge statystyczny minimalnym, audytowalnym systemem, zanim dobuduje się
 cokolwiek z oryginalnego PRD (5 agentów, dashboard, Docker). Status commitów, checkpointy,
-otwarte ryzyka → `IMPLEMENTATION_PLAN.md`; zadania i backlogi → `TASKS.md`; surowe
+otwarte ryzyka → `STATUS.md`; zadania i backlogi → `STATUS.md`; surowe
 wyniki rund → `runs/INDEX.md`. Te pliki zmieniają się często — traktuj jako aktualny stan, nie
 jako źródło stałych zasad.
 
@@ -89,8 +89,8 @@ jako źródło stałych zasad.
   (od Z5b) mają OSOBNE liczniki w `runs/INDEX.md`; wyników między bazami nie porównuje się 1:1.
 - **Jedna informacja mieszka w JEDNYM miejscu** (podział odpowiedzialności dokumentów):
   `runs/<katalog>/` = pełne wyniki (źródło prawdy); `runs/INDEX.md` = syntezy + wnioski
-  skumulowane + liczniki; `IMPLEMENTATION_PLAN.md` = decyzje/uzasadnienia/ryzyka (§7)/roadmapa
-  faz — sekcja per commit KRÓTKA (status + 2-3 zdania + link do runs/); `TASKS.md` = statusy
+  skumulowane + liczniki; `STATUS.md` = decyzje/uzasadnienia/ryzyka (§7)/roadmapa
+  faz — sekcja per commit KRÓTKA (status + 2-3 zdania + link do runs/); `STATUS.md` = statusy
   zadań/zasady pracy/backlog — wiersz zadania to status + jednozdaniowa uwaga + link;
   `README.md` = widok dla człowieka + kamienie milowe (zasada 15). Nie kopiuj pełnych syntez
   do PLAN/TASKS (historyczna duplikacja do odchudzenia: Backlog Z25).
@@ -113,9 +113,9 @@ giełdy), decyzje bramkowe faz (przejście do Fazy 1, zamknięcie Fazy 0, jakiko
 kapitał) i wszystko nieodwracalne (usuwanie danych/historii).
 
 **Claude — pełna autonomia badawcza W RAMACH zasad 1–16:** samodzielnie wybiera i uruchamia
-kolejne eksperymenty (w tym z backlogu w `TASKS.md`), może wprowadzać wynikające z wyników
+kolejne eksperymenty (w tym z backlogu w `STATUS.md`), może wprowadzać wynikające z wyników
 zmiany parametrów/cech/configu — **raportując po fakcie, w tej samej rundzie** (plik `runs/` +
-`IMPLEMENTATION_PLAN.md` §5/§7 + `TASKS.md`). Autonomia nie uchyla dyscypliny: jedna zmiana na
+`STATUS.md` §5/§7 + `STATUS.md`). Autonomia nie uchyla dyscypliny: jedna zmiana na
 raz, warianty rejestrowane z góry (przed obejrzeniem wyniku), licznik multiple-testing
 aktualizowany, każda decyzja udokumentowana z uzasadnieniem i ścieżką odwrotu (co i jak
 zrevertować). Skrypty pozostają neutralnymi reporterami — decyzję podejmuje i podpisuje w
@@ -131,9 +131,10 @@ runs/<data>_<id>-<slug>/ (+ runs/INDEX.md)               — katalog per run: RE
                                                             INDEX = spis + wnioski skumulowane
 docs/rag/ (01–07) + docs/INDEX.md                        — PEŁNE uzasadnienia decyzji (czytaj
                                                             przed zmianą architektury, nie tylko kodu)
-IMPLEMENTATION_PLAN.md                                    — status commitów i ryzyka, żywy dokument
-TASKS.md                                                  — zadania, backlogi, zasady pracy
-                                                            (branch-per-task, runs/, zużycie)
+STATUS.md                                                 — plan, historia rund, ryzyka,
+                                                            zadania, backlog, zasady operacyjne
+                                                            (scalone IMPLEMENTATION_PLAN+TASKS,
+                                                            2026-09-22; numeracja §1–§12 zachowana)
 config/settings.yaml, agents/feature_registry.yaml        — źródło prawdy dla parametrów
 ```
 

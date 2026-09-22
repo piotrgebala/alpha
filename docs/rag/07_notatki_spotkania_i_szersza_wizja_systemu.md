@@ -9,12 +9,12 @@ depends_on: [01_hipoteza_i_architektura.md]
 ## Kontekst i status
 
 Ten dokument to adnotowany zapis konkretnego spotkania (notatki dostarczone 2026-07-27, diagram
-Miro — **ten sam board**, który już raz zmapowano węzeł-po-węźle w `IMPLEMENTATION_PLAN.md` §10
+Miro — **ten sam board**, który już raz zmapowano węzeł-po-węźle w `STATUS.md` §10
 "Mapowanie wizji z diagramu (Miro) na fazy planu"). Nie jest to nowa mapa zadań ani zmiana
 zakresu Fazy 0 — to zapis rozbieżności między tym, co notatki ze spotkania przedstawiają jako
 zatwierdzone decyzje i zadania z terminami, a tym, co faktycznie obowiązuje wg `CLAUDE.md` i
-`IMPLEMENTATION_PLAN.md`. Szczegółowe mapowanie poszczególnych elementów diagramu na fazy — patrz
-`IMPLEMENTATION_PLAN.md` §10, nie duplikowane tutaj.
+`STATUS.md`. Szczegółowe mapowanie poszczególnych elementów diagramu na fazy — patrz
+`STATUS.md` §10, nie duplikowane tutaj.
 
 **Nieznana geneza:** nie wiadomo, czy to notatki z realnego spotkania z zewnętrznymi
 interesariuszami, czy ćwiczenie planistyczne. Analiza poniżej dotyczy treści, nie zakłada
@@ -48,7 +48,7 @@ monitoring wykonania i protokoły retreningu.
 | Onchain data | 🟡 Zgodne jako przyszłość | Kandydat do Test 2 w Fazie 1, nie Faza 0 (§10) |
 | Twitter sentiment, Forex Factory news | 🔴 Przedwczesne | Explicite Faza 2+/3 w §10, nie "teraz" |
 | RSI, ATR | ✅ Zgodne | Commit 2 (`agents/feature_miner.py`) |
-| MACD, Bollinger, GMMA | 🟡 Zgodne warunkowo | Częściowo redundantne z istniejącymi cechami — testować pojedynczo na OOS (§10, F1.5 w `TASKS.md`), nie hurtowo |
+| MACD, Bollinger, GMMA | 🟡 Zgodne warunkowo | Częściowo redundantne z istniejącymi cechami — testować pojedynczo na OOS (§10, F1.5 w `STATUS.md`), nie hurtowo |
 | XGBoost | ✅ Zgodne | Dwa niezależne modele, Commit 5 |
 | CatBoost, RandomForest | 🟡 Zgodne warunkowo | Tylko jako porównanie/ensemble PO potwierdzeniu edge'u XGBoostem (§10), nie równolegle od startu |
 | LSTM, GRU | 🔴 Niezgodne | Świadomie odrzucone — CLAUDE.md zasada 7, §8 pkt 7: dane tabelaryczne + ograniczona efektywna liczba próbek faworyzują drzewa |
@@ -59,14 +59,14 @@ monitoring wykonania i protokoły retreningu.
 | VaR, Max Drawdown | ✅ Zgodne | Kill-switch w `risk_controller.py`, Commit 5.5 |
 | Expected Shortfall | 🟡 Zgodne jako przyszłość | Naturalne uzupełnienie VaR, ale nie Faza 0 (§10) |
 | Correlation & Covariance, MPT Optimization | 🔴 Niezgodne dziś | Dotyczy alokacji między wieloma instrumentami — nierelewantne przy jednym instrumencie w Fazie 0 (§10) |
-| Retraining / Retrain Models? | 🟡 Trafna uwaga, brakująca w planie | Już dodane jako zadanie do Fazy 1 (§10, F1.4 w `TASKS.md`) |
-| Action items: terminy 15.08 / 30.08 / 10.09.2026 | 🔴 Niezgodne z rzeczywistym stanem | Zakładają równoległą budowę pełnego systemu, ale checkpoint Commitu 6 (go/no-go) jeszcze się nie wydarzył — wg `TASKS.md` Commit 3 (test leakage) to dopiero następny krok (6/52 zadań zrobionych) |
+| Retraining / Retrain Models? | 🟡 Trafna uwaga, brakująca w planie | Już dodane jako zadanie do Fazy 1 (§10, F1.4 w `STATUS.md`) |
+| Action items: terminy 15.08 / 30.08 / 10.09.2026 | 🔴 Niezgodne z rzeczywistym stanem | Zakładają równoległą budowę pełnego systemu, ale checkpoint Commitu 6 (go/no-go) jeszcze się nie wydarzył — wg `STATUS.md` Commit 3 (test leakage) to dopiero następny krok (6/52 zadań zrobionych) |
 
 ## Kluczowe rozbieżności
 
 1. **Sekwencja pracy.** Notatki zakładają trzy zespoły pracujące równolegle nad pełnym systemem
    (data, modele, risk) z twardymi terminami. Obecny plan wymaga sekwencyjnego dowodu edge'u
-   (Commit 1→6) PRZED jakąkolwiek pracą z Części II PRD — patrz `IMPLEMENTATION_PLAN.md` §1: "nic
+   (Commit 1→6) PRZED jakąkolwiek pracą z Części II PRD — patrz `STATUS.md` §1: "nic
    z Części II PRD (5 agentów, dashboard, Docker) nie jest budowane, dopóki Faza 0 nie udowodni
    empirycznie, że istnieje jakikolwiek edge statystyczny po kosztach transakcyjnych".
 2. **Wielość modeli/metod naraz.** CLAUDE.md zasada 4: "Rozszerzanie feature setu: jedna cecha na
@@ -85,7 +85,7 @@ monitoring wykonania i protokoły retreningu.
 ## Ocena i rekomendacja
 
 Notatki ze spotkania w dużej mierze odtwarzają pierwotny, ambitny zakres PRD (Część II) — dokładnie
-to, co `CLAUDE.md` i `IMPLEMENTATION_PLAN.md` świadomie odłożyły do czasu udowodnienia edge'u.
+to, co `CLAUDE.md` i `STATUS.md` świadomie odłożyły do czasu udowodnienia edge'u.
 Realizacja action items na podanych terminach (15.08, 30.08, 10.09.2026) byłaby wprost sprzeczna z
 zasadami 4 i 7 z `CLAUDE.md` oraz z zasadą nadrzędną z §1.
 
@@ -110,8 +110,8 @@ pracę niezgodną z zasadami projektu.
 ## Źródła
 
 - Notatki ze spotkania i diagram Miro dostarczone w konwersacji 2026-07-27 (ten sam diagram co w
-  `IMPLEMENTATION_PLAN.md` §10).
+  `STATUS.md` §10).
 - `CLAUDE.md` — zasady 4 i 7 (jedna cecha na raz; regime/sizing jako reguły do czasu edge'u).
-- `IMPLEMENTATION_PLAN.md` §1 (zasada nadrzędna), §8 (zasady pracy), §10 (mapowanie tego samego
+- `STATUS.md` §1 (zasada nadrzędna), §8 (zasady pracy), §10 (mapowanie tego samego
   diagramu na fazy).
-- `TASKS.md` — rzeczywisty stan postępu (6/52 zadań, Commit 3 jako następny krok).
+- `STATUS.md` — rzeczywisty stan postępu (6/52 zadań, Commit 3 jako następny krok).

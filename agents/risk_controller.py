@@ -1,7 +1,7 @@
 """
 risk_controller.py
 
-Sizing i kill-switch dla Fazy 0 (IMPLEMENTATION_PLAN.md §5 Commit 5.5). Zastępuje
+Sizing i kill-switch dla Fazy 0 (STATUS.md §5 Commit 5.5). Zastępuje
 tymczasowy `backtest.engine._placeholder_risk_controller` — formuła identyczna,
 teraz w formalnym, testowanym (hypothesis, Warstwa 3 DoD) module. Pełne
 uzasadnienie: docs/rag/03_ryzyko_i_sizing.md.

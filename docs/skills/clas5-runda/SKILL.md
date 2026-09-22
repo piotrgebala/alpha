@@ -55,8 +55,8 @@ Utwórz katalog `runs/YYYY-MM-DD_<id>-<slug>/`:
 
 Następnie: wiersz w tabeli `runs/INDEX.md` + aktualizacja WŁAŚCIWEGO licznika wariantów
 (per baza/hipoteza) + aktualizacja "Wnioski skumulowane". Potem synteza (tylko synteza +
-link — CLAUDE.md, wytyczna "jedna informacja = jedno miejsce") w `IMPLEMENTATION_PLAN.md`
-§5/§7 i `TASKS.md`. Jeśli runda zamyka KAMIEŃ MILOWY — zaktualizuj tabelę "Kamienie milowe"
+link — CLAUDE.md, wytyczna "jedna informacja = jedno miejsce") w `STATUS.md`
+§5/§7 i `STATUS.md`. Jeśli runda zamyka KAMIEŃ MILOWY — zaktualizuj tabelę "Kamienie milowe"
 i sekcję "Status" w `README.md` (CLAUDE.md zasada 15).
 
 ## 5. Bramki jakości przed publikacją

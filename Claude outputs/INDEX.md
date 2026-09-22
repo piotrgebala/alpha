@@ -1,9 +1,8 @@
 # runs/ — spis treści
 
 Katalog na surowy output ciężkich obliczeń (kalibracje, sweepy seedów, testy odporności na
-realnych danych) — konwencja ustalona 2026-09-21 (patrz TASKS.md, "Zasada pracy: `runs/*.md`").
-Każdy plik ma unikalne ID testu (powiązane z numeracją Commitów w `IMPLEMENTATION_PLAN.md`/
-`TASKS.md`, gdzie to dotyczy), metadane uruchomienia, pełny surowy output, sekcję **Co na plus
+realnych danych) — konwencja ustalona 2026-09-21 (patrz STATUS.md §13 (zasady pracy operacyjne)).
+Każdy plik ma unikalne ID testu (powiązane z numeracją Commitów w `STATUS.md`, gdzie to dotyczy), metadane uruchomienia, pełny surowy output, sekcję **Co na plus
 (+) / Co na minus (-)**, i syntezę. Ten plik jest aktualizowany przy każdym nowym pliku w
 katalogu — nie duplikuje treści, tylko wskazuje na nią.
 
@@ -21,5 +20,5 @@ katalogu — nie duplikuje treści, tylko wskazuje na nią.
    **Co na minus (-)**, **Wniosek**, **Rekomendacja** (bez automatycznego wyboru "zwycięzcy" —
    decyzja zawsze przy użytkowniku), **Pełny surowy output** (blok kodu).
 3. Dodaj wiersz do tabeli w tym pliku (ID, data, link, krótki opis, wynik).
-4. Zsynchronizuj skrót w `IMPLEMENTATION_PLAN.md`/`TASKS.md` z linkiem do pliku w `runs/` —
+4. Zsynchronizuj skrót w `STATUS.md` z linkiem do pliku w `runs/` —
    te dokumenty dostają TYLKO syntezę, nie kopię pełnego outputu.

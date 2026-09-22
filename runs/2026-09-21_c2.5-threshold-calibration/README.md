@@ -7,7 +7,7 @@
 ## Metadane
 
 - **Branch:** `task/C2.5-regime-threshold-calibration` (do utworzenia — patrz sekcja "Git" w
-  `IMPLEMENTATION_PLAN.md")
+  `STATUS.md")
 - **Poprzedzający commit (master):** Commit 2d — bramka wykonalności kosztowej
   (`agents/risk_controller.py::is_cost_feasible`, `MIN_BARRIER_TO_COST_RATIO=2.0`)
 - **Komenda:** `python3 -m backtest.calibrate_regime_thresholds` (pełny sweep, bez `--quick`)

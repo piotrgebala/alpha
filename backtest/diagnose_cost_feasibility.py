@@ -19,7 +19,7 @@ Trzy bloki, wszystkie read-only (zero zmian w pipeline):
   1. Rozkład reguły reżimu na realnych danych — pokazuje, że
      `direction_persistence_10` jest DYSKRETNA (|sum(sign)|/10 ∈ {0, 0.1, ..., 1.0}),
      więc próg 0.7 wpada w lukę rozkładu; to on, nie `atr_pctrank_20d`, czyni reżim
-     `trend` prawie pustym (C2.5, §7 IMPLEMENTATION_PLAN.md).
+     `trend` prawie pustym (C2.5, §7 STATUS.md).
   2. Wykonalność kosztowa: szerokość bariery (ATR_MULTIPLIER × atr_14) jako % ceny vs
      koszt round-trip, per reżim + wymagana trafność kierunku na break-even:
          p_break_even = 0.5 * (1 + koszt / bariera)

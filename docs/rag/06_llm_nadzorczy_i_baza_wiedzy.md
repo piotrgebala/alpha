@@ -8,7 +8,7 @@ depends_on: [01_hipoteza_i_architektura.md, 04_narzedzia_zewnetrzne.md, 05_metod
 
 ## Zakres i status
 
-Ten dokument rozwija dwie rzeczy, które w `IMPLEMENTATION_PLAN.md` i `01_hipoteza_i_architektura.md`
+Ten dokument rozwija dwie rzeczy, które w `STATUS.md` i `01_hipoteza_i_architektura.md`
 są dziś nazwane, ale nie zaprojektowane: (a) trzy komponenty Fazy 2/3 oparte o LLM offline/nadzorczo
 (`ai_interpreter.py`, `post_trade_critic.py`, `test_mathematics.py`) oraz (b) `docs/rag/` jako baza
 wiedzy, z której te komponenty (i ludzie, i Claude Code) faktycznie korzystają. Materiał źródłowy:
@@ -17,7 +17,7 @@ przepisania, dokładnie tak samo jak freqtrade/LEAN w `04_narzedzia_zewnetrzne.m
 runtime.
 
 **Nic z tego dokumentu nie jest budowane przed checkpointem go/no-go Commitu 6** (patrz
-`IMPLEMENTATION_PLAN.md` §5). Zasada nadrzędna z CLAUDE.md (zasada 6: "LLM nigdy w hot-pathie
+`STATUS.md` §5). Zasada nadrzędna z CLAUDE.md (zasada 6: "LLM nigdy w hot-pathie
 decyzyjnym. Offline/nadzorczo tylko") i z `01_hipoteza_i_architektura.md` obowiązuje bez wyjątków —
 ten dokument tylko doprecyzowuje, JAK ta zasada ma być zrealizowana, gdy przyjdzie na to czas.
 
@@ -187,25 +187,25 @@ wiedzy dla AI"), tylko nie zostało to dotąd nazwane wprost:
   `last_verified` (data ostatniej weryfikacji względem realnych danych/kodu), `depends_on` (lista
   innych plików rag, od których dany dokument zależy) pomogłyby zarówno człowiekowi, jak i
   przyszłemu `ai_interpreter.py` szybko ocenić aktualność i zależności bez czytania całej treści.
-- **Brak jednego pliku-indeksu (Mapa Treści)** linkującego `CLAUDE.md` + `IMPLEMENTATION_PLAN.md` +
+- **Brak jednego pliku-indeksu (Mapa Treści)** linkującego `CLAUDE.md` + `STATUS.md` +
   wszystkie `docs/rag/*.md` z jednozdaniowym opisem każdego. Dziś trzeba znać nazwy plików z góry —
-  widać to nawet w tym, że `IMPLEMENTATION_PLAN.md` §11 ręcznie wylicza wygenerowane pliki zamiast
+  widać to nawet w tym, że `STATUS.md` §11 ręcznie wylicza wygenerowane pliki zamiast
   odsyłać do indeksu.
 
 Obie te braki są **czysto dokumentacyjne** — nie dotykają kodu, configu ani logiki tradingowej,
 więc mogą być domknięte w dowolnym momencie, niezależnie od fazowania Commitów. Nie są jednak
-wykonane w ramach tego dokumentu — to zadanie planistyczne, patrz `IMPLEMENTATION_PLAN.md` §12.
+wykonane w ramach tego dokumentu — to zadanie planistyczne, patrz `STATUS.md` §12.
 
-### IMPLEMENTATION_PLAN.md jako "Observational Memory" sesji Claude Code
+### STATUS.md jako "Observational Memory" sesji Claude Code
 
-Nagłówek `IMPLEMENTATION_PLAN.md` mówi wprost: "Jeśli zaczynasz nową sesję Claude Code, podepnij
+Nagłówek `STATUS.md` mówi wprost: "Jeśli zaczynasz nową sesję Claude Code, podepnij
 ten plik jako kontekst — zastępuje potrzebę przewijania całej wcześniejszej rozmowy." To dokładnie
 mechanizm **Observational Memory** (Observer/Reflector) z S02E03 — kompresja stanu projektu do
 terse loga, żeby nowa sesja nie musiała odtwarzać kontekstu od zera. Definition of Done (pkt 7,
 `05_metodologia_wytwarzania_i_testow.md`) już wymaga aktualizacji tego pliku po każdym Commicie —
 to jest dyscyplina Observera, tylko nienazwana wprost.
 
-**Rekomendacja na przyszłość (nie teraz):** gdy `IMPLEMENTATION_PLAN.md` znacząco urośnie (np. po
+**Rekomendacja na przyszłość (nie teraz):** gdy `STATUS.md` znacząco urośnie (np. po
 zamknięciu Fazy 1), rozważyć rozdzielenie na "aktualny stan" (krótki, na górze pliku — to, co nowa
 sesja faktycznie potrzebuje przeczytać) i "archiwum decyzji" (historia, osobny plik) — analogicznie
 do podziału Observer (świeże logi) / Reflector (kompresja starych logów) z S02E03. Dziś plik jest
