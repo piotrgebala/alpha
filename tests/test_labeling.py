@@ -41,9 +41,7 @@ ENTRY_PRICE = 100.0
 def _make_df_from_ohlc(rows: list[tuple[float, float, float, float]]) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=["open", "high", "low", "close"])
     df["volume"] = 100.0
-    df["timestamp"] = pd.date_range(
-        "2026-01-01", periods=len(df), freq="5min", tz="UTC"
-    )
+    df["timestamp"] = pd.date_range("2026-01-01", periods=len(df), freq="5min", tz="UTC")
     return df[["timestamp", "open", "high", "low", "close", "volume"]]
 
 
@@ -179,8 +177,7 @@ def test_triple_barrier_same_candle_tiebreak_lower_closer(entry_atr: float) -> N
 
 def test_triple_barrier_atr_warmup_is_nan() -> None:
     rows = _warmup_rows(N_WARMUP, ENTRY_PRICE) + [
-        (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE)
-        for _ in range(5)
+        (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE) for _ in range(5)
     ]
     df = _make_df_from_ohlc(rows)
     atr = compute_atr_14(df)
@@ -194,8 +191,7 @@ def test_triple_barrier_atr_warmup_is_nan() -> None:
 def test_triple_barrier_tail_insufficient_window_is_nan() -> None:
     vertical = 3
     rows = _warmup_rows(N_WARMUP, ENTRY_PRICE) + [
-        (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE)
-        for _ in range(10)
+        (ENTRY_PRICE, ENTRY_PRICE + 0.1, ENTRY_PRICE - 0.1, ENTRY_PRICE) for _ in range(10)
     ]
     df = _make_df_from_ohlc(rows)
     result = compute_triple_barrier_labels(df, vertical_barrier_candles=vertical)
@@ -232,12 +228,7 @@ def test_walk_forward_folds_chronological_and_no_overlap() -> None:
 
     assert len(folds) > 0
     for fold in folds:
-        assert (
-            fold["train_start"]
-            < fold["train_end"]
-            == fold["test_start"]
-            < fold["test_end"]
-        )
+        assert fold["train_start"] < fold["train_end"] == fold["test_start"] < fold["test_end"]
         assert not (fold["train_mask"] & fold["test_mask"]).any()
         assert fold["train_mask"].sum() > 0
         assert fold["test_mask"].sum() > 0
@@ -261,9 +252,7 @@ def test_walk_forward_folds_start_offset_shifts_first_fold() -> None:
     # Commit 2.9 (Z1): offset przesuwa start PIERWSZEGO foldu o dokładnie tyle dni,
     # a domyślne 0.0 zachowuje się identycznie jak przed parametryzacją.
     df = _make_daily_df(200)
-    baseline = generate_walk_forward_folds(
-        df, train_days=60, test_days=14, step_days=14
-    )
+    baseline = generate_walk_forward_folds(df, train_days=60, test_days=14, step_days=14)
     offset = generate_walk_forward_folds(
         df, train_days=60, test_days=14, step_days=14, start_offset_days=7.0
     )
@@ -277,7 +266,7 @@ def test_walk_forward_folds_start_offset_shifts_first_fold() -> None:
     assert len(offset) <= len(baseline)
     # Domyślna wartość == jawne 0.0 (bez zmiany zachowania sprzed Commitu 2.9).
     assert len(explicit_zero) == len(baseline)
-    for a, b in zip(explicit_zero, baseline):
+    for a, b in zip(explicit_zero, baseline, strict=True):
         assert a["train_start"] == b["train_start"]
         assert a["test_end"] == b["test_end"]
 
@@ -400,12 +389,7 @@ def test_walk_forward_folds_offset_preserves_chronology_invariants(
     )
 
     for fold in folds:
-        assert (
-            fold["train_start"]
-            < fold["train_end"]
-            == fold["test_start"]
-            < fold["test_end"]
-        )
+        assert fold["train_start"] < fold["train_end"] == fold["test_start"] < fold["test_end"]
         assert not (fold["train_mask"] & fold["test_mask"]).any()
 
     if folds:

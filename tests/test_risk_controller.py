@@ -90,9 +90,7 @@ def test_compute_position_size_matches_manual_formula() -> None:
 def test_compute_position_size_default_atr_multiplier_matches_labeling() -> None:
     # CLAUDE.md zasada 3: atr_multiplier domyślny MUSI być agents.labeling.ATR_MULTIPLIER,
     # nigdy redefiniowany osobno.
-    size_default = compute_position_size(
-        equity=10_000.0, atr_14=50.0, entry_price=100.0
-    )
+    size_default = compute_position_size(equity=10_000.0, atr_14=50.0, entry_price=100.0)
     size_explicit = compute_position_size(
         equity=10_000.0,
         atr_14=50.0,
@@ -115,9 +113,7 @@ def test_compute_sizing_scales_effective_risk_by_confidence() -> None:
     )
     full_confidence = compute_sizing(signal_confidence=1.0, **kwargs)
     half_confidence = compute_sizing(signal_confidence=0.5, **kwargs)
-    assert half_confidence["position_size"] == pytest.approx(
-        full_confidence["position_size"] / 2.0
-    )
+    assert half_confidence["position_size"] == pytest.approx(full_confidence["position_size"] / 2.0)
 
 
 def test_compute_sizing_stop_and_take_profit_for_long() -> None:
@@ -166,18 +162,12 @@ def test_compute_sizing_returns_expected_keys() -> None:
 
 
 def test_check_kill_switch_triggers_above_threshold() -> None:
-    assert (
-        check_kill_switch(equity=7_000.0, peak_equity=10_000.0, drawdown_threshold=0.15)
-        is True
-    )
+    assert check_kill_switch(equity=7_000.0, peak_equity=10_000.0, drawdown_threshold=0.15) is True
 
 
 def test_check_kill_switch_does_not_trigger_at_exact_threshold() -> None:
     # drawdown dokładnie == próg -> NIE wyzwala (ostre >, nie >=).
-    assert (
-        check_kill_switch(equity=8_500.0, peak_equity=10_000.0, drawdown_threshold=0.15)
-        is False
-    )
+    assert check_kill_switch(equity=8_500.0, peak_equity=10_000.0, drawdown_threshold=0.15) is False
 
 
 def test_check_kill_switch_no_drawdown_when_at_peak() -> None:
@@ -278,12 +268,8 @@ def test_position_size_monotonic_nondecreasing_in_confidence(
         entry_price=entry_price,
         equity=equity,
     )
-    size_low = compute_sizing(signal_confidence=confidence_low, **kwargs)[
-        "position_size"
-    ]
-    size_high = compute_sizing(signal_confidence=confidence_high, **kwargs)[
-        "position_size"
-    ]
+    size_low = compute_sizing(signal_confidence=confidence_low, **kwargs)["position_size"]
+    size_high = compute_sizing(signal_confidence=confidence_high, **kwargs)["position_size"]
     assert size_high >= size_low - 1e-9
 
 
@@ -322,16 +308,12 @@ def test_should_rearm_kill_switch_false_when_never_tripped(
     extra_days=st.floats(min_value=0.0, max_value=365.0),
 )
 @settings(max_examples=50, deadline=None)
-def test_should_rearm_kill_switch_true_once_cooldown_elapsed(
-    cooldown_days, extra_days
-) -> None:
+def test_should_rearm_kill_switch_true_once_cooldown_elapsed(cooldown_days, extra_days) -> None:
     # current_timestamp skonstruowany tak, żeby upłynęło DOKŁADNIE cooldown_days +
     # extra_days (extra_days >= 0) -> zawsze >= cooldown_days -> zawsze True.
     tripped_at = pd.Timestamp("2025-01-01T00:00:00Z")
     current_timestamp = tripped_at + pd.Timedelta(days=cooldown_days + extra_days)
-    assert (
-        should_rearm_kill_switch(tripped_at, current_timestamp, cooldown_days) is True
-    )
+    assert should_rearm_kill_switch(tripped_at, current_timestamp, cooldown_days) is True
 
 
 @given(
@@ -346,9 +328,7 @@ def test_should_rearm_kill_switch_false_before_cooldown_elapsed_property(
     # cooldown_days (margines >= 0.1% cooldown_days) -> zawsze False.
     tripped_at = pd.Timestamp("2025-01-01T00:00:00Z")
     current_timestamp = tripped_at + pd.Timedelta(days=cooldown_days * fraction_elapsed)
-    assert (
-        should_rearm_kill_switch(tripped_at, current_timestamp, cooldown_days) is False
-    )
+    assert should_rearm_kill_switch(tripped_at, current_timestamp, cooldown_days) is False
 
 
 # ---------------------------------------------------------------------------
@@ -456,9 +436,7 @@ def test_is_cost_feasible_rejects_nan_atr() -> None:
     assert is_cost_feasible(float("nan"), 100.0, COST_FRACTION_STARTOWY) is False
 
 
-def test_min_barrier_to_cost_ratio_startup_value_matches_break_even_arithmetic() -> (
-    None
-):
+def test_min_barrier_to_cost_ratio_startup_value_matches_break_even_arithmetic() -> None:
     # Próg startowy nie jest dobrany po PnL — wynika z p = 0.5*(1 + 1/ratio).
     # ratio=2.0 -> wymagana trafność kierunku na break-even = 75%.
     p_break_even = 0.5 * (1.0 + 1.0 / MIN_BARRIER_TO_COST_RATIO)
@@ -480,9 +458,7 @@ def test_is_cost_feasible_consistent_with_ratio(
     ratio = barrier_to_cost_ratio(atr_14, entry_price, cost_fraction)
     expected = ratio >= min_ratio
     assert (
-        is_cost_feasible(
-            atr_14, entry_price, cost_fraction, min_barrier_to_cost_ratio=min_ratio
-        )
+        is_cost_feasible(atr_14, entry_price, cost_fraction, min_barrier_to_cost_ratio=min_ratio)
         is expected
     )
 
@@ -517,8 +493,5 @@ def test_is_cost_feasible_always_true_when_threshold_zero(
     # Próg 0.0 = bramka wyłączona (używane przez testy sprzed Commitu 2d oraz do
     # odtworzenia baseline'u Commitu 2c) — musi przepuszczać każdy poprawny sygnał.
     assert (
-        is_cost_feasible(
-            atr_14, entry_price, cost_fraction, min_barrier_to_cost_ratio=0.0
-        )
-        is True
+        is_cost_feasible(atr_14, entry_price, cost_fraction, min_barrier_to_cost_ratio=0.0) is True
     )

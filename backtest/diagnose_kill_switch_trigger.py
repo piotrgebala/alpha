@@ -55,7 +55,9 @@ def _annotate_trade_costs(trades: pd.DataFrame) -> pd.DataFrame:
     real["fee"] = notional.apply(round_trip_fee_cost)
     real["funding"] = [
         funding_cost(n, hc, int(d))
-        for n, hc, d in zip(notional, real["exit_bar_offset"], real["signal_direction"])
+        for n, hc, d in zip(
+            notional, real["exit_bar_offset"], real["signal_direction"], strict=True
+        )
     ]
     real["slippage"] = 2.0 * notional.apply(slippage_cost)
     real["gross_pnl_negative"] = real["gross_pnl"] < 0

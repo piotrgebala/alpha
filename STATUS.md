@@ -2177,8 +2177,8 @@ Te zadania nie zależą od żadnej hipotezy i poprawiają wszystko, co policzymy
 | ID | zadanie | warianty | dlaczego warto |
 |---|---|---|---|
 | **T1** ❌ **ZAMKNIĘTE JAKO NIEZASADNE (T1-diag, 2026-09-22)** | Realny funding w modelu kosztów zamiast stałej `FUNDING_RATE_8H = 0.0001` — **sprawdzone i niewarte zrobienia**. Przejście na realne stawki z dyskretnym harmonogramem przesuwa próg opłacalności o **+0,022 pp** (przy niepewności pomiaru 1,09 pp). Stała jest **dokładnie medianą** realnego rozkładu. **Uzasadnienie tego zadania było błędem kategorii:** „−0,00243%" z H3 to signowany koszt per transakcja policzony JUŻ tą stałą, dla próby z przewagą shortów — nie pomiar stawki. **Warunek ważności:** long/short po połowie; strategia jednostronna unieważniłaby wniosek → [runs/t1-diag](runs/2026-09-22_t1-diag-realny-funding/README.md) | 0 (diagnostyka) | Zamknięte bez zmiany w kodzie produkcyjnym |
-| **T2** | `ruff` + `black` — luka DoD zgłaszana od C2.11 | 0 | Dziś niedostępne na maszynie. Wymaga instalacji = **zgoda użytkownika** |
-| **T3** | Sprzątanie repo: katalog `Claude outputs/`, resztki `runs/*.md`, `.claude/settings.json` w repo | 0 | Zaproponowane trzy razy, nigdy nieautoryzowane. **Operacja nieodwracalna ⇒ decyzja użytkownika** |
+| **T2** ✅ **ZAMKNIĘTE (2026-09-22)** | `ruff` + `black` — luka DoD zgłaszana od C2.11. Zainstalowane (ruff 0.16.8, black 26.5.1), konfiguracja w `pyproject.toml`. **`line-length = 100`, nie domyślne 88** — przy 88 poza limit wypada 872 linii, przy 100 tylko 62; domyślna wartość przeformatowałaby też ZAMROŻONE skrypty rund. Ruff: **11 znalezisk → 0** (3 nieużywane importy, 8 × `zip()` bez `strict=`). Black: **15 plików dotkniętych w rundach** (zasada: nie całe repo). Zamrożone skrypty wyłączone z obu narzędzi spójnie. **Pozostało:** ~14 plików historycznych niesformatowanych — świadomie, bo formatowanie całego repo to osobna decyzja | 0 | Komendy: `py -m ruff check .` i `py -m black <pliki rundy>` |
+| **T3** ✅ **ZAMKNIĘTE (2026-09-22)** | Sprzątanie repo. Usunięte: katalog `Claude outputs/` (2 pliki — jeden **bajt w bajt identyczny** z `runs/2026-09-21_c2.6-.../README.md`, drugi to nieaktualny poprzednik `runs/INDEX.md`) oraz **16 stubów** `runs/*.md`, które same deklarowały się jako usuwalne. **`.claude/settings.json` ZOSTAJE** — to współdzielona konfiguracja projektu (włączone wtyczki, allowlist komend); usunięcie zabrałoby zespółowi działającą konfigurację. Wyczyszczone z niego wpisy jednorazowe (merge konkretnego brancha z C2.11). **`settings.local.json` dopisany do `.gitignore`** — do dziś chronił go wyłącznie globalny gitignore użytkownika, więc na innej maszynie wylądowałby w commitcie | 0 | Wszystko odzyskiwalne z historii gita |
 | **T4** ⭐ **PRIORYTET 1 po K1** | `MIN_VALIDATION_ROWS = 30` i `validation_fraction = 0.2` to **nieskalibrowane wartości startowe** (minus odnotowany w S1b) | 0 (diagnostyka) | Z17b pokazał, że ten próg potrafi po cichu wyłączyć early stopping w 92% foldów. Wymagałby zagnieżdżonego walk-forward |
 | **T5** ✅ **ZAMKNIĘTE — A1 PRZYJĘTE (decyzja użytkownika 2026-09-22)** | **ABSTYNENCJA MODELU — problem numer jeden** (K1). **K2: wagi klas DZIAŁAJĄ (próg wykrywalności niżej o krok siatki, odczyt przyrządu staje się monotoniczny), wymuszenie kierunku NIE** (n ×260, ale margines przy q=0,30 ujemny). **WYKONANE:** `DEFAULT_CLASS_WEIGHT_MODE = balanced` w silniku, `none` zostaje jako nazwany wariant odtwarzający baseline sprzed K2 (test z literałami). ADR: `docs/rag/03`. Adopcja ujawniła realny błąd (`KeyError` przy foldzie bez wszystkich klas) — naprawiony, z regresją. **Otwarte:** A1 schodzi PONIŻEJ podłogi abstynencji (43,6% wobec 66,5%), więc otwiera pozycje także na świecach kończących się niczym — niezmierzone na realnej cesze → [runs/k2](runs/2026-09-22_k2-naprawa-abstynencji/README.md). To ona, nie brak sygnału, ograniczyła S1b (345), H2.1 (98) i samą kontrolę negatywną K1 (n≈37). Kandydaci: wagi klas w XGBoost, wymuszenie kierunku zamiast trzeciej klasy `timeout` | 0 (poprawność pomiaru) | **Obniżenie progu wykrywalności jest warte więcej niż kolejna hipoteza** — dziś każda hipoteza poniżej 58% trafności jest niemierzalna, cokolwiek testujemy |
 | **T6** ✅ **ZAMKNIĘTE (K2)** | Kill-switch jako źródło obciążenia na szumie — **ROZSTRZYGNIĘTE: obciążenia NIE MA.** Różnica ON−OFF **+0,04 pp przy CI ±0,34 pp** na 167 160 transakcjach; 54,09% z K1 przypisane szumowi przy n=220 → [runs/k2](runs/2026-09-22_k2-naprawa-abstynencji/README.md) | 0 (diagnostyka) | K1 zmierzył 54,09% trafności na czystym szumie (nieistotne, ale niewykluczone). Kill-switch tłumi transakcje po serii strat, więc może podnosić trafność wśród tych, które przetrwały — walidacja S1 zmierzyła ten efekt jako +0,30 pp przy n=1 037 |
@@ -2247,6 +2247,48 @@ pre-rejestrację i własną regułę STOP.
 | **4E** | **Ekonomia dźwigni i sizingu** | Kill-switch testowany mechanicznie (C2c), nigdy jako dźwignia rentowności. **Uwaga: sizing nie tworzy edge'u** — mnoży istniejący. Przy `p` nieodróżnialnym od monety mnoży zero | Niski priorytet z tego powodu |
 
 ---
+
+#### Rachunek mierzalności (zasada 18) — policzony 2026-09-22 na `n` ZMIERZONYM w K3
+
+Próg opłacalności bez bramki reżimu: **52,93%** (K3). Projekt zmierzył trafność **50,27%**
+(Z10, n = 7 687). Dostępne `n` na jeden instrument: **8 033** (K3, C2/balanced).
+
+**Jakiej trafności musi sięgać hipoteza, żeby w ogóle była widoczna:**
+
+| zasięg | `n` | pasmo | min. wykrywalna trafność | nadwyżka nad zmierzonymi 50,27% |
+|---|---|---|---|---|
+| 1 instrument (4C, 4D) | 8 033 | 1,09 pp | **54,02%** | +3,75 pp |
+| 3 instrumenty (4D) | 24 099 | 0,63 pp | 53,56% | +3,29 pp |
+| 20 instrumentów (4A) | 160 660 | 0,24 pp | 53,17% | +2,90 pp |
+
+**Ile transakcji trzeba, żeby wykryć efekt danej wielkości (moc 80%):**
+
+| zakładana trafność | nadwyżka nad progiem | wymagane `n` | skala |
+|---|---|---|---|
+| 53,50% | 0,57 pp | 60 161 | 7,5× instrument BTC |
+| 54,00% | 1,07 pp | 17 065 | 2,1× instrument BTC |
+| 55,00% | 2,07 pp | 4 555 | **mieści się w jednym** |
+| 58,00% | 5,07 pp | 756 | **mieści się w jednym** |
+
+**Odczyt dla mapy — i on zmienia priorytety:**
+
+- **4C i 4D wymagają, żeby model osiągnął 54–55% trafności kierunkowej.** Najlepszy pomiar
+  w historii projektu to 50,27%. Nie są niemożliwe, ale wymagają efektu **większego niż
+  cokolwiek, co kiedykolwiek zmierzyliśmy** — i nie naprawia tego dokładanie instrumentów,
+  bo próg schodzi tylko z 54,02% do 53,17% przy dwudziestokrotnie większej próbie.
+- **4A (carry przekrojowy) jest jedyną ścieżką z wykonalną arytmetyką — teraz liczbowo.**
+  Jego próg opłacalności to **48,13%**, czyli **poniżej rzutu monetą**: wypłata nie wymaga
+  przewagi kierunkowej. Przy trafności 50,00% wystarczy **5 606 transakcji**, czyli **0,70×**
+  tego, co daje jeden instrument BTC. Wąskim gardłem nie jest liczba świec, tylko liczba
+  **nienakładających się okien 48h** w 6,8 roku (H2.0: moc 0,03–0,12× na jednym
+  instrumencie) — i to jest dokładnie to, co mnoży przekrój.
+- **4B (inny target) i 4E (ekonomia dźwigni) pozostają poza tym rachunkiem.** 4B ma inną
+  definicję wypłaty, więc próg opłacalności trzeba by policzyć od nowa; 4E nie tworzy edge'u,
+  tylko mnoży istniejący — przy `p` nieodróżnialnym od monety mnoży zero.
+
+**Ten rachunek NIE jest decyzją bramkową.** Mówi, które hipotezy da się zmierzyć, a nie którą
+uruchomić. Każda nadal wymaga zgody użytkownika, własnej pre-rejestracji i własnego licznika
+od zera.
 
 ### Czego ta mapa świadomie NIE zawiera
 

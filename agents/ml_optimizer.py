@@ -149,7 +149,10 @@ def validate_signal_policy(direction_policy: str, confidence_mode: str) -> None:
         raise ValueError(
             f"confidence_mode musi byc jednym z {CONFIDENCE_MODES}, dostalem: {confidence_mode!r}"
         )
-    if direction_policy == DIRECTION_POLICY_ARGMAX3 and confidence_mode == CONFIDENCE_MODE_CONDITIONAL:
+    if (
+        direction_policy == DIRECTION_POLICY_ARGMAX3
+        and confidence_mode == CONFIDENCE_MODE_CONDITIONAL
+    ):
         # Pewnosc warunkowa jest NIEZDEFINIOWANA dla wierszy o kierunku 0 - nie przepuszczamy
         # kombinacji, ktorej nie przemyslelismy (fail fast zamiast cichej dziwnej liczby).
         raise ValueError(
@@ -161,7 +164,9 @@ def validate_signal_policy(direction_policy: str, confidence_mode: str) -> None:
 def validate_class_weight_mode(mode: str) -> None:
     """Jak `validate_signal_policy`, dla wag klas - wolana przez silnik przed treningiem."""
     if mode not in CLASS_WEIGHT_MODES:
-        raise ValueError(f"class_weight_mode musi byc jednym z {CLASS_WEIGHT_MODES}, dostalem: {mode!r}")
+        raise ValueError(
+            f"class_weight_mode musi byc jednym z {CLASS_WEIGHT_MODES}, dostalem: {mode!r}"
+        )
 
 
 def class_weight_map(
@@ -189,7 +194,9 @@ def class_weight_map(
     values, counts = np.unique(class_indices, return_counts=True)
     n_total = int(counts.sum())
     n_classes = len(values)
-    return {int(c): float(n_total / (n_classes * cnt)) for c, cnt in zip(values, counts)}
+    return {
+        int(c): float(n_total / (n_classes * cnt)) for c, cnt in zip(values, counts, strict=True)
+    }
 
 
 def train_regime_model(

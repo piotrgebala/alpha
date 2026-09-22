@@ -115,9 +115,15 @@ def _print_block_1(regime: pd.Series) -> pd.DataFrame:
     table = coherence_table(regime, horizons=DEFAULT_HORIZONS_CANDLES)
     print("\n-- tabela spójności: ile świec ma CAŁE okno etykiety wewnątrz epizodu --")
     cols = [
-        "regime", "horizon_candles", "horizon_minutes", "median_length",
-        "n_episodes_ge_horizon", "n_episodes", "n_windows_inside",
-        "share_windows_inside", "coherent",
+        "regime",
+        "horizon_candles",
+        "horizon_minutes",
+        "median_length",
+        "n_episodes_ge_horizon",
+        "n_episodes",
+        "n_windows_inside",
+        "share_windows_inside",
+        "coherent",
     ]
     print(table[cols].to_string(index=False))
     print(
@@ -185,9 +191,7 @@ def _print_block_2(regime: pd.Series, df: pd.DataFrame) -> None:
     )
 
 
-def _print_block_3(
-    atr_rank: pd.Series, persistence: pd.Series, valid: pd.Series
-) -> pd.DataFrame:
+def _print_block_3(atr_rank: pd.Series, persistence: pd.Series, valid: pd.Series) -> pd.DataFrame:
     print("\n" + "=" * 96)
     print("BLOK 3 — przesiew kandydatów na regułę reżimu (kryterium dopuszczalności, 0 wariantów)")
     print("=" * 96)
@@ -197,9 +201,7 @@ def _print_block_3(
     )
 
     rows: list[dict] = []
-    print(
-        f"{'reguła':28s} {'trend: med/udz':>18s} {'range: med/udz':>18s} {'dopuszczalna':>13s}"
-    )
+    print(f"{'reguła':28s} {'trend: med/udz':>18s} {'range: med/udz':>18s} {'dopuszczalna':>13s}")
     for label, trend_th, range_th, smooth in CANDIDATE_RULES:
         regime = _regime_series(atr_rank, persistence, trend_th, range_th)[valid]
         regime = _smooth_regime(regime.reset_index(drop=True), smooth)

@@ -11,3 +11,10 @@ venv/
 # Data cache (generowany przy pierwszym uruchomieniu fetch_ohlcv.py)
 data/raw/*
 !data/raw/.gitkeep
+
+# Ustawienia Claude Code SPECYFICZNE DLA MASZYNY (uprawnienia zaakceptowane lokalnie).
+# `settings.json` ZOSTAJE sledzony — to wspoldzielona konfiguracja projektu (wlaczone
+# wtyczki, allowlist komend). `settings.local.json` jest prywatny i nie ma prawa
+# trafic do repo. Do T3 (2026-09-22) chronil go wylacznie globalny gitignore
+# uzytkownika, wiec na innej maszynie wyladowalby w commitcie.
+.claude/settings.local.json

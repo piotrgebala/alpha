@@ -98,7 +98,11 @@ def main() -> None:
             n_upper = int(regime_candles * test_coverage)
             per_fold = n_upper / n_folds if n_folds else 0.0
 
-            barrier = ATR_MULTIPLIER * float(atr_over_price[mask].median()) if regime_candles else float("nan")
+            barrier = (
+                ATR_MULTIPLIER * float(atr_over_price[mask].median())
+                if regime_candles
+                else float("nan")
+            )
             be = break_even_hit_rate(cost, barrier)
             p_min = min_detectable_hit_rate(be, n_upper)
             n_needed = required_trades(be, 0.5) if not pd.isna(be) else float("nan")
@@ -145,7 +149,9 @@ def main() -> None:
         if r["fold >= 30?"] == "NIE":
             verdict.append(f"foldy za małe ({r['na fold']} < {MIN_TRAIN_ROWS} świec/fold)")
         if r["moc wystarcza?"] == "NIE":
-            verdict.append(f"za mała próba (n<={r['n (górne ogr.)']} vs wymagane {r['n dla mocy 80%']})")
+            verdict.append(
+                f"za mała próba (n<={r['n (górne ogr.)']} vs wymagane {r['n dla mocy 80%']})"
+            )
         status = "WYKONALNE" if not verdict else "NIEWYKONALNE: " + "; ".join(verdict)
         print(
             f"  {r['interwał']:3s} {r['reżim']:6s} -> {status}\n"

@@ -6,7 +6,7 @@ description: "Procedura rundy badawczej w projekcie CLAS-5 (repo alpha): przed e
 # Runda badawcza CLAS-5
 
 Procedura obowiązuje przy KAŻDEJ rundzie w repo `alpha` (eksperyment, checkpoint, kalibracja,
-screening, diagnostyka na realnych danych). Nadrzędne źródło zasad: `CLAUDE.md` (zasady 1–17).
+screening, diagnostyka na realnych danych). Nadrzędne źródło zasad: `CLAUDE.md` (zasady 1–18).
 
 ## 0. Synchronizacja (dwa środowiska!)
 
@@ -29,8 +29,10 @@ Na repo pracują sesja chmurowa i lokalna sesja Claude Code. Przed rundą:
 
 - Zapisz: hipotezę rundy, DOKŁADNIE JEDNĄ zmienną (zasada 4), listę wariantów, kryterium
   sukcesu/porażki, regułę STOP jeśli runda jest częścią programu.
-- Dla eksperymentu policz MOC statystyczną (wzorzec Z19: `required_trades`,
-  `min_detectable_hit_rate` z `backtest/metrics.py`) — runda bez mocy nie startuje.
+- Dla eksperymentu policz MIERZALNOŚĆ (zasada 18): `expected_trades(...)` →
+  `measurability_report(...)` z `backtest/metrics.py`. **`oczekiwane_n` z abstynencji,
+  nie z liczby świec.** Werdykt NIEMIERZALNA = runda nie startuje. Realne punkty
+  odniesienia po K3 (BTC 4h, V=3): `n` rzędu 2 000 z bramką reżimu, 8 000 bez niej.
 - Zmiany wynikające z autonomii (CLAUDE.md, sekcja "Podział ról") dokumentuj z uzasadnieniem
   i ścieżką odwrotu.
 

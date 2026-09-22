@@ -38,9 +38,7 @@ from agents.feature_miner import FEATURE_FUNCTIONS, compute_atr_pctrank_20d
 from agents.funding_features import attach_funding_rate
 from agents.labeling import compute_triple_barrier_labels
 
-FEATURE_REGISTRY_PATH = (
-    Path(__file__).resolve().parent.parent / "agents" / "feature_registry.yaml"
-)
+FEATURE_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "agents" / "feature_registry.yaml"
 
 # atr_pctrank_20d z domyslnymi parametrami (candles_per_day=288, window_days=20)
 # potrzebuje 5760 wierszy, zanim da nie-NaN wynik -- dane musza byc odpowiednio
@@ -280,9 +278,9 @@ def test_funding_feature_never_uses_rate_settled_after_candle() -> None:
     """
     candles, funding = _make_candles(), _make_funding()
     out = attach_funding_rate(candles, funding)
-    lookup = dict(zip(funding["timestamp"], funding["funding_rate"]))
+    lookup = dict(zip(funding["timestamp"], funding["funding_rate"], strict=True))
 
-    for ts, value in zip(out["timestamp"], out["funding_rate"]):
+    for ts, value in zip(out["timestamp"], out["funding_rate"], strict=True):
         if pd.isna(value):
             continue
         zrodla = [t for t, v in lookup.items() if v == value]

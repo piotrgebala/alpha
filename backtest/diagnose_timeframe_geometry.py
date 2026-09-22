@@ -39,7 +39,7 @@ from agents.feature_miner import (
     compute_atr_pctrank_20d,
     compute_direction_persistence_10,
 )
-from agents.labeling import ATR_MULTIPLIER, VERTICAL_BARRIER_CANDLES
+from agents.labeling import ATR_MULTIPLIER
 from agents.regime_coherence import coherence_table, regime_episodes
 from backtest.costs import EXECUTION_MAKER_LIMIT, gate_cost_fraction
 from backtest.diagnose_cost_feasibility import _regime_series
@@ -85,7 +85,9 @@ def block_1_native_vs_resampled(native: dict[str, pd.DataFrame]) -> None:
         resampled = resample_ohlcv(base, timeframe)
         nat = native[timeframe]
         merged = nat.merge(resampled, on="timestamp", suffixes=("_nat", "_res"), how="inner")
-        print(f"\n-- {timeframe} -- natywnych={len(nat)}, z resample={len(resampled)}, wspólnych={len(merged)}")
+        print(
+            f"\n-- {timeframe} -- natywnych={len(nat)}, z resample={len(resampled)}, wspólnych={len(merged)}"
+        )
         if merged.empty:
             print("   brak wspólnych świec — nie da się porównać")
             continue
@@ -127,8 +129,14 @@ def block_2_coherence(native: dict[str, pd.DataFrame], cfg_rule: dict) -> None:
                 f"({lengths.median() * minutes:7.0f} min)  udział={share:5.2f}%"
             )
         table = coherence_table(regime, horizons=HORIZONS)
-        keep = ["regime", "horizon_candles", "median_length", "n_windows_inside",
-                "share_windows_inside", "coherent"]
+        keep = [
+            "regime",
+            "horizon_candles",
+            "median_length",
+            "n_windows_inside",
+            "share_windows_inside",
+            "coherent",
+        ]
         print(table[keep].to_string(index=False))
 
 

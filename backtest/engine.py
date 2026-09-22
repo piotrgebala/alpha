@@ -99,7 +99,7 @@ from agents.labeling import (
 )
 from agents.ml_optimizer import (
     CLASS_WEIGHT_BALANCED,
-    CLASS_WEIGHT_NONE,
+    CLASS_WEIGHT_NONE,  # noqa: F401 — re-eksport: nazwany wariant baseline'u sprzed K2
     CONFIDENCE_MODE_CLASS,
     DIRECTION_POLICY_ARGMAX3,
     DEFAULT_SEED,
@@ -537,9 +537,7 @@ def _train_fold_confidence_threshold(
         direction_policy=direction_policy,
         confidence_mode=confidence_mode,
     )
-    directional = train_signals.loc[
-        train_signals["signal_direction"] != 0.0, "signal_confidence"
-    ]
+    directional = train_signals.loc[train_signals["signal_direction"] != 0.0, "signal_confidence"]
     if directional.empty:
         return None
     return float(directional.quantile(confidence_quantile))
@@ -741,9 +739,7 @@ def run_backtest(
 
     equity = initial_equity
     trades: list[dict] = []
-    equity_curve: list[dict] = [
-        {"timestamp": df["timestamp"].iloc[0], "equity": equity}
-    ]
+    equity_curve: list[dict] = [{"timestamp": df["timestamp"].iloc[0], "equity": equity}]
     peak_equity = equity
     # Commit 2c: moment pierwszego nieprzerwanego zadziałania kill-switcha (None, gdy
     # nieaktywny) — patrz docstring modułu.

@@ -45,7 +45,7 @@ def _make_separable_dataset(n_per_class: int = 150, seed: int = 0) -> pd.DataFra
     for label, (m1, m2) in class_means.items():
         f1 = rng.normal(m1, 0.5, size=n_per_class)
         f2 = rng.normal(m2, 0.5, size=n_per_class)
-        for a, b in zip(f1, f2):
+        for a, b in zip(f1, f2, strict=True):
             rows.append({"f1": a, "f2": b, "label": label})
     df = pd.DataFrame(rows)
     return df.sample(frac=1.0, random_state=seed).reset_index(drop=True)
@@ -85,9 +85,7 @@ def test_train_regime_model_learns_separable_pattern() -> None:
     booster = train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
     signals = predict_signal(booster, test_df, FEATURE_COLUMNS)
 
-    accuracy = (
-        signals["signal_direction"].to_numpy() == test_df["label"].to_numpy()
-    ).mean()
+    accuracy = (signals["signal_direction"].to_numpy() == test_df["label"].to_numpy()).mean()
     assert accuracy > 0.9
 
 
@@ -112,9 +110,7 @@ def test_train_regime_model_raises_on_empty_train_after_dropna() -> None:
     df = _make_separable_dataset(seed=3)
     train_df, test_df = _train_test_split(df)
     train_df = train_df.copy()
-    train_df["f1"] = (
-        np.nan
-    )  # wszystkie wiersze train_df stają się niepoprawne po dropna
+    train_df["f1"] = np.nan  # wszystkie wiersze train_df stają się niepoprawne po dropna
 
     with pytest.raises(ValueError):
         train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
@@ -124,9 +120,7 @@ def test_train_regime_model_raises_on_empty_test_after_dropna() -> None:
     df = _make_separable_dataset(seed=4)
     train_df, test_df = _train_test_split(df)
     test_df = test_df.copy()
-    test_df["label"] = (
-        np.nan
-    )  # wszystkie wiersze test_df stają się niepoprawne po dropna
+    test_df["label"] = np.nan  # wszystkie wiersze test_df stają się niepoprawne po dropna
 
     with pytest.raises(ValueError):
         train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
@@ -251,8 +245,11 @@ def test_embargo_removes_tail_of_training_fold(monkeypatch) -> None:
 def test_embargo_zero_is_identical_to_no_embargo(monkeypatch) -> None:
     captured = _spy_xgb_train(monkeypatch)
     train_regime_model(
-        _labelled_frame(300, seed=1), _labelled_frame(100, seed=2),
-        FEATURE_COLUMNS, validation_fraction=None, embargo_candles=0,
+        _labelled_frame(300, seed=1),
+        _labelled_frame(100, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=None,
+        embargo_candles=0,
     )
     assert captured["fit_rows"] == 300
 
@@ -260,8 +257,10 @@ def test_embargo_zero_is_identical_to_no_embargo(monkeypatch) -> None:
 def test_embargo_larger_than_train_fold_raises() -> None:
     with pytest.raises(ValueError, match="embargo"):
         train_regime_model(
-            _labelled_frame(20, seed=1), _labelled_frame(50, seed=2),
-            FEATURE_COLUMNS, embargo_candles=100,
+            _labelled_frame(20, seed=1),
+            _labelled_frame(50, seed=2),
+            FEATURE_COLUMNS,
+            embargo_candles=100,
         )
 
 
@@ -273,8 +272,10 @@ def test_too_small_fold_trains_without_early_stopping_instead_of_leaking(monkeyp
     captured = _spy_xgb_train(monkeypatch)
     n = MIN_VALIDATION_ROWS + 5
     train_regime_model(
-        _labelled_frame(n, seed=1), _labelled_frame(50, seed=2),
-        FEATURE_COLUMNS, validation_fraction=0.2,
+        _labelled_frame(n, seed=1),
+        _labelled_frame(50, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=0.2,
     )
     assert captured["eval_rows"] == []
     assert captured["early_stopping_rounds"] is None
@@ -284,8 +285,10 @@ def test_too_small_fold_trains_without_early_stopping_instead_of_leaking(monkeyp
 def test_invalid_validation_fraction_raises(bad: float) -> None:
     with pytest.raises(ValueError, match="validation_fraction"):
         train_regime_model(
-            _labelled_frame(200, seed=1), _labelled_frame(50, seed=2),
-            FEATURE_COLUMNS, validation_fraction=bad,
+            _labelled_frame(200, seed=1),
+            _labelled_frame(50, seed=2),
+            FEATURE_COLUMNS,
+            validation_fraction=bad,
         )
 
 
@@ -313,8 +316,13 @@ def test_validation_split_is_chronological_tail_not_random(monkeypatch) -> None:
 
     monkeypatch.setattr(xgb, "train", fake_train)
     frame = _labelled_frame(200, seed=7)
-    train_regime_model(frame, _labelled_frame(50, seed=2), FEATURE_COLUMNS,
-                       validation_fraction=0.25, embargo_candles=0)
+    train_regime_model(
+        frame,
+        _labelled_frame(50, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=0.25,
+        embargo_candles=0,
+    )
     expected = frame["label"].map(LABEL_TO_CLASS).tolist()
     n_val = 50
     assert seen["fit"] == expected[: 200 - n_val]
@@ -334,8 +342,11 @@ def test_small_fold_still_gets_early_stopping(monkeypatch) -> None:
     """
     captured = _spy_xgb_train(monkeypatch)
     train_regime_model(
-        _labelled_frame(105, seed=1), _labelled_frame(50, seed=2),
-        FEATURE_COLUMNS, validation_fraction=0.2, embargo_candles=0,
+        _labelled_frame(105, seed=1),
+        _labelled_frame(50, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=0.2,
+        embargo_candles=0,
     )
     assert captured["eval_rows"] == [MIN_VALIDATION_ROWS]
     assert captured["fit_rows"] == 105 - MIN_VALIDATION_ROWS
@@ -346,8 +357,11 @@ def test_large_fold_unaffected_by_minimum(monkeypatch) -> None:
     """Na duzych foldach max() jest operacja pusta — wyniki na 5m musza zostac bez zmian."""
     captured = _spy_xgb_train(monkeypatch)
     train_regime_model(
-        _labelled_frame(1000, seed=1), _labelled_frame(200, seed=2),
-        FEATURE_COLUMNS, validation_fraction=0.2, embargo_candles=0,
+        _labelled_frame(1000, seed=1),
+        _labelled_frame(200, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=0.2,
+        embargo_candles=0,
     )
     assert captured["eval_rows"] == [200]  # round(1000*0.2), nie MIN_VALIDATION_ROWS
     assert captured["fit_rows"] == 800
@@ -357,8 +371,10 @@ def test_fold_too_small_for_any_split_still_skips_early_stopping(monkeypatch) ->
     """Granica pozostaje: gdy po wydzieleniu walidacji nie zostaje dosc na trening."""
     captured = _spy_xgb_train(monkeypatch)
     train_regime_model(
-        _labelled_frame(MIN_VALIDATION_ROWS + 5, seed=1), _labelled_frame(50, seed=2),
-        FEATURE_COLUMNS, validation_fraction=0.2,
+        _labelled_frame(MIN_VALIDATION_ROWS + 5, seed=1),
+        _labelled_frame(50, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=0.2,
     )
     assert captured["eval_rows"] == []
     assert captured["early_stopping_rounds"] is None
@@ -385,7 +401,7 @@ def _imbalanced_frame(n_timeout: int = 300, n_directional: int = 30, seed: int =
         (1.0, n_directional, (5.0, 5.0)),
         (-1.0, n_directional, (-5.0, -5.0)),
     ):
-        for a, b in zip(rng.normal(m1, 0.5, n), rng.normal(m2, 0.5, n)):
+        for a, b in zip(rng.normal(m1, 0.5, n), rng.normal(m2, 0.5, n), strict=True):
             rows.append({"f1": a, "f2": b, "label": label})
     return pd.DataFrame(rows).sample(frac=1.0, random_state=seed).reset_index(drop=True)
 
