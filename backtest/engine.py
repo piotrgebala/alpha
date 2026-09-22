@@ -273,6 +273,8 @@ def _collect_candidate_signals(
                         "n_signals": 0,
                         "n_signals_cost_gated": 0,
                         "n_signals_confidence_gated": 0,
+                        "n_signals_no_direction": 0,
+                        "n_rows_evaluated": 0,
                         "confidence_threshold": None,
                         "best_iteration": None,
                         "seed": seed,
@@ -299,9 +301,17 @@ def _collect_candidate_signals(
             n_signals = 0
             n_signals_cost_gated = 0
             n_signals_confidence_gated = 0
+            # Walidacja S1 (2026-09-22): to byl NAJWIEKSZY filtr lejka i jedyny bez licznika.
+            # Na 4h model odmowil kierunku na 70,9% swiec OOS, przez co raportowane "bramka
+            # kosztowa odrzucila 0%" bylo mylace - wiazacym filtrem byla abstynencja modelu,
+            # nie geometria. Bez tej liczby `p` nie da sie czytac jako wielkosci WARUNKOWEJ.
+            n_signals_no_direction = 0
+            n_rows_evaluated = 0
             for idx, row in signals.iterrows():
+                n_rows_evaluated += 1
                 direction = row["signal_direction"]
                 if direction == 0.0:
+                    n_signals_no_direction += 1
                     continue
                 label = test_df.loc[idx, "label"]
                 if pd.isna(label):
@@ -360,6 +370,8 @@ def _collect_candidate_signals(
                     "n_signals": n_signals,
                     "n_signals_cost_gated": n_signals_cost_gated,
                     "n_signals_confidence_gated": n_signals_confidence_gated,
+                    "n_signals_no_direction": n_signals_no_direction,
+                    "n_rows_evaluated": n_rows_evaluated,
                     "confidence_threshold": confidence_threshold,
                     "best_iteration": best_iteration_or_last(booster),
                     "seed": seed,

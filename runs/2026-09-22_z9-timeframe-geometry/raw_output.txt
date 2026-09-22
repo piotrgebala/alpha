@@ -1,0 +1,80 @@
+# Surowy output — 2026-09-22_z9-timeframe-geometry
+# Wyekstrahowany z README.md 2026-09-22 (CLAUDE.md zasada 11: raw_output.txt
+# jest obowiazkowy dla nowych rund). Tresc bez zmian.
+
+[data] 5m: 315648 świec 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+[data] 1h: 26304 świec 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:00:00+00:00
+[data] 4h: 6576 świec 2023-07-01 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+
+================================================================================================
+BLOK 1 (Z9) — natywne świece vs agregacja z 5m: czy resample zniekształca?
+================================================================================================
+
+-- 1h -- natywnych=26304, z resample=26304, wspólnych=26304
+   open    identycznych=100.00%  maks |błąd wzgl.|=0.000000%  mediana=0.00000000%
+   high    identycznych=100.00%  maks |błąd wzgl.|=0.015194%  mediana=0.00000000%
+   low     identycznych=100.00%  maks |błąd wzgl.|=0.176429%  mediana=0.00000000%
+   close   identycznych= 99.99%  maks |błąd wzgl.|=0.176978%  mediana=0.00000000%
+   volume  identycznych= 89.02%  maks |błąd wzgl.|=283.790682%  mediana=0.00000000%
+
+-- 4h -- natywnych=6576, z resample=6576, wspólnych=6576
+   open    identycznych= 99.98%  maks |błąd wzgl.|=0.063460%  mediana=0.00000000%
+   high    identycznych=100.00%  maks |błąd wzgl.|=0.000000%  mediana=0.00000000%
+   low     identycznych= 99.98%  maks |błąd wzgl.|=0.131404%  mediana=0.00000000%
+   close   identycznych= 99.98%  maks |błąd wzgl.|=0.069507%  mediana=0.00000000%
+   volume  identycznych= 93.95%  maks |błąd wzgl.|=23.133784%  mediana=0.00000000%
+
+================================================================================================
+BLOK 2 — czy grubszy interwał naprawia spójność bramki z horyzontem?
+================================================================================================
+
+-- 5m -- świec z cechami: 309875
+   trend  epizodów=  728  mediana=  2.0 świec (     10 min)  udział= 0.53%
+   range  epizodów= 9717  mediana=  5.0 świec (     25 min)  udział=21.62%
+regime  horizon_candles  median_length  n_windows_inside  share_windows_inside  coherent
+ trend                3            2.0               538              0.328851     False
+ trend               12            2.0                 8              0.004890     False
+ trend               48            2.0                 0              0.000000     False
+ range                3            5.0             49573              0.739940      True
+ range               12            5.0             14123              0.210804     False
+ range               48            5.0               105              0.001567     False
+
+-- 1h -- świec z cechami: 25811
+   trend  epizodów=   45  mediana=  1.0 świec (     60 min)  udział= 0.37%
+   range  epizodów=  980  mediana=  4.0 świec (    240 min)  udział=23.41%
+regime  horizon_candles  median_length  n_windows_inside  share_windows_inside  coherent
+ trend                3            1.0                29              0.302083     False
+ trend               12            1.0                 0              0.000000     False
+ trend               48            1.0                 0              0.000000     False
+ range                3            4.0              4305              0.712512      True
+ range               12            4.0              1140              0.188679     False
+ range               48            4.0                 8              0.001324     False
+
+-- 4h -- świec z cechami: 6443
+   trend  epizodów=   17  mediana=  1.0 świec (    240 min)  udział= 0.43%
+   range  epizodów=  297  mediana=  4.0 świec (    960 min)  udział=25.98%
+regime  horizon_candles  median_length  n_windows_inside  share_windows_inside  coherent
+ trend                3            1.0                 5              0.178571     False
+ trend               12            1.0                 0              0.000000     False
+ trend               48            1.0                 0              0.000000     False
+ range                3            4.0              1154              0.689367      True
+ range               12            4.0               242              0.144564     False
+ range               48            4.0                 0              0.000000     False
+
+================================================================================================
+BLOK 3 — relacja B/C: jak nisko schodzi PRÓG OPŁACALNOŚCI na grubszym interwale?
+================================================================================================
+koszt round-trip C = 0.0900% nominału (stały per transakcja, model C2.12)
+
+interwał  reżim      ATR/cena   B=1.5xATR  break-even p  zmierzone p      luka
+5m        range       0.0914%     0.1372%        82.81%       50.38%   -32.43pp
+5m        trend       0.2738%     0.4107%        60.96%       50.84%   -10.12pp
+1h        range       0.4430%     0.6645%        56.77%   niezmierz.         —
+1h        trend       0.8711%     1.3067%        53.44%   niezmierz.         —
+4h        range       1.0942%     1.6414%        52.74%   niezmierz.         —
+4h        trend       1.4247%     2.1371%        52.11%   niezmierz.         —
+
+[interpretacja] Koszt jest STAŁY per transakcja, a ATR rośnie z interwałem, więc
+próg opłacalności spada bez żadnych założeń o modelu. To jedyny mechanizm w projekcie,
+który obniża wymaganie wobec `p` nie dotykając `p`. UWAGA: niższy próg nie oznacza,
+że model go osiągnie — `p` na 1h/4h wymaga osobnego, pre-rejestrowanego pomiaru.

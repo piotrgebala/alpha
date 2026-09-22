@@ -771,3 +771,36 @@ def test_run_backtest_single_regime_produces_only_that_regime() -> None:
         regime_feature_sets=[("range", REVERSION_FEATURES)],
     )
     assert {f["regime"] for f in result["folds_summary"]} == {"range"}
+
+
+def test_folds_summary_counts_model_abstention() -> None:
+    """
+    Walidacja S1: `direction == 0` bylo NAJWIEKSZYM filtrem lejka (70,9% swiec OOS na 4h)
+    i jedynym bez licznika, przez co `p` czytano jak wielkosc bezwarunkowa. Bilans lejka
+    musi sie domykac: ocenione = bez_kierunku + przepuszczone + odrzucone przez bramki.
+    """
+    result = run_backtest(
+        _make_pipeline_test_ohlcv(seed=7),
+        train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0,
+    )
+    active = [f for f in result["folds_summary"] if not f["skipped"]]
+    assert active, "fixture musi wyprodukowac aktywny fold"
+    for fold in active:
+        assert fold["n_rows_evaluated"] == (
+            fold["n_signals"]
+            + fold["n_signals_no_direction"]
+            + fold["n_signals_cost_gated"]
+            + fold["n_signals_confidence_gated"]
+        ), "bilans lejka musi sie domykac w kazdym foldzie"
+    assert sum(f["n_rows_evaluated"] for f in active) > 0
+
+
+def test_skipped_folds_report_zero_funnel_counters() -> None:
+    result = run_backtest(
+        _make_pipeline_test_ohlcv(seed=7),
+        train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0,
+    )
+    for fold in result["folds_summary"]:
+        if fold["skipped"]:
+            assert fold["n_signals_no_direction"] == 0
+            assert fold["n_rows_evaluated"] == 0

@@ -107,10 +107,17 @@ jako źródło stałych zasad.
 
 ## Podział ról i autonomia (uzgodnione 2026-09-22)
 
-**Użytkownik:** operacje git (commit/merge/push — Claude zapisuje pliki do katalogu repo, ale nie
-ma shella na maszynie), pobieranie danych z Binance (sandbox nie ma dostępu sieciowego do
-giełdy), decyzje bramkowe faz (przejście do Fazy 1, zamknięcie Fazy 0, jakikolwiek realny
+**Użytkownik:** decyzje bramkowe faz (przejście do Fazy 1, zamknięcie Fazy 0, jakikolwiek realny
 kapitał) i wszystko nieodwracalne (usuwanie danych/historii).
+
+> **Sprostowanie 2026-09-22:** wcześniejsze brzmienie przypisywało użytkownikowi także operacje
+> git i pobieranie danych, uzasadniając to tym, że „Claude nie ma shella na maszynie" i „sandbox
+> nie ma dostępu sieciowego do giełdy". **W sesji lokalnej Claude Code oba są nieprawdą** —
+> w rundach Z5/Z9/Z5b Claude pobrał dane 5m/1h/4h wprost z Binance i sam prowadził
+> branche/merge/push. Zapis w starej formie mógłby zniechęcić przyszłą sesję do zrobienia
+> rzeczy, które umie. Podział zależy więc od środowiska: sesja chmurowa Cowork bywa bez shella
+> i bez sieci, sesja lokalna ma oba. **Niezmienne pozostaje to, co wyżej:** decyzje bramkowe
+> i operacje nieodwracalne zawsze wymagają zgody użytkownika.
 
 **Claude — pełna autonomia badawcza W RAMACH zasad 1–16:** samodzielnie wybiera i uruchamia
 kolejne eksperymenty (w tym z backlogu w `STATUS.md`), może wprowadzać wynikające z wyników
