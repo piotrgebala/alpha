@@ -89,6 +89,7 @@ from agents.feature_miner import (
     compute_all_features,
 )
 from agents.labeling import (
+    VERTICAL_BARRIER_CANDLES,
     ATR_MULTIPLIER,
     STEP_DAYS,
     TEST_WINDOW_DAYS,
@@ -98,10 +99,12 @@ from agents.labeling import (
 )
 from agents.ml_optimizer import (
     DEFAULT_SEED,
+    DEFAULT_VALIDATION_FRACTION,
     EARLY_STOPPING_ROUNDS,
     MOMENTUM_FEATURES,
     NUM_BOOST_ROUND,
     REVERSION_FEATURES,
+    best_iteration_or_last,
     predict_signal,
     train_regime_model,
 )
@@ -182,6 +185,8 @@ def _collect_candidate_signals(
     regime_feature_sets: list[tuple[str, list[str]]],
     execution_model: str,
     confidence_quantile: float | None,
+    validation_fraction: float | None,
+    embargo_candles: int,
     fold_start_offset_days: float,
 ) -> tuple[list[dict], list[dict]]:
     """
@@ -283,6 +288,8 @@ def _collect_candidate_signals(
                 num_boost_round=num_boost_round,
                 early_stopping_rounds=early_stopping_rounds,
                 seed=seed,
+                validation_fraction=validation_fraction,
+                embargo_candles=embargo_candles,
             )
             confidence_threshold = _train_fold_confidence_threshold(
                 booster, train_df, feature_columns, confidence_quantile
@@ -354,7 +361,7 @@ def _collect_candidate_signals(
                     "n_signals_cost_gated": n_signals_cost_gated,
                     "n_signals_confidence_gated": n_signals_confidence_gated,
                     "confidence_threshold": confidence_threshold,
-                    "best_iteration": booster.best_iteration,
+                    "best_iteration": best_iteration_or_last(booster),
                     "seed": seed,
                 }
             )
@@ -474,6 +481,8 @@ def run_backtest(
     candle_minutes: int = CANDLE_MINUTES,
     execution_model: str = DEFAULT_EXECUTION_MODEL,
     confidence_quantile: float | None = None,
+    validation_fraction: float | None = DEFAULT_VALIDATION_FRACTION,
+    embargo_candles: int = VERTICAL_BARRIER_CANDLES,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -578,6 +587,8 @@ def run_backtest(
         regime_feature_sets=active_feature_sets,
         execution_model=execution_model,
         confidence_quantile=confidence_quantile,
+        validation_fraction=validation_fraction,
+        embargo_candles=embargo_candles,
         fold_start_offset_days=fold_start_offset_days,
     )
 
