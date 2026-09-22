@@ -123,6 +123,40 @@ etykiet w H2.0) — ich średnia jest liczona wewnątrz funkcji odchylenia stand
 jest zwracana ani drukowana. `F` jest liczone i raportowane, bo to mechanizm hipotezy (jak
 „F realne" w H2.0).
 
+## POPRAWKA 1 do pre-rejestracji (2026-09-22, PRZED uruchomieniem, osobny commit)
+
+**Powód:** decyzja użytkownika w trakcie pobierania danych — „zatrzymaj pobieranie"
+(pełne uniwersum 685 symboli wymagało ~1–1,5 h przy limicie API), a następnie „wybierz
+20 symboli z największymi marketcapami na chwilę obecną, pomijając stablecoiny".
+Żadna liczba sondy nie była policzona ani obejrzana przed tą poprawką (skrypt
+`run_carry_probe_p2.py` nie był uruchomiony ani razu).
+
+**Zmienione elementy (wszystko inne bez zmian, w tym kryteria D1/D2 i warunek „0 wariantów"):**
+
+| element | pre-rejestracja | poprawka 1 |
+|---|---|---|
+| uniwersum | archiwum `data.binance.vision` (wszystkie, z wycofanymi) | **20 stałych symboli** — ranking kapitalizacji CoinGecko z 2026-09-22 (`coingecko_top100_2026-09-22.json`), pierwsze 20 pozycji mające perpetual USDT na Binance, bez stablecoinów (USDT, USDC, USDS, USDe, DAI, USD1) i tokenów złota (XAUT, PAXG); pominięte też pozycje bez perpetual (Figure Heloc, WBT, Rain, LEO) |
+| symbole | — | BTC, ETH, BNB, XRP, SOL, TRX, ZEC, HYPE, DOGE, XMR, LINK, ADA, XLM, BCH, UNI, NEAR, AVAX, LTC, CC, HBAR (`*USDT`) |
+| uniwersum podstawowe | TOP50 wg obrotu 30 d (w chwili `t`) | wszystkie zakwalifikowane z tych 20 (filtr TOP50 bezprzedmiotowy) |
+| min. zakwalifikowanych w oknie | 20 | **10** (przy 20 stałych symbolach próg 20 oznaczałby okna dopiero od debiutu najmłodszego, CC) |
+| koszyki | decyl, min. 2 | bez zmian ⇒ przy 10–20 symbolach **2 SHORT / 2 LONG** |
+| wrażliwość ALL | wszystkie zakwalifikowane | **usunięta** (tożsama z podstawowym) |
+| pomiar 1 | przeżywalność archiwum | zastąpiony opisem uniwersum stałego |
+
+**Konsekwencja, którą czytelnik MUSI znać — wprowadzony BŁĄD PRZEŻYWALNOŚCI:** dobór według
+DZISIEJSZEJ kapitalizacji to wybór zwycięzców z perspektywy 2026. Monety, które w latach
+2020–2025 były duże i upadły (LUNA, FTT i podobne), są poza zbiorem, a z nimi najgorsze
+epizody dla nogi LONG/SHORT. Pre-rejestracja celowo tego unikała; poprawka to wprowadza.
+Skutek dla interpretacji: wynik opisuje **20 dzisiejszych największych monet**, a nie
+„carry przekrojowy" w ogóle. **Kierunek obciążenia:** dla mechanizmu `F` (funding) — niejasny;
+dla rozrzutu `F − C + R` — prawdopodobnie ZANIŻONY (brak upadłości), więc `n_req` może
+wyjść optymistycznie. Werdykt WYKONALNA na tej próbie wymagałby potwierdzenia na uniwersum
+bez błędu przeżywalności przed jakimkolwiek wariantem hipotezy C.
+
+**Druga konsekwencja:** 20 symboli to dolna granica „~20+ instrumentów" z H2.0 — a koszyk
+2 + 2 to cienka dywersyfikacja. Pomiar 5 (`k_eff`) pokaże, ile z tych 20 jest faktycznie
+niezależnych.
+
 ## Ograniczenia znane z góry
 
 - Koszt 0,0767% zmierzono dla BTC; altcoiny mają szersze spready — koszt realny wyższy
