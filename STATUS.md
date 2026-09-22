@@ -6,7 +6,7 @@
 > treść `TASKS.md` weszła jako §13–§16.
 >
 > **Podział odpowiedzialności między trzy pliki w korzeniu** (świadomie nie jeden):
-> - `CLAUDE.md` — zasady nienaruszalne 1–17. **Jedyne źródło.** Ładowany automatycznie
+> - `CLAUDE.md` — zasady nienaruszalne 1–18. **Jedyne źródło.** Ładowany automatycznie
 >   do kontekstu Claude'a w każdej sesji, więc musi zostać krótki.
 > - `README.md` — wizytówka projektu dla człowieka wchodzącego z zewnątrz.
 > - `STATUS.md` (ten plik) — plan, historia rund, ryzyka, zadania, backlog.
@@ -20,12 +20,16 @@
 > Jeśli zaczynasz nową sesję Claude Code, podepnij ten plik jako kontekst — zastępuje potrzebę
 > przewijania całej wcześniejszej rozmowy.
 >
-> Ostatnia aktualizacja: 2026-08-01. **Status: Commity 1–6 zaimplementowane i przetestowane
-> (86/86 testów). Commit 6 (checkpoint go/no-go) na realnych danych BTC/USDT:USDT: wynik
-> **NO-GO**. Commit 2b (diagnoza, zakres uzgodniony: przegląd cech modelu `range`) wykazała, że
-> pierwotna przyczyna NO-GO leży gdzie indziej niż sądzono w Commit 6 (kill-switch, nie
-> model/cechy) — patrz §5 Commit 2b. Następny krok: NOWA decyzja z użytkownikiem o dalszym
-> zakresie (poza cechami — prawdopodobnie `agents/risk_controller.py`).**
+> Ostatnia aktualizacja nagłówka: 2026-09-22. **Status: Faza 0 ZAMKNIĘTA wynikiem negatywnym
+> (Z10). Po zamknięciu zmierzono z zapasem mocy wszystko, co da się zmierzyć tą metodologią na
+> BTC: momentum (M1, 49,74%), funding jako cechę (F1, 50,34%); dane o pozycjonowaniu są
+> niemierzalne (P1, 30 dni historii) — wniosek skumulowany 39 w `runs/INDEX.md`. Otwarte
+> kierunki wymagają zmiany założeń (§17, ETAP 4). Aktualny krok: sonda wykonalności carry
+> przekrojowego (P2, hipoteza 4A) — patrz §17 i `runs/INDEX.md`.**
+>
+> *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
+> krok: decyzja o Commit 2b" — była nieaktualna od serii C2.5; poprawiona w porządkach
+> 2026-09-22.)*
 
 ---
 
@@ -389,7 +393,12 @@ okazji):
   Rekomendacja "C2.5 i/lub przegląd cech `range`" z powyższego akapitu jest nieaktualna — patrz
   Commit 2b dla poprawionej rekomendacji zakresu.
 
-### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` `[W TRAKCIE — zablokowane na nowej decyzji użytkownika]`
+### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` `[ZAMKNIĘTE — przesłanka obalona w C2b.1; ścieżka przejęta przez C2c i serię C2.5–C2.13]`
+
+> **Porządki 2026-09-22:** status „W TRAKCIE — zablokowane" był nieaktualny od sierpnia.
+> C2b.1 pokazało, że przyczyną NO-GO był kill-switch (naprawiony w C2c), a nie cechy;
+> C2b.2/C2b.3 (dodanie cechy do `range`) straciły przesłankę i nie zostaną wykonane —
+> cechy `range` testowały później C2.7/C2.8, a Faza 0 zamknęła się w Z10.
 
 **Kontekst i uzgodniony zakres (ustalony z użytkownikiem przed startem, 2026-08-01):** powrót do
 Commit 2 ograniczony WYŁĄCZNIE do przeglądu/rewizji feature setu modelu `range`
@@ -1394,7 +1403,7 @@ STOP, rachunek mocy PRZED uruchomieniem. Nie dziedziczy budżetu ani progów po 
 > nienaruszalnych z `CLAUDE.md`, które od tamtej pory urosły do 16 i są jedynym źródłem.
 > Numer sekcji zachowany, żeby odniesienia „§8" nie wskazywały w pustkę.
 >
-> **Zasady 1–17: `CLAUDE.md`.** Zasady operacyjne (branch per zadanie, konwencja `runs/`,
+> **Zasady 1–18: `CLAUDE.md`.** Zasady operacyjne (branch per zadanie, konwencja `runs/`,
 > zarządzanie zużyciem): §13 niżej.
 
 ---
@@ -1548,7 +1557,7 @@ W `clas5_core/`, gotowe do wklejenia w VS Code:
 
 ## 13. Zasady pracy operacyjne (z TASKS.md)
 
-> Zasady NIENARUSZALNE (1–17) są w `CLAUDE.md`. Poniżej wyłącznie zasady operacyjne:
+> Zasady NIENARUSZALNE (1–18) są w `CLAUDE.md`. Poniżej wyłącznie zasady operacyjne:
 > jak prowadzić branche, jak dokumentować rundy, jak zarządzać zużyciem.
 
 ### Zasada pracy: osobny branch per zadanie
@@ -1729,7 +1738,7 @@ przetestowanych wariantów (CLAUDE.md zasada 14). Pełna procedura krok-po-kroku
 | C6.4 | Wynik osobno per reżim rynkowy — zinterpretowane jako trend vs range (nie kalendarzowo, patrz Uwagi) | ✅ | Realny zakres danych (2025-07→2026-07) nie sięga 2023 — interpretacja kalendarzowa z opisu zadania nie pasowała, zamieniona (za zgodą użytkownika) na podział wg reżimu. Wynik `summarize_by_regime`: **trend = WARUNKOWY (0/20 foldów policzalnych — WSZYSTKIE pominięte przez `min_train_rows`, reżim empirycznie prawie nieobecny w 14-dniowych oknach testowych, potwierdza ryzyko z C2.5/§7 IMPLEMENTATION_PLAN.md)**; **range = NO-GO (1/20 foldów policzalnych, Sharpe=-65.43)** |
 | C6.5 | Decyzja udokumentowana w `IMPLEMENTATION_PLAN.md` | ✅ | Udokumentowane w §5 (Commit 6) i §6/§7 — pełny opis liczb i przyczyn. Wynik: **NO-GO**. **Korekta (Commit 2b):** przyczyna "1/20 foldów z transakcjami" dla `range` opisana tu pierwotnie ("predict_signal zwraca wyłącznie direction=0") okazała się błędna — patrz Commit 2b niżej i IMPLEMENTATION_PLAN.md §5 |
 
-### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` (W TRAKCIE — zablokowane na nowej decyzji użytkownika)
+### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` — ZAMKNIĘTE (przesłanka obalona w C2b.1; C2b.2/C2b.3 bezprzedmiotowe, patrz §5)
 
 > Zakres uzgodniony z użytkownikiem 2026-08-01: WYŁĄCZNIE przegląd/rewizja feature setu modelu
 > `range` (`REVERSION_FEATURES`) — jawnie wykluczone: rekalibracja progów regime (C2.5), zmiana
@@ -2274,6 +2283,21 @@ kraniec CI 1,51 pp poniżej progu. Różnica wobec ramienia bez funding: **−0,
 (2,80× → 1,01×), było artefaktem zagłodzonej próby.
 → [runs/f1](runs/2026-09-22_f1-funding-zmierzony/README.md)
 
+#### P2 — sonda wykonalności carry przekrojowego (4A) ⚪ ZAMKNIĘTA 2026-09-22, NIEMIERZALNA
+
+0 wariantów, poza licznikami. Na 20 największych monetach (poprawka 1 — decyzja użytkownika)
+funding pokrywa koszt (F − C = 0,097% na 48h, CI [0,051%; 0,143%]), ale rozrzut wyniku okna
+σ = 5,56% wymaga ~25 850 okien wobec 1 161 dostępnych (0,045×). **Rachunek 4A w tabeli niżej
+(„20 instrumentów = 160 660”) jest OBALONY:** 18 monet ≈ k_eff = 2,0 niezależnych. Hipoteza C
+nie startuje (zasada 18). Otwarte: cash-and-carry ze spotem — inny produkt, decyzja bramkowa.
+→ [runs/p2](runs/2026-09-22_p2-sonda-carry-przekrojowy/README.md)
+
+#### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
+
+`data/collect_positioning.py`: OI + 4 proporcje long/short, 1h, BTC/ETH/SOL/BNB, dopisywane do
+`data/raw/positioning/`. Pierwszy przebieg 2026-09-22 (od 2026-09-01). **Do aktywacji po scaleniu
+do master:** zadanie Harmonogramu Windows (komenda w docstringu modułu). Użyteczne za ~3,4 roku.
+
 #### P1 — sonda wykonalności źródeł danych (2026-09-22)
 
 Przed postawieniem F sprawdzono, co jeszcze jest do wzięcia poza OHLCV. **Wszystkie pięć
@@ -2294,7 +2318,7 @@ Próg opłacalności bez bramki reżimu: **52,93%** (K3). Projekt zmierzył traf
 |---|---|---|---|---|
 | 1 instrument (4C, 4D) | 8 033 | 1,09 pp | **54,02%** | +3,75 pp |
 | 3 instrumenty (4D) | 24 099 | 0,63 pp | 53,56% | +3,29 pp |
-| 20 instrumentów (4A) | 160 660 | 0,24 pp | 53,17% | +2,90 pp |
+| ~~20 instrumentów (4A)~~ | ~~160 660~~ | ~~0,24 pp~~ | ~~53,17%~~ | ~~+2,90 pp~~ — **OBALONE w P2:** 18 monet ≈ k_eff 2,0 niezależnych |
 
 **Ile transakcji trzeba, żeby wykryć efekt danej wielkości (moc 80%):**
 
@@ -2311,7 +2335,10 @@ Próg opłacalności bez bramki reżimu: **52,93%** (K3). Projekt zmierzył traf
   w historii projektu to 50,27%. Nie są niemożliwe, ale wymagają efektu **większego niż
   cokolwiek, co kiedykolwiek zmierzyliśmy** — i nie naprawia tego dokładanie instrumentów,
   bo próg schodzi tylko z 54,02% do 53,17% przy dwudziestokrotnie większej próbie.
-- **4A (carry przekrojowy) jest jedyną ścieżką z wykonalną arytmetyką — teraz liczbowo.**
+- **⚠ SPROSTOWANE przez P2 (2026-09-22):** poniższy punkt zakładał, że przekrój mnoży próbę.
+  Zmierzone: korelacja zwrotów 0,47 ⇒ k_eff ≈ 2, a σ wyniku okna 5,56% wymaga ~25 850 okien
+  wobec 1 161 — 4A (na samych perpetualach) jest **NIEMIERZALNE**.
+- ~~**4A (carry przekrojowy) jest jedyną ścieżką z wykonalną arytmetyką — teraz liczbowo.**~~
   Jego próg opłacalności to **48,13%**, czyli **poniżej rzutu monetą**: wypłata nie wymaga
   przewagi kierunkowej. Przy trafności 50,00% wystarczy **5 606 transakcji**, czyli **0,70×**
   tego, co daje jeden instrument BTC. Wąskim gardłem nie jest liczba świec, tylko liczba
