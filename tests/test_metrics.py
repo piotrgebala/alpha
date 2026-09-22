@@ -20,6 +20,9 @@ from hypothesis import strategies as st
 
 from backtest.metrics import (
     MIN_TRADES_FOR_HIT_RATE_CI,
+    min_detectable_hit_rate,
+    required_trades,
+    wald_half_width,
     MIN_TRADES_FOR_N_EFF,
     break_even_hit_rate,
     classify_checkpoint,
@@ -764,3 +767,76 @@ def test_overall_hit_rate_is_weighted_average_of_components(
         + (row["hit_rate_timeout"] * n_timeout if n_timeout else 0.0)
     ) / n_total
     assert row["hit_rate"] == pytest.approx(expected)
+
+
+# ---------------------------------------------------------------------------
+# Z19 (Backlog II): moc statystyczna pomiaru trafnosci
+# ---------------------------------------------------------------------------
+
+
+def test_wald_half_width_matches_manual_formula() -> None:
+    # 1.959964 * sqrt(0.25 / 100) = 1.959964 * 0.05
+    assert wald_half_width(100) == pytest.approx(1.959964 * 0.05, rel=1e-6)
+
+
+def test_wald_half_width_shrinks_with_sample_size() -> None:
+    """Czterokrotnie wieksza proba => polowa szerokosci przedzialu."""
+    assert wald_half_width(400) == pytest.approx(wald_half_width(100) / 2.0, rel=1e-9)
+
+
+def test_wald_half_width_nan_for_empty_sample() -> None:
+    assert math.isnan(wald_half_width(0))
+    assert math.isnan(wald_half_width(-5))
+
+
+def test_min_detectable_hit_rate_is_break_even_plus_margin() -> None:
+    """Trzeba zmierzyc WIECEJ niz break-even, bo pomiar ma niepewnosc."""
+    be = 0.5274
+    p_min = min_detectable_hit_rate(be, n_trades=1551)
+    assert p_min > be
+    assert p_min == pytest.approx(be + wald_half_width(1551))
+
+
+def test_min_detectable_hit_rate_converges_to_break_even_for_huge_sample() -> None:
+    be = 0.55
+    assert min_detectable_hit_rate(be, n_trades=10_000_000) == pytest.approx(be, abs=1e-3)
+
+
+def test_min_detectable_hit_rate_nan_on_degenerate_input() -> None:
+    assert math.isnan(min_detectable_hit_rate(0.55, n_trades=0))
+    assert math.isnan(min_detectable_hit_rate(float("nan"), n_trades=100))
+
+
+def test_required_trades_reproduces_z19_four_hour_case() -> None:
+    """Regresja na liczbie, ktora przesadzila o werdykcie Z19 dla 4h."""
+    assert required_trades(0.5274, 0.5) == pytest.approx(2608, rel=0.01)
+
+
+def test_required_trades_explodes_for_vanishing_effect() -> None:
+    """Im mniejsza roznica do wykrycia, tym wieksza potrzebna proba."""
+    assert required_trades(0.51, 0.5) > required_trades(0.55, 0.5)
+    assert required_trades(0.5, 0.5) == float("inf")
+
+
+def test_required_trades_nan_outside_unit_interval() -> None:
+    assert math.isnan(required_trades(1.5, 0.5))
+    assert math.isnan(required_trades(0.5, 0.0))
+
+
+@given(
+    n_low=st.integers(min_value=1, max_value=5000),
+    extra=st.integers(min_value=1, max_value=5000),
+)
+@settings(max_examples=150, deadline=None)
+def test_half_width_monotonically_decreasing_in_n(n_low: int, extra: int) -> None:
+    assert wald_half_width(n_low) >= wald_half_width(n_low + extra)
+
+
+@given(
+    be=st.floats(min_value=0.51, max_value=0.9),
+    n=st.integers(min_value=30, max_value=100_000),
+)
+@settings(max_examples=150, deadline=None)
+def test_min_detectable_always_above_break_even(be: float, n: int) -> None:
+    """Niezmiennik: nigdy nie wolno orzec rentownosci przy trafnosci rownej progowi."""
+    assert min_detectable_hit_rate(be, n) > be
