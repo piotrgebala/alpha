@@ -21,7 +21,7 @@
 |---|---|
 | [`01_hipoteza_i_architektura.md`](rag/01_hipoteza_i_architektura.md) | Dlaczego Faza 0 poprzedza resztę PRD, fazowanie Faza 0–4, hipoteza regime-gated (momentum vs mean-reversion) |
 | [`02_cechy_i_leakage.md`](rag/02_cechy_i_leakage.md) | Metodologia ekstrakcji cech z wielu repo bez zależności runtime, definicje 9 cech Fazy 0, podejście do leakage |
-| [`03_ryzyko_i_sizing.md`](rag/03_ryzyko_i_sizing.md) | Triple-barrier labeling (ATR-scaled), walk-forward split, diagnostyka N_eff, dwa osobne modele |
+| [`03_ryzyko_i_sizing.md`](rag/03_ryzyko_i_sizing.md) | Triple-barrier labeling (ATR-scaled), walk-forward split, diagnostyka N_eff, dwa osobne modele; ADR-y: bramka kosztowa jako GÓRNE oszacowanie (H3), próg wykrywalności (K1), **wagi klas domyślnie — adopcja A1 po K2** |
 | [`04_narzedzia_zewnetrzne.md`](rag/04_narzedzia_zewnetrzne.md) | Uzasadnienie decyzji o freqtrade/LEAN/QuantConnect jako katalogach wzorców, nigdy zależnościach runtime |
 | [`05_metodologia_wytwarzania_i_testow.md`](rag/05_metodologia_wytwarzania_i_testow.md) | Piramida testów (unit/leakage/property-based/integration/walk-forward) i Definition of Done per commit |
 | [`06_llm_nadzorczy_i_baza_wiedzy.md`](rag/06_llm_nadzorczy_i_baza_wiedzy.md) | Projekt trzech komponentów LLM offline/nadzorczo (`ai_interpreter`, `post_trade_critic`, `test_mathematics`) i `docs/rag/` jako baza wiedzy |

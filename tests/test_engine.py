@@ -1212,27 +1212,44 @@ def test_regime_gated_run_reproduces_baseline_after_sentinel_added() -> None:
 _K2_KWARGS = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
 
 
-def test_run_backtest_k2_defaults_are_bit_identical_to_baseline() -> None:
+def test_class_weight_none_reproduces_pre_k2_baseline_exactly() -> None:
     """
-    REGRESJA BASELINE'U na poziomie calego pipeline'u - warunek ramienia A0.
+    REGRESJA BASELINE'U sprzed K2 — dokladnie ta sama rola, co `taker_only` po C2.12.
 
-    Jawne podanie domyslnych wariantow K2 musi dac journal i equity IDENTYCZNE co do
-    wartosci z wywolaniem sprzed K2. Gdyby K2 przesunelo baseline choc o cyfre, zadne
-    porownanie A0/A1/A2 nie mialoby punktu odniesienia, a wyniki C6-H3 przestalyby byc
-    odtwarzalne.
+    Po adopcji ramienia A1 domyslna wartosc `class_weight_mode` to `balanced`, wiec baseline
+    NIE jest juz domyslna sciezka. Musi jednak pozostac odtwarzalny co do cyfry, inaczej
+    wyniki C6-H3 (zapisane w `runs/`) traca punkt odniesienia w kodzie.
+
+    Liczby sa LITERALAMI zmierzonymi na drzewie sprzed K2 (commit b79795b, sonda
+    `baseline_probe`): journal 1 280 wierszy, `final_equity` 95 126,0168131146.
     """
-    raw = _make_pipeline_test_ohlcv(seed=7)
-    bez_argumentow = run_backtest(raw, **_K2_KWARGS)
-    jawne_domyslne = run_backtest(
-        raw,
+    wynik = run_backtest(
+        _make_pipeline_test_ohlcv(seed=7),
         class_weight_mode=engine_module.CLASS_WEIGHT_NONE,
         direction_policy=DIRECTION_POLICY_ARGMAX3,
         confidence_mode=CONFIDENCE_MODE_CLASS,
         kill_switch_enabled=True,
         **_K2_KWARGS,
     )
-    pd.testing.assert_frame_equal(bez_argumentow["trades"], jawne_domyslne["trades"])
-    assert bez_argumentow["final_equity"] == jawne_domyslne["final_equity"]
+    assert len(wynik["trades"]) == 1_280
+    assert wynik["final_equity"] == pytest.approx(95_126.0168131146, rel=0, abs=1e-9)
+
+
+def test_default_class_weight_mode_is_balanced_after_k2_adoption() -> None:
+    """
+    ADOPCJA A1 przypieta testem, zeby nie dalo sie jej cofnac po cichu.
+
+    Decyzja uzytkownika po rundzie K2: wagi klas wlaczone domyslnie. Uzasadnienie mierzone,
+    nie preferencja - `runs/2026-09-22_k2-naprawa-abstynencji/`. Gdyby ktos przestawil
+    domyslna wartosc z powrotem, model wrocilby do odmawiania kierunku w 99,6% swiec przy
+    slabym sygnale, a prog wykrywalnosci podnioslby sie o krok siatki `q`.
+    """
+    assert engine_module.DEFAULT_CLASS_WEIGHT_MODE == CLASS_WEIGHT_BALANCED
+
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    domyslny = run_backtest(raw, **_K2_KWARGS)
+    jawny_balanced = run_backtest(raw, class_weight_mode=CLASS_WEIGHT_BALANCED, **_K2_KWARGS)
+    pd.testing.assert_frame_equal(domyslny["trades"], jawny_balanced["trades"])
 
 
 def test_forced_direction_removes_abstention_end_to_end() -> None:
@@ -1264,11 +1281,43 @@ def test_forced_direction_removes_abstention_end_to_end() -> None:
 def test_class_weights_reach_the_engine_and_change_the_run() -> None:
     """Ramie A1: gdyby `class_weight_mode` nie docieralo przez silnik, byloby puste."""
     raw = _make_pipeline_test_ohlcv(seed=7)
-    baseline = run_backtest(raw, validation_fraction=0.2, **_K2_KWARGS)
-    balanced = run_backtest(
+    bez_wag = run_backtest(
+        raw, validation_fraction=0.2, class_weight_mode=engine_module.CLASS_WEIGHT_NONE,
+        **_K2_KWARGS,
+    )
+    z_wagami = run_backtest(
         raw, validation_fraction=0.2, class_weight_mode=CLASS_WEIGHT_BALANCED, **_K2_KWARGS
     )
-    assert not baseline["trades"].equals(balanced["trades"])
+    assert not bez_wag["trades"].equals(z_wagami["trades"])
+
+
+def test_class_absent_from_training_part_does_not_crash_weighted_run() -> None:
+    """
+    Regresja realnego bledu wykrytego przy ADOPCJI A1 (2026-09-22).
+
+    Mapa wag powstaje z czesci UCZACEJ, a stosuje sie ja rowniez do WALIDACYJNEJ. Dopoki
+    wagi byly opcja, nikt na to nie wpadl; po wlaczeniu ich domyslnie trzy testy `regime_all`
+    wywalily sie `KeyError: 1` — fold uczacy mial wylacznie klase `timeout`, a walidacyjny
+    zawieral kierunek. To nie jest przypadek teoretyczny: przy `min_train_rows` rownym 30
+    fold potrafi nie zawierac wszystkich trzech klas (rezim `trend` to 0,53% swiec, C2.5).
+
+    Klasa nieobecna w uczacej nie ma czestosci do odwrocenia, wiec dostaje wage neutralna.
+    """
+    from agents.ml_optimizer import LABEL_TO_CLASS, class_weight_map
+
+    # Uczaca zna WYLACZNIE timeout; walidacyjna zawiera oba kierunki.
+    tylko_timeout = np.array([LABEL_TO_CLASS[0.0]] * 40)
+    mapa = class_weight_map(tylko_timeout, mode=CLASS_WEIGHT_BALANCED)
+    assert set(mapa) == {LABEL_TO_CLASS[0.0]}, "fikstura musi dawac mape bez klas kierunkowych"
+
+    # Pelny przebieg na danych, ktore ten uklad realnie produkuja - ma przejsc, nie paść.
+    wynik = run_backtest(
+        _make_pipeline_test_ohlcv(seed=7),
+        regime_feature_sets=[(REGIME_ALL, REVERSION_FEATURES)],
+        class_weight_mode=CLASS_WEIGHT_BALANCED,
+        **_K2_KWARGS,
+    )
+    assert len(wynik["trades"]) > 0
 
 
 # --- T6: dwie asercje OBOWIAZKOWE z pre-rejestracji ---

@@ -529,6 +529,43 @@ ramię najgorsze.
    Świadomie NIE proponuję „K3 z poprawionymi bramkami" — przy tych samych ziarnach dałoby
    identyczne liczby, więc byłoby to przepisywanie reguł po fakcie w przebraniu nowej rundy.
 
+   > ### ✅ DECYZJA UŻYTKOWNIKA (2026-09-22): **A1 PRZYJĘTE**
+   >
+   > Użytkownik wybrał **odczyt bramki 1 wg celu** i polecił adopcję ramienia A1. Zapisuję to
+   > jako **jawne odstępstwo od litery pre-rejestracji**, nie jako reinterpretację po cichu:
+   > człon B bramki 1 („pooled CI musi zawierać próg") nie został spełniony przez A1
+   > i **nie udajemy, że został**. Podstawą decyzji jest człon A (brak fałszywych alarmów,
+   > 0/12) plus dowód, że człon B mierzy nieprecyzyjność, a nie specyficzność.
+   >
+   > **Co wykonano:** `DEFAULT_CLASS_WEIGHT_MODE = CLASS_WEIGHT_BALANCED` w
+   > `backtest/engine.py`; `CLASS_WEIGHT_NONE` zostaje jako nazwany wariant odtwarzający
+   > baseline sprzed K2. Pełne uzasadnienie i konsekwencje: **ADR w `docs/rag/03`**.
+   >
+   > **Ścieżka odwrotu:** jedna linia — `DEFAULT_CLASS_WEIGHT_MODE = CLASS_WEIGHT_NONE`.
+   > Zapali się wtedy `test_default_class_weight_mode_is_balanced_after_k2_adoption`, który
+   > istnieje po to, żeby cofnięcie nie mogło przejść niezauważone.
+
+## Usterki wykryte PRZY ADOPCJI (nie w samej rundzie)
+
+Włączenie wag klas domyślnie natychmiast ujawniło **realny błąd**, którego runda nie mogła
+zobaczyć — i to jest samodzielny argument za tym, żeby adopcję robić kodem, a nie notatką.
+
+**`KeyError` przy foldzie bez wszystkich klas.** Mapa wag powstaje z części **treningowej**,
+a stosowana jest również do **walidacyjnej**. Fold, w którym część ucząca zawierała wyłącznie
+klasę `timeout`, a walidacyjna zawierała kierunek, wywracał cały przebieg. Trzy testy
+`regime_all` zapaliły się natychmiast po zmianie domyślnej wartości.
+
+Dlaczego runda tego nie złapała: wyrocznia ma wszystkie trzy klasy w każdym foldzie, więc mapa
+wag zawsze była kompletna. **Na realnych danych to jest przypadek spodziewany** — przy
+`min_train_rows` równym 30 fold potrafi nie zawierać wszystkich klas (reżim `trend` to 0,53%
+świec, C2.5).
+
+Naprawa: klasa nieobecna w części uczącej dostaje **wagę neutralną 1,0** — nie ma częstości do
+odwrócenia, a dotyczy to wyłącznie macierzy walidacyjnej (early stopping), nie gradientów.
+Regresja: `test_class_absent_from_training_part_does_not_crash_weighted_run`.
+
+Testy po adopcji: **371/371**.
+
 3. **Gdyby A1 zostało przyjęte — czego to NIE znaczy.** Nie znaczy, że jakakolwiek hipoteza
    tradingowa zaczyna działać. Znaczy tylko, że przyrząd widzi słabsze zjawiska niż dotąd.
    Warunek utrzymania „0 wariantów" pozostaje w mocy: **żadna liczba z K2 nie może być cytowana

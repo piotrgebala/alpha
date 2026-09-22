@@ -98,6 +98,7 @@ from agents.labeling import (
     generate_walk_forward_folds,
 )
 from agents.ml_optimizer import (
+    CLASS_WEIGHT_BALANCED,
     CLASS_WEIGHT_NONE,
     CONFIDENCE_MODE_CLASS,
     DIRECTION_POLICY_ARGMAX3,
@@ -153,6 +154,26 @@ PREREGISTERED_CONFIDENCE_QUANTILE = 0.75
 # każdy konsument w repo bierze je wprost z `backtest.costs`, a druga ścieżka importu do
 # tej samej stałej to tylko kolejne miejsce, które może się rozjechać.
 DEFAULT_EXECUTION_MODEL = EXECUTION_MAKER_LIMIT
+
+# K2 (2026-09-22): ADOPCJA RAMIENIA A1 — wagi klas wlaczone DOMYSLNIE.
+#
+# Decyzja uzytkownika po rundzie K2 (`runs/2026-09-22_k2-naprawa-abstynencji/`). Mierzone
+# uzasadnienie, nie preferencja: model bez wazenia odmawial kierunku w 99,6% swiec przy
+# slabym sygnale, bo klasa `timeout` ma 2/3 masy i milczenie bylo dla niego optymalne.
+# Z wagami prog wykrywalnosci spada o krok siatki `q` (wykrywa 0,30 zamiast 0,40), a odczyt
+# przyrzadu przestaje byc niemonotoniczny — baseline czytal rosnaca sile sygnalu jako
+# 51,71 -> 53,62 -> 51,43 -> 54,84 -> 59,23, czyli zgadywal.
+#
+# Ta sama konwencja co `DEFAULT_EXECUTION_MODEL` (C2.12): domyslna wartosc przesuwa sie na
+# wariant przyjety, a poprzedni ZOSTAJE jako nazwany wariant odtwarzajacy baseline co do
+# cyfry (`CLASS_WEIGHT_NONE`, regresja w `test_engine.py`).
+#
+# SKUTEK DLA STARYCH SKRYPTOW, zapisany jawnie: zamrozone skrypty rund (zasada 13) wolaja
+# `run_backtest` bez tego argumentu, wiec uruchomione DZIS dadza inne liczby niz zapisane
+# w ich `runs/`. Zrodlem prawdy dla wynikow historycznych pozostaje `runs/<katalog>/`;
+# zeby odtworzyc je z kodu, trzeba podac jawnie `class_weight_mode=CLASS_WEIGHT_NONE`.
+# Ten sam koszt zaplacilo C2.12 przy przejsciu na `maker_limit` i zostal wtedy przyjety.
+DEFAULT_CLASS_WEIGHT_MODE = CLASS_WEIGHT_BALANCED
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
 # STATUS.md C2.5: "reżim trend może być rzadki"). To engineering safeguard, NIE parametr
@@ -575,7 +596,7 @@ def run_backtest(
     candle_minutes: int = CANDLE_MINUTES,
     execution_model: str = DEFAULT_EXECUTION_MODEL,
     timeout_leg: str = DEFAULT_TIMEOUT_LEG,
-    class_weight_mode: str = CLASS_WEIGHT_NONE,
+    class_weight_mode: str = DEFAULT_CLASS_WEIGHT_MODE,
     direction_policy: str = DIRECTION_POLICY_ARGMAX3,
     confidence_mode: str = CONFIDENCE_MODE_CLASS,
     kill_switch_enabled: bool = True,

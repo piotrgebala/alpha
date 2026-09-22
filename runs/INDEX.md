@@ -234,6 +234,27 @@ podsumowanie pod tabelą.
    kalibracyjne powinno brzmiec "najnizsze `q`, przy ktorym `ci_low > break_even`", a pasmo
    raportowac obok, opisowo.
 
+29. **WAGI KLAS PRZYJETE DOMYSLNIE (adopcja A1 po K2, decyzja uzytkownika 2026-09-22).**
+   `DEFAULT_CLASS_WEIGHT_MODE = balanced` w silniku; `none` zostaje jako nazwany wariant
+   odtwarzajacy baseline sprzed K2 co do cyfry (test z literalami: 1 280 transakcji,
+   final_equity 95 126,0168131146). **Baseline projektu przesunal sie** — ta sama decyzja
+   i ten sam koszt co przy C2.12: **zamrozone skrypty rund uruchomione DZIS dadza inne liczby**
+   niz zapisane w ich katalogach. Zrodlem prawdy dla wynikow historycznych pozostaje
+   `runs/<katalog>/`; odtworzenie z kodu wymaga jawnego `class_weight_mode="none"`.
+   Pelne uzasadnienie i konsekwencje: ADR w `docs/rag/03`. **Odstepstwo od litery
+   pre-rejestracji K2 zapisane jawnie** — czlon B bramki 1 NIE zostal spelniony przez A1
+   i nie udajemy, ze zostal; podstawa decyzji jest czlon A (0/12 falszywych alarmow) plus
+   dowod, ze czlon B mierzy nieprecyzyjnosc.
+30. **ADOPCJA KODEM ZNAJDUJE BLEDY, KTORYCH RUNDA NIE ZNAJDZIE (2026-09-22).** Wlaczenie wag
+   klas domyslnie natychmiast wywalilo trzy testy `KeyError`-em: mapa wag powstaje z czesci
+   TRENINGOWEJ, a stosowana jest rowniez do WALIDACYJNEJ, wiec fold, w ktorym uczaca miala
+   wylacznie klase `timeout`, a walidacyjna zawierala kierunek, wywracal caly przebieg.
+   Runda tego nie mogla zobaczyc — wyrocznia ma wszystkie trzy klasy w kazdym foldzie.
+   **Na realnych danych to przypadek SPODZIEWANY** (przy `min_train_rows`=30 fold potrafi nie
+   zawierac wszystkich klas; rezim `trend` to 0,53% swiec). Wniosek proceduralny: **wariant
+   przyjety do uzytku trzeba wlaczyc DOMYSLNIE i przepuscic przez pelny pytest**, a nie
+   zostawiac jako opcje — opcja nie jest testowana tam, gdzie jej nikt nie podaje.
+
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11 i 14)
 
 1. **PRZED projektowaniem rundy:** przeczytaj tabelę + liczniki + "Wnioski skumulowane" +
