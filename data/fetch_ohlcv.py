@@ -276,14 +276,21 @@ if __name__ == "__main__":
     # interwał nie jest ściągany ponownie — `data/raw/` to jedno miejsce na komplet danych.
     timeframes = cfg.get("timeframes") or [cfg["timeframe"]]
 
+    # Z5b: niektóre interwały potrzebują DŁUŻSZEJ historii niż podstawowa. Powód nie jest
+    # "więcej danych = lepiej" (to odrzucono w audycie), tylko konkretny: na 4h wiążącym
+    # ograniczeniem eksperymentu jest LICZEBNOŚĆ PRÓBY (Z19: 1 551 świec `range` wobec
+    # wymaganych 2 608). Nadpisanie dotyczy więc tylko tych interwałów, gdzie to ogranicza.
+    start_overrides = cfg.get("timeframe_start_overrides") or {}
+
     for symbol in symbols_to_fetch:
         for timeframe in timeframes:
-            cache_file = _cache_path(cfg["cache_dir"], symbol, timeframe, cfg["start"], cfg["end"])
+            start = start_overrides.get(timeframe, cfg["start"])
+            cache_file = _cache_path(cfg["cache_dir"], symbol, timeframe, start, cfg["end"])
             cached = cache_file.exists()
             df = get_ohlcv_cached(
                 symbol=symbol,
                 timeframe=timeframe,
-                start=cfg["start"],
+                start=start,
                 end=cfg["end"],
                 cache_dir=cfg["cache_dir"],
                 exchange_id=cfg["exchange_id"],
