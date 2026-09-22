@@ -2,7 +2,7 @@
 costs.py
 
 Modelowanie kosztów transakcyjnych Binance USDS-M Futures (perpetuals) — docs/rag/04
-_narzedzia_zewnetrzne.md i IMPLEMENTATION_PLAN.md §5 Commit 5. Wartości startowe, do
+_narzedzia_zewnetrzne.md i STATUS.md §5 Commit 5. Wartości startowe, do
 kalibracji, gdy dostępne będą realne dane funding rate (Faza 1, LEAN
 `Lean.DataSource.BinanceFundingRate`) — źródło prawdy: config/settings.yaml sekcja
 `costs`.

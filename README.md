@@ -25,9 +25,9 @@ opłacalności 53,07%; reguła STOP uruchomiona, seria zamknięta (licznik 1/1).
 wszystkich znanych wad pomiaru obraz jest spójny: **brak sygnału kierunkowego**. Rekomendacja:
 **Z10 opcja 1 — udokumentowane zamknięcie Fazy 0 wynikiem negatywnym** (decyzja bramkowa przy
 użytkowniku). Stan testów: 246/246. Surowe wyniki każdej rundy:
-[`runs/`](runs/INDEX.md) (tabela + wnioski skumulowane). Backlog i zasady pracy: `TASKS.md`.
+[`runs/`](runs/INDEX.md) (tabela + wnioski skumulowane). Backlog i zasady pracy: `STATUS.md`.
 
-Pełny, aktualny status: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 
 ## Kamienie milowe
 
@@ -35,9 +35,9 @@ Pełny, aktualny status: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
 | Kamień | Data | Wynik (jedno zdanie) | Szczegóły |
 |---|---|---|---|
-| Commit 6 — checkpoint go/no-go | 2026-08-01 | **NO-GO** na BTC 5m (2025-07→2026-07); tylko 1/40 foldów policzalnych | `IMPLEMENTATION_PLAN.md` §5 |
-| C2c — kill-switch | 2026-08-01 | Deadlock naprawiony (cooldown/re-arm); NO-GO potwierdzone na 23/40 foldów — werdykt uwiarygodniony | `IMPLEMENTATION_PLAN.md` §5 |
-| C2d — bramka kosztowa | 2026-09-21 | Strata była w ~94% arytmetyczna (bariera<koszt); po bramce pozorny edge 54,6% spada do 49,3% | `IMPLEMENTATION_PLAN.md` §5 |
+| Commit 6 — checkpoint go/no-go | 2026-08-01 | **NO-GO** na BTC 5m (2025-07→2026-07); tylko 1/40 foldów policzalnych | `STATUS.md` §5 |
+| C2c — kill-switch | 2026-08-01 | Deadlock naprawiony (cooldown/re-arm); NO-GO potwierdzone na 23/40 foldów — werdykt uwiarygodniony | `STATUS.md` §5 |
+| C2d — bramka kosztowa | 2026-09-21 | Strata była w ~94% arytmetyczna (bariera<koszt); po bramce pozorny edge 54,6% spada do 49,3% | `STATUS.md` §5 |
 | C2.5–C2.8 — seria falsyfikacji | 2026-09-21 | Progi regime, timeframe 1h/4h i cecha `adx_14` wyczerpane jako kierunki naprawy (wszystko NO-GO/nierozstrzygalne) | [runs/](runs/INDEX.md) |
 | C2.9 — naprawa metodologii pomiaru | 2026-09-21 | Sweep seedów był pusty (deterministyczny XGBoost); NO-GO odporne na fold-jitter 10/10; strata per trade istotna w OBU reżimach | [runs/c2.9](runs/2026-09-21_c2.9-measurement-methodology/README.md) |
 | C2.10 — nowa baza 3 lata (Z5) | 2026-09-21 | NO-GO strukturalne, nie ilościowe: bramka kosztowa blokuje 98% sygnałów `range`, `trend`=0,53% świec | [runs/c2.10](runs/2026-09-21_c2.10-extended-history-z5/README.md) |
@@ -71,8 +71,8 @@ reguła STOP zamknęła serię po pierwszym (jedynym pre-zarejestrowanym) warian
 clas5_core/
 ├── README.md                     ← ten plik
 ├── CLAUDE.md                     — instrukcje dla Claude Code (czytane automatycznie)
-├── IMPLEMENTATION_PLAN.md        — status commitów, żywy dokument
-├── TASKS.md                      — zadania per commit + zasady pracy + Backlog (Z1–Z25)
+├── STATUS.md        — status commitów, żywy dokument
+├── STATUS.md                      — zadania per commit + zasady pracy + Backlog (Z1–Z25)
 ├── .github/workflows/tests.yml   — CI: pytest + spójność registry/kod
 ├── docs/rag/                     — pełne uzasadnienia decyzji (01–07), per temat
 ├── docs/INDEX.md                 — mapa całej dokumentacji
@@ -121,8 +121,8 @@ Pełna, zawsze aktualna mapa wszystkich dokumentów: [`docs/INDEX.md`](docs/INDE
 |---|---|
 | `README.md` | Ty jesteś tutaj — ogólny obraz |
 | `CLAUDE.md` | Claude Code — krótkie, stabilne zasady, czytane na starcie każdej sesji |
-| `IMPLEMENTATION_PLAN.md` | Aktualny status commitów, znane ryzyka, checklisty — zmienia się często |
-| `TASKS.md` | Granularny, statusowalny rozkład planu na pojedyncze zadania z ID i statusem |
+| `STATUS.md` | Plan, historia rund, ryzyka, zadania z ID i statusem, backlog — zmienia się często |
+| `runs/INDEX.md` | Księga eksperymentów: co uruchomiono, z jakim wynikiem, ile wariantów zużyto |
 | `docs/rag/01_hipoteza_i_architektura.md` | Dlaczego regime-gated, dlaczego LLM offline, dlaczego nie deep learning |
 | `docs/rag/02_cechy_i_leakage.md` | Definicje cech, metodologia testowania leakage, multi-repo extraction |
 | `docs/rag/03_ryzyko_i_sizing.md` | Triple-barrier labeling, sizing, walk-forward, checkpoint go/no-go |
@@ -149,7 +149,7 @@ Pełna, aktualna lista: [`CLAUDE.md`](CLAUDE.md). W skrócie:
 Ten kod służy do celów badawczych i edukacyjnych. Nie stanowi porady inwestycyjnej. Trading
 kontraktów perpetual futures z dźwignią wiąże się z wysokim ryzykiem utraty kapitału. Żadna
 część tego repozytorium nie została zwalidowana na prawdziwym kapitale — checkpoint go/no-go
-(`IMPLEMENTATION_PLAN.md`, Commit 6) jeszcze nie został osiągnięty. Nie uruchamiaj tego z
+(`STATUS.md`, Commit 6) jeszcze nie został osiągnięty. Nie uruchamiaj tego z
 prawdziwymi środkami przed przejściem pełnej sekwencji: walidacja → paper trading → mały kapitał
 w pełni tolerowalny do stracenia.
 

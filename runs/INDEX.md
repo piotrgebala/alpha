@@ -107,5 +107,5 @@ podsumowanie pod tabelą.
    pliku) i `raw_output.txt` (pełny stdout, nieskrócony).
 4. Dodaj wiersz do tabeli (z licznikiem **Warianty**), zaktualizuj WŁAŚCIWY licznik pod tabelą
    (per baza/hipoteza) ORAZ sekcję **"Wnioski skumulowane"**.
-5. Zsynchronizuj syntezę w `IMPLEMENTATION_PLAN.md` §5/§7 i `TASKS.md` — te dokumenty dostają
+5. Zsynchronizuj syntezę w `STATUS.md` §5/§7 i `STATUS.md` — te dokumenty dostają
    TYLKO syntezę i link do katalogu, nie kopię outputu.

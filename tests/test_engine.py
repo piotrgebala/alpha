@@ -10,7 +10,7 @@ ustrukturyzowany wynik.
 `_make_pipeline_test_ohlcv` konstruuje dane z jawnie odseparowanymi segmentami ATR/
 kierunku (ambiguous warmup -> trend -> range), żeby DETERMINISTYCZNIE (dla ustalonego
 seeda) wywołać OBA reżimy classify_regime — czysto losowe dane (i.i.d.) dają reżim
-"range" dużo częściej niż "trend" (ryzyko odnotowane w TASKS.md C2.5), więc nie
+"range" dużo częściej niż "trend" (ryzyko odnotowane w STATUS.md C2.5), więc nie
 gwarantowałyby ćwiczenia obu ścieżek.
 
 UWAGA (Commit 2d): testy w tym pliku, które powstały PRZED bramką wykonalności kosztowej,

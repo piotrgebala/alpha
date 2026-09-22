@@ -1,7 +1,7 @@
 # Mapa dokumentacji projektu
 
-> Plik-indeks (D.2 w `TASKS.md`): jedno miejsce linkujące wszystkie dokumenty projektu, z
-> jednozdaniowym opisem każdego. Nie zastępuje żadnego z nich — `IMPLEMENTATION_PLAN.md` zostaje
+> Plik-indeks (D.2 w `STATUS.md`): jedno miejsce linkujące wszystkie dokumenty projektu, z
+> jednozdaniowym opisem każdego. Nie zastępuje żadnego z nich — `STATUS.md` zostaje
 > jedynym źródłem aktualnego statusu, `docs/rag/*.md` jedynym źródłem pełnych uzasadnień decyzji.
 >
 > Ostatnia aktualizacja: 2026-08-01.
@@ -12,8 +12,8 @@
 |---|---|
 | [`README.md`](../README.md) | Wejście do repo dla ludzi (GitHub) — czym jest projekt, szybki start, zastrzeżenia |
 | [`CLAUDE.md`](../CLAUDE.md) | Krótkie, stabilne instrukcje/zasady dla Claude Code, czytane automatycznie na starcie sesji |
-| [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md) | Aktualny status commitów, decyzje, znane ryzyka — żywy dokument, zmienia się często |
-| [`TASKS.md`](../TASKS.md) | Granularny, statusowalny rozkład `IMPLEMENTATION_PLAN.md` na pojedyncze zadania z ID i statusem |
+| [`STATUS.md`](../STATUS.md) | Aktualny status commitów, decyzje, znane ryzyka — żywy dokument, zmienia się często |
+| [`STATUS.md`](../STATUS.md) | Granularny, statusowalny rozkład `STATUS.md` na pojedyncze zadania z ID i statusem |
 
 ## `docs/rag/` — pełne uzasadnienia decyzji
 

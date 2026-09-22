@@ -2,7 +2,7 @@
 diagnose_kill_switch_trigger.py
 
 Commit 2c — diagnoza PRZYCZYNY serii strat, która uruchamia kill-switch w fold_idx=0
-`range` (IMPLEMENTATION_PLAN.md §5 Commit 2b, otwarte pytanie z C2b.1b). Skrypt
+`range` (STATUS.md §5 Commit 2b, otwarte pytanie z C2b.1b). Skrypt
 read-only/analityczny, poza pytest (jak `run_checkpoint.py`/`diagnose_range_signal.py`) —
 inspekcja SZCZEGÓŁÓW pierwszych realnych transakcji (kill_switch_active=False) przed
 momentem, gdy equity zamraża się na stałe.

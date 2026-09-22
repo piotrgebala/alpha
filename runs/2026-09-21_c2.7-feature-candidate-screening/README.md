@@ -144,7 +144,7 @@ NO-GO z C2.5/C2.6. To NIE zamyka wątku cech — tylko potwierdza, że wybór KT
 dalej nie może się opierać na tym screeningu (za słaby sygnał), tylko na uzasadnieniu
 merytorycznym (np. `adx_14` jako ciągła, niezredukowana do dyskretnych kroków alternatywa dla
 `direction_persistence_10` w kontekście otwartego wątku "dlaczego `range` konsekwentnie stawiał
-na long podczas trendu spadkowego" — patrz IMPLEMENTATION_PLAN.md §7).
+na long podczas trendu spadkowego" — patrz STATUS.md §7).
 
 ## Rekomendacja (nie decyzja)
 

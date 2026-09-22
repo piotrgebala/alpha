@@ -3,12 +3,12 @@ run_checkpoint_v2.py
 
 Commit 2.9 — kanoniczny checkpoint go/no-go v2, następca `run_checkpoint.py`
 (który pozostaje w repo NIEZMIENIONY jako zamrożony zapis metodologii Commitu 6 —
-jego wynik jest udokumentowany w IMPLEMENTATION_PLAN.md i musi pozostać odtwarzalny).
+jego wynik jest udokumentowany w STATUS.md i musi pozostać odtwarzalny).
 Skrypt jednorazowy/analityczny, poza pytest. Pierwszy użytkownik wspólnej biblioteki
 `backtest/checkpoint_lib.py` (Z13).
 
 CO SIĘ ZMIENIA względem v1 (pełne uzasadnienie: docs/rag/03, aktualizacja 2026-09-21,
-oraz TASKS.md Backlog Z1–Z3):
+oraz STATUS.md §16 Backlog Z1–Z3):
   1. (Z1) Sweep stabilności po SEEDACH zastąpiony sweepem FOLD-JITTER (offset startu
      okien walk-forward 0..9 dni). Powód: XGBoost w konfiguracji Fazy 0 (bez
      subsample/colsample) jest deterministyczny — seed niczego nie zmieniał i każdy

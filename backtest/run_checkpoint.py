@@ -5,7 +5,7 @@ Commit 6 — pełny checkpoint go/no-go na REALNYCH danych z Binance (przez
 data/fetch_ohlcv.get_ohlcv_cached). Skrypt jednorazowy/analityczny, celowo POZA
 pytest (brak asercji, wymaga sieci przy pierwszym uruchomieniu i realnego czasu
 treningu XGBoost x10 seedów) — wyniki liczbowe trafiają ręcznie do
-IMPLEMENTATION_PLAN.md (C6.5). Testy formuł/klasyfikacji są w tests/test_metrics.py
+STATUS.md (C6.5). Testy formuł/klasyfikacji są w tests/test_metrics.py
 (syntetyczne, deterministyczne, bez sieci).
 
 Kroki:

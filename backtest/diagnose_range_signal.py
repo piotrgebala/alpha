@@ -1,7 +1,7 @@
 """
 diagnose_range_signal.py
 
-Commit 2b (post-Commit-6 NO-GO, IMPLEMENTATION_PLAN.md §5) — diagnostyka C2b.1: dlaczego
+Commit 2b (post-Commit-6 NO-GO, STATUS.md §5) — diagnostyka C2b.1: dlaczego
 model_reversion (regime="range") wygenerował sygnał (signal_direction != 0) tylko w 1/20
 foldów walk-forward na realnych danych (Commit 6). Skrypt analityczny, POZA pytest (jak
 backtest/run_checkpoint.py) — celowo READ-ONLY, nie zmienia żadnego już scalonego pliku
@@ -24,7 +24,7 @@ Per fold reżimu "range", raportuje:
      marginalny argmax blisko remisu z inną klasą.
 
 Interpretacja (decision gate, nie zakodowana tutaj jako automatyczna decyzja — patrz
-IMPLEMENTATION_PLAN.md §5 "Commit 2b"):
+STATUS.md §5 "Commit 2b"):
   - Jeśli train/test label dist jest ~all class 0 NIEZALEŻNIE od foldu -> strukturalny
     problem regime/bariery, nowe cechy prawdopodobnie nie pomogą (poza zakresem tej sesji:
     progi regime i mnożnik ATR zostają bez zmian).
@@ -174,7 +174,7 @@ def _print_report(reports: list[dict]) -> None:
         max_importance_per_feature = {
             f: max(r["feature_importance_gain"][f] for r in evaluated) for f in REVERSION_FEATURES
         }
-        print("=== SUMMARY (decision gate input, IMPLEMENTATION_PLAN.md §5 Commit 2b) ===")
+        print("=== SUMMARY (decision gate input, STATUS.md §5 Commit 2b) ===")
         print(f"  evaluated folds: {len(evaluated)}/{len(reports)}")
         print(f"  avg %% test labels == 0 (timeout) across evaluated folds: {avg_pct_0_test:.1f}%")
         print(f"  total nonzero signals across evaluated folds: {total_signals}/{total_test_rows}")

@@ -7,7 +7,7 @@
 ## Metadane
 
 - **Branch:** `task/C2.9-measurement-methodology` (do utworzenia)
-- **Poprzedzający stan (master):** Commit 2.8 + backlog Z1–Z15 (TASKS.md, przegląd całego
+- **Poprzedzający stan (master):** Commit 2.8 + backlog Z1–Z15 (STATUS.md, przegląd całego
   projektu 2026-09-21). Ta runda realizuje **Z1+Z2+Z3+Z4+Z13** oraz higienę **Z11+Z12+Z14+Z15**.
 - **Komenda:** `python3 -m backtest.run_checkpoint_v2` (pełny, z sweepem fold-jitter)
 - **Nowe pliki:** `backtest/checkpoint_lib.py` (Z13, wspólna biblioteka — FORWARD-LOOKING,
@@ -29,7 +29,7 @@
 
 ## Dlaczego ta runda w ogóle powstała
 
-Audyt projektu (2026-09-21, TASKS.md Backlog) wykazał, że **sweep stabilności po seedach
+Audyt projektu (2026-09-21, STATUS.md §16 Backlog) wykazał, że **sweep stabilności po seedach
 (C6.3) mierzył dokładnie nic**: `DEFAULT_XGB_PARAMS` nie zawiera `subsample`/
 `colsample_bytree`, więc XGBoost jest w pełni deterministyczny — seed nie zmienia ani
 jednego drzewa. Empirycznie: std=0,0000 identyczne do ostatniej cyfry w KAŻDYM

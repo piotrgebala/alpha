@@ -1,7 +1,7 @@
 """
 metrics.py
 
-Commit 6 — Checkpoint go/no-go (IMPLEMENTATION_PLAN.md, docs/rag/03_ryzyko_i_sizing.md).
+Commit 6 — Checkpoint go/no-go (STATUS.md, docs/rag/03_ryzyko_i_sizing.md).
 Sharpe po kosztach per fold, klasyfikacja GO/WARUNKOWY/NO-GO, rozbicie per reżim rynkowy.
 `backtest.engine.run_backtest` celowo NIE liczy Sharpe'a (patrz docstring tego modułu) —
 to jawnie zadanie C6.1-C6.4, zaimplementowane tutaj jako czyste, testowalne funkcje
@@ -31,7 +31,7 @@ Konstrukcyjnie rozłączne: >60% foldów z Sharpe>0.5 wyklucza >50% foldów z Sh
 
 C6.4 (rozbicie per reżim rynkowy): interpretacja jako trend vs range (kolumna `regime`
 w trades/folds_summary), NIE kalendarzowa — realny zakres danych (2025-07 -> 2026-07)
-nie sięga 2023, więc dosłowna treść TASKS.md ("2023 vs 2024-25") nie pasuje do
+nie sięga 2023, więc dosłowna treść STATUS.md ("2023 vs 2024-25") nie pasuje do
 faktycznie dostępnych danych. `summarize_by_regime` po prostu woła classify_checkpoint
 osobno na podzbiorze fold_metrics dla każdego reżimu.
 """

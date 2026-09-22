@@ -3,7 +3,7 @@ test_risk_controller.py
 
 Warstwa 1 (unit) + Warstwa 3 (hypothesis property-based, wymagane przez DoD dla
 `agents/risk_controller.py` — docs/rag/05_metodologia_wytwarzania_i_testow.md) dla
-sizingu i kill-switcha (IMPLEMENTATION_PLAN.md §5 Commit 5.5).
+sizingu i kill-switcha (STATUS.md §5 Commit 5.5).
 """
 
 from __future__ import annotations
