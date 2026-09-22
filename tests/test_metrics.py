@@ -531,6 +531,7 @@ def _make_edge_trades(rows: list[dict]) -> pd.DataFrame:
         "exit_price": 101.0,
         "gross_pnl": 1.0,
         "cost": 0.14,
+        "exit_reason": "tp",
         "kill_switch_active": False,
     }
     if not rows:
@@ -682,3 +683,84 @@ def test_hit_rate_within_unit_interval_and_matches_count(n_wins: int, n_losses: 
     else:
         assert 0.0 <= result["hit_rate"] <= 1.0
         assert result["hit_rate"] == pytest.approx(n_wins / (n_wins + n_losses))
+
+
+# ---------------------------------------------------------------------------
+# Z18 (Backlog II): jedna definicja `p` + rozbicie per typ wyjścia
+# ---------------------------------------------------------------------------
+
+
+def test_canonical_hit_rate_counts_profitable_timeouts_as_wins() -> None:
+    """
+    SEDNO Z18: `direction*label>0` liczyłoby KAŻDY timeout jako porażkę (bo label==0),
+    także zamknięty z zyskiem. Definicja kanoniczna `gross_pnl>0` tego nie robi.
+    """
+    trades = _make_edge_trades(
+        [{"gross_pnl": 1.0, "exit_reason": "tp"}] * 5
+        + [{"gross_pnl": 1.0, "exit_reason": "timeout"}] * 3   # zyskowne timeouty
+        + [{"gross_pnl": -1.0, "exit_reason": "sl"}] * 2
+    )
+    result = compute_hit_rate(trades)
+    assert result["hit_rate"] == pytest.approx(0.8)  # 8/10, NIE 5/10
+    # gdyby liczyć "tylko trafienia bariery poziomej", byłoby 5/10 — różnica 30 pp
+    assert result["hit_rate"] != pytest.approx(0.5)
+
+
+def test_edge_report_splits_hit_rate_by_exit_reason() -> None:
+    trades = _make_edge_trades(
+        [{"gross_pnl": 1.0, "exit_reason": "tp"}] * 6
+        + [{"gross_pnl": -1.0, "exit_reason": "sl"}] * 4
+        + [{"gross_pnl": 1.0, "exit_reason": "timeout"}] * 1
+        + [{"gross_pnl": -1.0, "exit_reason": "timeout"}] * 9
+    )
+    row = summarize_edge_by_regime(trades).iloc[0]
+    assert row["share_timeout"] == pytest.approx(0.5)
+    assert row["hit_rate_barrier"] == pytest.approx(0.6)   # 6/10
+    assert row["hit_rate_timeout"] == pytest.approx(0.1)   # 1/10
+    assert row["hit_rate"] == pytest.approx(0.35)          # 7/20 — średnia ważona
+
+
+def test_edge_report_timeout_columns_are_nan_without_exit_reason() -> None:
+    """Journal sprzed C2.12 nie ma kolumny `exit_reason` — raport nie może się wywalić."""
+    trades = _make_edge_trades([{"gross_pnl": 1.0}] * 5).drop(columns=["exit_reason"])
+    row = summarize_edge_by_regime(trades).iloc[0]
+    assert math.isnan(row["share_timeout"])
+    assert math.isnan(row["hit_rate_barrier"])
+    assert not math.isnan(row["hit_rate"])  # kanoniczna miara nadal policzalna
+
+
+def test_edge_report_all_barrier_exits_gives_nan_timeout_rate() -> None:
+    trades = _make_edge_trades([{"gross_pnl": 1.0, "exit_reason": "tp"}] * 5)
+    row = summarize_edge_by_regime(trades).iloc[0]
+    assert row["share_timeout"] == pytest.approx(0.0)
+    assert math.isnan(row["hit_rate_timeout"])
+    assert row["hit_rate_barrier"] == pytest.approx(1.0)
+
+
+@given(
+    n_tp=st.integers(min_value=0, max_value=40),
+    n_sl=st.integers(min_value=0, max_value=40),
+    n_to_win=st.integers(min_value=0, max_value=40),
+    n_to_loss=st.integers(min_value=0, max_value=40),
+)
+@settings(max_examples=150, deadline=None)
+def test_overall_hit_rate_is_weighted_average_of_components(
+    n_tp: int, n_sl: int, n_to_win: int, n_to_loss: int
+) -> None:
+    """Niezmiennik: kanoniczna trafność = średnia ważona składowych per typ wyjścia."""
+    trades = _make_edge_trades(
+        [{"gross_pnl": 1.0, "exit_reason": "tp"}] * n_tp
+        + [{"gross_pnl": -1.0, "exit_reason": "sl"}] * n_sl
+        + [{"gross_pnl": 1.0, "exit_reason": "timeout"}] * n_to_win
+        + [{"gross_pnl": -1.0, "exit_reason": "timeout"}] * n_to_loss
+    )
+    n_total = n_tp + n_sl + n_to_win + n_to_loss
+    if n_total == 0:
+        return
+    row = summarize_edge_by_regime(trades).iloc[0]
+    n_barrier, n_timeout = n_tp + n_sl, n_to_win + n_to_loss
+    expected = (
+        (row["hit_rate_barrier"] * n_barrier if n_barrier else 0.0)
+        + (row["hit_rate_timeout"] * n_timeout if n_timeout else 0.0)
+    ) / n_total
+    assert row["hit_rate"] == pytest.approx(expected)

@@ -36,10 +36,12 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 
 | Z17+Z21 | 2026-09-22 | [2026-09-22_z17-z21-early-stopping-leak.md](2026-09-22_z17-z21-early-stopping-leak.md) | Backlog II: naprawa przecieku early stopping (liczba drzew dobierana na foldzie OOS) + embargo na granicy train/test. `validation_fraction` (ogon foldu treningowego), `embargo_candles`, guard `best_iteration_or_last`. Adopcja zadeklarowana jako BEZWARUNKOWA przed uruchomieniem | 0 (naprawa błędu) | **Kierunek obciążenia potwierdzony: `p` było ZAWYŻONE.** `range` hit 51,07% → **50,38%**, a z_stat **+1,81 → +0,63** — czyli jedyny wynik w projekcie wyglądający na „bliski istotności" (C2.12) był ARTEFAKTEM PRZECIEKU. `trend` 49,86% → 50,84% (z=+0,29, n=299, szum). `fraction_le_zero` 0,870 → 0,907. **Najczystszy pomiar `p` w historii projektu — i pokazuje brak edge'u kierunkowego w obu reżimach** |
 
+| Z18 | 2026-09-22 | [2026-09-22_z18-unify-hit-rate.md](2026-09-22_z18-unify-hit-rate.md) | Backlog II: definicja kanoniczna `p` = `gross_pnl>0` udokumentowana w kodzie + rozbicie trafnosci per typ wyjscia (`share_timeout`, `hit_rate_barrier`, `hit_rate_timeout`) | 0 (ujednolicenie definicji) | Rozjazd definicji zmierzony: naiwna (`dir*label>0`, tylko `tp`) zanizala o **+5,6 pp** (`range`) i **+8,0 pp** (`trend`). **Zamknieta hipoteza ucieczkowa:** traf. na samych barierach poziomych = **50,50%** (`range`, n=6 239) i 50,20% (`trend`) — edge NIE chowa sie w zadnej skladowej, timeouty niczego nie rozcienczaja |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
 C2.11 to instrumentacja (0 wariantów); C2.12 to +1 wariant (model kosztów); C2.13 to +1 wariant
-(próg pewności) => **licznik = 2**. Z16 (pomiar specyfikacji) i Z17+Z21 (naprawa błędu) to 0 wariantów — licznik nadal **2**.
+(próg pewności) => **licznik = 2**. Z16 (pomiar specyfikacji), Z17+Z21 (naprawa błędu) i Z18 (definicja) to 0 wariantów — licznik nadal **2**.
 
 ## Jak dodać nowy wpis
 
