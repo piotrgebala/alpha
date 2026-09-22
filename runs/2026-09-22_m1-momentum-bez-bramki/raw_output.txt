@@ -1,0 +1,110 @@
+========================================================================================================
+M1 — MOMENTUM bez bramki rezimu (konfiguracja i kryterium ZAMROZONE)
+========================================================================================================
+dane      : 14916 swiec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+pipeline  : BEZ bramki rezimu, V=3, wagi klas `balanced` (A1),
+            walk-forward 60/28/28, seed 42
+ramie A   : ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20']
+ramie B   : ['return_lag_1', 'volume_zscore_20', 'momentum_5', 'ema_diff_9_21']
+JEDNA zmienna: zestaw cech. Wszystko inne identyczne (zasada 4).
+
+  policzone: ramie A (odniesienie: REVERSION (4 cechy))
+  policzone: ramie B (kandydat: MOMENTUM (4 cechy))
+
+========================================================================================================
+1. WYNIK — trafnosc wobec progu oplacalnosci
+========================================================================================================
+   ramie |  abstyn. |       n |  trafnosc |               CI 95% |  prog BE |   margines
+  ----------------------------------------------------------------------------------------
+       A |   43.84% |    8033 |    50.37% | [  49.27%;   51.46%] |   52.93% |     -2.57 pp
+       B |   40.23% |    8512 |    49.74% | [  48.68%;   50.80%] |   52.94% |     -3.20 pp
+
+========================================================================================================
+2. GEOMETRIA — skad bierze sie prog (wielkosci niezalezne od trafnosci)
+========================================================================================================
+   ramie |   bariera B |    koszt C |      C/B |  udzial timeout
+  --------------------------------------------------------------
+       A |     1.3824% |    0.0811% |   0.0587 |          65.11%
+       B |     1.3711% |    0.0806% |   0.0588 |          64.91%
+
+========================================================================================================
+3. KRYTERIUM — zapisane PRZED uruchomieniem
+========================================================================================================
+  wymagane n do orzeczenia NEGATYWU (moc 80%) : 4,481
+  zmierzone n w ramieniu B                    : 8,512  (1.90x)  -> moc WYSTARCZA
+  pasmo przy tym n                            : 1.06 pp
+
+  >>> WERDYKT M1: NEGATYWNY — ci_high < prog. Momentum NIE dobija do progu oplacalnosci
+
+========================================================================================================
+4. MIERZALNOSC ex post (zasada 18) — czy pytanie bylo dobrze postawione
+========================================================================================================
+  ramie A: prog wykrywalnosci 54.03%, zmierzone 50.37% -> NIEMIERZALNA
+  ramie B: prog wykrywalnosci 54.00%, zmierzone 49.74% -> NIEMIERZALNA
+
+  Kontrola zalozenia z pre-rejestracji: required_trades(50.84% vs 52.94%) = 4,445
+
+========================================================================================================
+5. PELNE TABELE (do raw_output)
+========================================================================================================
+  --- ramie A: odniesienie: REVERSION (4 cechy) ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      8033  0.503672 0.658284 0.492739 0.514606       0.651064          0.512665          0.498853     0.013824  0.000811      0.529325 -0.025653
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.36046511627906974, 'fraction_le_zero': 0.6395348837209303, 'fraction_positive_sign': 0.36046511627906974, 'mean_sharpe': -1.7663058600955661}
+  UWAGA: `classification` NIE jest kryterium tej rundy — K1 wykazalo, ze potrafi
+  zwrocic GO czystemu szumowi (wniosek skumulowany 24).
+
+  --- ramie B: kandydat: MOMENTUM (4 cechy) ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      8512  0.497415 -0.47691 0.486794 0.508037       0.649084          0.502511          0.494661     0.013711  0.000806      0.529385 -0.031969
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.2558139534883721, 'fraction_le_zero': 0.7093023255813954, 'fraction_positive_sign': 0.29069767441860467, 'mean_sharpe': -2.0499304493916664}
+  UWAGA: `classification` NIE jest kryterium tej rundy — K1 wykazalo, ze potrafi
+  zwrocic GO czystemu szumowi (wniosek skumulowany 24).
+
+
+
+########################################################################################################
+# WALIDACJA (CLAUDE.md zasada 16a)
+# komenda: PYTHONPATH=. py runs/2026-09-22_m1-momentum-bez-bramki/m1_walidacja.py
+########################################################################################################
+================================================================================================
+1. TRAFNOSC PRZELICZONA WPROST Z JOURNALU (zliczenie gross_pnl > 0)
+================================================================================================
+   ramie |   trafien |       n |  z journalu |   z tabeli |   roznica
+  ------------------------------------------------------------------
+       A |      4046 |    8033 |    50.3672% |   50.3672% | 0.000000 pp
+       B |      4234 |    8512 |    49.7415% |   49.7415% | 0.000000 pp
+
+  Zerowa roznica = `summarize_edge_by_regime` liczy dokladnie to, co deklaruje.
+
+================================================================================================
+2. KOGO NIE MA W ZBIORZE
+================================================================================================
+                        etap |    ramie A |    ramie B
+  ----------------------------------------------------
+             ocenione swiece |      14448 |      14448
+      odpadlo na abstynencji |       6334 |       5813
+             bramka pewnosci |          0 |          0
+             bramka kosztowa |          0 |          0
+                     sygnaly |       8114 |       8635
+     stlumione kill-switchem |         81 |        123
+                W PROBIE (n) |       8033 |       8512
+    ramie A: foldy pominiete 0/86, bilans lejka domyka sie: True
+    ramie B: foldy pominiete 0/86, bilans lejka domyka sie: True
+
+================================================================================================
+3. CZY RAMIONA SIE OD SIEBIE ROZNIA (test dwoch proporcji)
+================================================================================================
+  ramie A (reversion) : 50.37%   ramie B (momentum) : 49.74%
+  roznica B - A = -0.63 pp,  95% CI [-2.15; +0.90] pp,  z = -0.80
+  >>> ROZNICA NIEISTOTNA — momentum nie jest GORSZE od reversion, jest TAK SAMO nieobecne.
+
+================================================================================================
+4. ZGODNOSC RAMIENIA A Z HISTORYCZNYMI POMIARAMI PROJEKTU
+================================================================================================
+  Ramie A to INNA konfiguracja niz cokolwiek w Z10: 4h zamiast 5m, bez bramki zamiast
+  z bramka, wagi klas zamiast ich braku. Jesli mimo to daje te sama liczbe, jest to
+  niezalezne potwierdzenie, ze aparat mierzy to samo co wczesniej.
+
+    5m `range` (Z17+Z21): 50.38% [49.21; 51.54]   vs ramie A 50.37% [49.27; 51.46]  -> CI NAKLADAJA SIE
+     POOLED Faza 0 (Z10): 50.27% [49.15; 51.38]   vs ramie A 50.37% [49.27; 51.46]  -> CI NAKLADAJA SIE
