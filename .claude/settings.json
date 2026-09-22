@@ -1,12 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(PYTHONIOENCODING=utf-8 py -m backtest.run_checkpoint_v2 --quick)",
-      "Bash(echo \"EXIT=$?\")",
+      "Bash(py -m pytest *)",
+      "Bash(py -m ruff check *)",
+      "Bash(py -m black *)",
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git checkout *)",
-      "Bash(git merge --no-ff task/C2.11-edge-instrumentation -m 'Merge Commit 2.11: instrumentacja edge'\\\\''u - rozbicie werdyktu na \\(2p-1\\)*B vs C *)",
+      "Bash(git merge --no-ff *)",
       "Bash(git push *)"
     ]
   },

@@ -101,9 +101,7 @@ def compute_sharpe_ratio(
     return float((mean_excess / std) * np.sqrt(periods_per_year))
 
 
-def compute_fold_metrics(
-    trades: pd.DataFrame, folds_summary: list[dict]
-) -> pd.DataFrame:
+def compute_fold_metrics(trades: pd.DataFrame, folds_summary: list[dict]) -> pd.DataFrame:
     """
     Per-fold (regime, fold_idx) Sharpe po kosztach — C6.1.
 
@@ -158,9 +156,7 @@ def compute_fold_metrics(
                 "test_end": test_end,
                 "n_trades": n_trades,
                 "mean_return": fold_returns.mean() if n_trades > 0 else float("nan"),
-                "std_return": (
-                    fold_returns.std(ddof=1) if n_trades > 1 else float("nan")
-                ),
+                "std_return": (fold_returns.std(ddof=1) if n_trades > 1 else float("nan")),
                 "sharpe": sharpe,
                 "t_stat": compute_t_stat(fold_returns),
                 "skip_reason": fold.get("skip_reason"),
@@ -462,10 +458,18 @@ def summarize_edge_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
         notional = notional.replace(0.0, np.nan)
         entry_price = real_trades["entry_price"].replace(0.0, np.nan)
 
-        barrier_pct = float(
-            ((real_trades["exit_price"] - real_trades["entry_price"]).abs() / entry_price).mean()
-        ) if len(real_trades) else float("nan")
-        cost_pct = float((real_trades["cost"] / notional).mean()) if len(real_trades) else float("nan")
+        barrier_pct = (
+            float(
+                (
+                    (real_trades["exit_price"] - real_trades["entry_price"]).abs() / entry_price
+                ).mean()
+            )
+            if len(real_trades)
+            else float("nan")
+        )
+        cost_pct = (
+            float((real_trades["cost"] / notional).mean()) if len(real_trades) else float("nan")
+        )
 
         # Z18: rozbicie trafności per typ wyjścia. Bariera pozioma (tp/sl) i pionowa
         # (timeout) mają inny rozkład wypłat — pierwsza zawsze ±B, druga dowolny ruch
@@ -478,7 +482,9 @@ def summarize_edge_by_regime(trades: pd.DataFrame) -> pd.DataFrame:
             barrier_trades = real_trades.loc[~is_timeout]
             timeout_trades = real_trades.loc[is_timeout]
             hit_rate_barrier = (
-                float((barrier_trades["gross_pnl"] > 0).mean()) if len(barrier_trades) else float("nan")
+                float((barrier_trades["gross_pnl"] > 0).mean())
+                if len(barrier_trades)
+                else float("nan")
             )
             hit_rate_timeout = (
                 float((timeout_trades["gross_pnl"] > 0).mean()) if n_timeout else float("nan")
@@ -526,8 +532,8 @@ def summarize_by_regime(fold_metrics: pd.DataFrame) -> pd.DataFrame:
         rows.append({"regime": regime, **result})
     return pd.DataFrame(rows)
 
-# --- Z19 (Backlog II): moc statystyczna pomiaru trafności ---
 
+# --- Z19 (Backlog II): moc statystyczna pomiaru trafności ---
 
 
 def observed_wald_ci(hits: int, n_trades: int, z: float = Z_TWO_SIDED_95) -> dict:
@@ -549,12 +555,22 @@ def observed_wald_ci(hits: int, n_trades: int, z: float = Z_TWO_SIDED_95) -> dic
         {n_trades, hit_rate, half_width, ci_low, ci_high}; NaN dla n <= 0.
     """
     if n_trades <= 0:
-        return {"n_trades": 0, "hit_rate": float("nan"), "half_width": float("nan"),
-                "ci_low": float("nan"), "ci_high": float("nan")}
+        return {
+            "n_trades": 0,
+            "hit_rate": float("nan"),
+            "half_width": float("nan"),
+            "ci_low": float("nan"),
+            "ci_high": float("nan"),
+        }
     p = hits / n_trades
     half = float(z * np.sqrt(p * (1.0 - p) / n_trades))
-    return {"n_trades": int(n_trades), "hit_rate": float(p), "half_width": half,
-            "ci_low": float(p - half), "ci_high": float(p + half)}
+    return {
+        "n_trades": int(n_trades),
+        "hit_rate": float(p),
+        "half_width": half,
+        "ci_low": float(p - half),
+        "ci_high": float(p + half),
+    }
 
 
 def wald_half_width(n_trades: int, z: float = Z_TWO_SIDED_95) -> float:

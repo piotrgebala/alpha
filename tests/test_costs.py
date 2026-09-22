@@ -49,9 +49,7 @@ from backtest.costs import funding_cost as funding_cost_fn
 def test_round_trip_fee_cost_is_double_single_side_fee() -> None:
     notional = 10_000.0
     fee_rate = 0.0005
-    assert round_trip_fee_cost(notional, fee_rate) == pytest.approx(
-        2 * notional * fee_rate
-    )
+    assert round_trip_fee_cost(notional, fee_rate) == pytest.approx(2 * notional * fee_rate)
 
 
 def test_slippage_cost_matches_bps_formula() -> None:
@@ -63,12 +61,8 @@ def test_slippage_cost_matches_bps_formula() -> None:
 def test_funding_cost_long_pays_positive_funding() -> None:
     # direction=+1 (long), funding_rate_8h dodatni -> koszt dodatni (long płaci funding).
     notional = 10_000.0
-    holding_candles = (
-        FUNDING_PERIOD_HOURS * 60 / CANDLE_MINUTES
-    )  # równo 1 okres funding (8h)
-    cost = funding_cost_fn(
-        notional, holding_candles, direction=1, funding_rate_8h=0.0001
-    )
+    holding_candles = FUNDING_PERIOD_HOURS * 60 / CANDLE_MINUTES  # równo 1 okres funding (8h)
+    cost = funding_cost_fn(notional, holding_candles, direction=1, funding_rate_8h=0.0001)
     assert cost == pytest.approx(10_000.0 * 0.0001 * 1.0)
 
 
@@ -76,21 +70,15 @@ def test_funding_cost_short_receives_positive_funding() -> None:
     # direction=-1 (short) przy dodatnim funding_rate_8h -> koszt ujemny (short otrzymuje).
     notional = 10_000.0
     holding_candles = FUNDING_PERIOD_HOURS * 60 / CANDLE_MINUTES
-    cost = funding_cost_fn(
-        notional, holding_candles, direction=-1, funding_rate_8h=0.0001
-    )
+    cost = funding_cost_fn(notional, holding_candles, direction=-1, funding_rate_8h=0.0001)
     assert cost == pytest.approx(-10_000.0 * 0.0001 * 1.0)
 
 
 def test_funding_cost_scales_linearly_with_holding_periods() -> None:
     notional = 10_000.0
     one_period_candles = FUNDING_PERIOD_HOURS * 60 / CANDLE_MINUTES
-    cost_1 = funding_cost_fn(
-        notional, one_period_candles, direction=1, funding_rate_8h=0.0002
-    )
-    cost_3 = funding_cost_fn(
-        notional, one_period_candles * 3, direction=1, funding_rate_8h=0.0002
-    )
+    cost_1 = funding_cost_fn(notional, one_period_candles, direction=1, funding_rate_8h=0.0002)
+    cost_3 = funding_cost_fn(notional, one_period_candles * 3, direction=1, funding_rate_8h=0.0002)
     assert cost_3 == pytest.approx(cost_1 * 3)
 
 
@@ -103,9 +91,7 @@ def test_total_round_trip_cost_is_sum_of_components() -> None:
     slippage_bps = 2.0
 
     expected_fee = round_trip_fee_cost(notional, taker_fee_rate)
-    expected_funding = funding_cost_fn(
-        notional, holding_candles, direction, funding_rate_8h
-    )
+    expected_funding = funding_cost_fn(notional, holding_candles, direction, funding_rate_8h)
     expected_slippage = 2.0 * slippage_cost(notional, slippage_bps)
     expected_total = expected_fee + expected_funding + expected_slippage
 
@@ -146,9 +132,9 @@ def test_round_trip_cost_fraction_consistent_with_total_round_trip_cost() -> Non
 
 
 def test_round_trip_cost_fraction_scales_with_inputs() -> None:
-    assert round_trip_cost_fraction(
-        taker_fee_rate=0.0002, slippage_bps=0.0
-    ) == pytest.approx(0.0004)
+    assert round_trip_cost_fraction(taker_fee_rate=0.0002, slippage_bps=0.0) == pytest.approx(
+        0.0004
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -460,9 +446,7 @@ def test_gate_cost_fraction_is_attained_property(
     costs = []
     for r in VALID_EXIT_REASONS:
         entry_leg, exit_leg = execution_legs(execution_model, r, timeout_leg)
-        costs.append(
-            round_trip_cost_fraction(entry_leg=entry_leg, exit_leg=exit_leg, **rates)
-        )
+        costs.append(round_trip_cost_fraction(entry_leg=entry_leg, exit_leg=exit_leg, **rates))
     assert any(abs(c - gate) <= 1e-15 for c in costs)
 
 

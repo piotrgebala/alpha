@@ -92,6 +92,28 @@ jako źródło stałych zasad.
     sekcji **Wniosek** i **Rekomendacja** w README każdej rundy. Techniczna precyzja (wzory,
     pełne tabele, kod) zostaje w sekcjach technicznych i w `raw_output.txt` — prosty język ją
     TŁUMACZY, nie zastępuje.
+18. **Hipoteza dostaje rachunek MIERZALNOŚCI przed uruchomieniem, nie po.** Pre-rejestracja
+    każdej rundy eksperymentalnej podaje wynik
+    `backtest/metrics.py::measurability_report(zakładana_trafność, break_even, oczekiwane_n)`.
+    **`oczekiwane_n` liczy się przez `expected_trades(n_świec, abstynencja, admission_rate)`,
+    nie z liczby świec** — to człon, którego brak przewrócił trzy rundy z rzędu: S1 → S1b
+    (1 037 → 345), S1b → H2.1 (345 → 98), i samą kontrolę K1 (n≈37 na losowanie). Za każdym
+    razem zaskoczenie, mimo że precedens leżał już w repo (wniosek skumulowany 19).
+    **Runda, której `measurability_report` zwraca NIEMIERZALNA, nie startuje** — jej wynik
+    nie rozstrzygnie niczego NIEZALEŻNIE od tego, co wyjdzie, więc uczciwiej jej nie
+    uruchamiać, niż potem interpretować nierozstrzygalną liczbę.
+    **ŚWIADOMIE BEZ ZAMROŻONEGO PROGU.** Nie wolno dokładać stałej w rodzaju „hipoteza musi
+    zakładać ≥58% trafności" — liczba 58,2% z K1 była artefaktem rozdzielczości siatki `q`
+    i została sprostowana w K2. Właściwością przyrządu jest `wald_half_width(n)`, zależna
+    WYŁĄCZNIE od `n`. Projekt ma już dwa udokumentowane trupy po zamrożonych progach
+    (`MIN_VALIDATION_ROWS = 30` po cichu wyłączył early stopping w 92% foldów — Z17b;
+    `std < 0.2` ze sweepu seedów, o którym `checkpoint_lib` pisze wprost, że go nie
+    rejestruje). Trzeciego nie dokładamy.
+    **Kryterium pre-rejestrowane sprawdź też w granicy dużego `n`** — czy nie jest
+    anty-skorelowane z celem rundy. Bramka 1 w K2 żądała, by CI trafności zawierało próg
+    opłacalności, co na czystym szumie jest równoważne warunkowi `n ≤ ~1 142`: mierzyła
+    nieprecyzyjność zamiast specyficzności i karała każde ramię osiągające cel rundy
+    (wniosek skumulowany 28).
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 
@@ -143,7 +165,7 @@ kapitał) i wszystko nieodwracalne (usuwanie danych/historii).
 > i bez sieci, sesja lokalna ma oba. **Niezmienne pozostaje to, co wyżej:** decyzje bramkowe
 > i operacje nieodwracalne zawsze wymagają zgody użytkownika.
 
-**Claude — pełna autonomia badawcza W RAMACH zasad 1–17:** samodzielnie wybiera i uruchamia
+**Claude — pełna autonomia badawcza W RAMACH zasad 1–18:** samodzielnie wybiera i uruchamia
 kolejne eksperymenty (w tym z backlogu w `STATUS.md`), może wprowadzać wynikające z wyników
 zmiany parametrów/cech/configu — **raportując po fakcie, w tej samej rundzie** (plik `runs/` +
 `STATUS.md` §5/§7 + `STATUS.md`). Autonomia nie uchyla dyscypliny: jedna zmiana na

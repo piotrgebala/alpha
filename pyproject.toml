@@ -1,0 +1,59 @@
+# Konfiguracja lintera i formatera (zadanie T2, domknięte 2026-09-22).
+#
+# DLACZEGO 100, a nie domyślne 88 blacka: kod tego projektu jest pisany do ~100 znaków
+# od początku. Przy 88 poza limit wypada 872 linii, przy 100 — 62. Ustawienie domyślnej
+# wartości oznaczałoby przeformatowanie praktycznie całego repo, w tym ZAMROŻONYCH skryptów
+# rund (CLAUDE.md zasada 13), które są odtwarzalnymi zapisami zakończonych eksperymentów,
+# a nie kodem do refaktoryzacji wstecz. Konfiguracja ma opisywać kod, który mamy, a nie
+# wymuszać przepisanie historii.
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+# Skrypty rund są zamrożone (zasada 13) — formater ich nie dotyka. Źródłem prawdy dla ich
+# wyników są katalogi `runs/`, a reformatowanie zmieniałoby plik, którego komenda w sekcji
+# "Metadane" ma odtwarzać zapisany output.
+extend-exclude = '''
+(
+    ^/runs/
+  | ^/backtest/run_checkpoint\.py
+  | ^/backtest/run_single_regime_4h\.py
+  | ^/backtest/run_funding_feature_h21\.py
+  | ^/backtest/run_positive_control_k1\.py
+  | ^/backtest/run_timeout_leg_band\.py
+  | ^/backtest/run_abstention_fix_k2\.py
+  | ^/backtest/run_measurability_k3\.py
+)
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# Te same skrypty, ktore omija black — zamrozone zapisy rund (zasada 13). Spojnosc jest
+# istotna: gdyby ruff je sprawdzal, a black nie formatowal, lint bylby nieprzechodni
+# dokladnie na plikach, ktorych z zasady nie wolno ruszac.
+extend-exclude = [
+    "runs",
+    "backtest/run_checkpoint.py",
+    "backtest/run_single_regime_4h.py",
+    "backtest/run_funding_feature_h21.py",
+    "backtest/run_positive_control_k1.py",
+    "backtest/run_timeout_leg_band.py",
+    "backtest/run_abstention_fix_k2.py",
+    "backtest/run_measurability_k3.py",
+]
+
+[tool.ruff.lint]
+# Zestaw celowo wąski: błędy składni/importów/oczywiste pomyłki. NIE włączamy reguł
+# stylistycznych wymagających przepisania kodu — T2 ma domknąć lukę w Definition of Done,
+# a nie uruchomić refaktor całego repo.
+select = ["E4", "E7", "E9", "F", "B"]
+ignore = [
+    # Długość linii pilnuje black, nie ruff — inaczej oba narzędzia kłócą się o te same
+    # linie i lint staje się nieprzechodni z definicji.
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Testy świadomie importują rzeczy tylko po to, żeby sprawdzić, że da się je zaimportować.
+"tests/*" = ["F401"]

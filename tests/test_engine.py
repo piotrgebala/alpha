@@ -62,9 +62,7 @@ from backtest.engine import (
     run_backtest,
 )
 
-N_WARMUP = (
-    5760  # 20 dni @ 5m - wymagane, by atr_pctrank_20d (feature_miner.py) nie było NaN
-)
+N_WARMUP = 5760  # 20 dni @ 5m - wymagane, by atr_pctrank_20d (feature_miner.py) nie było NaN
 N_TREND = 2880  # 10 dni - segment o wysokim, trwałym ATR + konsekwentny kierunek -> regime="trend"
 N_RANGE = 2880  # 10 dni - segment o niskim ATR + losowym kierunku -> regime="range"
 
@@ -105,9 +103,7 @@ def _make_pipeline_test_ohlcv(seed: int = 7) -> pd.DataFrame:
 
     df = pd.DataFrame(rows, columns=["open", "high", "low", "close"])
     df["volume"] = rng.uniform(50.0, 150.0, size=len(df))
-    df["timestamp"] = pd.date_range(
-        "2026-01-01", periods=len(df), freq="5min", tz="UTC"
-    )
+    df["timestamp"] = pd.date_range("2026-01-01", periods=len(df), freq="5min", tz="UTC")
     return df[["timestamp", "open", "high", "low", "close", "volume"]]
 
 
@@ -334,15 +330,11 @@ def test_run_backtest_threads_regime_thresholds_to_signal_population() -> None:
         min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
     )
 
-    baseline = run_backtest(
-        raw_ohlcv, trend_threshold=DEFAULT_TREND_THRESHOLD, **kwargs
-    )
+    baseline = run_backtest(raw_ohlcv, trend_threshold=DEFAULT_TREND_THRESHOLD, **kwargs)
     unreachable_threshold = run_backtest(raw_ohlcv, trend_threshold=0.99, **kwargs)
 
     def _trend_signals(result: dict) -> int:
-        return sum(
-            f["n_signals"] for f in result["folds_summary"] if f["regime"] == "trend"
-        )
+        return sum(f["n_signals"] for f in result["folds_summary"] if f["regime"] == "trend")
 
     assert _trend_signals(baseline) > 0
     assert _trend_signals(unreachable_threshold) == 0
@@ -369,9 +361,7 @@ def test_run_backtest_threads_candles_per_day_to_signal_population() -> None:
         min_barrier_to_cost_ratio=0.0,  # Commit 2d — patrz UWAGA w docstringu modułu
     )
 
-    baseline = run_backtest(
-        raw_ohlcv, candles_per_day=DEFAULT_CANDLES_PER_DAY, **kwargs
-    )
+    baseline = run_backtest(raw_ohlcv, candles_per_day=DEFAULT_CANDLES_PER_DAY, **kwargs)
     starved = run_backtest(raw_ohlcv, candles_per_day=100_000, **kwargs)
 
     def _total_signals(result: dict) -> int:
@@ -461,9 +451,7 @@ def test_run_backtest_threads_candle_minutes_to_funding_cost() -> None:
     explicit_5 = run_backtest(raw_ohlcv, candle_minutes=5, **kwargs)
     minutes_60 = run_backtest(raw_ohlcv, candle_minutes=60, **kwargs)
 
-    real_default = default_run["trades"].loc[
-        ~default_run["trades"]["kill_switch_active"]
-    ]
+    real_default = default_run["trades"].loc[~default_run["trades"]["kill_switch_active"]]
     real_5 = explicit_5["trades"].loc[~explicit_5["trades"]["kill_switch_active"]]
     real_60 = minutes_60["trades"].loc[~minutes_60["trades"]["kill_switch_active"]]
 
@@ -768,8 +756,11 @@ def test_run_backtest_embargo_follows_vertical_barrier_by_default() -> None:
     try:
         run_backtest(
             _make_pipeline_test_ohlcv(seed=7),
-            train_days=5, test_days=2, step_days=2,
-            min_barrier_to_cost_ratio=0.0, vertical_barrier_candles=7,
+            train_days=5,
+            test_days=2,
+            step_days=2,
+            min_barrier_to_cost_ratio=0.0,
+            vertical_barrier_candles=7,
         )
     finally:
         engine_module._collect_candidate_signals = original
@@ -788,8 +779,12 @@ def test_run_backtest_explicit_embargo_overrides_default() -> None:
     try:
         run_backtest(
             _make_pipeline_test_ohlcv(seed=7),
-            train_days=5, test_days=2, step_days=2,
-            min_barrier_to_cost_ratio=0.0, vertical_barrier_candles=7, embargo_candles=0,
+            train_days=5,
+            test_days=2,
+            step_days=2,
+            min_barrier_to_cost_ratio=0.0,
+            vertical_barrier_candles=7,
+            embargo_candles=0,
         )
     finally:
         engine_module._collect_candidate_signals = original
@@ -800,7 +795,10 @@ def test_run_backtest_single_regime_produces_only_that_regime() -> None:
     """Architektura jednoreżimowa: przekazanie jednego zestawu cech => tylko ten reżim."""
     result = run_backtest(
         _make_pipeline_test_ohlcv(seed=7),
-        train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0,
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        min_barrier_to_cost_ratio=0.0,
         regime_feature_sets=[("range", REVERSION_FEATURES)],
     )
     assert {f["regime"] for f in result["folds_summary"]} == {"range"}
@@ -814,7 +812,10 @@ def test_folds_summary_counts_model_abstention() -> None:
     """
     result = run_backtest(
         _make_pipeline_test_ohlcv(seed=7),
-        train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0,
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        min_barrier_to_cost_ratio=0.0,
     )
     active = [f for f in result["folds_summary"] if not f["skipped"]]
     assert active, "fixture musi wyprodukowac aktywny fold"
@@ -834,7 +835,10 @@ def test_skipped_folds_report_zero_funnel_counters() -> None:
     # nie wykonywala sie ani razu i test przechodzil, nie sprawdzajac niczego.
     result = run_backtest(
         _make_pipeline_test_ohlcv(seed=7),
-        train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0,
+        train_days=5,
+        test_days=2,
+        step_days=2,
+        min_barrier_to_cost_ratio=0.0,
         min_train_rows=10_000,
     )
     skipped = [f for f in result["folds_summary"] if f["skipped"]]
@@ -867,14 +871,18 @@ def test_all_fold_summaries_share_one_key_set() -> None:
 
     normal = run_backtest(raw, regime_feature_sets=feature_sets, **kwargs)["folds_summary"]
     # Prog nie do spelnienia -> KAZDY fold leci galezia `min_train_rows`.
-    starved = run_backtest(
-        raw, regime_feature_sets=feature_sets, min_train_rows=10_000, **kwargs
-    )["folds_summary"]
+    starved = run_backtest(raw, regime_feature_sets=feature_sets, min_train_rows=10_000, **kwargs)[
+        "folds_summary"
+    ]
     summaries = normal + starved
 
     active = [f for f in summaries if not f["skipped"]]
-    empty = [f for f in summaries if f["skip_reason"] and "regime_df jest puste" in f["skip_reason"]]
-    starved_folds = [f for f in summaries if f["skip_reason"] and "min_train_rows" in f["skip_reason"]]
+    empty = [
+        f for f in summaries if f["skip_reason"] and "regime_df jest puste" in f["skip_reason"]
+    ]
+    starved_folds = [
+        f for f in summaries if f["skip_reason"] and "min_train_rows" in f["skip_reason"]
+    ]
     assert active, "brak rekordu aktywnego - test nie porownuje wszystkich trzech ksztaltow"
     assert empty, "brak rekordu 'pusty rezim'"
     assert starved_folds, "brak rekordu 'min_train_rows'"
@@ -958,9 +966,7 @@ def test_journal_cost_never_exceeds_gate_cost_fraction(timeout_leg) -> None:
 
     Funding odejmowany, bo bramka swiadomie go nie zawiera (costs.round_trip_cost_fraction).
     """
-    result = run_backtest(
-        _make_pipeline_test_ohlcv(seed=7), timeout_leg=timeout_leg, **_H3_KWARGS
-    )
+    result = run_backtest(_make_pipeline_test_ohlcv(seed=7), timeout_leg=timeout_leg, **_H3_KWARGS)
     trades = result["trades"]
     real = trades[~trades["kill_switch_active"].astype(bool)]
     assert len(real) > 0, "fikstura musi produkowac transakcje, inaczej test nic nie sprawdza"
@@ -1282,7 +1288,9 @@ def test_class_weights_reach_the_engine_and_change_the_run() -> None:
     """Ramie A1: gdyby `class_weight_mode` nie docieralo przez silnik, byloby puste."""
     raw = _make_pipeline_test_ohlcv(seed=7)
     bez_wag = run_backtest(
-        raw, validation_fraction=0.2, class_weight_mode=engine_module.CLASS_WEIGHT_NONE,
+        raw,
+        validation_fraction=0.2,
+        class_weight_mode=engine_module.CLASS_WEIGHT_NONE,
         **_K2_KWARGS,
     )
     z_wagami = run_backtest(
@@ -1333,16 +1341,22 @@ def test_kill_switch_disabled_suppresses_nothing() -> None:
     """
     raw = _make_pipeline_test_ohlcv(seed=7)
     off = run_backtest(
-        raw, risk_controller_fn=_oversized_risk_controller_fn, kill_switch_enabled=False, **_K2_KWARGS
+        raw,
+        risk_controller_fn=_oversized_risk_controller_fn,
+        kill_switch_enabled=False,
+        **_K2_KWARGS,
     )
     on = run_backtest(
-        raw, risk_controller_fn=_oversized_risk_controller_fn, kill_switch_enabled=True, **_K2_KWARGS
+        raw,
+        risk_controller_fn=_oversized_risk_controller_fn,
+        kill_switch_enabled=True,
+        **_K2_KWARGS,
     )
 
     assert off["trades"]["kill_switch_active"].sum() == 0
-    assert on["trades"]["kill_switch_active"].sum() > 0, (
-        "fikstura musi wywolywac kill-switcha w ramieniu ON - inaczej test nie porownuje niczego"
-    )
+    assert (
+        on["trades"]["kill_switch_active"].sum() > 0
+    ), "fikstura musi wywolywac kill-switcha w ramieniu ON - inaczej test nie porownuje niczego"
 
 
 def test_kill_switch_arms_share_identical_candidate_set() -> None:
@@ -1400,12 +1414,17 @@ def test_hit_rate_inputs_are_insensitive_to_kill_switch() -> None:
         ({"direction_policy": "force"}, "direction_policy"),
         ({"confidence_mode": "raw"}, "confidence_mode"),
         (
-            {"direction_policy": DIRECTION_POLICY_ARGMAX3, "confidence_mode": CONFIDENCE_MODE_CONDITIONAL},
+            {
+                "direction_policy": DIRECTION_POLICY_ARGMAX3,
+                "confidence_mode": CONFIDENCE_MODE_CONDITIONAL,
+            },
             "conditional",
         ),
     ],
 )
-def test_run_backtest_rejects_bad_k2_variants_before_training(monkeypatch, kwargs, oczekiwany_komunikat) -> None:
+def test_run_backtest_rejects_bad_k2_variants_before_training(
+    monkeypatch, kwargs, oczekiwany_komunikat
+) -> None:
     """
     Literowka w nazwie wariantu ma padac w NAJWCZESNIEJSZYM punkcie przebiegu, a nie po
     wytrenowaniu pierwszego modelu.

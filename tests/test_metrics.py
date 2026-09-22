@@ -132,12 +132,8 @@ def test_compute_sharpe_ratio_nan_zero_variance() -> None:
 
 def test_compute_sharpe_ratio_risk_free_rate_lowers_result() -> None:
     returns = pd.Series([0.01, 0.02, 0.015, 0.005])
-    sharpe_zero_rf = compute_sharpe_ratio(
-        returns, periods_per_year=252.0, risk_free_rate=0.0
-    )
-    sharpe_positive_rf = compute_sharpe_ratio(
-        returns, periods_per_year=252.0, risk_free_rate=0.005
-    )
+    sharpe_zero_rf = compute_sharpe_ratio(returns, periods_per_year=252.0, risk_free_rate=0.0)
+    sharpe_positive_rf = compute_sharpe_ratio(returns, periods_per_year=252.0, risk_free_rate=0.005)
     assert sharpe_positive_rf < sharpe_zero_rf
 
 
@@ -288,9 +284,7 @@ def test_compute_fold_metrics_single_trade_insufficient() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _fold_metrics_from_sharpes(
-    sharpes: list[float], regime: str = "trend"
-) -> pd.DataFrame:
+def _fold_metrics_from_sharpes(sharpes: list[float], regime: str = "trend") -> pd.DataFrame:
     return pd.DataFrame(
         {
             "regime": [regime] * len(sharpes),
@@ -382,8 +376,7 @@ def test_summarize_by_regime_independent_classification() -> None:
 
 @given(
     sharpes=st.lists(
-        st.floats(min_value=-10.0, max_value=10.0, allow_nan=False)
-        | st.just(float("nan")),
+        st.floats(min_value=-10.0, max_value=10.0, allow_nan=False) | st.just(float("nan")),
         min_size=0,
         max_size=30,
     )
@@ -460,9 +453,7 @@ def test_compute_fold_metrics_includes_t_stat_column() -> None:
     assert metrics.iloc[0]["t_stat"] == pytest.approx(compute_t_stat(returns))
 
 
-def test_summarize_pooled_by_regime_pools_across_folds_and_excludes_kill_switch() -> (
-    None
-):
+def test_summarize_pooled_by_regime_pools_across_folds_and_excludes_kill_switch() -> None:
     rng = np.random.default_rng(0)
     rows = []
     # 100 transakcji trend rozrzuconych po 5 foldach — pooling MUSI je połączyć.
@@ -676,12 +667,12 @@ def test_break_even_monotonic_in_cost(cost_low: float, extra: float, barrier: fl
     assert break_even_hit_rate(cost_low + extra, barrier) > break_even_hit_rate(cost_low, barrier)
 
 
-@given(n_wins=st.integers(min_value=0, max_value=60), n_losses=st.integers(min_value=0, max_value=60))
+@given(
+    n_wins=st.integers(min_value=0, max_value=60), n_losses=st.integers(min_value=0, max_value=60)
+)
 @settings(max_examples=100, deadline=None)
 def test_hit_rate_within_unit_interval_and_matches_count(n_wins: int, n_losses: int) -> None:
-    trades = _make_edge_trades(
-        [{"gross_pnl": 1.0}] * n_wins + [{"gross_pnl": -1.0}] * n_losses
-    )
+    trades = _make_edge_trades([{"gross_pnl": 1.0}] * n_wins + [{"gross_pnl": -1.0}] * n_losses)
     result = compute_hit_rate(trades)
     assert result["n_trades"] == n_wins + n_losses
     if n_wins + n_losses == 0:
@@ -703,7 +694,7 @@ def test_canonical_hit_rate_counts_profitable_timeouts_as_wins() -> None:
     """
     trades = _make_edge_trades(
         [{"gross_pnl": 1.0, "exit_reason": "tp"}] * 5
-        + [{"gross_pnl": 1.0, "exit_reason": "timeout"}] * 3   # zyskowne timeouty
+        + [{"gross_pnl": 1.0, "exit_reason": "timeout"}] * 3  # zyskowne timeouty
         + [{"gross_pnl": -1.0, "exit_reason": "sl"}] * 2
     )
     result = compute_hit_rate(trades)
@@ -721,9 +712,9 @@ def test_edge_report_splits_hit_rate_by_exit_reason() -> None:
     )
     row = summarize_edge_by_regime(trades).iloc[0]
     assert row["share_timeout"] == pytest.approx(0.5)
-    assert row["hit_rate_barrier"] == pytest.approx(0.6)   # 6/10
-    assert row["hit_rate_timeout"] == pytest.approx(0.1)   # 1/10
-    assert row["hit_rate"] == pytest.approx(0.35)          # 7/20 — średnia ważona
+    assert row["hit_rate_barrier"] == pytest.approx(0.6)  # 6/10
+    assert row["hit_rate_timeout"] == pytest.approx(0.1)  # 1/10
+    assert row["hit_rate"] == pytest.approx(0.35)  # 7/20 — średnia ważona
 
 
 def test_edge_report_timeout_columns_are_nan_without_exit_reason() -> None:
@@ -918,8 +909,16 @@ def test_detectability_band_matches_preregistered_table() -> None:
     zgadzac z tym, co juz jest opublikowane w `runs/` - i test to pokaze, zamiast pozwolic
     dokumentacji rozjechac sie z kodem po cichu.
     """
-    oczekiwane_pp = {50: 13.86, 98: 9.90, 105: 9.56, 220: 6.61, 345: 5.28, 787: 3.49,
-                     4_843: 1.41, 7_687: 1.12}
+    oczekiwane_pp = {
+        50: 13.86,
+        98: 9.90,
+        105: 9.56,
+        220: 6.61,
+        345: 5.28,
+        787: 3.49,
+        4_843: 1.41,
+        7_687: 1.12,
+    }
     for n, pp in oczekiwane_pp.items():
         assert 100.0 * wald_half_width(n) == pytest.approx(pp, abs=0.01), f"n={n}"
 
@@ -957,8 +956,16 @@ def test_measurability_report_does_not_define_a_second_threshold() -> None:
 
 @pytest.mark.parametrize(
     "p, be, n",
-    [(float("nan"), 0.52, 100), (0.6, float("nan"), 100), (0.6, 0.52, float("nan")),
-     (0.6, 0.52, 0), (0.0, 0.52, 100), (1.0, 0.52, 100), (0.6, 0.0, 100), (0.6, 1.0, 100)],
+    [
+        (float("nan"), 0.52, 100),
+        (0.6, float("nan"), 100),
+        (0.6, 0.52, float("nan")),
+        (0.6, 0.52, 0),
+        (0.0, 0.52, 100),
+        (1.0, 0.52, 100),
+        (0.6, 0.0, 100),
+        (0.6, 1.0, 100),
+    ],
 )
 def test_measurability_report_refuses_to_guess(p, be, n) -> None:
     """Smieciowe wejscie ma dac jawne N/D, nie liczbe, ktora ktos zacytuje w write-upie."""
