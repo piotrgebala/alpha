@@ -39,15 +39,33 @@ przy 50%. Wszystkie 10 cech to transformacje tej samej informacji: ceny i wolume
 testów**, funding rate jako sygnał — **nigdy nie zaimplementowany**, ekonomia dźwigni —
 **niezbadana**. Pełna lista: [Z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md).
 
-Budżet zużyty: **10 wariantów**, 17 rund, 2 uruchomione reguły STOP. Stan testów: **308/308**.
+Budżet zużyty: **10 wariantów**, 17 rund, 2 uruchomione reguły STOP. Stan testów: **319/319**.
 Surowe wyniki każdej rundy: [`runs/`](runs/INDEX.md) (tabela + wnioski skumulowane).
 Backlog i zasady pracy: [`STATUS.md`](STATUS.md).
 
-### 🔵 Otwarta: hipoteza H2 — funding rate (decyzja użytkownika, 2026-09-22)
+### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
-Pierwsze w projekcie źródło informacji **spoza OHLCV**. Własny licznik od zera (**0/1 zużytych**), własna reguła STOP, rachunek mocy **przed** eksperymentem.
+Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
+zamknęła serię.
 
-[H2.0](runs/2026-09-22_h2.0-funding-wykonalnosc/README.md) pobrał dane (7 457 rekordów funding, 6,8 roku, zero dziur) i **odrzucił 2 z 3 sformułowań za 0 wariantów**. Wykonalne zostaje jedno: **funding jako 11. cecha, bez bramki reżimu, 4h** — pre-rejestrowane jako **H2.1**, kryterium `ci_low > 52,69%` (**sprostowane w H3** z 53,12% — pierwotnie policzyłem je najdroższym możliwym kosztem zamiast zmierzonym), wymagany przyrost trafności **+2,39 pp**. Uczciwy prior: **niski** — żadna pojedyncza cecha w tym projekcie nie dała takiego efektu.
+[H2.0](runs/2026-09-22_h2.0-funding-wykonalnosc/README.md) pobrał dane (7 457 rekordów, 6,8 roku,
+zero dziur) i **rachunkiem mocy odrzucił 2 z 3 sformułowań za 0 wariantów**.
+[H3](runs/2026-09-22_h3-noga-timeout-pasmo/README.md) sprostował próg (53,12% → **52,69%**)
+i naprawił usterkę w liczeniu kosztów.
+[H2.1](runs/2026-09-22_h2.1-funding-jako-cecha/README.md) — jedyny eksperyment — wyszedł
+**NIEROZSTRZYGNIĘTY**: `n = 98` wobec wymaganych 1 000.
+
+**Dlaczego:** zdjęcie bramki reżimu miało powiększyć próbę i powiększyło liczbę ocenianych świec
+czterokrotnie (**zero pominiętych foldów** wobec 22 z 85 w S1). Ale przy okazji podniosło udział
+klasy „nic się nie wydarzyło” z **60,83% na 66,58%** — a model uczy się przewidywać właśnie ją
+i **przestaje handlować w 99,3% przypadków**.
+
+**Jedyne, co runda pokazała:** funding **potroił liczbę decyzji modelu** (35 → 98), czyli został
+uznany za informacyjny. O trafności tych decyzji nie mówi nic — próbka jest za mała.
+
+**Następny krok należy do użytkownika** (Etap 2 mapy drogowej w [`STATUS.md`](STATUS.md) §17):
+jedyną drogą do większej próby jest **wymiar przekrojowy** — ten sam mechanizm na wielu
+instrumentach — a nie kolejne `V`, interwał ani cecha na BTC.
 
 Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 
@@ -73,6 +91,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **Z10 — ZAMKNIĘCIE FAZY 0** | 2026-09-22 | **DECYZJA BRAMKOWA UŻYTKOWNIKA: Faza 0 zamknięta wynikiem negatywnym.** Pooled trafność **50,27%** (n=7 687, CI95 [49,15%; 51,38%]) — górny kraniec **1,30 pp poniżej** najniższego progu opłacalności (52,69%) przy mocy **2,8×**: dowód braku, nie brak dowodu. Wąskie gardło **informacyjne, nie inżynieryjne** — wszystkie 10 cech to transformacje ceny i wolumenu. Jawnie NIEPRZETESTOWANE: momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni | [runs/z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md) |
 | **H2.0 — wykonalność nowej hipotezy (funding)** | 2026-09-22 | **Rachunek mocy odrzucił 2 z 3 sformułowań ZA 0 WARIANTÓW.** Bramka na skrajny funding — moc 0,05–0,44× (zagładza próbę jak `trend`). Carry — moc 0,03–0,12×, choć próg opłacalności spada **poniżej 50%** (48,13%): ogranicza liczba nienakładających się okien 48h, więc żyje w formule przekrojowej. Zostaje **funding jako 11. cecha bez bramki na 4h** — pre-rejestrowane jako H2.1 (1 wariant, reguła STOP) | [runs/h2.0](runs/2026-09-22_h2.0-funding-wykonalnosc/README.md) |
 | **H3 — noga „timeout” w modelu kosztów** | 2026-09-22 | **Runda obaliła tezę, która ją zamówiła.** Podejrzenie z H2.0 nie broni się: **zlecenie oczekujące wymaga znanej CENY, a przy wyjściu „z upływem czasu” znamy tylko MOMENT**. Zmierzone pasmo progu **[51,64%; 52,69%]** — niepewność **nieistotna decyzyjnie**, poprzeczka NIE obniżona. Przy okazji: naprawiona usterka (koszt liczony w dwóch miejscach niezależnie) i sprostowany mój błąd rachunkowy z H2.0 (53,12% → **52,69%**) | [runs/h3](runs/2026-09-22_h3-noga-timeout-pasmo/README.md) |
+| **H2.1 — funding jako cecha (jedyny eksperyment H2)** | 2026-09-22 | **NIEROZSTRZYGNIĘTY** (`n = 98 < 1 000`). Przyczyną nie jest funding ani długość historii, tylko **struktura zadania uczenia**: zdjęcie bramki podniosło udział klasy dominującej 60,83% → 66,58%, więc model **odmawia kierunku w 99,3%** świec. Jedyne ustalenie: funding **potroił liczbę decyzji** (35 → 98). **Licznik H2 wyczerpany (1/1), reguła STOP zamknęła serię** | [runs/h2.1](runs/2026-09-22_h2.1-funding-jako-cecha/README.md) |
 
 ## Hipoteza w skrócie
 
@@ -118,7 +137,7 @@ clas5_core/
 ├── backtest/                     — silnik backtestu, koszty, metryki, checkpoint v2,
 │                                    skrypty analityczne (zamrożone zapisy eksperymentów)
 ├── runs/                         — surowy output ciężkich przebiegów (INDEX.md = spis treści)
-├── tests/                        — testy jednostkowe/integracyjne/property-based (308)
+├── tests/                        — testy jednostkowe/integracyjne/property-based (319)
 └── requirements.txt
 ```
 
@@ -129,7 +148,7 @@ git clone <adres-repo>
 cd clas5_core
 pip install -r requirements.txt --break-system-packages   # lub w wirtualnym środowisku
 
-pytest -v          # 308 passed (stan na H3, 2026-09-22)
+pytest -v          # 319 passed (stan na H2.1, 2026-09-22)
 ```
 
 Przed pierwszym pobraniem prawdziwych danych: zweryfikuj dokładny symbol ccxt na swojej maszynie
