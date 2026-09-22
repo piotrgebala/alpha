@@ -2242,11 +2242,24 @@ pre-rejestrację i własną regułę STOP.
 |---|---|---|---|
 | **4A** | **Carry przekrojowy** — ten sam mechanizm funding na 20+ instrumentach naraz | **Jedyna ścieżka, o której wiemy, że jest WYKONALNA statystycznie.** H2.0: na jednym instrumencie brakuje rzędu wielkości próby (0,03–0,12×), bo ogranicza liczba nienakładających się okien 48h w 6,8 roku. Przekrój mnoży próbę przez liczbę instrumentów. Próg opłacalności spada **poniżej 50%** (48,13%) — nie trzeba przewagi kierunkowej | Silnik portfelowy, którego Faza 0 nie ma. Łamie zasadę 9. **To inny projekt, nie kolejna runda** |
 | **4B** | **Target inny niż kierunek** — np. przewidywanie zmienności zamiast kierunku | Zero testów. Zmienność jest znacznie lepiej przewidywalna niż kierunek (fakt powszechnie znany), ale **nie wiadomo, czy da się na tym zarobić bez opcji** | Nowa definicja etykiety, nowa ekonomia wypłaty. Prawdopodobnie poza zakresem perpetuali |
-| **4C** | **Momentum bez bramki reżimu** | **NIEPRZETESTOWANE, ale to nie jest luka do zasypania.** Z16: przy każdej regule reżimu wydłużenie epizodów zapada udział do 0,05–1,5%. Bez bramki „momentum" to po prostu predykcja kierunku z cech OHLCV — czyli dokładnie to, co Faza 0 obaliła na 7 687 transakcjach | Nic nowego — dlatego jest tu, a nie w Etapie 1 |
+| **4C** ❌ **ROZSTRZYGNIETE 2026-09-22 (M1) — WYNIK NEGATYWNY** | **Momentum bez bramki reżimu.** ~~NIEPRZETESTOWANE~~ — przetestowane. **SPROSTOWANIE poprzedniego brzmienia:** stało tu, że to „dokładnie to, co Faza 0 obaliła na 7 687 transakcjach” — **było to za mocne i sprzeczne z wnioskiem skumulowanym 12**, bo tamte 7 687 transakcji to w **96% cechy mean-reversion**; momentum miało tam 299 transakcji i CI szerokie na 11 pp. M1 zmierzyło je na **8 512** transakcjach: trafność **49,74%**, CI [48,68%; 50,80%], próg **52,94%** — górny kraniec **2,14 pp poniżej progu** przy próbie 1,90× wymaganej. **Momentum NIE jest gorsze od mean-reversion** (różnica −0,63 pp, z = −0,80, nieistotna) — jest tak samo nieobecne → [runs/m1](runs/2026-09-22_m1-momentum-bez-bramki/README.md) | 1 (licznik M wyczerpany) |
 | **4D** | **ETH / SOL / BNB** | Zero testów (zasada 9 nigdy nie została spełniona). **Ale:** to test GENERALIZACJI tej samej hipotezy, więc ma sens dopiero, gdy jest co generalizować | Czeka na pozytywny wynik czegokolwiek |
 | **4E** | **Ekonomia dźwigni i sizingu** | Kill-switch testowany mechanicznie (C2c), nigdy jako dźwignia rentowności. **Uwaga: sizing nie tworzy edge'u** — mnoży istniejący. Przy `p` nieodróżnialnym od monety mnoży zero | Niski priorytet z tego powodu |
 
 ---
+
+#### Hipoteza M — momentum bez bramki reżimu ⚪ ZAMKNIĘTA 2026-09-22, wynik NEGATYWNY
+
+Pierwsza hipoteza postawiona **po** zamknięciu Fazy 0 i H2. Własny licznik od zera:
+**1/1 wyczerpany**, reguła STOP aktywna. Powstała z wniosku skumulowanego 12 (momentum jako
+pozycja, której Faza 0 **nie wykazała** — niewykonalność pomiaru, nie brak edge'u) i stała się
+wykonalna dopiero po zdjęciu bramki (H2.1a) i adopcji wag klas (K2 → K3), które podniosły
+próbę z 299 do 8 512.
+
+**Wynik:** momentum trafia w **49,74%** przy progu **52,94%**; górny kraniec CI leży 2,14 pp
+poniżej progu, próba 1,90× wymaganej do orzeczenia negatywu. **Dowód braku, nie brak dowodu.**
+Ramię odniesienia odtworzyło historyczny pomiar projektu co do 0,01 pp.
+→ [runs/m1](runs/2026-09-22_m1-momentum-bez-bramki/README.md)
 
 #### Rachunek mierzalności (zasada 18) — policzony 2026-09-22 na `n` ZMIERZONYM w K3
 
