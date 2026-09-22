@@ -38,10 +38,12 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 
 | Z18 | 2026-09-22 | [2026-09-22_z18-unify-hit-rate.md](2026-09-22_z18-unify-hit-rate.md) | Backlog II: definicja kanoniczna `p` = `gross_pnl>0` udokumentowana w kodzie + rozbicie trafnosci per typ wyjscia (`share_timeout`, `hit_rate_barrier`, `hit_rate_timeout`) | 0 (ujednolicenie definicji) | Rozjazd definicji zmierzony: naiwna (`dir*label>0`, tylko `tp`) zanizala o **+5,6 pp** (`range`) i **+8,0 pp** (`trend`). **Zamknieta hipoteza ucieczkowa:** traf. na samych barierach poziomych = **50,50%** (`range`, n=6 239) i 50,20% (`trend`) — edge NIE chowa sie w zadnej skladowej, timeouty niczego nie rozcienczaja |
 
+| Z9 | 2026-09-22 | [2026-09-22_z9-timeframe-geometry.md](2026-09-22_z9-timeframe-geometry.md) | Backlog Z9: natywne swiece 1h/4h pobrane z Binance do trwalego cache (`data.timeframes`, raport cache/giełda) + walidacja resample vs natywne + spojnosc i relacja B/C per interwal | 0 (walidacja danych) | **Resample psuje WOLUMEN:** ceny zgodne co do grosza, ale wolumen rozni sie w **11% swiec 1h** i 6% swiec 4h (bledy do 284%) — a `volume_zscore_20` jest cecha OBU modeli, wiec C2.6 dostawal zepsute wejscie. **Grubszy interwal obniza PROG OPLACALNOSCI bez dotykania `p`:** `range` 82,81% (5m) -> 56,77% (1h) -> **52,74% (4h)**. Sam interwal NIE uspojnia bramki (mediana epizodu 4-5 swiec niezaleznie od skali), ale przy **V=3** `range` jest spojny na kazdym interwale (69-74% swiec z pelnym oknem) |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
 C2.11 to instrumentacja (0 wariantów); C2.12 to +1 wariant (model kosztów); C2.13 to +1 wariant
-(próg pewności) => **licznik = 2**. Z16 (pomiar specyfikacji), Z17+Z21 (naprawa błędu) i Z18 (definicja) to 0 wariantów — licznik nadal **2**.
+(próg pewności) => **licznik = 2**. Z16, Z17+Z21, Z18 i Z9 to 0 wariantów (pomiar/naprawa/walidacja danych) — licznik nadal **2**.
 
 ## Jak dodać nowy wpis
 
