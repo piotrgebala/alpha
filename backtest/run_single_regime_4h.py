@@ -5,7 +5,7 @@ Eksperyment S1 — pierwsza runda NOWEJ serii hipotezowej: architektura JEDNORE�
 świecach 4h. Skrypt jednorazowy/analityczny, poza pytest, na `backtest/checkpoint_lib.py`.
 
 KONFIGURACJA JEST ZAMROŻONA — pochodzi z pre-rejestracji zapisanej PRZED uruchomieniem
-czegokolwiek: `runs/2026-09-22_z5b-long-history-4h-preregistration.md`. Skrypt jej nie
+czegokolwiek: `runs/2026-09-22_z5b-long-history-4h-preregistration/README.md`. Skrypt jej nie
 wybiera i nie stroi; wyłącznie wykonuje i raportuje.
 
 Dlaczego ta konfiguracja (streszczenie łańcucha pomiarów, pełne uzasadnienia w runs/):
@@ -66,7 +66,9 @@ def main() -> None:
     df = _load(cfg, TIMEFRAME)
 
     print("=" * 96)
-    print("S1 — architektura jednoreżimowa na 4h (konfiguracja ZAMROŻONA w pre-rejestracji)")
+    print(
+        "S1 — architektura jednoreżimowa na 4h (konfiguracja ZAMROŻONA w pre-rejestracji)"
+    )
     print("=" * 96)
     print(
         f"dane: {len(df)} świec {TIMEFRAME}, {df['timestamp'].min()} -> {df['timestamp'].max()}\n"
@@ -135,7 +137,9 @@ def main() -> None:
             f"      Wyniku NIE interpretujemy w żadną stronę."
         )
     elif ci_low > PREREGISTERED_BREAK_EVEN:
-        print("  >>> KRYTERIUM SPEŁNIONE: dolny kraniec CI przekracza próg opłacalności.")
+        print(
+            "  >>> KRYTERIUM SPEŁNIONE: dolny kraniec CI przekracza próg opłacalności."
+        )
     else:
         print(
             "  >>> KRYTERIUM NIESPEŁNIONE: dolny kraniec CI nie przekracza progu.\n"

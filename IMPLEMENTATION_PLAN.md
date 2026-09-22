@@ -647,7 +647,7 @@ podglądania Sharpe'a na tym zbiorze (CLAUDE.md zasada 1): `(0.7, 0.3)` baseline
 kontrola (przewidywanie: ta sama "luka" rozkładu co baseline), `(0.5, 0.3)` przecina pierwszą
 granicę masy na osi trend, `(0.5, 0.5)` przecina granicę na obu osiach. Każdy oceniony przez
 identyczny pipeline co Commit 6 (10-seedowy sweep stabilności, seed 42-51), bez automatycznego
-wyboru zwycięzcy. Pełny wynik + surowy output: `runs/2026-09-21_c2.5-threshold-calibration.md`.
+wyboru zwycięzcy. Pełny wynik + surowy output: `runs/2026-09-21_c2.5-threshold-calibration/README.md`.
 
 **Wynik C2.5.2:**
 
@@ -711,7 +711,7 @@ przechodzi** (117 + 8: 4 resample + 3 feature_miner + 1 engine).
 **C2.6.2 — Skrypt (`backtest/checkpoint_timeframe_robustness.py`, poza pytest):** identyczny
 pipeline co Commit 6/2c/2d/2.5, uruchomiony na 5m (referencja), 1h (8 760 świec), 4h (2 190
 świec) — dokładny, bezresztowy podział z 105 120 świec 5m potwierdza brak przesunięcia
-granic/dziur przy resample. Pełny wynik: `runs/2026-09-21_c2.6-timeframe-robustness.md`.
+granic/dziur przy resample. Pełny wynik: `runs/2026-09-21_c2.6-timeframe-robustness/README.md`.
 
 **Wynik C2.6.2:**
 
@@ -763,7 +763,7 @@ analityczne) + 8 nowych, czystych funkcji cech (4 rodziny: volatility, momentum,
 mean-reversion, volume), świadomie zaprojektowanych jako nie-redundantne z 9 cechami w
 `agents/feature_miner.FEATURE_FUNCTIONS` NA PODSTAWIE definicji wzoru. Nie wchodzą do
 registry produkcyjnego na tym etapie (screening przed-rejestracyjny, formalny test leakage
-dopiero przy promocji jednej cechy). Pełny wynik: `runs/2026-09-21_c2.7-feature-candidate-screening.md`.
+dopiero przy promocji jednej cechy). Pełny wynik: `runs/2026-09-21_c2.7-feature-candidate-screening/README.md`.
 
 **Wynik — blok 2 (korelacja cecha-cecha, redundancja):**
 
@@ -812,7 +812,7 @@ integracyjny weryfikuje przekazanie parametru. Nowy skrypt
 `backtest/evaluate_feature_candidate.py` (poza pytest): baseline (4 cechy) vs kandydat
 (5 cech), pełny walk-forward + 10-seed sweep. Pełny zestaw: **128/128 przechodzi**
 (125 + 3: 1 unit test adx_14 + 1 integracyjny regime_feature_sets + 1 nowa instancja
-parametryzowanego testu leakage). Pełny wynik: `runs/2026-09-21_c2.8-adx14-oos-evaluation.md`.
+parametryzowanego testu leakage). Pełny wynik: `runs/2026-09-21_c2.8-adx14-oos-evaluation/README.md`.
 
 **Wynik:**
 
@@ -876,7 +876,7 @@ ostatniej cyfry w KAŻDYM eksperymencie C6→C2.8 (~10 pustych "potwierdzeń sta
   czyta `feature_registry.yaml` zamiast hardkodować listę). docs/rag/03 zaktualizowane
   (sekcja stabilności). Pełny zestaw: **139/139 testów przechodzi** (128 + 11).
 
-**Wynik na realnych danych (`runs/2026-09-21_c2.9-measurement-methodology.md`):**
+**Wynik na realnych danych (`runs/2026-09-21_c2.9-measurement-methodology/README.md`):**
 
 | Miara | Wartość |
 |---|---|
@@ -918,7 +918,7 @@ multiple-testing w `runs/INDEX.md` rozwidlony per zbiór danych (stary: 7, nowy:
 - **C2.10.3 — checkpoint v2** (`run_checkpoint_v2`, pełny sweep) + diagnostyka udziału reżimów i
   bramki kosztowej z `folds_summary`.
 
-**Wynik na realnych danych (`runs/2026-09-21_c2.10-extended-history-z5.md`):**
+**Wynik na realnych danych (`runs/2026-09-21_c2.10-extended-history-z5/README.md`):**
 
 | Miara | Stare okno (C2.9, 1 rok) | **Nowe okno (C2.10, 3 lata)** |
 |---|---|---|
@@ -967,7 +967,7 @@ wpięte do `checkpoint_lib.run_and_summarize` (`edge_per_regime`) i `run_checkpo
 **Kryteria GO/WARUNKOWY/NO-GO NIEZMIENIONE** — nowe miary to diagnostyka obok werdyktu,
 dokładnie jak Z2/Z3 w C2.9. Testy: **157/157** (143 + 14: 11 unit + 3 `hypothesis`).
 
-**Wynik (`runs/2026-09-21_c2.11-edge-instrumentation.md`)** — werdykt bit-identyczny z C2.10
+**Wynik (`runs/2026-09-21_c2.11-edge-instrumentation/README.md`)** — werdykt bit-identyczny z C2.10
 (`mean_sharpe = -12,392006781796571`, 21/144), co jest regresją baseline'u potwierdzającą, że
 runda jest czysto addytywna:
 
@@ -1004,7 +1004,7 @@ etykiecie −1 to TP, nie SL), `_execution_legs`, parametr `execution_model`
 wyjścia — dostaje założenie konserwatywne (wyjście taker). Testy: **182/182** (+25), w tym
 regresja baseline'u: `taker_only` odtwarza koszt sprzed C2.12 co do cyfry.
 
-**Wynik (`runs/2026-09-21_c2.12-execution-cost-model.md`):**
+**Wynik (`runs/2026-09-21_c2.12-execution-cost-model/README.md`):**
 
 | Miara | C2.11 | **C2.12** |
 |---|---|---|
@@ -1043,7 +1043,7 @@ w `trend`. Kryterium: `z_margin > 2` w co najmniej jednym reżimie + poprawa kla
 **Metodologia:** próg = kwantyl `signal_confidence` z foldu **treningowego**, stosowany OOS;
 JEDNA pre-rejestrowana wartość `q=0.75`, zero sweepu. Reszta pipeline'u bez zmian.
 
-**Wynik (`runs/2026-09-21_c2.13-confidence-threshold.md`) — kryterium NIESPEŁNIONE:**
+**Wynik (`runs/2026-09-21_c2.13-confidence-threshold/README.md`) — kryterium NIESPEŁNIONE:**
 
 | | baseline (C2.12) | kandydat (q=0,75) |
 |---|---|---|
@@ -1135,6 +1135,37 @@ reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
 
 ---
 
+### Seria Z16→Z5b + S1 — naprawy pomiaru, pivot na 4h i rozstrzygnięcie drugiej hipotezy `[ZROBIONE — S1: kryterium NIESPEŁNIONE, reguła STOP, seria zamknięta]`
+
+**Synteza (2026-09-22; pełne wyniki w `runs/`, wnioski skumulowane w `runs/INDEX.md`):**
+
+- **Z16** — reżim `trend` strukturalnie niespójny z horyzontem etykiety (0,49% świec z etykietą
+  wewnątrz reżimu); `range` uspójnialny wygładzaniem → [runs/z16](runs/2026-09-22_z16-regime-coherence/README.md);
+- **Z17+Z21** — przeciek early stopping + brak embargo naprawione; `p` było ZAWYŻONE
+  (51,07%→50,38%) → [runs/z17+z21](runs/2026-09-22_z17-z21-early-stopping-leak/README.md);
+- **Z18** — kanoniczna definicja `p` = `gross_pnl>0`; edge nie chowa się w żadnej składowej
+  → [runs/z18](runs/2026-09-22_z18-unify-hit-rate/README.md);
+- **Z9** — natywne świece 1h/4h (resample psuł WOLUMEN w 11% świec 1h); próg opłacalności
+  `range` 82,81% (5m) → 52,74% (4h) → [runs/z9](runs/2026-09-22_z9-timeframe-geometry/README.md);
+- **Z19** — rachunek mocy PRZED eksperymentem; rekomendacja Z9 obalona zanim kosztowała rundę
+  → [runs/z19](runs/2026-09-22_z19-statistical-power/README.md);
+- **Z5b** — pełna historia 4h (14 916 świec, 6,8 roku); 4h WYKONALNE; **pre-rejestracja**
+  eksperymentu jednoreżimowego (kryterium: trafność ≥ 56,15%, STOP przy wyniku negatywnym)
+  → [runs/z5b](runs/2026-09-22_z5b-long-history-4h-preregistration/README.md);
+- **S1** — eksperyment uruchomiony wg zamrożonej pre-rejestracji: **kryterium NIESPEŁNIONE
+  rozstrzygająco** — n=1 037 (>925), trafność **48,60%**, 95% CI [45,56%; 51,64%], górny
+  kraniec PONIŻEJ progu opłacalności 53,07%; bramka kosztowa odrzuciła 0% sygnałów (geometria
+  naprawiona — nie pomogło). **Reguła STOP uruchomiona, licznik serii 1/1 zużyty**
+  → [runs/s1](runs/2026-09-22_s1-single-regime-4h/README.md).
+
+**Stan po S1:** obie architektury (dwureżimowa 5m/1h/4h i jednoreżimowa 4h) wyczerpane; po
+usunięciu wszystkich znanych wad pomiaru `p` ani razu nie drgnęło w górę. Rekomendacja:
+**Z10 opcja 1 — udokumentowane zamknięcie Fazy 0 wynikiem negatywnym** (decyzja bramkowa
+przy użytkowniku). Ewentualne nowe hipotezy (funding rate jako sygnał, inny instrument,
+target zmienności) = osobna pre-rejestracja, osobny licznik, osobna reguła STOP.
+
+---
+
 ## 6. Zweryfikowane empirycznie (nie tylko zaplanowane)
 
 - TA-Lib (0.7.0) instaluje się i liczy ATR/RSI/EMA poprawnie (zweryfikowane na random walk).
@@ -1216,7 +1247,7 @@ reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
   warianty NO-GO. Rzadkość regime `trend` NIE jest już otwartym ryzykiem do "naprawienia
   kalibracją" — jest zamkniętym eksperymentem z wynikiem: więcej świec trend/range nie poprawia
   wyniku, bo dodane świece nie mają lepszej jakości sygnału. Pełny wynik:
-  `runs/2026-09-21_c2.5-threshold-calibration.md`.
+  `runs/2026-09-21_c2.5-threshold-calibration/README.md`.
 - **Regime "trend" jest jeszcze rzadszy na grubszych timeframe'ach (Commit 2.6, 2026-09-21).**
   Przy STAŁEJ liczbie 10 świec dla `direction_persistence_10` (świadomie nieprzeliczonej per
   timeframe), regime `trend` dał **ZERO transakcji** na 1h i 4h (0/18 i 0/12 foldów), gorzej niż
@@ -1256,7 +1287,7 @@ reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
   mechanizm bariera-vs-koszt naprawiony empirycznie (0% świec arytmetycznie niewykonalnych na
   1h/4h, wobec 56,8% na 5m), ale trafność kierunku pozostaje ~49% (1h) albo spada do ~41% (4h,
   gorzej niż rzut monetą) — patrz Commit 2.6 wyżej i
-  `runs/2026-09-21_c2.6-timeframe-robustness.md`. Trzy niezależne testy (bramka kosztowa,
+  `runs/2026-09-21_c2.6-timeframe-robustness/README.md`. Trzy niezależne testy (bramka kosztowa,
   progi regime, timeframe) wskazują teraz zgodnie na TEN SAM wniosek: problem nie jest ani
   kosztowy, ani kalibracyjny, ani granulacyjny — jest w samym modelu/cechach. Pozostają
   kandydaci: (c) weryfikacja założeń kosztowych (taker 0,05%/stronę to wartość startowa; przy
@@ -1281,7 +1312,7 @@ reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
   do ewentualnego formalnego testu OOS i/lub do osobnej dyskusji jako zamiennik
   `direction_persistence_10` w regule regime (dotyczy otwartego wątku o błędnej klasyfikacji
   trendu spadkowego jako `range`, Commit 2c). Żadna decyzja o promocji cechy nie została
-  podjęta — pełny wynik: `runs/2026-09-21_c2.7-feature-candidate-screening.md`.
+  podjęta — pełny wynik: `runs/2026-09-21_c2.7-feature-candidate-screening/README.md`.
 - **Formalny test OOS `adx_14` (Commit 2.8, 2026-09-21) — piąty niezależny wynik w tym samym
   paśmie "brak silnego sygnału".** Dodanie `adx_14` do `MOMENTUM_FEATURES` (Test 1, Test 2
   niezmieniony) daje małą, konsekwentną poprawę w `trend` (mean_sharpe -8,46→-7,11,
@@ -1292,7 +1323,7 @@ reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
   setu. `range` (dominujący udział w werdykcie NO-GO) kompletnie niezmieniony. `compute_adx_14`
   zostaje w registry (formalnie przetestowana pod kątem leakage), `MOMENTUM_FEATURES`
   NIEZMIENIONE do czasu decyzji użytkownika. Pełny wynik:
-  `runs/2026-09-21_c2.8-adx14-oos-evaluation.md`.
+  `runs/2026-09-21_c2.8-adx14-oos-evaluation/README.md`.
 - **Naprawiona metodologia pomiaru zaostrzyła obraz (Commit 2.9, 2026-09-21).** Sweep
   stabilności po seedach mierzył nic (deterministyczny XGBoost — każde dotychczasowe
   "std=0,0000 STABILNY" było puste); zastąpiony fold-jitterem: **NO-GO w 10/10 offsetów**,
@@ -1300,11 +1331,11 @@ reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
   t=-7,15; trend t=-2,91/-2,63 po N_eff). Zmierzony szum wyrównania foldów (σ≈3,1
   mean_sharpe) czyni porównania wariantów o Δ<~3 nierozstrzygalnymi na rocznych danych 5m —
   **kolejne rundy hipotezowe bez dłuższej historii danych (Backlog Z5) mają ograniczoną moc
-  rozstrzygania**. Pełny wynik: `runs/2026-09-21_c2.9-measurement-methodology.md`.
+  rozstrzygania**. Pełny wynik: `runs/2026-09-21_c2.9-measurement-methodology/README.md`.
   **Aktualizacja C2.10 (Z5 zrobione, 3 lata danych):** werdykt twardszy (range t=-10,47, trend
   t=-5,51), ale odsetek ważnych foldów bez zmian (14,6%) — ograniczenie jest strukturalne
   (`trend`=0,53% świec; bramka kosztowa blokuje 98% sygnałów `range`), nie do naprawienia
-  dłuższą historią. Pełny wynik: `runs/2026-09-21_c2.10-extended-history-z5.md`.
+  dłuższą historią. Pełny wynik: `runs/2026-09-21_c2.10-extended-history-z5/README.md`.
 - **Założenia kosztowe są wartościami startowymi, a teraz decydują o werdykcie.** Dopóki koszt był
   jednym z wielu składników, jego przybliżony charakter nie miał znaczenia. Po Commicie 2d koszt
   jest osią diagnozy, więc `taker_fee_rate=0.0005` / `slippage_bps=2` / `funding_rate_8h=0.0001`

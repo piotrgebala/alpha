@@ -1,0 +1,125 @@
+[data] 105120 świec, 2025-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+
+[blok 1] 9 cech istniejących + 8 kandydatek = 17 razem
+  Istniejące (agents/feature_miner.FEATURE_FUNCTIONS): ['atr_14', 'atr_pctrank_20d', 'direction_persistence_10', 'return_lag_1', 'momentum_5', 'ema_diff_9_21', 'volume_zscore_20', 'rsi_14', 'price_zscore_20']
+  Nowe kandydatki (ten skrypt, poza registry):         ['bb_width_20', 'realized_vol_20', 'roc_20', 'adx_14', 'bb_pctb_20', 'vwap_deviation_20', 'obv_zscore_20', 'volume_roc_10']
+  W modelu Test 1 (MOMENTUM_FEATURES, agents/ml_optimizer.py): ['return_lag_1', 'volume_zscore_20', 'momentum_5', 'ema_diff_9_21']
+  W modelu Test 2 (REVERSION_FEATURES, agents/ml_optimizer.py): ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20']
+
+  Liczba NaN per cecha (warmup wskaźnika, oczekiwane na początku serii):
+    atr_14                           14 / 105120
+    atr_pctrank_20d                5773 / 105120
+    direction_persistence_10         10 / 105120
+    return_lag_1                      1 / 105120
+    momentum_5                        5 / 105120
+    ema_diff_9_21                    20 / 105120
+    volume_zscore_20                 19 / 105120
+    rsi_14                           14 / 105120
+    price_zscore_20                  19 / 105120
+    bb_width_20                      19 / 105120
+    realized_vol_20                  20 / 105120
+    roc_20                           20 / 105120
+    adx_14                           27 / 105120
+    bb_pctb_20                       19 / 105120
+    vwap_deviation_20                19 / 105120
+    obv_zscore_20                    19 / 105120
+    volume_roc_10                    10 / 105120
+
+[blok 2] Macierz korelacji Spearman cecha-cecha (cały zbiór, zaokrąglone do 2 miejsc):
+                          atr_14  atr_pctrank_20d  direction_persistence_10  return_lag_1  momentum_5  ema_diff_9_21  volume_zscore_20  rsi_14  price_zscore_20  bb_width_20  realized_vol_20  roc_20  adx_14  bb_pctb_20  vwap_deviation_20  obv_zscore_20  volume_roc_10
+atr_14                      1.00             0.88                      0.01         -0.01       -0.00          -0.04             -0.03   -0.04            -0.02         0.79             0.88   -0.03    0.24       -0.02               0.00          -0.02          -0.02
+atr_pctrank_20d             0.88             1.00                      0.02         -0.01       -0.01          -0.05             -0.03   -0.05            -0.02         0.73             0.79   -0.04    0.25       -0.02              -0.00          -0.02          -0.02
+direction_persistence_10    0.01             0.02                      1.00         -0.01       -0.01          -0.01              0.13   -0.01            -0.01         0.10            -0.01   -0.01    0.07       -0.01              -0.02          -0.01           0.12
+return_lag_1               -0.01            -0.01                     -0.01          1.00        0.37           0.06             -0.01    0.31             0.38        -0.01            -0.00    0.18   -0.00        0.38               0.34           0.29          -0.01
+momentum_5                 -0.00            -0.01                     -0.01          0.37        1.00           0.38             -0.04    0.65             0.74        -0.00             0.00    0.43   -0.01        0.74               0.72           0.56          -0.03
+ema_diff_9_21              -0.04            -0.05                     -0.01          0.06        0.38           1.00             -0.04    0.87             0.72        -0.03            -0.03    0.89   -0.04        0.72               0.71           0.60          -0.03
+volume_zscore_20           -0.03            -0.03                      0.13         -0.01       -0.04          -0.04              1.00   -0.04            -0.04         0.02            -0.05   -0.04    0.05       -0.04              -0.05          -0.03           0.75
+rsi_14                     -0.04            -0.05                     -0.01          0.31        0.65           0.87             -0.04    1.00             0.92        -0.03            -0.03    0.84   -0.02        0.92               0.86           0.74          -0.03
+price_zscore_20            -0.02            -0.02                     -0.01          0.38        0.74           0.72             -0.04    0.92             1.00        -0.01            -0.01    0.74   -0.01        1.00               0.92           0.78          -0.04
+bb_width_20                 0.79             0.73                      0.10         -0.01       -0.00          -0.03              0.02   -0.03            -0.01         1.00             0.85   -0.02    0.43       -0.01               0.01          -0.01          -0.00
+realized_vol_20             0.88             0.79                     -0.01         -0.00        0.00          -0.03             -0.05   -0.03            -0.01         0.85             1.00   -0.03    0.27       -0.01               0.01          -0.01          -0.04
+roc_20                     -0.03            -0.04                     -0.01          0.18        0.43           0.89             -0.04    0.84             0.74        -0.02            -0.03    1.00   -0.03        0.74               0.74           0.63          -0.03
+adx_14                      0.24             0.25                      0.07         -0.00       -0.01          -0.04              0.05   -0.02            -0.01         0.43             0.27   -0.03    1.00       -0.01              -0.02          -0.02           0.02
+bb_pctb_20                 -0.02            -0.02                     -0.01          0.38        0.74           0.72             -0.04    0.92             1.00        -0.01            -0.01    0.74   -0.01        1.00               0.92           0.78          -0.04
+vwap_deviation_20           0.00            -0.00                     -0.02          0.34        0.72           0.71             -0.05    0.86             0.92         0.01             0.01    0.74   -0.02        0.92               1.00           0.72          -0.04
+obv_zscore_20              -0.02            -0.02                     -0.01          0.29        0.56           0.60             -0.03    0.74             0.78        -0.01            -0.01    0.63   -0.02        0.78               0.72           1.00          -0.03
+volume_roc_10              -0.02            -0.02                      0.12         -0.01       -0.03          -0.03              0.75   -0.03            -0.04        -0.00            -0.04   -0.03    0.02       -0.04              -0.04          -0.03           1.00
+
+[blok 2] Pary cecha-cecha z |Spearman corr| > 0.7 (potencjalna redundancja):
+  price_zscore_20              <-> bb_pctb_20                    corr=+1.000   [mean-reversion (Test 2, w modelu)] / [mean-reversion (KANDYDAT, Test 2)]
+  price_zscore_20              <-> vwap_deviation_20             corr=+0.919   [mean-reversion (Test 2, w modelu)] / [mean-reversion (KANDYDAT, Test 2)]
+  bb_pctb_20                   <-> vwap_deviation_20             corr=+0.919   [mean-reversion (KANDYDAT, Test 2)] / [mean-reversion (KANDYDAT, Test 2)]
+  rsi_14                       <-> price_zscore_20               corr=+0.917   [mean-reversion (Test 2, w modelu)] / [mean-reversion (Test 2, w modelu)]
+  rsi_14                       <-> bb_pctb_20                    corr=+0.917   [mean-reversion (Test 2, w modelu)] / [mean-reversion (KANDYDAT, Test 2)]
+  ema_diff_9_21                <-> roc_20                        corr=+0.891   [momentum (Test 1, w modelu)] / [momentum (KANDYDAT, Test 1)]
+  atr_14                       <-> atr_pctrank_20d               corr=+0.884   [volatility (regime gate)] / [volatility (regime gate)]
+  atr_14                       <-> realized_vol_20               corr=+0.880   [volatility (regime gate)] / [volatility (KANDYDAT)]
+  ema_diff_9_21                <-> rsi_14                        corr=+0.872   [momentum (Test 1, w modelu)] / [mean-reversion (Test 2, w modelu)]
+  rsi_14                       <-> vwap_deviation_20             corr=+0.860   [mean-reversion (Test 2, w modelu)] / [mean-reversion (KANDYDAT, Test 2)]
+  bb_width_20                  <-> realized_vol_20               corr=+0.850   [volatility (KANDYDAT)] / [volatility (KANDYDAT)]
+  rsi_14                       <-> roc_20                        corr=+0.839   [mean-reversion (Test 2, w modelu)] / [momentum (KANDYDAT, Test 1)]
+  atr_pctrank_20d              <-> realized_vol_20               corr=+0.794   [volatility (regime gate)] / [volatility (KANDYDAT)]
+  atr_14                       <-> bb_width_20                   corr=+0.792   [volatility (regime gate)] / [volatility (KANDYDAT)]
+  price_zscore_20              <-> obv_zscore_20                 corr=+0.776   [mean-reversion (Test 2, w modelu)] / [volume (KANDYDAT)]
+  bb_pctb_20                   <-> obv_zscore_20                 corr=+0.776   [mean-reversion (KANDYDAT, Test 2)] / [volume (KANDYDAT)]
+  volume_zscore_20             <-> volume_roc_10                 corr=+0.747   [volume (Test 1 + Test 2, wspólna, w modelu)] / [volume (KANDYDAT)]
+  price_zscore_20              <-> roc_20                        corr=+0.743   [mean-reversion (Test 2, w modelu)] / [momentum (KANDYDAT, Test 1)]
+  roc_20                       <-> bb_pctb_20                    corr=+0.743   [momentum (KANDYDAT, Test 1)] / [mean-reversion (KANDYDAT, Test 2)]
+  roc_20                       <-> vwap_deviation_20             corr=+0.740   [momentum (KANDYDAT, Test 1)] / [mean-reversion (KANDYDAT, Test 2)]
+  momentum_5                   <-> bb_pctb_20                    corr=+0.738   [momentum (Test 1, w modelu)] / [mean-reversion (KANDYDAT, Test 2)]
+  momentum_5                   <-> price_zscore_20               corr=+0.738   [momentum (Test 1, w modelu)] / [mean-reversion (Test 2, w modelu)]
+  rsi_14                       <-> obv_zscore_20                 corr=+0.737   [mean-reversion (Test 2, w modelu)] / [volume (KANDYDAT)]
+  atr_pctrank_20d              <-> bb_width_20                   corr=+0.728   [volatility (regime gate)] / [volatility (KANDYDAT)]
+  momentum_5                   <-> vwap_deviation_20             corr=+0.722   [momentum (Test 1, w modelu)] / [mean-reversion (KANDYDAT, Test 2)]
+  vwap_deviation_20            <-> obv_zscore_20                 corr=+0.719   [mean-reversion (KANDYDAT, Test 2)] / [volume (KANDYDAT)]
+  ema_diff_9_21                <-> price_zscore_20               corr=+0.716   [momentum (Test 1, w modelu)] / [mean-reversion (Test 2, w modelu)]
+  ema_diff_9_21                <-> bb_pctb_20                    corr=+0.716   [momentum (Test 1, w modelu)] / [mean-reversion (KANDYDAT, Test 2)]
+  ema_diff_9_21                <-> vwap_deviation_20             corr=+0.709   [momentum (Test 1, w modelu)] / [mean-reversion (KANDYDAT, Test 2)]
+
+[blok 3] Korelacja Spearman cecha-target (label triple-barrier jako -1/0/1)
+  UWAGA: to jest OPISOWE/EKSPLORACYJNE na CAŁYM zbiorze (nie OOS) — patrz
+  docs/rag/02_cechy_i_leakage.md 'Rozszerzanie feature setu — protokół', punkt 1
+  (multiple testing / data dredging). NIE jest to bramka selekcji ani dowód edge'u.
+  Jedyny krok o wadze dowodowej: formalny walk-forward JEDNEJ wybranej cechy (przyszły Commit).
+  Cechy dopasowane do modelu docelowego regime'u (patrz FAMILY_ASSIGNMENT):
+
+  regime='trend': n=523 świec z etykietą (po odrzuceniu warmup/NaN label)
+    volume_roc_10                spearman=-0.0647   [volume (KANDYDAT)] <- KANDYDAT
+    volume_zscore_20             spearman=-0.0621   [volume (Test 1 + Test 2, wspólna, w modelu)]
+    direction_persistence_10     spearman=+0.0479   [trend-strength (regime gate)]
+    realized_vol_20              spearman=+0.0433   [volatility (KANDYDAT)] <- KANDYDAT
+    atr_14                       spearman=+0.0372   [volatility (regime gate)]
+    adx_14                       spearman=-0.0279   [trend-strength (KANDYDAT, Test 1)] <- KANDYDAT
+    obv_zscore_20                spearman=+0.0220   [volume (KANDYDAT)] <- KANDYDAT
+    bb_width_20                  spearman=+0.0184   [volatility (KANDYDAT)] <- KANDYDAT
+    rsi_14                       spearman=+0.0167   [mean-reversion (Test 2, w modelu)]
+    price_zscore_20              spearman=+0.0160   [mean-reversion (Test 2, w modelu)]
+    bb_pctb_20                   spearman=+0.0160   [mean-reversion (KANDYDAT, Test 2)] <- KANDYDAT
+    vwap_deviation_20            spearman=+0.0159   [mean-reversion (KANDYDAT, Test 2)] <- KANDYDAT
+    ema_diff_9_21                spearman=+0.0112   [momentum (Test 1, w modelu)]
+    roc_20                       spearman=-0.0085   [momentum (KANDYDAT, Test 1)] <- KANDYDAT
+    momentum_5                   spearman=+0.0070   [momentum (Test 1, w modelu)]
+    return_lag_1                 spearman=+0.0064   [momentum (Test 1 + Test 2, wspólna)]
+    atr_pctrank_20d              spearman=-0.0058   [volatility (regime gate)]
+
+  regime='range': n=22198 świec z etykietą (po odrzuceniu warmup/NaN label)
+    realized_vol_20              spearman=-0.0346   [volatility (KANDYDAT)] <- KANDYDAT
+    atr_14                       spearman=-0.0291   [volatility (regime gate)]
+    bb_width_20                  spearman=-0.0269   [volatility (KANDYDAT)] <- KANDYDAT
+    atr_pctrank_20d              spearman=-0.0254   [volatility (regime gate)]
+    momentum_5                   spearman=-0.0207   [momentum (Test 1, w modelu)]
+    obv_zscore_20                spearman=-0.0206   [volume (KANDYDAT)] <- KANDYDAT
+    vwap_deviation_20            spearman=-0.0164   [mean-reversion (KANDYDAT, Test 2)] <- KANDYDAT
+    rsi_14                       spearman=-0.0158   [mean-reversion (Test 2, w modelu)]
+    return_lag_1                 spearman=-0.0125   [momentum (Test 1 + Test 2, wspólna)]
+    price_zscore_20              spearman=-0.0095   [mean-reversion (Test 2, w modelu)]
+    bb_pctb_20                   spearman=-0.0095   [mean-reversion (KANDYDAT, Test 2)] <- KANDYDAT
+    roc_20                       spearman=-0.0094   [momentum (KANDYDAT, Test 1)] <- KANDYDAT
+    volume_roc_10                spearman=+0.0082   [volume (KANDYDAT)] <- KANDYDAT
+    ema_diff_9_21                spearman=-0.0074   [momentum (Test 1, w modelu)]
+    direction_persistence_10     spearman=-0.0065   [trend-strength (regime gate)]
+    volume_zscore_20             spearman=+0.0063   [volume (Test 1 + Test 2, wspólna, w modelu)]
+    adx_14                       spearman=+0.0020   [trend-strength (KANDYDAT, Test 1)] <- KANDYDAT
+
+[koniec] Ten skrypt nie wybiera 'zwycięskiej' cechy i nie modyfikuje registry/configu.
+  Decyzja, którą JEDNĄ cechę testować formalnie w walk-forward, należy do użytkownika.

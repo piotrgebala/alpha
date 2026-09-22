@@ -44,26 +44,31 @@ długie sesje iteracyjne trening→metryki→debug windują zużycie kontekstu s
 dokupić usage credits na sporadyczne przekroczenia, albo przejść na Max 5x, jeśli limit łapany jest
 systematycznie (nie okazjonalnie), dopiero gdy dane z `/usage` to potwierdzą.
 
-## Zasada pracy: `runs/*.md` — surowy output ciężkich obliczeń
+## Zasada pracy: `runs/` — katalog per run + obowiązek czytania przed rundą
 
-**Ustalone z użytkownikiem 2026-09-21, rozszerzone 2026-09-21 (C2.6).** Każde uruchomienie
-skryptu analitycznego, które generuje dużo surowego outputu (kalibracja, sweep seedów,
-diagnostyka na realnych danych — np. `backtest/calibrate_regime_thresholds.py`,
-`backtest/checkpoint_timeframe_robustness.py`, `backtest/run_checkpoint.py`), zapisuje pełny
-raw output do `runs/YYYY-MM-DD_<slug>.md`: **ID testu** (spójne z numeracją Commitów, gdzie
-dotyczy), metadane (branch/commit/komenda/parametry/dane), pełny stdout w bloku kodu, oraz
-(od C2.6) obowiązkowa sekcja **Co na plus (+) / Co na minus (-)** — krótkie, uczciwe
-zestawienie tego, co wynik potwierdza/wzmacnia, i tego, co pozostaje słabe/niepewne/
-niepełne (włącznie z ograniczeniami metodologicznymi danej rundy, nie tylko wynikiem
-liczbowym). Plik trafia do repo (**commitowany**, nie `.gitignore` — "commitować wszystko",
-decyzja użytkownika) — to trwały, odtwarzalny zapis, nie scratch.
+**Ustalone z użytkownikiem 2026-09-21 (pliki + sekcja +/-), rozszerzone 2026-09-22 (katalogi
+per run, wnioski skumulowane, obowiązek czytania — CLAUDE.md zasady 11 i 14).** Każde
+uruchomienie skryptu analitycznego na realnych danych dostaje **WŁASNY KATALOG**
+`runs/YYYY-MM-DD_<id>-<slug>/` z plikami:
 
-**`runs/INDEX.md`** — spis treści całego katalogu: ID testu, data, link do pliku, jednozdaniowy
-opis, wynik. Aktualizowany (nowy wiersz) przy każdym nowym pliku w `runs/`.
+- `README.md` — pełny write-up: **ID testu**, **Metadane**, **Poprzedzające wyniki** (które
+  wcześniejsze runy motywują/ograniczają tę rundę — obowiązkowe dla nowych rund), **Wynik**,
+  **Co na plus (+) / Co na minus (-)**, **Wniosek**, **Rekomendacja**;
+- `raw_output.txt` — pełny, nieskrócony stdout (obowiązkowy dla nowych rund);
+- ewentualne artefakty (CSV, wykresy).
 
-`IMPLEMENTATION_PLAN.md` i `TASKS.md` dostają tylko SYNTEZĘ (tabelę porównawczą + wniosek) i
-link do pliku w `runs/`, nie kopię całego outputu — ten sam wzorzec co zwięzłe podsumowania
-Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
+Wszystko trafia do repo (**commitowane**, nie `.gitignore` — "commitować wszystko", decyzja
+użytkownika) — trwały, odtwarzalny zapis, nie scratch.
+
+**`runs/INDEX.md`** — spis treści (ID, data, link do katalogu, opis, **licznik wariantów** =
+księga multiple-testing, rozwidlany per baza danych i per hipoteza, wynik) **+ sekcja
+"Wnioski skumulowane"** — syntetyczny stan wiedzy ze wszystkich rund, aktualizowany po KAŻDEJ
+rundzie. **Przed projektowaniem nowej rundy obowiązkowo czyta się INDEX (tabela + wnioski) i
+README powiązanych runów** — projekt rundy buduje na przebytych wynikach, nie powtarza
+przetestowanych wariantów (CLAUDE.md zasada 14). Pełna procedura krok-po-kroku:
+`runs/INDEX.md`, sekcja "Jak dodać nowy wpis".
+
+`IMPLEMENTATION_PLAN.md` i `TASKS.md` dostają tylko SYNTEZĘ i link do katalogu w `runs/`.
 
 ## Legenda statusów
 
@@ -124,7 +129,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 | C2.2 | `classify_regime()` | ✅ | |
 | C2.3 | `split_by_regime()` | ✅ | |
 | C2.4 | Nieformalny leakage sanity check (9/9 na danych syntetycznych) | ✅ | Nie zastępuje formalnego testu z Commitu 3 |
-| C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ✅ | **ZROBIONE 2026-09-21 — wynik: NO-GO, hipoteza falsyfikowana.** Pełny opis pracy i wyniku: sekcja "Commit 2.5" niżej (po Commicie 2d), `runs/2026-09-21_c2.5-threshold-calibration.md`, IMPLEMENTATION_PLAN.md §5/§7 |
+| C2.5 | Kalibracja progów regime rule (0.7/0.3) na realnych danych | ✅ | **ZROBIONE 2026-09-21 — wynik: NO-GO, hipoteza falsyfikowana.** Pełny opis pracy i wyniku: sekcja "Commit 2.5" niżej (po Commicie 2d), `runs/2026-09-21_c2.5-threshold-calibration/README.md`, IMPLEMENTATION_PLAN.md §5/§7 |
 
 ### Commit 3 — Test leakage (`agent_5_compliance/test_leakage.py`) — ✅ ZROBIONE
 
@@ -221,7 +226,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > odpalił C2.5 tak"): bounded-autonomy — z góry zarejestrowany, mały, strukturalnie (nie z PnL)
 > uzasadniony zestaw kandydatów progów regime, oceniony przez pełny walk-forward checkpoint, bez
 > automatycznego wyboru zwycięzcy. Pełna diagnoza, tabela i surowy output:
-> `IMPLEMENTATION_PLAN.md` §5 Commit 2.5, `runs/2026-09-21_c2.5-threshold-calibration.md`.
+> `IMPLEMENTATION_PLAN.md` §5 Commit 2.5, `runs/2026-09-21_c2.5-threshold-calibration/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -235,7 +240,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > gdzie bariera ATR rośnie względem stałego kosztu. Zmieniona WYŁĄCZNIE granulacja danych +
 > niezbędna konwersja jednostek (`candles_per_day`) — reszta pipeline'u (progi, ATR_MULTIPLIER,
 > bramka kosztowa) niezmieniona. Pełna diagnoza: `IMPLEMENTATION_PLAN.md` §5 Commit 2.6,
-> `runs/2026-09-21_c2.6-timeframe-robustness.md`.
+> `runs/2026-09-21_c2.6-timeframe-robustness/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -250,7 +255,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > korelacja cecha-target dopuszczona WYŁĄCZNIE jako opisowa/eksploracyjna (nigdy jako bramka
 > selekcji) — per `docs/rag/02_cechy_i_leakage.md` "Rozszerzanie feature setu — protokół" i
 > CLAUDE.md zasada 4. Pełna diagnoza: `IMPLEMENTATION_PLAN.md` §5 Commit 2.7,
-> `runs/2026-09-21_c2.7-feature-candidate-screening.md`.
+> `runs/2026-09-21_c2.7-feature-candidate-screening/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -263,7 +268,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > Zakres uzgodniony z użytkownikiem 2026-09-21 ("sformalizować test OOS dla adx_14"):
 > jedna cecha (CLAUDE.md zasada 4), DODANA do `MOMENTUM_FEATURES` (Test 1/trend),
 > `REVERSION_FEATURES` (Test 2/range) niezmienione. Pełna diagnoza:
-> `IMPLEMENTATION_PLAN.md` §5 Commit 2.8, `runs/2026-09-21_c2.8-adx14-oos-evaluation.md`.
+> `IMPLEMENTATION_PLAN.md` §5 Commit 2.8, `runs/2026-09-21_c2.8-adx14-oos-evaluation/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -276,7 +281,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > Zakres: pierwsza transza backlogu z audytu 2026-09-21, na polecenie użytkownika ("Dopisz i
 > wypchnij do repo a później zacznij realizować"). Zero zmian w hipotezie/cechach/progach/
 > kosztach/modelu — wyłącznie metodologia pomiaru + higiena. Pełna diagnoza:
-> `IMPLEMENTATION_PLAN.md` §5 Commit 2.9, `runs/2026-09-21_c2.9-measurement-methodology.md`.
+> `IMPLEMENTATION_PLAN.md` §5 Commit 2.9, `runs/2026-09-21_c2.9-measurement-methodology/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -290,7 +295,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > Zakres: Backlog Z5, wykonane na maszynie użytkownika (Binance dostępne). Decyzja użytkownika:
 > **3 lata** (2023-07-01 → 2026-07-01), `end` bez zmian. Zero zmian w hipotezie/cechach/progach/
 > kosztach/modelu — wyłącznie dane + utwardzenie fetchu. To NOWA BAZA checkpointu, nie porównanie
-> 1:1 z C6–C2.9. Pełny wynik: `runs/2026-09-21_c2.10-extended-history-z5.md`.
+> 1:1 z C6–C2.9. Pełny wynik: `runs/2026-09-21_c2.10-extended-history-z5/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -305,7 +310,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 > Zakres: pierwsza runda czterorundowego programu uzgodnionego z użytkownikiem 2026-09-21
 > (instrumentacja → koszty Z6 → próg pewności → reguła reżimu Z7, z pre-rejestrowaną regułą
 > STOP po Rundzie 3). Zero zmian w pipeline'ie — wyłącznie przyrząd pomiarowy. Pełny wynik:
-> `runs/2026-09-21_c2.11-edge-instrumentation.md`.
+> `runs/2026-09-21_c2.11-edge-instrumentation/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -317,7 +322,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 
 > Zakres: Runda 2 programu „droga do GO". Decyzja użytkownika: maker na wejściu i take-proficie,
 > taker na stop-lossie i timeoucie; slippage tylko na nogach taker. Pełny wynik:
-> `runs/2026-09-21_c2.12-execution-cost-model.md`.
+> `runs/2026-09-21_c2.12-execution-cost-model/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -331,7 +336,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 
 > Zakres: Runda 3 programu „droga do GO". Hipoteza, próg i kryterium sukcesu zarejestrowane
 > PRZED uruchomieniem (`runs/2026-09-21_c2.12-*.md`, sekcja Rekomendacja). Pełny wynik:
-> `runs/2026-09-21_c2.13-confidence-threshold.md`.
+> `runs/2026-09-21_c2.13-confidence-threshold/README.md`.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
@@ -349,7 +354,7 @@ Commitu 2c/2d z pełną diagnozą w osobnym skrypcie analitycznym.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| S1 | Pomiar trafności na architekturze jednoreżimowej 4h | ❌ **WYNIK NEGATYWNY** | n=1 037 (>925, wynik rozstrzygający). Trafność **48,60%**, CI [45,56%; 51,64%] — **górny kraniec poniżej progu 53,07%**, czyli z 95% pewnością trafność jest NIŻSZA od progu opłacalności. Bramka kosztowa odrzuciła 0% sygnałów (geometria naprawiona, nie pomogło). Testy 246/246. **REGUŁA STOP URUCHOMIONA — seria zamknięta, licznik 1/1.** `runs/2026-09-22_s1-single-regime-4h.md` |
+| S1 | Pomiar trafności na architekturze jednoreżimowej 4h | ❌ **WYNIK NEGATYWNY** | n=1 037 (>925, wynik rozstrzygający). Trafność **48,60%**, CI [45,56%; 51,64%] — **górny kraniec poniżej progu 53,07%**, czyli z 95% pewnością trafność jest NIŻSZA od progu opłacalności. Bramka kosztowa odrzuciła 0% sygnałów (geometria naprawiona, nie pomogło). Testy 246/246. **REGUŁA STOP URUCHOMIONA — seria zamknięta, licznik 1/1.** `runs/2026-09-22_s1-single-regime-4h/README.md` |
 
 **Stan hipotezy po S1:** runda usunęła wszystkie znane wady pomiaru naraz (przeciek early
 stopping, brak embargo, niespójność bramka↔horyzont, zepsuty wolumen z resampla, bariera
@@ -440,7 +445,7 @@ negatywnym.** Decyzja przy użytkowniku.
 > strukturalny: `trend`=0,53% świec, bramka kosztowa blokuje 98% sygnałów `range`. Otwarte:
 > **Z6** (koszty — przy 98% blokady bramka jest werdyktem o kosztach), **Z7** (reguła reżimu —
 > adresuje pusty `trend`), **Z8/Z9** (Z9 teraz wykonalne z tej maszyny) oraz **Z10** (decyzja
-> strategiczna — przy Tobie; `runs/2026-09-21_c2.10-extended-history-z5.md`, sekcja Rekomendacja).
+> strategiczna — przy Tobie; `runs/2026-09-21_c2.10-extended-history-z5/README.md`, sekcja Rekomendacja).
 
 ### A. Wiarygodność pomiaru
 
@@ -455,11 +460,11 @@ negatywnym.** Decyzja przy użytkowniku.
 
 | ID | Zadanie | Status | Uwagi |
 |---|---|---|---|
-| Z5 | **Wydłużyć historię danych do 3–5 lat** | ✅ C2.10 | Zrealizowane na maszynie użytkownika (2026-09-21): decyzja użytkownika **3 lata** (2023-07-01 → 2026-07-01), `data.start` w config, `py -m data.fetch_ohlcv` → `data/raw/BTC-USDT-USDT_5m_20230701T000000Z_20260701T000000Z.parquet`, **315 648 świec = 1096×288, zero dziur**, overlap 2025-07→2026-07 identyczny co do bajtu ze starym plikiem (który ZOSTAJE jako zamrożone źródło C6–C2.9). Pętla fetch dostała retry/backoff na `ccxt.NetworkError` (+4 testy). Wynik checkpointu v2 na nowej bazie: sekcja Commit 2.10 + `runs/2026-09-21_c2.10-extended-history-z5.md` |
+| Z5 | **Wydłużyć historię danych do 3–5 lat** | ✅ C2.10 | Zrealizowane na maszynie użytkownika (2026-09-21): decyzja użytkownika **3 lata** (2023-07-01 → 2026-07-01), `data.start` w config, `py -m data.fetch_ohlcv` → `data/raw/BTC-USDT-USDT_5m_20230701T000000Z_20260701T000000Z.parquet`, **315 648 świec = 1096×288, zero dziur**, overlap 2025-07→2026-07 identyczny co do bajtu ze starym plikiem (który ZOSTAJE jako zamrożone źródło C6–C2.9). Pętla fetch dostała retry/backoff na `ccxt.NetworkError` (+4 testy). Wynik checkpointu v2 na nowej bazie: sekcja Commit 2.10 + `runs/2026-09-21_c2.10-extended-history-z5/README.md` |
 | Z6 | Zweryfikować założenia kosztowe (kandydat (c) z §7 IMPLEMENTATION_PLAN.md) | ✅ C2.12 | Koszty są OSIĄ werdyktu od Commitu 2d, a `taker=0.05%`/`slippage=2bps`/`funding=0.01%/8h` to wartości startowe. Realny tier fee, udział maker (0.02%), realne dane funding |
 | Z7 | Reguła regime na `adx_14` zamiast/obok dyskretnej `direction_persistence_10` | ⏳ | Osobny, z góry zarejestrowany eksperyment NA REGULE (nie modelu). Motywacja z trzech niezależnych rund: dyskretność persistence (C2.5), corr adx↔persistence=+0,07 (C2.7), błędna klasyfikacja trendu spadkowego jako `range` (C2c) |
 | Z8 | Rozdzielić timeframe od horyzontu trzymania | ⏳ | Nierozdzielony confound C2.6: `VERTICAL_BARRIER_CANDLES=12` = 1h @ 5m, ale 48h @ 4h. Przeliczyć proporcjonalnie jako jawnie nazwany eksperyment |
-| Z9 | Walidacja natywnych świec 1h/4h vs resample z 5m | ✅ **ZROBIONE** | WYNIK: ceny zgodne co do grosza, ale **wolumen rozjezdza sie w 11% swiec 1h i 6% swiec 4h** (bledy do 284%) — a `volume_zscore_20` jest cecha obu modeli, wiec C2.6 dostawal czesciowo zepsute wejscie. Dane 1h/4h pobrane i odlozone w `data/raw/` (cache trwaly). **Dodatkowo:** prog oplacalnosci `range` spada 82,81% (5m) -> 56,77% (1h) -> **52,74% (4h)** — pierwszy realistyczny prog w projekcie. `runs/2026-09-22_z9-timeframe-geometry.md`. Pierwotny opis: Wymaga maszyny użytkownika (dostęp do Binance); sprawdza, czy agregacja z 5m nie zniekształca wyniku C2.6 |
+| Z9 | Walidacja natywnych świec 1h/4h vs resample z 5m | ✅ **ZROBIONE** | WYNIK: ceny zgodne co do grosza, ale **wolumen rozjezdza sie w 11% swiec 1h i 6% swiec 4h** (bledy do 284%) — a `volume_zscore_20` jest cecha obu modeli, wiec C2.6 dostawal czesciowo zepsute wejscie. Dane 1h/4h pobrane i odlozone w `data/raw/` (cache trwaly). **Dodatkowo:** prog oplacalnosci `range` spada 82,81% (5m) -> 56,77% (1h) -> **52,74% (4h)** — pierwszy realistyczny prog w projekcie. `runs/2026-09-22_z9-timeframe-geometry/README.md`. Pierwotny opis: Wymaga maszyny użytkownika (dostęp do Binance); sprawdza, czy agregacja z 5m nie zniekształca wyniku C2.6 |
 | Z10 | **DECYZJA STRATEGICZNA: rewizja hipotezy czy domknięcie Fazy 0** | ⬜ | Po pięciu wynikach w paśmie szumu — decyzja UŻYTKOWNIKA, nie zadanie implementacyjne. Opcje: inna definicja reżimu / inny driver (funding rate) / inny instrument — albo udokumentowany wynik negatywny jako poprawne zamknięcie Fazy 0 |
 
 ### E. Backlog II — po programie „droga do GO" (C2.11–C2.13), audyt 2026-09-21
@@ -485,10 +490,10 @@ negatywnym.** Decyzja przy użytkowniku.
 
 | ID | Zadanie | Status | Koszt budżetu | Uwagi |
 |---|---|---|---|---|
-| Z16 | **Diagnostyka spójności bramki reżimu z horyzontem etykiety** (`agents/regime_coherence.py` + `backtest/diagnose_regime_coherence.py`) | ✅ **ZROBIONE** | **0** | WYNIK: `trend` **0,49%** świec z etykietą wewnątrz własnego reżimu (mediana epizodu 2 vs horyzont 12), `range` 21,1%. Z8 domknięty (B wymagane 4,21% => horyzont ~39 dni vs epizod 5h15m; w `trend` 2p−1<0). **Asymetria: `range` uspójnialny (mediana 5→39 przy udziale 46,9%), `trend` NIE (udział zapada do 0,05–1,5%).** Testy 214/214. `runs/2026-09-22_z16-regime-coherence.md`. Pierwotny opis: Formalizuje ustalenie przewodnie: rozkład długości epizodów per reżim + udział świec z pełnym oknem etykiety wewnątrz epizodu, dla V ∈ {12, 48, 144, 576}. Zamienia „nie znaleźliśmy edge'u" w mechanizm. **Zamyka Z8 bez wydawania wariantu.** Kryterium: udział `trend` z pełnym oknem < 5% (zmierzone: 0,55%) |
-| Z17 | Naprawa przecieku early stopping (`agents/ml_optimizer.py:130` — `evals=[(dtest,"test")]`) | ✅ **ZROBIONE** (razem z Z21 — ta sama granica) | 0 | WYNIK: kierunek obciążenia potwierdzony, `p` było ZAWYŻONE. `range` hit 51,07%→**50,38%**, z_stat **+1,81→+0,63** — „bliskość istotności" z C2.12 była artefaktem przecieku. Testy 226/226. `runs/2026-09-22_z17-z21-early-stopping-leak.md`. Pierwotny opis: Early stopping wybiera liczbę drzew NA FOLDZIE OOS. Udokumentowane jako „decyzja" w docstringach i `config/settings.yaml:48` — dokumentacja opisuje buga jako wybór. Kierunek obciążenia: **ZAWYŻA `p`**. Wymaga `validation_fraction` (ogon foldu treningowego) + guard na `best_iteration` w 3 miejscach (`ml_optimizer.py:167`, `engine.py:357`, `diagnose_range_signal.py:138` — `AttributeError` na xgboost ≥2.0 bez ES). Zależność: **Z16 najpierw** |
-| Z18 | Jedna definicja `p` | ✅ **ZROBIONE** | 0 | Zarzut audytu o trzech definicjach byl PRZESADZONY — `gross_pnl>0` uzywane spojnie; realny rozjazd dotyczy wylacznie timeoutow. Zmierzony: naiwna definicja zaniza o +5,6/+8,0 pp. **Kluczowe:** trafnosc na samych barierach poziomych = 50,50%/50,20% — edge nie chowa sie w zadnej skladowej. Testy 231/231. `runs/2026-09-22_z18-unify-hit-rate.md`. Pierwotny opis: Dziś w obiegu TRZY niekompatybilne definicje (`gross_pnl>0` z filtrem kill-switcha, `dir*label>0` bez timeoutów, `gross_pnl>0` na pełnej populacji), różniące się o 6–14 pp. Do czasu ujednolicenia każdy przyszły pomiar `p` jest nieporównywalny |
-| Z19 | Moc statystyczna przed eksperymentem + `z_margin` do `metrics.py` | ✅ **ZROBIONE (moc)** | 0 | `wald_half_width`, `min_detectable_hit_rate`, `required_trades` + 11 testów. WYNIK: **4h NIEWYKONALNE** (foldy 21,5 < 30; próba 1 551 < 2 608), **1h `range` jedyna wykonalna** (n<=5 600 vs 425; próg 56,77%, trzeba zmierzyć 58,08%). Obaliło rekomendację z Z9 przed wydaniem budżetu. `runs/2026-09-22_z19-statistical-power.md`. Przeniesienie `z_margin` — nadal otwarte. Pierwotny opis: Statystyka, na której stanął werdykt C2.13, mieszka w jednorazowym skrypcie rundy |
+| Z16 | **Diagnostyka spójności bramki reżimu z horyzontem etykiety** (`agents/regime_coherence.py` + `backtest/diagnose_regime_coherence.py`) | ✅ **ZROBIONE** | **0** | WYNIK: `trend` **0,49%** świec z etykietą wewnątrz własnego reżimu (mediana epizodu 2 vs horyzont 12), `range` 21,1%. Z8 domknięty (B wymagane 4,21% => horyzont ~39 dni vs epizod 5h15m; w `trend` 2p−1<0). **Asymetria: `range` uspójnialny (mediana 5→39 przy udziale 46,9%), `trend` NIE (udział zapada do 0,05–1,5%).** Testy 214/214. `runs/2026-09-22_z16-regime-coherence/README.md`. Pierwotny opis: Formalizuje ustalenie przewodnie: rozkład długości epizodów per reżim + udział świec z pełnym oknem etykiety wewnątrz epizodu, dla V ∈ {12, 48, 144, 576}. Zamienia „nie znaleźliśmy edge'u" w mechanizm. **Zamyka Z8 bez wydawania wariantu.** Kryterium: udział `trend` z pełnym oknem < 5% (zmierzone: 0,55%) |
+| Z17 | Naprawa przecieku early stopping (`agents/ml_optimizer.py:130` — `evals=[(dtest,"test")]`) | ✅ **ZROBIONE** (razem z Z21 — ta sama granica) | 0 | WYNIK: kierunek obciążenia potwierdzony, `p` było ZAWYŻONE. `range` hit 51,07%→**50,38%**, z_stat **+1,81→+0,63** — „bliskość istotności" z C2.12 była artefaktem przecieku. Testy 226/226. `runs/2026-09-22_z17-z21-early-stopping-leak/README.md`. Pierwotny opis: Early stopping wybiera liczbę drzew NA FOLDZIE OOS. Udokumentowane jako „decyzja" w docstringach i `config/settings.yaml:48` — dokumentacja opisuje buga jako wybór. Kierunek obciążenia: **ZAWYŻA `p`**. Wymaga `validation_fraction` (ogon foldu treningowego) + guard na `best_iteration` w 3 miejscach (`ml_optimizer.py:167`, `engine.py:357`, `diagnose_range_signal.py:138` — `AttributeError` na xgboost ≥2.0 bez ES). Zależność: **Z16 najpierw** |
+| Z18 | Jedna definicja `p` | ✅ **ZROBIONE** | 0 | Zarzut audytu o trzech definicjach byl PRZESADZONY — `gross_pnl>0` uzywane spojnie; realny rozjazd dotyczy wylacznie timeoutow. Zmierzony: naiwna definicja zaniza o +5,6/+8,0 pp. **Kluczowe:** trafnosc na samych barierach poziomych = 50,50%/50,20% — edge nie chowa sie w zadnej skladowej. Testy 231/231. `runs/2026-09-22_z18-unify-hit-rate/README.md`. Pierwotny opis: Dziś w obiegu TRZY niekompatybilne definicje (`gross_pnl>0` z filtrem kill-switcha, `dir*label>0` bez timeoutów, `gross_pnl>0` na pełnej populacji), różniące się o 6–14 pp. Do czasu ujednolicenia każdy przyszły pomiar `p` jest nieporównywalny |
+| Z19 | Moc statystyczna przed eksperymentem + `z_margin` do `metrics.py` | ✅ **ZROBIONE (moc)** | 0 | `wald_half_width`, `min_detectable_hit_rate`, `required_trades` + 11 testów. WYNIK: **4h NIEWYKONALNE** (foldy 21,5 < 30; próba 1 551 < 2 608), **1h `range` jedyna wykonalna** (n<=5 600 vs 425; próg 56,77%, trzeba zmierzyć 58,08%). Obaliło rekomendację z Z9 przed wydaniem budżetu. `runs/2026-09-22_z19-statistical-power/README.md`. Przeniesienie `z_margin` — nadal otwarte. Pierwotny opis: Statystyka, na której stanął werdykt C2.13, mieszka w jednorazowym skrypcie rundy |
 | Z20 | Warunek „zgodny znak" z `docs/rag/03:103` — zaimplementować albo skorygować docs | ⬜ | 0 | `fraction_positive_sign` (`metrics.py:296,312`) liczone i zwracane, **nigdy nieczytane**. Bramka GO jest ściśle słabsza niż udokumentowana. Uwaga: to NIE podważa dotychczasowego NO-GO (osłabia tylko GO) |
 | Z21 | Purge/embargo na granicy train/test | ✅ **ZROBIONE** (w Z17 — walidacja z ogona treningu wymagała embargo, inaczej naprawa byłaby pozorna) | 0 | `test_start == train_end`, zero purge w całym repo (grep: 0 trafień). Etykiety ostatnich ≤V świec treningu sięgają w okno testowe: 0,069% wierszy/fold przy V=12, ale **rośnie liniowo z V** (3,33% przy V=576) — blokujące dla każdej rundy z długim horyzontem |
 | Z22 | `run_backtest`: parametr `vertical_barrier_candles` | ✅ **ZROBIONE** (w S1) | 0 | Horyzont etykiety jest parametrem; `embargo_candles=None` domyślnie **wiąże się z V**, więc nie da się ich rozjechać przez przeoczenie (to samo zabezpieczenie co zasada 3 dla mnożnika ATR). `atr_multiplier` celowo NIE parametryzowany — musiałby zmienić się jednocześnie w `risk_controller`. 4 testy. Pierwotny opis: Dziś `compute_triple_barrier_labels(df)` wołane bez argumentów, `ATR_MULTIPLIER` jako stała modułowa (`engine.py:321`). **Blokada metodologiczna:** żadnego eksperymentu na geometrii nie da się zrobić baseline-vs-wariant w jednym procesie. CLAUDE.md zasada 3: mnożnik musi zmienić się JEDNOCZEŚNIE z `risk_controller` |
@@ -502,7 +507,7 @@ Budżet na nowej bazie danych: **2 warianty wydane** (C2.12, C2.13).
 | Z8 | Rozdzielenie timeframe od horyzontu (geometria wypłaty) | ✅ **ZAMKNIĘTE przez Z16 — niewykonalne przy obecnej definicji reżimu** | 0 | Niewykonalne przy obecnej definicji reżimu (patrz ustalenie przewodnie). Zamknąć jako „ODŁOŻONE — niewykonalne", NIE jako „zmierzone negatywnie" — hipoteza bez uruchomienia nie jest zmierzona |
 | Z7 | Reguła reżimu na `adx_14` | ⬜ przeformułowane przez Z16 — kryterium `is_rule_admissible` gotowe | screening **0**, potem OOS **1** | W obecnym brzmieniu atakuje nieruchomy człon `p` i jest zwykłym kolejnym wariantem po negatywnym wyniku. Po Z16 da się przeformułować na kryterium **mierzalne bez modelu**: reguła jest dopuszczalna, gdy mediana długości epizodu ≥ horyzont etykiety przy udziale reżimu ≥ 5% świec. Screening kandydatów pod tym kryterium nie dotyka modelu (0 wariantów). **Bez Z16 nie uruchamiać** |
 | Z24 | Porzucenie bramki reżimu — handel na `ambiguous` (77,9% świec) | ⬜ | 1 (NOWA seria) | Empirycznie najlepiej uzasadniona z otwartych, ale to **NOWA hipoteza**, nie wariant obecnej (docs/rag/03 przy NO-GO: „wróć do feature registry — inna hipoteza, NIE tuning tego samego zestawu"). Własna pre-rejestracja, własny licznik, własna reguła STOP. Nie łączyć z Z7 |
-| Z5b | Pełna historia 2019→2026 (**dla 4h**) | ✅ **ZROBIONE** | 0 | Pobrane i odłożone: **14 916 świec 4h, 6,8 roku, zero dziur**. 4h przeszło na WYKONALNE (foldy 21,5→48,0; próba 1 551→4 076). Nowy pomiar koryguje Z19: przy V=3 **60,8% to timeouty**, więc próg rośnie 52,30%→**54,60%**. Wybrano V=3 (spójność = wymóg poprawności). **Eksperyment PRE-ZAREJESTROWANY, nieuruchomiony** — kryterium: trafność ≥ 56,15%, margines mocy 4,3×, klauzula nierozstrzygalności przy n<925. `runs/2026-09-22_z5b-long-history-4h-preregistration.md`. Pierwotny opis: Odrzuciłem to jako „nie domyka żadnego członu" — prawda na 5m, **nieprawda na 4h**, gdzie wiążącym ograniczeniem jest liczebność próby. 4h od 2019-09 (~6,8 roku) dałoby ~3 600 świec `range` wobec wymaganych 2 608 — czyli **odblokowałoby konfigurację o najniższym progu w projekcie (52,74%)**. Wymaga też okna testowego 28 dni zamiast 14 | Nie domyka żadnego członu. Jedyny nowy deliverable (tabela mocy) liczy się na istniejących danych w sekundy, bo udział reżimu jest własnością REGUŁY, nie epoki rynkowej |
+| Z5b | Pełna historia 2019→2026 (**dla 4h**) | ✅ **ZROBIONE** | 0 | Pobrane i odłożone: **14 916 świec 4h, 6,8 roku, zero dziur**. 4h przeszło na WYKONALNE (foldy 21,5→48,0; próba 1 551→4 076). Nowy pomiar koryguje Z19: przy V=3 **60,8% to timeouty**, więc próg rośnie 52,30%→**54,60%**. Wybrano V=3 (spójność = wymóg poprawności). **Eksperyment PRE-ZAREJESTROWANY, nieuruchomiony** — kryterium: trafność ≥ 56,15%, margines mocy 4,3×, klauzula nierozstrzygalności przy n<925. `runs/2026-09-22_z5b-long-history-4h-preregistration/README.md`. Pierwotny opis: Odrzuciłem to jako „nie domyka żadnego członu" — prawda na 5m, **nieprawda na 4h**, gdzie wiążącym ograniczeniem jest liczebność próby. 4h od 2019-09 (~6,8 roku) dałoby ~3 600 świec `range` wobec wymaganych 2 608 — czyli **odblokowałoby konfigurację o najniższym progu w projekcie (52,74%)**. Wymaga też okna testowego 28 dni zamiast 14 | Nie domyka żadnego członu. Jedyny nowy deliverable (tabela mocy) liczy się na istniejących danych w sekundy, bo udział reżimu jest własnością REGUŁY, nie epoki rynkowej |
 
 **Rekomendowana kolejność:** Z16 → **decyzja Z10 użytkownika** → jeśli zamknięcie Fazy 0:
 Z18+Z23 do dokumentu zamykającego, Z17 jako adnotacja o skonfundowanym `p`; jeśli kontynuacja:
@@ -525,3 +530,4 @@ Z17, Z18, Z21, Z22, potem Z7 screening (0) i dopiero Z7 OOS (1 wariant).
 | Z13 | Wspólna biblioteka checkpointu (`backtest/checkpoint_lib.py`) — FORWARD-LOOKING | ✅ C2.9 | `_load_config`/`_fetch_data`/`_run_and_summarize`/sweep/stabilność skopiowane 4× (run_checkpoint, calibrate, timeframe, evaluate). UWAGA: historycznych skryptów NIE refaktorować wstecz — są zamrożonymi zapisami eksperymentów, odtwarzalnymi komendą z `runs/` ("Metadane"); biblioteka obowiązuje od nowych skryptów |
 | Z14 | Odświeżyć README.md | ✅ C2.9 | Status "Commit 6, 86/86 testów" nieaktualny (128/128, seria C2.5–C2.8), struktura bez `runs/` |
 | Z15 | Test spójności registry↔kod jako pytest czytający YAML | ✅ C2.9 | `test_feature_functions_covers_all_ten` hardkoduje listę zamiast czytać `feature_registry.yaml`; check inline w tests.yml zostaje jako belt-and-suspenders |
+| Z25 | Odchudzenie duplikacji PLAN↔TASKS (19 zduplikowanych sekcji per-commit, 99+69 KB) | ⏳ | Audyt 2026-09-22: PLAN i TASKS to NIE to samo (PLAN: decyzje/ryzyka/roadmapa; TASKS: statusy/zasady/backlog), ale sekcje per-commit są kopiowane 1:1 w 19 przypadkach, a od C2.9 syntezy żyją też w runs/INDEX. Docelowy podział: CLAUDE.md, wytyczna "jedna informacja = jedno miejsce". Odchudzić historyczne sekcje (szczegóły→runs/, w PLAN/TASKS status+2-3 zdania+link); od teraz nowe rundy piszą od razu krótko |

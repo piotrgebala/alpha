@@ -1,0 +1,153 @@
+# C2.11 — instrumentacja edge'u: rozbicie werdyktu na (2p−1)·B vs C (2026-09-21)
+
+## ID testu
+
+**C2.11** — patrz `runs/INDEX.md` dla pełnego spisu.
+
+## Metadane
+
+- **Branch:** `task/C2.11-edge-instrumentation`
+- **Poprzedzający stan (master):** Commit 2.10 (`ed6a0cd`) — 3 lata danych, NO-GO, 21/144
+  ważnych foldów. Runda 1 z czterorundowego programu „droga do GO" (uzgodnionego 2026-09-21).
+- **Komenda:** `py -m backtest.run_checkpoint_v2 --quick`
+- **Zmiany:** `backtest/metrics.py` — `break_even_hit_rate`, `compute_hit_rate`,
+  `summarize_edge_by_regime`, stała `MIN_TRADES_FOR_HIT_RATE_CI=20`;
+  `backtest/checkpoint_lib.py` — klucz `edge_per_regime` w `run_and_summarize`;
+  `backtest/run_checkpoint_v2.py` — druk sekcji. **Zero zmian w pipeline'ie** (silnik, cechy,
+  progi, koszty, model nietknięte).
+- **Źródło danych:** `data/raw/BTC-USDT-USDT_5m_20230701T000000Z_20260701T000000Z.parquet`
+  (315 648 świec, bez dziur) — ta sama baza co C2.10.
+- **Warianty hipotezy: 0** (czysta instrumentacja pomiaru, jak C2.9).
+- **Testy:** **157/157** (143 + 14 nowych: 11 jednostkowych + 3 property-based `hypothesis`).
+
+## Dlaczego ta runda powstała
+
+C2.10 zamknął się wnioskiem „brak edge'u", ale diagnostyka przed planem pokazała, że to
+sformułowanie **myli dwie różne rzeczy**. Cały werdykt GO/NO-GO liczy się z `net_pnl`
+(`metrics.py::compute_trade_returns`), a `gross_pnl` — jedyna kolumna mówiąca o jakości samego
+sygnału — jest zapisywana w journalu i **nigdy nieczytana przez `metrics.py`**. Trafność kierunku
+i próg opłacalności istniały wyłącznie jako wyrażenia ad hoc w skryptach diagnostycznych
+(`backtest/diagnose_cost_feasibility.py:184-204`), bez jednego testu.
+
+Skoro bariery triple-barrier są symetryczne (±`ATR_MULTIPLIER`×ATR, odtwarzane przez
+`engine._resolve_exit_price`), wypłata transakcji jest w pełni określona przez to, czy kierunek
+zgadzał się z etykietą. Werdykt redukuje się więc do jednej nierówności:
+
+```
+(2p − 1) · B  >  C          p = trafność kierunku, B = szerokość bariery, C = koszt round-trip
+```
+
+Bez rozbicia na te trzy człony „NO-GO" nie odróżnia **„model nie ma pojęcia"** od **„model ma
+rację, ale koszt zjada barierę"** — a to dwie różne diagnozy prowadzące do różnych następnych
+kroków. Ta runda dodaje brakujący przyrząd pomiarowy; nie zmienia ani pipeline'u, ani kryteriów.
+
+## Metodologia
+
+`compute_hit_rate` liczy trafność z `gross_pnl > 0` (świadomie brutto — netto mieszałoby jakość
+sygnału z modelem kosztów), wyklucza wiersze `kill_switch_active` tak jak `compute_trade_returns`,
+raportuje z-stat wobec H0: p=0,5 (se pod hipotezą zerową = √(0,25/n)) i 95% CI Walda wokół
+estymaty. Poniżej `MIN_TRADES_FOR_HIT_RATE_CI=20` sam ułamek jest raportowany, ale z-stat i CI
+są NaN — aproksymacja normalna dwumianu tam nie działa i liczba udawałaby precyzję, której nie ma.
+
+`break_even_hit_rate(C, B) = 0.5·(1 + C/B)`, NaN dla niedodatniej bariery (spójnie z konwencją
+NaN w `compute_sharpe_ratio`/`compute_t_stat`).
+
+**Zastrzeżenie jawne:** `barrier_pct` i `cost_pct` to średnie po transakcjach, więc
+`break_even_p` z ich ilorazu jest przybliżeniem pierwszego rzędu (E[C]/E[B] ≠ E[C/B]). Miara
+diagnostyczna do czytania rzędu wielkości i kierunku zmian między rundami — **nie wchodzi do
+kryteriów klasyfikacji z docs/rag/03, które pozostają NIEZMIENIONE.**
+
+## Wynik
+
+**Werdykt bit-identyczny z C2.10** (`mean_sharpe = -12,392006781796571`, 21/144 foldów) — dowód,
+że runda jest czysto addytywna i nie przepisała pipeline'u. Nowa sekcja raportu:
+
+| regime | n | hit_rate | z | CI 95% | B (bariera) | C (koszt) | break_even_p | **margin** |
+|---|---|---|---|---|---|---|---|---|
+| `range` | 530 | 51,89% | +0,87 | [47,6%; 56,1%] | 0,2707% | 0,1399% | **75,83%** | **−23,94 pp** |
+| `trend` | 395 | 50,63% | +0,25 | [45,7%; 55,6%] | 0,4719% | 0,1402% | **64,86%** | **−14,23 pp** |
+
+## Co na plus (+)
+
+- **Diagnoza się zmienia jakościowo.** Trafność kierunku jest nieistotnie różna od rzutu monetą
+  (z=+0,87 i +0,25), ale **dodatnia w obu reżimach** — model nie jest odwrócony. Jednocześnie
+  wymagana trafność to 75,8% / 64,9%. Werdykt NO-GO jest więc **przesądzony arytmetycznie
+  geometrią wypłaty**, a nie tym, że model myli kierunek: nawet trafność idealnie na górnym
+  krańcu CI (56,1% / 55,6%) zostawia ~20 pp / ~9 pp pod progiem opłacalności.
+- **Margines jest teraz jedną liczbą per reżim**, porównywalną między rundami — kolejne rundy
+  (koszty, próg pewności, reguła reżimu) mają jawny, wspólny licznik postępu.
+- Pełne pokrycie testami (14), w tym trzy niezmienniki `hypothesis`: break-even > 0,5 dla
+  każdego dodatniego kosztu, monotoniczność break-even w koszcie, oraz zgodność `hit_rate`
+  z surowym zliczeniem na dowolnej kombinacji wygranych/przegranych.
+- Regresja baseline'u: liczby C2.10 odtworzone co do ostatniej cyfry.
+
+## Co na minus (−)
+
+- **To nadal tylko przyrząd — nie przybliża do GO ani o krok.** Werdykt bez zmian; wartość rundy
+  jest wyłącznie diagnostyczna.
+- `break_even_p` jest przybliżeniem pierwszego rzędu (średnia ilorazu vs iloraz średnich) —
+  do czytania rzędu wielkości, nie do rozstrzygania różnic rzędu pojedynczych punktów procentowych.
+- `hit_rate` traktuje wyjścia po barierze pionowej (`label==0`, wyjście po cenie zamknięcia) tak
+  samo jak trafienia bariery, choć ich rozkład wypłat jest inny (ruch zwykle węższy niż B).
+  Rozdzielenie wymaga kolumny `exit_reason`, która powstanie dopiero w Rundzie 2 — wtedy warto
+  tu wrócić i rozbić trafność per typ wyjścia.
+- Miary edge'u nie są (jeszcze) liczone per fold, tylko pooled per reżim — nie widać więc, czy
+  margines jest stabilny w czasie, czy uśrednia okresy o różnym charakterze.
+
+## Wniosek
+
+Rozbicie werdyktu na człony pokazuje, że **blokada jest w geometrii wypłaty, nie w kierunku
+sygnału**: model trafia 50,6–51,9% (nieistotnie powyżej monety, ale nie poniżej), podczas gdy
+przy obecnym koszcie 0,14% i barierze 0,27%/0,47% potrzeba 75,8%/64,9%. Luka wynosi 24 pp
+(`range`) i 14 pp (`trend`). Żadna poprawa modelu w realistycznym zakresie jej nie domknie —
+domknąć ją może tylko zmiana C (koszt) albo B (geometria), ewentualnie selekcja podzbioru
+transakcji o wyższym p.
+
+## Rekomendacja
+
+Bez automatycznego wyboru — zgodnie z konwencją decyzja przy użytkowniku. Program uzgodniony
+2026-09-21 przewiduje jako następną **Rundę 2 (C2.12 / Backlog Z6)**: realistyczny model
+wykonania (maker na wejściu i TP, taker na SL), który atakuje człon C — dominujący, bo 0,14%
+kosztu stoi naprzeciw 1,47 bps średniego edge'u brutto. Z policzonego kontrfaktu wiadomo, że
+sama ta zmiana **nie da GO** (mean_sharpe ≈ −6…−3), ale obniża próg bramki kosztowej, która dziś
+blokuje 98% sygnałów `range` — czyli powinna skokowo zwiększyć liczbę ważnych foldów (21/144).
+
+## Pełny surowy output
+
+```
+[data] 315648 świec: 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+[data] brak dziur.
+
+[seed=42] kanoniczny przebieg (offset=0)...
+
+=== Sharpe + t-stat per fold (seed=42) ===
+[tabela 144 wierszy pominięta w tym zapisie — IDENTYCZNA co do cyfry z C2.10,
+ patrz runs/2026-09-21_c2.10-extended-history-z5/README.md; ta runda nie zmienia pipeline'u]
+
+=== Klasyfikacja (kryteria docs/rag/03, NIEZMIENIONE) ===
+{'classification': 'NO-GO', 'n_valid_folds': 21, 'n_total_folds': 144, 'fraction_above_threshold': 0.0, 'fraction_le_zero': 0.9523809523809523, 'fraction_positive_sign': 0.047619047619047616, 'mean_sharpe': -12.392006781796571}
+
+=== Rozbicie per reżim ===
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             10             72                       0.0               0.9                     0.1   -14.948049
+ trend          NO-GO             11             72                       0.0               1.0                     0.0   -10.068332
+
+=== Diagnostyka pooled per reżim (Commit 2.9/Z2+Z3) ===
+regime  n_trades  mean_return  std_return  sharpe_per_trade     t_stat      n_eff  t_stat_neff
+ range       530    -0.001001    0.002202         -0.454610 -10.465919 260.911565    -7.343213
+ trend       395    -0.000712    0.002566         -0.277329  -5.511796 212.635627    -4.044014
+[interpretacja] |t_stat| < ~2 => średni zwrot per trade nieodróżnialny od zera
+przy tej liczbie obserwacji; t_stat_neff dodatkowo koryguje za autokorelację.
+
+=== Rozbicie edge'u: (2p-1)*B vs C (Commit 2.11) ===
+regime  n_trades  hit_rate   z_stat   ci_low  ci_high  barrier_pct  cost_pct  break_even_p    margin
+ range       530  0.518868 0.868744 0.476330 0.561406     0.002707  0.001399      0.758312 -0.239445
+ trend       395  0.506329 0.251577 0.457024 0.555634     0.004719  0.001402      0.648589 -0.142259
+[interpretacja] hit_rate = trafność kierunku PRZED kosztami (gross_pnl>0);
+break_even_p = 0.5*(1 + C/B) = trafność wymagana, żeby wyjść na zero przy tej
+szerokości bariery i tym koszcie; margin = hit_rate - break_even_p. Margin <= 0
+oznacza, że werdykt jest przesądzony arytmetycznie, niezależnie od jakości modelu.
+z_stat wobec H0: p=0.5 — |z| < ~2 => trafność nieodróżnialna od rzutu monetą.
+
+[--quick] pomijam sweep fold-jitter.
+```

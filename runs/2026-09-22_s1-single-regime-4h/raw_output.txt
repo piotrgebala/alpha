@@ -1,0 +1,34 @@
+================================================================================================
+S1 — architektura jednoreżimowa na 4h (konfiguracja ZAMROŻONA w pre-rejestracji)
+================================================================================================
+dane: 14916 świec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+reżim: range (bez `trend`)  |  V = 3 (12h)  |  walk-forward 60/28/28 dni  |  seed 42
+kryterium sukcesu: dolny kraniec 95% CI > 54.60%
+klauzula nierozstrzygalności: n < 925
+
+=== Klasyfikacja (kryteria docs/rag/03, NIEZMIENIONE) ===
+{'classification': 'NO-GO', 'n_valid_folds': 59, 'n_total_folds': 85, 'fraction_above_threshold': 0.3389830508474576, 'fraction_le_zero': 0.5932203389830508, 'fraction_positive_sign': 0.4067796610169492, 'mean_sharpe': -0.5894676087080075}
+
+=== Diagnostyka pooled ===
+regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat     n_eff  t_stat_neff
+ range      1037    -0.000178    0.002553         -0.069709 -2.244801 620.00031    -1.735739
+
+=== Rozbicie edge'u ===
+regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+ range      1037  0.486017 -0.900552 0.455597 0.516438       0.586307          0.512821          0.467105     0.012609  0.000775      0.530736 -0.044719
+
+=== Foldy === łącznie=85, aktywne=63, pominięte=22
+sygnały przepuszczone=1060, odrzucone przez koszt=0
+
+================================================================================================
+WERDYKT wobec PRE-REJESTROWANEGO kryterium
+================================================================================================
+  n                       = 1037
+  trafność zmierzona      = 48.60%
+  95% CI                  = [45.56%; 51.64%]
+  break-even (pre-rej.)   = 54.60%
+  break-even (zmierzone)  = 53.07%
+  trzeba było zmierzyć    = 57.64%
+
+  >>> KRYTERIUM NIESPEŁNIONE: dolny kraniec CI nie przekracza progu.
+      Zgodnie z regułą STOP to koniec tej linii hipotezy.

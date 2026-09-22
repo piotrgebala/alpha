@@ -109,7 +109,7 @@ features:
       jedyny z 8 kandydatów nisko skorelowany z resztą registry (corr=+0.07 z
       direction_persistence_10). Formalny test OOS jako DODATEK do MOMENTUM_FEATURES
       (agents/ml_optimizer.py), nie zamiennik żadnej istniejącej cechy: Commit 2.8,
-      backtest/evaluate_feature_candidate.py, runs/2026-09-21_c2.8-adx14-oos-evaluation.md.
+      backtest/evaluate_feature_candidate.py, runs/2026-09-21_c2.8-adx14-oos-evaluation/README.md.
       Obliczana dla każdej świecy (FEATURE_FUNCTIONS) niezależnie od wyniku testu OOS —
       dodanie do MOMENTUM_FEATURES jest osobną decyzją, dopiero po przeczytaniu wyniku.
 

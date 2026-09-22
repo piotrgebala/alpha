@@ -1,0 +1,92 @@
+[data] 105120 świec: 2025-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+[data] brak dziur.
+
+[seed=42] kanoniczny przebieg (offset=0)...
+
+=== Sharpe + t-stat per fold (seed=42) ===
+regime  fold_idx                test_start                  test_end  n_trades  mean_return  std_return     sharpe    t_stat                                            skip_reason
+ trend         0 2025-09-19 02:25:00+00:00 2025-10-03 02:25:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=81, n_test_valid=25 < min_train_rows=30
+ trend         1 2025-10-03 02:25:00+00:00 2025-10-17 02:25:00+00:00        32    -0.001747    0.002227 -22.661828 -4.436739                                                    NaN
+ trend         2 2025-10-17 02:25:00+00:00 2025-10-31 02:25:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=105, n_test_valid=21 < min_train_rows=30
+ trend         3 2025-10-31 02:25:00+00:00 2025-11-14 02:25:00+00:00        35     0.000134    0.002808   1.442573  0.282427                                                    NaN
+ trend         4 2025-11-14 02:25:00+00:00 2025-11-28 02:25:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=133, n_test_valid=16 < min_train_rows=30
+ trend         5 2025-11-28 02:25:00+00:00 2025-12-12 02:25:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=111, n_test_valid=29 < min_train_rows=30
+ trend         6 2025-12-12 02:25:00+00:00 2025-12-26 02:25:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=122, n_test_valid=10 < min_train_rows=30
+ trend         7 2025-12-26 02:25:00+00:00 2026-01-09 02:25:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=101, n_test_valid=22 < min_train_rows=30
+ trend         8 2026-01-09 02:25:00+00:00 2026-01-23 02:25:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=97, n_test_valid=29 < min_train_rows=30
+ trend         9 2026-01-23 02:25:00+00:00 2026-02-06 02:25:00+00:00        37    -0.000729    0.002218 -10.207717 -1.998470                                                    NaN
+ trend        10 2026-02-06 02:25:00+00:00 2026-02-20 02:25:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=109, n_test_valid=14 < min_train_rows=30
+ trend        11 2026-02-20 02:25:00+00:00 2026-03-06 02:25:00+00:00        31    -0.000198    0.002350  -2.397221 -0.469329                                                    NaN
+ trend        12 2026-03-06 02:25:00+00:00 2026-03-20 02:25:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=133, n_test_valid=17 < min_train_rows=30
+ trend        13 2026-03-20 02:25:00+00:00 2026-04-03 02:25:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=114, n_test_valid=6 < min_train_rows=30
+ trend        14 2026-04-03 02:25:00+00:00 2026-04-17 02:25:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=92, n_test_valid=16 < min_train_rows=30
+ trend        15 2026-04-17 02:25:00+00:00 2026-05-01 02:25:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=73, n_test_valid=7 < min_train_rows=30
+ trend        16 2026-05-01 02:25:00+00:00 2026-05-15 02:25:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=65, n_test_valid=13 < min_train_rows=30
+ trend        17 2026-05-15 02:25:00+00:00 2026-05-29 02:25:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=44, n_test_valid=13 < min_train_rows=30
+ trend        18 2026-05-29 02:25:00+00:00 2026-06-12 02:25:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=49, n_test_valid=26 < min_train_rows=30
+ trend        19 2026-06-12 02:25:00+00:00 2026-06-26 02:25:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=62, n_test_valid=16 < min_train_rows=30
+ range         0 2025-09-23 22:50:00+00:00 2025-10-07 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         1 2025-10-07 22:50:00+00:00 2025-10-21 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         2 2025-10-21 22:50:00+00:00 2025-11-04 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         3 2025-11-04 22:50:00+00:00 2025-11-18 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         4 2025-11-18 22:50:00+00:00 2025-12-02 22:50:00+00:00        85    -0.001341    0.002324 -27.170592 -5.319466                                                    NaN
+ range         5 2025-12-02 22:50:00+00:00 2025-12-16 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         6 2025-12-16 22:50:00+00:00 2025-12-30 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         7 2025-12-30 22:50:00+00:00 2026-01-13 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         8 2026-01-13 22:50:00+00:00 2026-01-27 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         9 2026-01-27 22:50:00+00:00 2026-02-10 22:50:00+00:00         1    -0.000735         NaN        NaN       NaN                                                    NaN
+ range        10 2026-02-10 22:50:00+00:00 2026-02-24 22:50:00+00:00       137    -0.000924    0.002223 -24.851800 -4.865492                                                    NaN
+ range        11 2026-02-24 22:50:00+00:00 2026-03-10 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        12 2026-03-10 22:50:00+00:00 2026-03-24 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        13 2026-03-24 22:50:00+00:00 2026-04-07 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        14 2026-04-07 22:50:00+00:00 2026-04-21 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        15 2026-04-21 22:50:00+00:00 2026-05-05 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        16 2026-05-05 22:50:00+00:00 2026-05-19 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        17 2026-05-19 22:50:00+00:00 2026-06-02 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        18 2026-06-02 22:50:00+00:00 2026-06-16 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        19 2026-06-16 22:50:00+00:00 2026-06-30 22:50:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+
+=== Klasyfikacja (kryteria docs/rag/03, NIEZMIENIONE) ===
+{'classification': 'NO-GO', 'n_valid_folds': 6, 'n_total_folds': 40, 'fraction_above_threshold': 0.16666666666666666, 'fraction_le_zero': 0.8333333333333334, 'fraction_positive_sign': 0.16666666666666666, 'mean_sharpe': -14.3077642884818}
+
+=== Rozbicie per reżim ===
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO              2             20                      0.00              1.00                    0.00   -26.011196
+ trend          NO-GO              4             20                      0.25              0.75                    0.25    -8.456048
+
+=== Diagnostyka pooled per reżim (Commit 2.9/Z2+Z3) ===
+regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat      n_eff  t_stat_neff
+ range       223    -0.001082    0.002261         -0.478581 -7.146738        NaN          NaN
+ trend       135    -0.000625    0.002491         -0.250750 -2.913452 109.790346    -2.627381
+[interpretacja] |t_stat| < ~2 => średni zwrot per trade nieodróżnialny od zera
+przy tej liczbie obserwacji; t_stat_neff dodatkowo koryguje za autokorelację.
+
+[sweep] fold-jitter: offsety startu okien walk-forward 0..9 dni
+  ... fold_start_offset_days=0
+  ... fold_start_offset_days=1
+  ... fold_start_offset_days=2
+  ... fold_start_offset_days=3
+  ... fold_start_offset_days=4
+  ... fold_start_offset_days=5
+  ... fold_start_offset_days=6
+  ... fold_start_offset_days=7
+  ... fold_start_offset_days=8
+  ... fold_start_offset_days=9
+
+=== Stabilność fold-jitter (Commit 2.9/Z1 — zamiast pustego sweepu seedów) ===
+ offset_days  mean_sharpe classification  n_valid_folds  n_total_folds
+         0.0   -14.307764          NO-GO              6             40
+         1.0   -13.812747          NO-GO              7             39
+         2.0   -13.021264          NO-GO              7             39
+         3.0   -15.892089          NO-GO              7             39
+         4.0   -12.332791          NO-GO              9             38
+         5.0   -12.600317          NO-GO              9             38
+         6.0   -15.890071          NO-GO              8             38
+         7.0   -14.363842          NO-GO              8             38
+         8.0    -8.650515          NO-GO              8             38
+         9.0    -6.202294          NO-GO              9             38
+
+std(mean_sharpe) po 10 offsetach = 3.0880; zakres = [-15.8921, -6.2023]; spójność znaku (ujemny) = 100%
+[UWAGA] Celowo BEZ progu pass/fail — stary próg std<0.2 dotyczył (pustego) szumu
+seedów i nie przenosi się na realną perturbację podziału danych. Interpretacja
+rozkładu należy do użytkownika (patrz backtest/checkpoint_lib.py, docstring).

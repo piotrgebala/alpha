@@ -15,23 +15,43 @@ Pełne uzasadnienie tej decyzji i wszystkich pozostałych: [`docs/rag/01_hipotez
 
 ## Status
 
-**Faza 0, checkpoint go/no-go (Commit 6) zakończony wynikiem NO-GO** na realnych danych
-BTC/USDT:USDT (2025-07-01 → 2026-06-30), potwierdzonym serią pięciu niezależnych,
-metodologicznie czystych testów pojedynczych zmian (Commity 2c–2.8: naprawa kill-switcha,
-bramka kosztowa, kalibracja progów regime, odporność na timeframe 1h/4h, screening korelacji
-cech, formalny test OOS `adx_14`) — wszystkie w paśmie "brak silnego sygnału". Commit 2.9
-naprawił metodologię pomiaru (fold-jitter zamiast pustego sweepu seedów, t-stat/N_eff/pooled
-Sharpe) i potwierdził NO-GO jako odporne na wyrównanie foldów (100% offsetów ujemne). Commit
-2.10 (Backlog Z5) wydłużył historię danych do 3 lat (2023-07-01 → 2026-06-30, 315 648 świec 5m,
-bez dziur) i ustanowił na niej NOWĄ bazę checkpointu — wyniki C6–C2.9 pozostają zamrożone na
-starym oknie. Stan testów: 143/143. Surowe wyniki każdej rundy: katalog [`runs/`](runs/INDEX.md).
-Otwarta decyzja strategiczna i backlog poprawek: `TASKS.md` (sekcja Backlog, Z1–Z15).
+**Faza 0: hipoteza dwureżimowa (trend/range na 5m) jest po serii C2.5–C2.13 wyczerpana jako
+kierunek** — NO-GO odporne na perturbacje pomiaru, strata per trade istotna statystycznie w obu
+reżimach, program naprawczy "droga do GO" zakończony regułą STOP (C2.13), a przyczyna
+zlokalizowana strukturalnie: geometria wypłaty + niespójność reżimu `trend` z horyzontem
+etykiety (C2.11, Z16). **Hipoteza jednoreżimowa 4h (Z5b → S1) również odrzucona,
+rozstrzygająco:** trafność 48,60%, 95% CI [45,56%; 51,64%] — górny kraniec PONIŻEJ progu
+opłacalności 53,07%; reguła STOP uruchomiona, seria zamknięta (licznik 1/1). Po usunięciu
+wszystkich znanych wad pomiaru obraz jest spójny: **brak sygnału kierunkowego**. Rekomendacja:
+**Z10 opcja 1 — udokumentowane zamknięcie Fazy 0 wynikiem negatywnym** (decyzja bramkowa przy
+użytkowniku). Stan testów: 246/246. Surowe wyniki każdej rundy:
+[`runs/`](runs/INDEX.md) (tabela + wnioski skumulowane). Backlog i zasady pracy: `TASKS.md`.
 
 Pełny, aktualny status: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
+## Kamienie milowe
+
+> Aktualizowane przy każdym zamkniętym kamieniu (CLAUDE.md, zasada 15). Pełne wyniki — linki.
+
+| Kamień | Data | Wynik (jedno zdanie) | Szczegóły |
+|---|---|---|---|
+| Commit 6 — checkpoint go/no-go | 2026-08-01 | **NO-GO** na BTC 5m (2025-07→2026-07); tylko 1/40 foldów policzalnych | `IMPLEMENTATION_PLAN.md` §5 |
+| C2c — kill-switch | 2026-08-01 | Deadlock naprawiony (cooldown/re-arm); NO-GO potwierdzone na 23/40 foldów — werdykt uwiarygodniony | `IMPLEMENTATION_PLAN.md` §5 |
+| C2d — bramka kosztowa | 2026-09-21 | Strata była w ~94% arytmetyczna (bariera<koszt); po bramce pozorny edge 54,6% spada do 49,3% | `IMPLEMENTATION_PLAN.md` §5 |
+| C2.5–C2.8 — seria falsyfikacji | 2026-09-21 | Progi regime, timeframe 1h/4h i cecha `adx_14` wyczerpane jako kierunki naprawy (wszystko NO-GO/nierozstrzygalne) | [runs/](runs/INDEX.md) |
+| C2.9 — naprawa metodologii pomiaru | 2026-09-21 | Sweep seedów był pusty (deterministyczny XGBoost); NO-GO odporne na fold-jitter 10/10; strata per trade istotna w OBU reżimach | [runs/c2.9](runs/2026-09-21_c2.9-measurement-methodology/README.md) |
+| C2.10 — nowa baza 3 lata (Z5) | 2026-09-21 | NO-GO strukturalne, nie ilościowe: bramka kosztowa blokuje 98% sygnałów `range`, `trend`=0,53% świec | [runs/c2.10](runs/2026-09-21_c2.10-extended-history-z5/README.md) |
+| C2.11 — instrumentacja edge'u | 2026-09-21 | Blokada leży w geometrii wypłaty (2p−1)·B>C, nie w kierunku sygnału (p≈51%, wymagane 65–76%) | [runs/c2.11](runs/2026-09-21_c2.11-edge-instrumentation/README.md) |
+| C2.12 — model wykonania maker/taker (Z6) | 2026-09-21 | Koszt −52%, ~połowa luki do opłacalności domknięta — nadal NO-GO; per-fold Sharpe przestał być wiarygodnym przyrządem | [runs/c2.12](runs/2026-09-21_c2.12-execution-cost-model/README.md) |
+| C2.13 — próg pewności | 2026-09-21 | Hipoteza SFALSYFIKOWANA (trafność spadła zamiast wzrosnąć) — **reguła STOP programu "droga do GO" uruchomiona** | [runs/c2.13](runs/2026-09-21_c2.13-confidence-threshold/README.md) |
+| Z16–Z21 — diagnostyka strukturalna + naprawy pomiaru | 2026-09-22 | Reżim `trend` strukturalnie niespójny z horyzontem etykiety (nie do naprawienia barierą); przeciek early stopping naprawiony — najczystsze p=50,38% (brak edge'u kierunkowego) | [runs/z16](runs/2026-09-22_z16-regime-coherence/README.md), [runs/z17+z21](runs/2026-09-22_z17-z21-early-stopping-leak/README.md) |
+| Z9/Z19/Z5b — pivot na 4h | 2026-09-22 | Natywne dane 1h/4h (resample psuł wolumen!), rachunek mocy przed eksperymentem, **pre-rejestracja hipotezy jednoreżimowej 4h** (6,8 roku, kryterium: trafność ≥ 56,15%) | [runs/z5b](runs/2026-09-22_z5b-long-history-4h-preregistration/README.md) |
+| S1 — eksperyment jednoreżimowy 4h | 2026-09-22 | **Kryterium NIESPEŁNIONE rozstrzygająco** (trafność 48,60%, górny kraniec CI poniżej progu opłacalności) — **reguła STOP: seria zamknięta**; rekomendacja: zamknięcie Fazy 0 wynikiem negatywnym (Z10 opcja 1, decyzja przy użytkowniku) | [runs/s1](runs/2026-09-22_s1-single-regime-4h/README.md) |
+
 ## Hipoteza w skrócie
 
-Regime-gated: deterministyczna reguła (nie model) rozdziela dane na reżim "trend" i "range".
+**Hipoteza pierwotna (sfalsyfikowana w Fazie 0, patrz Kamienie milowe):** regime-gated —
+deterministyczna reguła (nie model) rozdziela dane na reżim "trend" i "range".
 
 - **Test 1 — Momentum:** w reżimie trend, cena kontynuuje ruch.
 - **Test 2 — Mean-reversion:** w reżimie range, cena wraca do średniej po przegrzaniu.
@@ -40,6 +60,11 @@ Dwa osobne, niezależnie trenowane modele XGBoost — nie jeden połączony mode
 wyłącznie na BTC; ETH/SOL/BNB to test generalizacji tej samej hipotezy, nie równoległa walidacja
 czterech strategii naraz.
 
+**Hipoteza druga (pre-zarejestrowana w Z5b, sfalsyfikowana w S1):** architektura jednoreżimowa
+na natywnych świecach 4h, pełna historia 6,8 roku, wygładzona bramka `range` (V=3), kryterium
+sukcesu: trafność kierunku ≥ 56,15%. Wynik: 48,60% przy progu 53,07% — odrzucona z zapasem,
+reguła STOP zamknęła serię po pierwszym (jedynym pre-zarejestrowanym) wariancie.
+
 ## Struktura projektu
 
 ```
@@ -47,7 +72,7 @@ clas5_core/
 ├── README.md                     ← ten plik
 ├── CLAUDE.md                     — instrukcje dla Claude Code (czytane automatycznie)
 ├── IMPLEMENTATION_PLAN.md        — status commitów, żywy dokument
-├── TASKS.md                      — zadania per commit + Backlog (Z1–Z15)
+├── TASKS.md                      — zadania per commit + zasady pracy + Backlog (Z1–Z25)
 ├── .github/workflows/tests.yml   — CI: pytest + spójność registry/kod
 ├── docs/rag/                     — pełne uzasadnienia decyzji (01–07), per temat
 ├── docs/INDEX.md                 — mapa całej dokumentacji
@@ -63,7 +88,7 @@ clas5_core/
 ├── backtest/                     — silnik backtestu, koszty, metryki, checkpoint v2,
 │                                    skrypty analityczne (zamrożone zapisy eksperymentów)
 ├── runs/                         — surowy output ciężkich przebiegów (INDEX.md = spis treści)
-├── tests/                        — testy jednostkowe/integracyjne/property-based (139)
+├── tests/                        — testy jednostkowe/integracyjne/property-based (246)
 └── requirements.txt
 ```
 
@@ -74,7 +99,7 @@ git clone <adres-repo>
 cd clas5_core
 pip install -r requirements.txt --break-system-packages   # lub w wirtualnym środowisku
 
-pytest -v          # powinno dać 6 passed (stan na Commit 2)
+pytest -v          # 246 passed (stan na S1, 2026-09-22)
 ```
 
 Przed pierwszym pobraniem prawdziwych danych: zweryfikuj dokładny symbol ccxt na swojej maszynie

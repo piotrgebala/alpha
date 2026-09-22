@@ -7,7 +7,7 @@ niezależnie trenowane modele XGBoost, nie jeden połączony.
 
 **Cel Fazy 0:** udowodnić edge statystyczny minimalnym, audytowalnym systemem, zanim dobuduje się
 cokolwiek z oryginalnego PRD (5 agentów, dashboard, Docker). Status commitów, checkpointy,
-otwarte ryzyka → `IMPLEMENTATION_PLAN.md`; zadania i backlog (Z1–Z15) → `TASKS.md`; surowe
+otwarte ryzyka → `IMPLEMENTATION_PLAN.md`; zadania i backlogi → `TASKS.md`; surowe
 wyniki rund → `runs/INDEX.md`. Te pliki zmieniają się często — traktuj jako aktualny stan, nie
 jako źródło stałych zasad.
 
@@ -37,25 +37,73 @@ jako źródło stałych zasad.
     (jeśli dotyczy) property-based testu w `hypothesis`.** Pełna checklista Definition of Done:
     `docs/rag/05_metodologia_wytwarzania_i_testow.md`.
 11. **Każdy ciężki przebieg na realnych danych** (checkpoint, kalibracja, sweep, screening)
-    **kończy się plikiem `runs/YYYY-MM-DD_<slug>.md`** (ID testu, metadane, sekcja "Co na plus
-    (+) / Co na minus (-)", pełny surowy output) **+ wierszem w `runs/INDEX.md` z licznikiem
-    wariantów** (jawna księga budżetu multiple-testing). Pełna konwencja: `TASKS.md`, sekcja
-    "Zasada pracy: `runs/*.md`".
+    **dostaje WŁASNY KATALOG `runs/YYYY-MM-DD_<id>-<slug>/`** zawierający `README.md`
+    (write-up: ID, Metadane, **Poprzedzające wyniki**, Wynik, "Co na plus (+) / Co na minus
+    (-)", Wniosek, Rekomendacja) **+ `raw_output.txt`** (pełny, nieskrócony stdout) + ewentualne
+    artefakty. Do tego **wiersz w `runs/INDEX.md` z licznikiem wariantów** (księga budżetu
+    multiple-testing) **i aktualizacja sekcji "Wnioski skumulowane"** tamże. Pełna procedura:
+    `runs/INDEX.md`, sekcja "Jak dodać nowy wpis".
 12. **Wyniki raportuje się metodologią checkpointu v2** (`backtest/run_checkpoint_v2.py` /
-    `backtest/checkpoint_lib.py`: sweep fold-jitter, per-fold t-stat, pooled per regime, N_eff).
+    `backtest/checkpoint_lib.py`: sweep fold-jitter, per-fold t-stat, pooled per regime, N_eff;
+    od C2.11 także rozbicie edge'u: trafność `p`, break-even, margines `(2p−1)·B − C`).
     **Nigdy nie cytuj "stabilności na 10 seedach"** — XGBoost w konfiguracji Fazy 0 jest
     deterministyczny, więc ten sweep nie mierzy niczego (`docs/rag/03`, aktualizacja 2026-09-21).
 13. **Historyczne skrypty analityczne są ZAMROŻONE** — to odtwarzalne zapisy zakończonych
     eksperymentów (komenda w sekcji "Metadane" ich plików `runs/`), nie kod do refaktoryzacji
     wstecz. Nowe skrypty budują na `backtest/checkpoint_lib.py`.
+14. **PRZED każdą nową rundą/eksperymentem przeczytaj `runs/INDEX.md`** (tabela + "Wnioski
+    skumulowane") **i README runów powiązanych z planowaną zmianą** — projekt rundy musi
+    jawnie budować na przebytych wynikach: sekcja "Poprzedzające wyniki" w README nowej rundy
+    wymienia, które wcześniejsze runy ją motywują/ograniczają. Nigdy nie testuj ponownie
+    wariantu już przetestowanego (albo równoważnego — jak `bb_pctb_20` ≡ `price_zscore_20`,
+    C2.7) bez jawnego odnotowania, dlaczego powtórka jest uzasadniona.
+15. **Wynik każdego kamienia milowego jest aktualizowany w `README.md`** — sekcja
+    "Kamienie milowe" (tabela: ID, data, jednozdaniowy wynik, link do katalogu w `runs/`)
+    plus zsynchronizowana sekcja "Status". Kamień milowy = zamknięta runda z `runs/`,
+    checkpoint go/no-go, decyzja bramkowa fazy, uruchomienie/zatrzymanie programu badawczego.
+    README jest widokiem z lotu ptaka dla CZŁOWIEKA — aktualizacja domyka rundę tak samo
+    obowiązkowo jak wpis do `runs/INDEX.md` (zasada 11).
+16. **Bramki jakości rundy** (procedury ze skilli `data:validate-data` /
+    `data:statistical-analysis` / `engineering:code-review`, przystosowane do projektu):
+    (a) **PRZED publikacją write-upu rundy** — walidacja: przeliczenie co najmniej JEDNEJ
+    kluczowej liczby drugą, niezależną drogą; jawne pytanie **"kogo NIE ma w zbiorze"**
+    (filtry/bramki/warmupy — dokładnie ten bias złapał nas w C2d, gdzie pozorny edge
+    mieszkał w odfiltrowanych świecach); red-flag "wynik idealnie potwierdza hipotezę";
+    werdykt **Ready / Caveats / Revision zapisany w README rundy**;
+    (b) **standard raportowania statystyk** — efekt + CI/half-width zamiast samego p/z,
+    zakresy zamiast fałszywej precyzji, przy skośnych zwrotach per trade mediana obok
+    średniej, zawsze w kontekście licznika multiple-testing (zasada 11);
+    (c) **PRZED merge rundy do master** — przegląd diffu (korektność/edge-case'y/testy/
+    czytelność) z werdyktem jednym zdaniem w README rundy.
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 
-- **Zmierzony szum wyrównania foldów na rocznych danych 5m: σ≈3,1 mean_sharpe** (C2.9). Różnicy
-  między wariantami Δ<~3 nie traktuj jako rozstrzygniętej — odnotuj i wróć do niej po wydłużeniu
-  historii danych (Backlog Z5). Zmierz σ ponownie po każdej istotnej zmianie datasetu.
+- **Per-fold `mean_sharpe` NIE jest już nośną statystyką porównań** (C2.12: σ fold-jitter
+  rozjechała się 3,1→75,7 przy LEPSZEJ ekonomice per trade — annualizacja przy n≈kilka
+  transakcji/fold produkuje artefakty). Warianty rozstrzygaj na **pooled t-stat / t_neff i
+  marginesie `(2p−1)·B − C`** (z z_margin); kryteria klasyfikacji z docs/rag/03 pozostają
+  formalnie niezmienione jako werdykt bramkowy. Szum nośnych statystyk zmierz ponownie po
+  każdej istotnej zmianie datasetu/modelu kosztów.
+- **Liczniki wariantów rozwidlają się per baza danych i per hipoteza** — stara baza
+  (2025-07→2026-07), nowa baza (2023-07→2026-07, od C2.10) i nowa hipoteza jednoreżimowa 4h
+  (od Z5b) mają OSOBNE liczniki w `runs/INDEX.md`; wyników między bazami nie porównuje się 1:1.
+- **Jedna informacja mieszka w JEDNYM miejscu** (podział odpowiedzialności dokumentów):
+  `runs/<katalog>/` = pełne wyniki (źródło prawdy); `runs/INDEX.md` = syntezy + wnioski
+  skumulowane + liczniki; `IMPLEMENTATION_PLAN.md` = decyzje/uzasadnienia/ryzyka (§7)/roadmapa
+  faz — sekcja per commit KRÓTKA (status + 2-3 zdania + link do runs/); `TASKS.md` = statusy
+  zadań/zasady pracy/backlog — wiersz zadania to status + jednozdaniowa uwaga + link;
+  `README.md` = widok dla człowieka + kamienie milowe (zasada 15). Nie kopiuj pełnych syntez
+  do PLAN/TASKS (historyczna duplikacja do odchudzenia: Backlog Z25).
+- **Mapowanie skilli na momenty pracy:** procedura rundy → `clas5-runda`; bramki jakości
+  (walidacja write-upu, standard statystyk, przegląd diffu) → zasada 16 (skille
+  `data:validate-data` / `data:statistical-analysis` / `engineering:code-review`); decyzja
+  architektoniczna → `engineering:architecture` jako ADR do `docs/rag/`; wykresy → `dataviz`.
 - Lint/format: `ruff` + `black` na plikach dotykanych w rundzie; plików zamrożonych (zasada 13)
   nie reformatuj. Różnice CRLF/LF między repo (Windows) a środowiskiem pracy są normalne.
+- **Dwa środowiska pracują na tym repo** (sesja chmurowa Cowork + lokalna sesja Claude Code na
+  maszynie użytkownika). Przed każdą rundą ZSYNCHRONIZUJ stan z repo (zasada 14 obejmuje też
+  "przeczytaj świeży stan plików, nie cache z własnej pamięci sesji"); nie nadpisuj plików,
+  których wersja na dysku jest nowsza niż twoja — zmerguj.
 
 ## Podział ról i autonomia (uzgodnione 2026-09-22)
 
@@ -64,7 +112,7 @@ ma shella na maszynie), pobieranie danych z Binance (sandbox nie ma dostępu sie
 giełdy), decyzje bramkowe faz (przejście do Fazy 1, zamknięcie Fazy 0, jakikolwiek realny
 kapitał) i wszystko nieodwracalne (usuwanie danych/historii).
 
-**Claude — pełna autonomia badawcza W RAMACH zasad 1–13:** samodzielnie wybiera i uruchamia
+**Claude — pełna autonomia badawcza W RAMACH zasad 1–16:** samodzielnie wybiera i uruchamia
 kolejne eksperymenty (w tym z backlogu w `TASKS.md`), może wprowadzać wynikające z wyników
 zmiany parametrów/cech/configu — **raportując po fakcie, w tej samej rundzie** (plik `runs/` +
 `IMPLEMENTATION_PLAN.md` §5/§7 + `TASKS.md`). Autonomia nie uchyla dyscypliny: jedna zmiana na
@@ -78,11 +126,13 @@ dokumentacji Claude, nigdy "automat w skrypcie".
 ```
 data/, agents/, agent_5_compliance/, backtest/, tests/   — kod produkcyjny
 backtest/checkpoint_lib.py + run_checkpoint_v2.py        — kanoniczna metodologia pomiaru (zasada 12)
-runs/ (+ runs/INDEX.md)                                  — surowe wyniki rund (zasada 11)
+runs/<data>_<id>-<slug>/ (+ runs/INDEX.md)               — katalog per run: README.md +
+                                                            raw_output.txt (zasady 11 i 14);
+                                                            INDEX = spis + wnioski skumulowane
 docs/rag/ (01–07) + docs/INDEX.md                        — PEŁNE uzasadnienia decyzji (czytaj
                                                             przed zmianą architektury, nie tylko kodu)
 IMPLEMENTATION_PLAN.md                                    — status commitów i ryzyka, żywy dokument
-TASKS.md                                                  — zadania, backlog Z1–Z15, zasady pracy
+TASKS.md                                                  — zadania, backlogi, zasady pracy
                                                             (branch-per-task, runs/, zużycie)
 config/settings.yaml, agents/feature_registry.yaml        — źródło prawdy dla parametrów
 ```

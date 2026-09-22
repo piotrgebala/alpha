@@ -179,7 +179,7 @@ def compute_adx_14(df: pd.DataFrame) -> pd.Series:
     "siłę trendu") — sensowny kandydat do formalnego testu OOS jako DODATEK do
     `MOMENTUM_FEATURES` (agents/ml_optimizer.py), nie zamiennik. Wynik formalnego
     testu OOS: `backtest/evaluate_feature_candidate.py`,
-    `runs/2026-09-21_c2.8-adx14-oos-evaluation.md`.
+    `runs/2026-09-21_c2.8-adx14-oos-evaluation/README.md`.
     """
     adx = talib.ADX(
         df["high"].values, df["low"].values, df["close"].values, timeperiod=14
