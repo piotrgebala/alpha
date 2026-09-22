@@ -41,6 +41,7 @@ podsumowanie pod tabelą.
 | **H2.0** | 2026-09-22 | [h2.0-funding-wykonalnosc](2026-09-22_h2.0-funding-wykonalnosc/README.md) | **NOWA HIPOTEZA (H2): wykonalność funding rate.** Nowe dane (7 457 rekordów funding, 0 dziur, 6,8 roku) + 5 analiz: rozkład, trwałość, liczebność, geometria, moc. **ZERO spojrzeń na target** (zaostrzenie wobec C2.7 — powód: C2.13) | 0 (wykonalność przed eksperymentem) | **RACHUNEK MOCY ODRZUCIŁ 2 z 3 SFORMUŁOWAŃ ZA 0 WARIANTÓW.** (a) **bramka na skrajny funding — ODRZUCONA**, moc 0,05–0,44× (bramka zagładza próbę, jak `trend` w Fazie 0); (b) **funding carry — ODRZUCONY**, moc 0,03–0,12%, choć próg opłacalności spada **poniżej 50%** (`p*`=48,13% po kontroli ucięcia barierą) — ogranicza liczba nienakładających się okien 48h, nie próg; żyje w formule PRZEKROJOWEJ; (c) **funding jako 11. cecha bez bramki, 4h — JEDYNE WYKONALNE**, zapas mocy +0,29 pp, wymagany przyrost `p` **+2,85 pp**. **Odkrycia:** masa punktowa 35,85% obserwacji na stawce bazowej ⇒ progi percentylowe nieużywalne (pułapka C2.5 powtórzona); autokorelacja funding lag=1 **+0,797** (sygnał trwały, nie szum); `timeout→taker` w modelu kosztów może być błędem — naprawa dałaby próg 53,12%→52,08%. Walidacja (16a): **READY** |
 | **H3** | 2026-09-22 | [h3-noga-timeout-pasmo](2026-09-22_h3-noga-timeout-pasmo/README.md) | Analiza WRAZLIWOSCI na noge wyjscia `timeout` (pasmo maker/taker) + naprawa usterki strukturalnej: bramka kosztowa miala wlasna kopie reguly nog i literal, nic nie wiazalo jej z journalem. Pre-rejestracja w OSOBNYM commicie PRZED kodem | 0 (poprawnosc modelu kosztow, warunek D5) | **RUNDA OBALILA TEZE, KTORA JA ZAMOWILA.** Podejrzenie z H2.0 (`timeout->taker` to blad) NIE broni sie: **noga maker wymaga znanej CENY, a przy barierze pionowej znamy tylko CZAS**; wariant maker bylby tez niespojny z `_resolve_exit_price` (`close` swiecy timeoutu nieosiagalny limitem bez lookaheadu). **Pasmo progu [51,64%; 52,69%], szerokosc 1,05 pp** przy 60,00% timeoutow. **D3: niepewnosc NIEISTOTNA decyzyjnie** — oba krance wymagaja przyrostu trafnosci (+1,37/+2,39 pp nad 50,27% z Z10) wiekszego niz cokolwiek, co dala kiedykolwiek pojedyncza cecha. **Domyslna `TAKER` bez zmian (D1), poprzeczka NIE obnizona (D2), licznik H2 nadal 0/1 (D5).** Walidacja (16a): **READY** — koszt z journalu = policzony z mieszanki wyjsc co do 8. miejsca |
 | **H2.1** | 2026-09-22 | [h2.1-funding-jako-cecha](2026-09-22_h2.1-funding-jako-cecha/README.md) | **JEDYNY EKSPERYMENT HIPOTEZY H2:** funding jako cecha (pierwsze zrodlo informacji SPOZA OHLCV), bez bramki rezimu, 4h, V=3, 6,8 roku. Dwa ramiona (4 cechy vs 4+funding) | **1 — LICZNIK H2 WYCZERPANY (1/1)** | **NIEROZSTRZYGNIETY** (klauzula `n < 1 000`): **n = 98**. Przyczyna NIE jest funding ani dlugosc historii, tylko STRUKTURA ZADANIA UCZENIA: zdjecie bramki podnioslo udzial klasy dominujacej (timeout) **60,83% -> 66,58%**, wiec model z dzialajacym early stoppingiem **odmawia kierunku w 99,32%** swiec. Zdjecie bramki zadzialalo (ocenionych swiec 4x wiecej, **zero pominietych foldow** wobec 22/85 w S1), ale proba spadla 345 -> 98. **Jedyne ustalenie:** funding POTROIL liczbe decyzji modelu (35 -> 98), czyli zostal uznany za informacyjny — ale o trafnosci nie mowi nic (CI szerokie na 20 pp). **UWAGA: `classify_checkpoint` zwrocil GO dla obu ramion — to ARTEFAKT** `mean_sharpe` przy 3 i 11 waznych foldach (21,3 przy skali 1-3), patologia z C2.12. Walidacja (16a): **CAVEATS** |
+| **K1** | 2026-09-22 | [k1-kontrola-pozytywna](2026-09-22_k1-kontrola-pozytywna/README.md) | **KONTROLA POZYTYWNA APARATU** — pierwsza w projekcie. Wstrzykniecie syntetycznej cechy o znanej sile sygnalu do PRAWDZIWYCH swiec BTC 4h + niezmieniony pipeline. Szesc poziomow sily + kontrola negatywna na 6 losowaniach czystego szumu | 0 (kalibracja przyrzadu, POZA licznikami hipotez) | **APARAT DZIALA, ale jest GRUBOZIARNISTY.** (a) Przy wyroczni doskonalej mierzy **100,00%** trafnosci na 4 843 transakcjach — caly lancuch przenosi sygnal bez strat. (b) **Kryterium `ci_low > break_even` jest UCZCIWE: 0 falszywych alarmow na 6 losowaniach szumu** — to uwiarygodnia WSZYSTKIE werdykty projektu. (c) **PROG WYKRYWALNOSCI ~58% trafnosci wobec progu OPLACALNOSCI ~52,7% — luka 5,5 pp, w ktorej sygnal bylby oplacalny i NIEWIDZIALNY.** Przyczyna: abstynencja modelu 99,3-99,7% przy slabym sygnale. (d) **`classify_checkpoint` wystawil GO CZYSTEMU SZUMOWI** — potwierdzenie podejrzenia z H2.1 w mocniejszej formie. (e) Otwarte: trafnosc na szumie 54,09% (z=+1,21, nieistotne, ale n=220 nie wyklucza obciazenia ~7 pp). Walidacja (16a): **CAVEATS** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -180,6 +181,30 @@ podsumowanie pod tabelą.
    przy 3 i 11 waznych foldach i `mean_sharpe` = 21,3 (typowa skala 1-3). To ta sama patologia
    co w C2.12. **Zadnego werdyktu klasyfikacyjnego nie wolno cytowac bez podania
    `n_valid_folds`** — inaczej runda nierozstrzygnieta daje sie przeczytac jako sukces.
+
+22. **APARAT POMIAROWY DZIALA — zweryfikowane (K1).** Przy wyroczni doskonalej pipeline
+   mierzy 100,00% trafnosci; kryterium `ci_low > break_even` dalo **0 falszywych alarmow na
+   6 losowaniach czystego szumu**. To jest dowod, ktorego projekt nie mial przez 15 rund
+   i ktory uwiarygodnia wszystkie dotychczasowe werdykty oparte na tym kryterium — w tym Z10.
+23. **PROG WYKRYWALNOSCI (~58%) LEZY POWYZEJ PROGU OPLACALNOSCI (~52,7%)** — luka 5,5 pp (K1).
+   Hipoteza dajaca trafnosc 53-58% bylaby OPLACALNA i jednoczesnie NIEWIDZIALNA dla tego
+   pipeline'u. Przyczyna: przy slabym sygnale model odmawia kierunku w 99,3-99,7% swiec, wiec
+   proba nie pozwala niczego dowiesc (przy q=0,20 trafnosc punktowa 56,19% > prog 51,90%,
+   ale n=105 i CI siega 46,70%). **WYMOG: kazda przyszla runda musi podac, czy jej hipoteza
+   miesci sie powyzej ~58% zakladanej trafnosci — inaczej jest niemierzalna Z GORY.**
+   Skutek dla wynikow wstecz: Z10/Z17+Z21 (n=7 687 / 7 043) NIETKNIETE; S1b (345) i H2.1 (98)
+   byly ponizej progu wykrywalnosci, wiec ich werdykty "nierozstrzygniety" byly SLUSZNE
+   z powodu, ktorego wtedy nie znalismy.
+24. **`classify_checkpoint` WYSTAWIL GO CZYSTEMU SZUMOWI** (K1) — i WARUNKOWY przy q=0.
+   Podejrzenie z H2.1 potwierdzone na danych, w ktorych Z KONSTRUKCJI nie ma czego znalezc.
+   **Ta miara nie jest i nigdy nie byla kryterium werdyktu**; projekt slusznie przeszedl na
+   `ci_low > break_even` (C2.12), a K1 dostarcza dowodu, ktorego wtedy nie bylo. Zadnej
+   wartosci GO/WARUNKOWY/NO-GO nie wolno cytowac bez `n_valid_folds`.
+25. **ABSTYNENCJA MODELU jest problemem numer jeden tego projektu** (K1). To ona, a nie brak
+   sygnalu, ograniczyla S1b (n=345), H2.1 (n=98) i sama kontrole negatywna (n~37 na losowanie —
+   **przyrzad nie potrafi porzadnie zwalidowac sam siebie z tego samego powodu, dla ktorego
+   nie widzi slabych sygnalow**). Kandydaci na osobna runde: wagi klas w XGBoost, kalibracja
+   MIN_VALIDATION_ROWS/validation_fraction, wymuszenie kierunku zamiast trzeciej klasy.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11 i 14)
 

@@ -1,0 +1,77 @@
+Komenda: py -m backtest.run_positive_control_k1  oraz  py k1_null.py
+Data: 2026-09-22   Branch: task/K1-kontrola-pozytywna   Testy: 319/319
+
+################################################################
+### CZESC 1: krzywa wykrywalnosci
+################################################################
+C:\Users\pitge\AppData\Local\Programs\Python\Python314\Lib\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\pitge\AppData\Local\Programs\Python\Python314\Lib\site-packages\numpy\lib\_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+C:\Users\pitge\AppData\Local\Programs\Python\Python314\Lib\site-packages\numpy\lib\_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+====================================================================================================
+K1 — KONTROLA POZYTYWNA aparatu pomiarowego
+====================================================================================================
+dane      : 14916 swiec 4h (te same co S1/S1b/H2.1)
+etykiety  : 14899 nie-NaN, rozklad {-1.0: np.float64(17.23), 0.0: np.float64(66.58), 1.0: np.float64(16.19)}
+pipeline  : NIEZMIENIONY (bez bramki rezimu, V=3, walk-forward 60/28/28, seed 42)
+cechy     : ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20'] + 'oracle'
+
+q = sila wstrzyknietego sygnalu. q=0 to KONTROLA NEGATYWNA (czysty szum):
+    aparat NIE MOZE tam niczego znalezc. Jesli znajdzie - mamy przeciek.
+
+--- q = 0.00  (faktyczna zgodnosc cechy z etykieta: 33.7%) ---
+--- q = 0.05  (faktyczna zgodnosc cechy z etykieta: 36.7%) ---
+--- q = 0.10  (faktyczna zgodnosc cechy z etykieta: 40.3%) ---
+--- q = 0.20  (faktyczna zgodnosc cechy z etykieta: 46.3%) ---
+--- q = 0.40  (faktyczna zgodnosc cechy z etykieta: 59.4%) ---
+--- q = 1.00  (faktyczna zgodnosc cechy z etykieta: 99.9%) ---
+
+====================================================================================================
+KRZYWA WYKRYWALNOSCI — co wstrzyknieto vs co aparat zmierzyl
+====================================================================================================
+      q | zgodnosc |  abstyn. | n_trades | trafnosc |  CI_low |   prog | margines |   werdykt
+  --------------------------------------------------------------------------------------------
+   0.00 |    33.7% |    99.7% |       50 |   54.00% |  40.19% | 51.37% |   +2.63 pp | WARUNKOWY
+   0.05 |    36.7% |    99.5% |       69 |   47.83% |  36.04% | 51.57% |   -3.74 pp | WARUNKOWY
+   0.10 |    40.3% |    99.5% |       69 |   55.07% |  43.34% | 51.85% |   +3.23 pp |        GO
+   0.20 |    46.3% |    99.3% |      105 |   56.19% |  46.70% | 51.90% |   +4.29 pp | WARUNKOWY
+   0.40 |    59.4% |    94.6% |      787 |   58.20% |  54.75% | 52.08% |   +6.12 pp |        GO
+   1.00 |    99.9% |    66.5% |     4843 |  100.00% | 100.00% | 50.80% |  +49.20 pp |        GO
+
+====================================================================================================
+ODCZYT
+====================================================================================================
+  KONTROLA NEGATYWNA (q=0): trafnosc 54.00%, margines +2.63 pp, werdykt WARUNKOWY
+    -> aparat NIE powinien tu znalezc przewagi. Znalezienie jej oznaczaloby przeciek.
+
+  NAJSLABSZY WYKRYTY SYGNAL: q = 0.40 (zgodnosc cechy 59.4%) -> trafnosc 58.20%, CI_low 54.75% > prog 52.08%
+    -> APARAT DZIALA. Ponizej tej sily sygnal jest dla niego niewidoczny.
+
+  zapisano: runs/2026-09-22_k1-kontrola-pozytywna/krzywa_wykrywalnosci.csv
+
+################################################################
+### CZESC 2: kontrola negatywna na 6 losowaniach czystego szumu
+################################################################
+KONTROLA NEGATYWNA na 6 niezaleznych losowaniach czystego szumu
+==============================================================================
+   seed |     n | trafnosc |   prog |  margines | CI_low>prog
+  --------------------------------------------------------------
+      0 |    54 |   46.30% | 51.28% |    -4.98 pp |       False
+      1 |    21 |   52.38% | 52.47% |    -0.09 pp |       False
+      2 |    40 |   62.50% | 52.70% |    +9.80 pp |       False
+      3 |    31 |   54.84% | 52.56% |    +2.28 pp |       False
+      4 |    47 |   53.19% | 52.89% |    +0.31 pp |       False
+      5 |    27 |   59.26% | 52.19% |    +7.07 pp |       False
+
+  trafnosc: srednia 54.74%, mediana 54.02%, zakres [46.30%; 62.50%]
+  margines: srednia +2.40 pp, dodatnich 4/6
+  kryterium PRE-REJESTROWANE (ci_low > prog) przebite: 0/6
+
+  ODCZYT: jesli srednia trafnosc ~50% i kryterium przebite 0/6 -> aparat NIE ma
+  obciazenia dodatniego, a pojedynczy odczyt 54% przy q=0 byl szumem przy n=50.
+
+### test istotnosci pooled
+pooled n=220 wygranych=119 trafnosc=54.09% se=3.37pp z=+1.214 -> NIEISTOTNE
+95% CI = [47.48%; 60.70%] -- zawiera 50%

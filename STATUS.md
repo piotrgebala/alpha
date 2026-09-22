@@ -2141,6 +2141,23 @@ strony.
 
 ---
 
+### ETAP 0 (WYKONANY 2026-09-22) — kalibracja przyrządu: K1
+
+> **Zadanie, które powinno być pierwsze, a było siedemnaste.** Projekt wyprodukował 15 wyników
+> negatywnych na przyrządzie, którego nikt nie skalibrował.
+
+| wynik | treść |
+|---|---|
+| **Aparat działa** | przy wyroczni doskonałej mierzy **100,00%** trafności na 4 843 transakcjach |
+| **Kryterium uczciwe** | `ci_low > break_even` — **0 fałszywych alarmów na 6 losowaniach szumu**; uwiarygodnia WSZYSTKIE werdykty projektu, w tym Z10 |
+| **Próg wykrywalności ~58%** | wobec progu opłacalności ~52,7% — **luka 5,5 pp**, w której sygnał byłby opłacalny i niewidzialny |
+| **`classify_checkpoint` zdegradowany** | wystawił **GO czystemu szumowi** — nie jest kryterium werdyktu |
+| **Otwarte** | trafność na szumie 54,09% (z=+1,21, nieistotne, ale n=220 nie wyklucza obciążenia ~7 pp) |
+
+**Skutek dla mapy:** każda przyszła runda musi podać, czy zakładana trafność jej hipotezy
+przekracza **~58%**. Poniżej tego progu hipoteza jest **niemierzalna z góry**, niezależnie od
+ilości danych. → [runs/k1](runs/2026-09-22_k1-kontrola-pozytywna/README.md)
+
 ### ETAP 3 — dług techniczny wart zrobienia NIEZALEŻNIE od H2.1
 
 Te zadania nie zależą od żadnej hipotezy i poprawiają wszystko, co policzymy później.
@@ -2150,7 +2167,9 @@ Te zadania nie zależą od żadnej hipotezy i poprawiają wszystko, co policzymy
 | **T1** | **Realny funding w modelu kosztów** zamiast stałej `FUNDING_RATE_8H = 0.0001` | 0 (poprawność) | Mamy 7 457 rekordów od H2.0 i ich **nie używamy**. Zmierzony średni funding to −0,00243% (przychód!), a model zakłada +0,01% kosztu. Dotyczy KAŻDEGO wyniku, jaki policzymy dalej |
 | **T2** | `ruff` + `black` — luka DoD zgłaszana od C2.11 | 0 | Dziś niedostępne na maszynie. Wymaga instalacji = **zgoda użytkownika** |
 | **T3** | Sprzątanie repo: katalog `Claude outputs/`, resztki `runs/*.md`, `.claude/settings.json` w repo | 0 | Zaproponowane trzy razy, nigdy nieautoryzowane. **Operacja nieodwracalna ⇒ decyzja użytkownika** |
-| **T4** | `MIN_VALIDATION_ROWS = 30` i `validation_fraction = 0.2` to **nieskalibrowane wartości startowe** (minus odnotowany w S1b) | 0 (diagnostyka) | Z17b pokazał, że ten próg potrafi po cichu wyłączyć early stopping w 92% foldów. Wymagałby zagnieżdżonego walk-forward |
+| **T4** ⭐ **PRIORYTET 1 po K1** | `MIN_VALIDATION_ROWS = 30` i `validation_fraction = 0.2` to **nieskalibrowane wartości startowe** (minus odnotowany w S1b) | 0 (diagnostyka) | Z17b pokazał, że ten próg potrafi po cichu wyłączyć early stopping w 92% foldów. Wymagałby zagnieżdżonego walk-forward |
+| **T5** ⭐ | **ABSTYNENCJA MODELU — problem numer jeden** (K1). To ona, nie brak sygnału, ograniczyła S1b (345), H2.1 (98) i samą kontrolę negatywną K1 (n≈37). Kandydaci: wagi klas w XGBoost, wymuszenie kierunku zamiast trzeciej klasy `timeout` | 0 (poprawność pomiaru) | **Obniżenie progu wykrywalności jest warte więcej niż kolejna hipoteza** — dziś każda hipoteza poniżej 58% trafności jest niemierzalna, cokolwiek testujemy |
+| **T6** | Kill-switch jako źródło obciążenia na szumie (przebieg z wyłączonym kill-switchem) | 0 (diagnostyka) | K1 zmierzył 54,09% trafności na czystym szumie (nieistotne, ale niewykluczone). Kill-switch tłumi transakcje po serii strat, więc może podnosić trafność wśród tych, które przetrwały — walidacja S1 zmierzyła ten efekt jako +0,30 pp przy n=1 037 |
 
 ---
 
