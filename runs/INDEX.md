@@ -32,10 +32,12 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 
 | C2.13 | 2026-09-21 | [2026-09-21_c2.13-confidence-threshold.md](2026-09-21_c2.13-confidence-threshold.md) | Runda 3/4 „droga do GO": pre-rejestrowany próg pewności `q=0,75` liczony na foldzie TRENINGOWYM, stosowany OOS (`_train_fold_confidence_threshold`, `confidence_quantile`); baseline vs kandydat przez `evaluate_confidence_threshold.py` | 1 | **HIPOTEZA SFALSYFIKOWANA — reguła STOP uruchomiona.** `range` margin −15,5→−14,7 pp (z_margin **−17,1**), `trend` trafność **49,9%→45,5%** (−4,3 pp, w stronę PRZECIWNĄ do przewidywanej), margin −9,1→−13,2 pp (z_margin **−2,66**). Kryterium `z_margin>2` niespełnione w żadnym reżimie, klasyfikacja NO-GO→NO-GO. Monotoniczny „skill" z pomiaru przed programem okazał się **artefaktem selekcji post hoc** (kwartyl wybrany po zobaczeniu wyniku, na danych zpoolowanych). **Runda 4 (Z7) NIE uruchomiona** — zgodnie z regułą STOP. Decyzja Z10 przy użytkowniku |
 
+| Z16 | 2026-09-22 | [2026-09-22_z16-regime-coherence.md](2026-09-22_z16-regime-coherence.md) | Backlog II/Z16: pomiar SPÓJNOŚCI bramki reżimu z horyzontem etykiety — `agents/regime_coherence.py` (`regime_episodes`, `windows_fully_inside`, `coherence_table`, `is_rule_admissible`) + przesiew 6 kandydatów na regułę reżimu. Bez uruchamiania modelu | 0 (pomiar specyfikacji) | **Hipoteza wyjaśniająca POTWIERDZONA:** w `trend` tylko **0,49%** świec ma etykietę opisującą ruch wewnątrz własnego reżimu (mediana epizodu **2 świece** vs horyzont **12**); w `range` 21,1% (mediana 5). **Z8 DOMKNIĘTY za 0 wariantów:** wymagane B = **4,21%** ceny (30,7×) => horyzont **~39 dni** vs najdłuższy epizod **5h15m**; w `trend` `2p−1 < 0`, więc żadna bariera nie pomaga. **Kluczowa asymetria:** `range` daje się uspójnić (wygładzanie 12 => mediana **39** świec przy udziale **46,9%**), `trend` NIE (wygładzanie wydłuża epizody, ale udział zapada do 0,05–1,5%) |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
 C2.11 to instrumentacja (0 wariantów); C2.12 to +1 wariant (model kosztów); C2.13 to +1 wariant
-(próg pewności) => **licznik = 2**.
+(próg pewności) => **licznik = 2**. Z16 to pomiar specyfikacji (0 wariantów) — licznik nadal **2**.
 
 ## Jak dodać nowy wpis
 
