@@ -185,6 +185,54 @@ niezależnych obserwacji z autokorelacji zwrotów — funkcja z C4.4, wpięta do
 pierwszy). Kryteria klasyfikacji GO/WARUNKOWY/NO-GO z tabeli wyżej pozostają NIEZMIENIONE —
 nowe miary są diagnostyką obok werdyktu, nie nowym werdyktem.
 
+## PROG WYKRYWALNOSCI i degradacja `classify_checkpoint` (K1, 2026-09-22)
+
+Pierwsza w projekcie KONTROLA POZYTYWNA aparatu pomiarowego: wstrzykniecie do prawdziwych
+swiec syntetycznej cechy o ZNANEJ sile sygnalu i sprawdzenie, przy jakiej sile niezmieniony
+pipeline zaczyna ja widziec. Pelny write-up: `runs/2026-09-22_k1-kontrola-pozytywna/`.
+
+**Aparat dziala:** przy wyroczni doskonalej mierzy 100,00% trafnosci na 4 843 transakcjach —
+lancuch cechy -> etykiety -> walk-forward -> trening -> bramki -> metryki przenosi sygnal
+bez strat. **Kryterium `ci_low > break_even` jest uczciwe:** 0 falszywych alarmow na 6
+losowaniach czystego szumu.
+
+**Ale prog WYKRYWALNOSCI lezy POWYZEJ progu OPLACALNOSCI:**
+
+| | trafnosc |
+|---|---|
+| prog oplacalnosci (ile trzeba, zeby zarabiac) | ~52,7% |
+| prog wykrywalnosci (ile trzeba, zeby pipeline to UDOWODNIL) | ~58,2% |
+| **luka** | **~5,5 pp** |
+
+Hipoteza dajaca trafnosc 53-58% bylaby oplacalna i jednoczesnie NIEWIDZIALNA. Przyczyna nie
+jest statystyczna, tylko behawioralna: przy slabym sygnale model **odmawia kierunku w 99,3%
+swiec**, wiec proba spada do kilkudziesieciu transakcji. Przy q=0,20 trafnosc punktowa wyniosla
+56,19% (powyzej progu oplacalnosci 51,90%), ale n=105 i CI siegalo 46,70%.
+
+> **WYMOG DLA KAZDEJ PRZYSZLEJ RUNDY:** rachunek mocy przed eksperymentem musi podac, czy
+> zakladana trafnosc hipotezy przekracza ~58%. Ponizej tego progu hipoteza jest **niemierzalna
+> z gory**, niezaleznie od ilosci danych — i uruchamianie jej jest marnowaniem wariantu.
+
+### `classify_checkpoint` — DIAGNOSTYKA, nie werdykt
+
+K1 wykazal, ze `classify_checkpoint` zwraca **GO na czystym szumie** (q=0,10, zgodnosc cechy
+z etykieta 40,3%) i **WARUNKOWY przy q=0** — czyli na danych, w ktorych z konstrukcji nie ma
+czego znalezc. To ta sama patologia co per-fold `mean_sharpe` przy malym n (C2.12) i ten sam
+efekt, ktory w H2.1 dal GO przy 3 i 11 waznych foldach.
+
+**Kryteria GO/WARUNKOWY/NO-GO pozostaja formalnie w tym dokumencie jako zapis historyczny,
+ale NIE SA kryterium werdyktu.** Werdykt orzeka sie na `ci_low > break_even` (przejscie
+zapoczatkowane w C2.12, dowod dostarczony w K1). Zadnej wartosci GO/WARUNKOWY/NO-GO nie wolno
+cytowac bez podania `n_valid_folds`.
+
+### Abstynencja modelu — problem numer jeden
+
+To ona, a nie brak sygnalu, ograniczyla S1b (n=345), H2.1 (n=98) i sama kontrole negatywna
+K1 (n~37 na losowanie). **Przyrzad nie potrafi porzadnie zwalidowac sam siebie z dokladnie
+tego samego powodu, dla ktorego nie widzi slabych sygnalow.** Kandydaci na osobna runde: wagi
+klas w XGBoost, kalibracja `MIN_VALIDATION_ROWS`/`validation_fraction`, wymuszenie kierunku
+zamiast trzeciej klasy "timeout".
+
 ## Retraining modeli (temat dodany po przeglądzie szerszej wizji projektu)
 
 Nie było w pierwotnym planie Fazy 0 — dodać w Fazie 1:
