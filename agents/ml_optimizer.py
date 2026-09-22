@@ -184,9 +184,14 @@ def train_regime_model(
     if not 0.0 < validation_fraction < 1.0:
         raise ValueError(f"validation_fraction musi być w (0, 1), dostałem {validation_fraction}")
 
-    n_val = int(round(len(train_clean) * validation_fraction))
+    # Z17b (2026-09-22): bierz CO NAJMNIEJ MIN_VALIDATION_ROWS wierszy na walidację, o ile
+    # zostaje dość na trening. Stara formuła (sam ułamek) powodowała, że przy małych foldach
+    # `n_val` wypadało poniżej progu i early stopping NIE ZAŁĄCZAŁ SIĘ WCALE — na 4h dotyczyło
+    # to 58 z 63 foldów (92,1%), czyli naprawa Z17+Z21 była tam martwa. Na dużych foldach
+    # max() jest operacją pustą, więc wyniki na 5m pozostają bez zmian.
+    n_val = max(MIN_VALIDATION_ROWS, int(round(len(train_clean) * validation_fraction)))
     n_fit = len(train_clean) - n_val
-    if n_val < MIN_VALIDATION_ROWS or n_fit < MIN_VALIDATION_ROWS:
+    if n_fit < MIN_VALIDATION_ROWS:
         # Za mało danych na uczciwy podział. Trenuj BEZ early stoppingu na całym foldzie
         # treningowym — świadomie gorszy model, ale bez przecieku. Liczbę drzew wyznacza
         # wtedy num_boost_round (patrz best_iteration_or_last).

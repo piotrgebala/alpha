@@ -48,6 +48,8 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | Z9/Z19/Z5b — pivot na 4h | 2026-09-22 | Natywne dane 1h/4h (resample psuł wolumen!), rachunek mocy przed eksperymentem, **pre-rejestracja hipotezy jednoreżimowej 4h** (6,8 roku, kryterium: trafność ≥ 56,15%) | [runs/z5b](runs/2026-09-22_z5b-long-history-4h-preregistration/README.md) |
 | S1 — eksperyment jednoreżimowy 4h | 2026-09-22 | **Kryterium NIESPEŁNIONE** (trafność 48,60%, CI [45,56%; 51,64%] wobec pre-rejestrowanego progu >54,60% — przepada o 9,04 pp) — **reguła STOP: seria zamknięta**. Walidacja (zasada 16a): **CAVEATS** — liczby potwierdzone co do cyfry, werdykt odporny, ale wynik obowiązuje na **6,95% historii** (krach COVID i szybkie ruchy poza zbiorem). Rekomendacja: zamknięcie Fazy 0 wynikiem negatywnym (Z10 opcja 1, decyzja przy użytkowniku) | [runs/s1](runs/2026-09-22_s1-single-regime-4h/README.md) |
 
+| S1b — S1 po naprawie early stoppingu | 2026-09-22 | **NIEROZSTRZYGALNY** (klauzula `n<925`): naprawa podniosła foldy z early stoppingiem 5/63→53/63, ale ścięła próbę 1 037→345 (abstynencja modelu 70,9%→90,5%). Konfiguracja 4h/V=3 jest przy poprawnym pipelinie **nietestowalna** — brakuje 11,4 lat danych | [runs/s1b](runs/2026-09-22_s1b-early-stopping-naprawiony/README.md) |
+
 ## Hipoteza w skrócie
 
 **Hipoteza pierwotna (sfalsyfikowana w Fazie 0, patrz Kamienie milowe):** regime-gated —
