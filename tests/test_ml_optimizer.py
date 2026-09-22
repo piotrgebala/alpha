@@ -14,9 +14,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import xgboost as xgb
+
 from agents.ml_optimizer import (
     CLASS_TO_LABEL,
     LABEL_TO_CLASS,
+    MIN_VALIDATION_ROWS,
+    best_iteration_or_last,
     predict_signal,
     train_regime_model,
 )
@@ -152,3 +156,159 @@ def test_predict_signal_preserves_index_after_dropna() -> None:
     assert nan_index not in signals.index
     assert len(signals) == len(test_with_nan) - 1
     assert list(signals.index) == [i for i in test_with_nan.index if i != nan_index]
+
+
+# ---------------------------------------------------------------------------
+# Z17+Z21 (Backlog II): walidacja z ogona treningu + embargo na granicy train/test
+# ---------------------------------------------------------------------------
+
+
+def _labelled_frame(n: int, seed: int) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+    return pd.DataFrame(
+        {
+            "f1": rng.normal(size=n),
+            "f2": rng.normal(size=n),
+            "label": rng.choice([-1.0, 0.0, 1.0], size=n),
+        }
+    )
+
+
+class _SpyBooster:
+    best_iteration = 5
+
+
+def _spy_xgb_train(monkeypatch) -> dict:
+    """Przechwytuje argumenty xgb.train — pozwala sprawdzić, NA CZYM liczy się early stopping."""
+    captured: dict = {}
+
+    def fake_train(params, dtrain, num_boost_round=None, evals=None, **kwargs):
+        captured["fit_rows"] = dtrain.num_row()
+        captured["eval_rows"] = [d.num_row() for d, _ in (evals or [])]
+        captured["eval_names"] = [name for _, name in (evals or [])]
+        captured["early_stopping_rounds"] = kwargs.get("early_stopping_rounds")
+        return _SpyBooster()
+
+    monkeypatch.setattr(xgb, "train", fake_train)
+    return captured
+
+
+def test_validation_split_never_evaluates_on_test_fold(monkeypatch) -> None:
+    """
+    SEDNO Z17: przy `validation_fraction` early stopping MUSI liczyć się na ogonie
+    treningu, nie na foldzie OOS. Rozmiary dobrane tak, że liczba wierszy walidacji
+    (38) jest różna od rozmiaru testu (100) — test jednoznacznie odróżnia obie wersje.
+    """
+    captured = _spy_xgb_train(monkeypatch)
+    train_regime_model(
+        _labelled_frame(200, seed=1),
+        _labelled_frame(100, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=0.2,
+        embargo_candles=12,
+    )
+    # 200 - 12 (embargo) = 188; n_val = round(188*0.2) = 38; n_fit = 150
+    assert captured["fit_rows"] == 150
+    assert captured["eval_rows"] == [38]
+    assert captured["eval_names"] == ["validation"]
+    assert 100 not in captured["eval_rows"], "early stopping nie może widzieć foldu testowego"
+
+
+def test_legacy_path_still_evaluates_on_test(monkeypatch) -> None:
+    """Ścieżka sprzed Z17 zachowana do regresji baseline'u C6-C2.13 — i jawnie nazwana."""
+    captured = _spy_xgb_train(monkeypatch)
+    train_regime_model(
+        _labelled_frame(200, seed=1),
+        _labelled_frame(100, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=None,
+    )
+    assert captured["fit_rows"] == 200
+    assert captured["eval_rows"] == [100]
+    assert captured["eval_names"] == ["test"]
+
+
+def test_embargo_removes_tail_of_training_fold(monkeypatch) -> None:
+    """Z21: ostatnie V wierszy treningu mają etykiety sięgające w okno testowe."""
+    captured = _spy_xgb_train(monkeypatch)
+    train_regime_model(
+        _labelled_frame(300, seed=1),
+        _labelled_frame(100, seed=2),
+        FEATURE_COLUMNS,
+        validation_fraction=None,
+        embargo_candles=50,
+    )
+    assert captured["fit_rows"] == 250
+
+
+def test_embargo_zero_is_identical_to_no_embargo(monkeypatch) -> None:
+    captured = _spy_xgb_train(monkeypatch)
+    train_regime_model(
+        _labelled_frame(300, seed=1), _labelled_frame(100, seed=2),
+        FEATURE_COLUMNS, validation_fraction=None, embargo_candles=0,
+    )
+    assert captured["fit_rows"] == 300
+
+
+def test_embargo_larger_than_train_fold_raises() -> None:
+    with pytest.raises(ValueError, match="embargo"):
+        train_regime_model(
+            _labelled_frame(20, seed=1), _labelled_frame(50, seed=2),
+            FEATURE_COLUMNS, embargo_candles=100,
+        )
+
+
+def test_too_small_fold_trains_without_early_stopping_instead_of_leaking(monkeypatch) -> None:
+    """
+    Gdy fold jest za mały na uczciwy podział, wolimy model BEZ early stoppingu niż
+    early stopping na OOS. Świadomie gorszy model, ale bez przecieku.
+    """
+    captured = _spy_xgb_train(monkeypatch)
+    n = MIN_VALIDATION_ROWS + 5
+    train_regime_model(
+        _labelled_frame(n, seed=1), _labelled_frame(50, seed=2),
+        FEATURE_COLUMNS, validation_fraction=0.2,
+    )
+    assert captured["eval_rows"] == []
+    assert captured["early_stopping_rounds"] is None
+
+
+@pytest.mark.parametrize("bad", [0.0, 1.0, -0.1, 1.5])
+def test_invalid_validation_fraction_raises(bad: float) -> None:
+    with pytest.raises(ValueError, match="validation_fraction"):
+        train_regime_model(
+            _labelled_frame(200, seed=1), _labelled_frame(50, seed=2),
+            FEATURE_COLUMNS, validation_fraction=bad,
+        )
+
+
+def test_best_iteration_or_last_falls_back_when_no_early_stopping() -> None:
+    """xgboost >= 2.0 podnosi AttributeError bez early stoppingu — guard na 3 wywołania."""
+
+    class _NoES:
+        pass
+
+    assert best_iteration_or_last(_NoES(), num_boost_round=200) == 199
+    assert best_iteration_or_last(_SpyBooster()) == 5
+
+
+def test_validation_split_is_chronological_tail_not_random(monkeypatch) -> None:
+    """
+    Losowy podział szeregu czasowego pozwoliłby walidować się na danych SPRZED tych,
+    na których model się uczy. Sprawdzamy, że walidacja to dokładnie ogon.
+    """
+    seen: dict = {}
+
+    def fake_train(params, dtrain, num_boost_round=None, evals=None, **kwargs):
+        seen["fit"] = dtrain.get_label().tolist()
+        seen["val"] = evals[0][0].get_label().tolist() if evals else []
+        return _SpyBooster()
+
+    monkeypatch.setattr(xgb, "train", fake_train)
+    frame = _labelled_frame(200, seed=7)
+    train_regime_model(frame, _labelled_frame(50, seed=2), FEATURE_COLUMNS,
+                       validation_fraction=0.25, embargo_candles=0)
+    expected = frame["label"].map(LABEL_TO_CLASS).tolist()
+    n_val = 50
+    assert seen["fit"] == expected[: 200 - n_val]
+    assert seen["val"] == expected[200 - n_val :]

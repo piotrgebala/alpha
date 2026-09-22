@@ -42,7 +42,7 @@ import yaml
 
 from agents.feature_miner import compute_all_features
 from agents.labeling import compute_triple_barrier_labels, generate_walk_forward_folds
-from agents.ml_optimizer import DEFAULT_SEED, REVERSION_FEATURES, predict_signal, train_regime_model
+from agents.ml_optimizer import best_iteration_or_last, DEFAULT_SEED, REVERSION_FEATURES, predict_signal, train_regime_model
 from backtest.engine import MIN_TRAIN_ROWS
 from data.fetch_ohlcv import get_ohlcv_cached
 
@@ -135,7 +135,7 @@ def diagnose(df: pd.DataFrame, seed: int = DEFAULT_SEED) -> list[dict]:
         report.update(
             {
                 "skipped": False,
-                "best_iteration": booster.best_iteration,
+                "best_iteration": best_iteration_or_last(booster),
                 "feature_importance_gain": importance_full,
                 "n_signals_nonzero": n_signals_nonzero,
                 "n_test_with_label": len(signals_valid),

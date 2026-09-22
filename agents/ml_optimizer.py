@@ -60,7 +60,37 @@ DEFAULT_XGB_PARAMS = {
     "eval_metric": "mlogloss",
 }
 NUM_BOOST_ROUND = 200  # sklearn-API: n_estimators
-EARLY_STOPPING_ROUNDS = 20  # na foldzie OOS (test), nigdy na train
+EARLY_STOPPING_ROUNDS = 20
+
+# Z17+Z21 (Backlog II) — walidacja early stoppingu wycinana z CHRONOLOGICZNEGO OGONA
+# foldu treningowego, plus embargo na granicy train/test.
+#
+# Stan sprzed Z17 (zachowany jako `validation_fraction=None`): early stopping liczyło się
+# na `test_df`, czyli na foldzie OOS. To przeciek decyzji — liczba drzew była dobierana
+# pod dane, na których mierzymy wynik, więc raportowane `p` było ZAWYŻONE. Docstringi
+# i config/settings.yaml opisywały to jako decyzję ("na foldzie OOS, nigdy na train"),
+# co utrwalało buga jako wybór projektowy.
+#
+# Embargo: etykieta triple-barrier wiersza t patrzy do t+VERTICAL_BARRIER_CANDLES, więc
+# ostatnie V wierszy treningu ma etykiety sięgające W OKNO TESTOWE. Bez odcięcia ich
+# walidacja (ogon treningu) byłaby skażona ruchem z okresu testowego — czyli naprawa
+# Z17 bez Z21 nie naprawiałaby niczego. Stąd oba w jednej zmianie: dotyczą TEJ SAMEJ
+# granicy. `embargo_candles=0` zachowuje stan sprzed zmiany.
+DEFAULT_VALIDATION_FRACTION = 0.2
+MIN_VALIDATION_ROWS = 30  # spójne z backtest.engine.MIN_TRAIN_ROWS
+
+
+def best_iteration_or_last(booster: xgb.Booster, num_boost_round: int = NUM_BOOST_ROUND) -> int:
+    """
+    `booster.best_iteration` istnieje TYLKO wtedy, gdy zadziałał early stopping.
+    Bez niego xgboost >= 2.0 podnosi AttributeError — a wariant bez early stoppingu
+    powstaje legalnie, gdy fold jest za mały na wydzielenie walidacji. Zwraca wtedy
+    indeks ostatniego drzewa.
+    """
+    best = getattr(booster, "best_iteration", None)
+    if best is None:
+        return num_boost_round - 1
+    return int(best)
 
 
 def train_regime_model(
@@ -72,6 +102,8 @@ def train_regime_model(
     num_boost_round: int = NUM_BOOST_ROUND,
     early_stopping_rounds: int = EARLY_STOPPING_ROUNDS,
     seed: int = DEFAULT_SEED,
+    validation_fraction: float | None = None,
+    embargo_candles: int = 0,
 ) -> xgb.Booster:
     """
     Trenuje pojedynczy model XGBoost (multi-class -1/0/1) na `train_df`, z early
@@ -115,23 +147,63 @@ def train_regime_model(
     if len(test_clean) == 0:
         raise ValueError("test_df nie ma żadnego poprawnego wiersza po dropna (feature/label NaN)")
 
-    y_train = train_clean[label_column].map(LABEL_TO_CLASS).to_numpy(dtype=np.int32)
-    y_test = test_clean[label_column].map(LABEL_TO_CLASS).to_numpy(dtype=np.int32)
-
-    dtrain = xgb.DMatrix(train_clean[feature_columns], label=y_train)
-    dtest = xgb.DMatrix(test_clean[feature_columns], label=y_test)
+    # Z21: odetnij ogon treningu, którego etykiety sięgają w okno testowe.
+    if embargo_candles > 0:
+        if len(train_clean) <= embargo_candles:
+            raise ValueError(
+                f"embargo_candles={embargo_candles} wycina cały fold treningowy "
+                f"({len(train_clean)} wierszy) — fold powinien zostać pominięty wcześniej"
+            )
+        train_clean = train_clean.iloc[:-embargo_candles]
 
     full_params = {**DEFAULT_XGB_PARAMS, **(params or {}), "seed": seed}
 
-    booster = xgb.train(
+    def _dmatrix(frame: pd.DataFrame) -> xgb.DMatrix:
+        labels = frame[label_column].map(LABEL_TO_CLASS).to_numpy(dtype=np.int32)
+        return xgb.DMatrix(frame[feature_columns], label=labels)
+
+    if validation_fraction is None:
+        # ŚCIEŻKA SPRZED Z17 — early stopping na foldzie OOS. Zachowana WYŁĄCZNIE po to,
+        # żeby dało się odtworzyć wyniki C6-C2.13 co do cyfry. Nie używać do nowych pomiarów.
+        booster = xgb.train(
+            full_params,
+            _dmatrix(train_clean),
+            num_boost_round=num_boost_round,
+            evals=[(_dmatrix(test_clean), "test")],
+            early_stopping_rounds=early_stopping_rounds,
+            verbose_eval=False,
+        )
+        return booster
+
+    if not 0.0 < validation_fraction < 1.0:
+        raise ValueError(f"validation_fraction musi być w (0, 1), dostałem {validation_fraction}")
+
+    n_val = int(round(len(train_clean) * validation_fraction))
+    n_fit = len(train_clean) - n_val
+    if n_val < MIN_VALIDATION_ROWS or n_fit < MIN_VALIDATION_ROWS:
+        # Za mało danych na uczciwy podział. Trenuj BEZ early stoppingu na całym foldzie
+        # treningowym — świadomie gorszy model, ale bez przecieku. Liczbę drzew wyznacza
+        # wtedy num_boost_round (patrz best_iteration_or_last).
+        return xgb.train(
+            full_params,
+            _dmatrix(train_clean),
+            num_boost_round=num_boost_round,
+            verbose_eval=False,
+        )
+
+    # Walidacja to CHRONOLOGICZNY OGON treningu (nie losowa próbka): losowy podział
+    # szeregu czasowego pozwoliłby modelowi walidować się na danych sprzed tych, na
+    # których się uczy.
+    fit_part = train_clean.iloc[:n_fit]
+    val_part = train_clean.iloc[n_fit:]
+    return xgb.train(
         full_params,
-        dtrain,
+        _dmatrix(fit_part),
         num_boost_round=num_boost_round,
-        evals=[(dtest, "test")],
+        evals=[(_dmatrix(val_part), "validation")],
         early_stopping_rounds=early_stopping_rounds,
         verbose_eval=False,
     )
-    return booster
 
 
 def predict_signal(
@@ -164,7 +236,7 @@ def predict_signal(
     clean = df.dropna(subset=feature_columns)
     dmatrix = xgb.DMatrix(clean[feature_columns])
 
-    best_iteration = booster.best_iteration
+    best_iteration = best_iteration_or_last(booster)
     proba = booster.predict(dmatrix, iteration_range=(0, best_iteration + 1))
 
     class_idx = np.argmax(proba, axis=1)

@@ -34,10 +34,12 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 
 | Z16 | 2026-09-22 | [2026-09-22_z16-regime-coherence.md](2026-09-22_z16-regime-coherence.md) | Backlog II/Z16: pomiar SPÓJNOŚCI bramki reżimu z horyzontem etykiety — `agents/regime_coherence.py` (`regime_episodes`, `windows_fully_inside`, `coherence_table`, `is_rule_admissible`) + przesiew 6 kandydatów na regułę reżimu. Bez uruchamiania modelu | 0 (pomiar specyfikacji) | **Hipoteza wyjaśniająca POTWIERDZONA:** w `trend` tylko **0,49%** świec ma etykietę opisującą ruch wewnątrz własnego reżimu (mediana epizodu **2 świece** vs horyzont **12**); w `range` 21,1% (mediana 5). **Z8 DOMKNIĘTY za 0 wariantów:** wymagane B = **4,21%** ceny (30,7×) => horyzont **~39 dni** vs najdłuższy epizod **5h15m**; w `trend` `2p−1 < 0`, więc żadna bariera nie pomaga. **Kluczowa asymetria:** `range` daje się uspójnić (wygładzanie 12 => mediana **39** świec przy udziale **46,9%**), `trend` NIE (wygładzanie wydłuża epizody, ale udział zapada do 0,05–1,5%) |
 
+| Z17+Z21 | 2026-09-22 | [2026-09-22_z17-z21-early-stopping-leak.md](2026-09-22_z17-z21-early-stopping-leak.md) | Backlog II: naprawa przecieku early stopping (liczba drzew dobierana na foldzie OOS) + embargo na granicy train/test. `validation_fraction` (ogon foldu treningowego), `embargo_candles`, guard `best_iteration_or_last`. Adopcja zadeklarowana jako BEZWARUNKOWA przed uruchomieniem | 0 (naprawa błędu) | **Kierunek obciążenia potwierdzony: `p` było ZAWYŻONE.** `range` hit 51,07% → **50,38%**, a z_stat **+1,81 → +0,63** — czyli jedyny wynik w projekcie wyglądający na „bliski istotności" (C2.12) był ARTEFAKTEM PRZECIEKU. `trend` 49,86% → 50,84% (z=+0,29, n=299, szum). `fraction_le_zero` 0,870 → 0,907. **Najczystszy pomiar `p` w historii projektu — i pokazuje brak edge'u kierunkowego w obu reżimach** |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
 C2.11 to instrumentacja (0 wariantów); C2.12 to +1 wariant (model kosztów); C2.13 to +1 wariant
-(próg pewności) => **licznik = 2**. Z16 to pomiar specyfikacji (0 wariantów) — licznik nadal **2**.
+(próg pewności) => **licznik = 2**. Z16 (pomiar specyfikacji) i Z17+Z21 (naprawa błędu) to 0 wariantów — licznik nadal **2**.
 
 ## Jak dodać nowy wpis
 

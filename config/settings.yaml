@@ -45,7 +45,13 @@ model:
   max_depth: 4
   learning_rate: 0.05               # native XGBoost API nazywa to "eta"
   n_estimators: 200                 # native API: num_boost_round
-  early_stopping_rounds: 20         # na foldzie OOS (test), nigdy na train
+  # Z17+Z21 (2026-09-22): early stopping liczy się na CHRONOLOGICZNYM OGONIE foldu
+  # TRENINGOWEGO (validation_fraction=0.2), nie na foldzie OOS. Poprzedni komentarz
+  # brzmiał "na foldzie OOS (test), nigdy na train" — opisywał BUGA jako decyzję
+  # projektową. Dodatkowo embargo=vertical_barrier_candles odcina ogon treningu,
+  # którego etykiety sięgały w okno testowe.
+  early_stopping_rounds: 20
+  validation_fraction: 0.2          # ułamek foldu treningowego na walidację early stoppingu
   seed: 42                          # jawny i logowany — docs/rag/05 (reprodukowalność)
 
 # Commit 5 (backtest/costs.py). Wartości startowe kosztów transakcyjnych Binance USDS-M Futures —
