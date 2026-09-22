@@ -39,9 +39,28 @@ przy 50%. Wszystkie 10 cech to transformacje tej samej informacji: ceny i wolume
 testów**, funding rate jako sygnał — **nigdy nie zaimplementowany**, ekonomia dźwigni —
 **niezbadana**. Pełna lista: [Z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md).
 
-Budżet zużyty: **10 wariantów**, 17 rund, 2 uruchomione reguły STOP. Stan testów: **319/319**.
+Budżet zużyty (stan na Z10): **10 wariantów**, 17 rund, 2 uruchomione reguły STOP.
 Surowe wyniki każdej rundy: [`runs/`](runs/INDEX.md) (tabela + wnioski skumulowane).
 Backlog i zasady pracy: [`STATUS.md`](STATUS.md).
+
+### 🔴 Po Fazie 0: wszystko, co da się zmierzyć, zmierzone (M1 + P1 + F1, 2026-09-22)
+
+Po zamknięciu Fazy 0 sprawdziliśmy jeszcze dwie rzeczy, których Faza 0 nie zmierzyła, tym razem
+na próbie ok. 8 000 transakcji (wystarczająco dużej, żeby rozstrzygnąć):
+
+| co | trafność | próg opłacalności | wynik |
+|---|---|---|---|
+| momentum — „co rośnie, rośnie dalej” ([M1](runs/2026-09-22_m1-momentum-bez-bramki/README.md)) | 49,74% | 52,94% | brak przewagi |
+| funding — opłata za trzymanie pozycji, jedyna informacja spoza wykresu ceny ([F1](runs/2026-09-22_f1-funding-zmierzony/README.md)) | 50,34% | 52,94% | brak przewagi |
+| dane o pozycjach graczy ([P1](runs/2026-09-22_p1-sonda-zrodel-danych/README.md)) | — | — | nie da się zmierzyć: giełda daje tylko 30 dni historii |
+
+**Co to znaczy:** przewidywanie KIERUNKU ceny BTC na tych danych nie daje przewagi — w każdym
+wariancie model trafia jak rzut monetą. Otwarte zostały tylko kierunki, które zmieniają samo
+założenie projektu (`STATUS.md` §17, ETAP 4). Pierwszy z nich — **carry przekrojowy**
+(zarabianie na samej opłacie funding na wielu parach naraz, bez zgadywania kierunku) — jest
+sprawdzany sondą wykonalności P2 (`runs/INDEX.md`).
+
+Stan testów: **392/392** (2026-09-22).
 
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
@@ -63,9 +82,8 @@ i **przestaje handlować w 99,3% przypadków**.
 **⚠ To, co runda rzekomo pokazała, zostało WYCOFANE 2026-09-22** (patrz kamień milowy F1): ~~funding potroił liczbę decyzji modelu (35 → 98), czyli został~~
 uznany za informacyjny. O trafności tych decyzji nie mówi nic — próbka jest za mała.
 
-**Następny krok należy do użytkownika** (Etap 2 mapy drogowej w [`STATUS.md`](STATUS.md) §17):
-jedyną drogą do większej próby jest **wymiar przekrojowy** — ten sam mechanizm na wielu
-instrumentach — a nie kolejne `V`, interwał ani cecha na BTC.
+*(Historyczne: po H2.1 następnym krokiem był wymiar przekrojowy. Funding jako cecha został
+potem zmierzony osobno w F1 — patrz sekcja wyżej.)*
 
 Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 

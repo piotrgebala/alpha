@@ -6,7 +6,7 @@
 > treść `TASKS.md` weszła jako §13–§16.
 >
 > **Podział odpowiedzialności między trzy pliki w korzeniu** (świadomie nie jeden):
-> - `CLAUDE.md` — zasady nienaruszalne 1–17. **Jedyne źródło.** Ładowany automatycznie
+> - `CLAUDE.md` — zasady nienaruszalne 1–18. **Jedyne źródło.** Ładowany automatycznie
 >   do kontekstu Claude'a w każdej sesji, więc musi zostać krótki.
 > - `README.md` — wizytówka projektu dla człowieka wchodzącego z zewnątrz.
 > - `STATUS.md` (ten plik) — plan, historia rund, ryzyka, zadania, backlog.
@@ -20,12 +20,16 @@
 > Jeśli zaczynasz nową sesję Claude Code, podepnij ten plik jako kontekst — zastępuje potrzebę
 > przewijania całej wcześniejszej rozmowy.
 >
-> Ostatnia aktualizacja: 2026-08-01. **Status: Commity 1–6 zaimplementowane i przetestowane
-> (86/86 testów). Commit 6 (checkpoint go/no-go) na realnych danych BTC/USDT:USDT: wynik
-> **NO-GO**. Commit 2b (diagnoza, zakres uzgodniony: przegląd cech modelu `range`) wykazała, że
-> pierwotna przyczyna NO-GO leży gdzie indziej niż sądzono w Commit 6 (kill-switch, nie
-> model/cechy) — patrz §5 Commit 2b. Następny krok: NOWA decyzja z użytkownikiem o dalszym
-> zakresie (poza cechami — prawdopodobnie `agents/risk_controller.py`).**
+> Ostatnia aktualizacja nagłówka: 2026-09-22. **Status: Faza 0 ZAMKNIĘTA wynikiem negatywnym
+> (Z10). Po zamknięciu zmierzono z zapasem mocy wszystko, co da się zmierzyć tą metodologią na
+> BTC: momentum (M1, 49,74%), funding jako cechę (F1, 50,34%); dane o pozycjonowaniu są
+> niemierzalne (P1, 30 dni historii) — wniosek skumulowany 39 w `runs/INDEX.md`. Otwarte
+> kierunki wymagają zmiany założeń (§17, ETAP 4). Aktualny krok: sonda wykonalności carry
+> przekrojowego (P2, hipoteza 4A) — patrz §17 i `runs/INDEX.md`.**
+>
+> *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
+> krok: decyzja o Commit 2b" — była nieaktualna od serii C2.5; poprawiona w porządkach
+> 2026-09-22.)*
 
 ---
 
@@ -389,7 +393,12 @@ okazji):
   Rekomendacja "C2.5 i/lub przegląd cech `range`" z powyższego akapitu jest nieaktualna — patrz
   Commit 2b dla poprawionej rekomendacji zakresu.
 
-### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` `[W TRAKCIE — zablokowane na nowej decyzji użytkownika]`
+### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` `[ZAMKNIĘTE — przesłanka obalona w C2b.1; ścieżka przejęta przez C2c i serię C2.5–C2.13]`
+
+> **Porządki 2026-09-22:** status „W TRAKCIE — zablokowane" był nieaktualny od sierpnia.
+> C2b.1 pokazało, że przyczyną NO-GO był kill-switch (naprawiony w C2c), a nie cechy;
+> C2b.2/C2b.3 (dodanie cechy do `range`) straciły przesłankę i nie zostaną wykonane —
+> cechy `range` testowały później C2.7/C2.8, a Faza 0 zamknęła się w Z10.
 
 **Kontekst i uzgodniony zakres (ustalony z użytkownikiem przed startem, 2026-08-01):** powrót do
 Commit 2 ograniczony WYŁĄCZNIE do przeglądu/rewizji feature setu modelu `range`
@@ -1394,7 +1403,7 @@ STOP, rachunek mocy PRZED uruchomieniem. Nie dziedziczy budżetu ani progów po 
 > nienaruszalnych z `CLAUDE.md`, które od tamtej pory urosły do 16 i są jedynym źródłem.
 > Numer sekcji zachowany, żeby odniesienia „§8" nie wskazywały w pustkę.
 >
-> **Zasady 1–17: `CLAUDE.md`.** Zasady operacyjne (branch per zadanie, konwencja `runs/`,
+> **Zasady 1–18: `CLAUDE.md`.** Zasady operacyjne (branch per zadanie, konwencja `runs/`,
 > zarządzanie zużyciem): §13 niżej.
 
 ---
@@ -1548,7 +1557,7 @@ W `clas5_core/`, gotowe do wklejenia w VS Code:
 
 ## 13. Zasady pracy operacyjne (z TASKS.md)
 
-> Zasady NIENARUSZALNE (1–17) są w `CLAUDE.md`. Poniżej wyłącznie zasady operacyjne:
+> Zasady NIENARUSZALNE (1–18) są w `CLAUDE.md`. Poniżej wyłącznie zasady operacyjne:
 > jak prowadzić branche, jak dokumentować rundy, jak zarządzać zużyciem.
 
 ### Zasada pracy: osobny branch per zadanie
@@ -1729,7 +1738,7 @@ przetestowanych wariantów (CLAUDE.md zasada 14). Pełna procedura krok-po-kroku
 | C6.4 | Wynik osobno per reżim rynkowy — zinterpretowane jako trend vs range (nie kalendarzowo, patrz Uwagi) | ✅ | Realny zakres danych (2025-07→2026-07) nie sięga 2023 — interpretacja kalendarzowa z opisu zadania nie pasowała, zamieniona (za zgodą użytkownika) na podział wg reżimu. Wynik `summarize_by_regime`: **trend = WARUNKOWY (0/20 foldów policzalnych — WSZYSTKIE pominięte przez `min_train_rows`, reżim empirycznie prawie nieobecny w 14-dniowych oknach testowych, potwierdza ryzyko z C2.5/§7 IMPLEMENTATION_PLAN.md)**; **range = NO-GO (1/20 foldów policzalnych, Sharpe=-65.43)** |
 | C6.5 | Decyzja udokumentowana w `IMPLEMENTATION_PLAN.md` | ✅ | Udokumentowane w §5 (Commit 6) i §6/§7 — pełny opis liczb i przyczyn. Wynik: **NO-GO**. **Korekta (Commit 2b):** przyczyna "1/20 foldów z transakcjami" dla `range` opisana tu pierwotnie ("predict_signal zwraca wyłącznie direction=0") okazała się błędna — patrz Commit 2b niżej i IMPLEMENTATION_PLAN.md §5 |
 
-### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` (W TRAKCIE — zablokowane na nowej decyzji użytkownika)
+### Commit 2b — Diagnoza NO-GO: przegląd cech modelu `range` — ZAMKNIĘTE (przesłanka obalona w C2b.1; C2b.2/C2b.3 bezprzedmiotowe, patrz §5)
 
 > Zakres uzgodniony z użytkownikiem 2026-08-01: WYŁĄCZNIE przegląd/rewizja feature setu modelu
 > `range` (`REVERSION_FEATURES`) — jawnie wykluczone: rekalibracja progów regime (C2.5), zmiana

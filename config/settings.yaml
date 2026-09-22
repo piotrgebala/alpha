@@ -39,8 +39,10 @@ regime_rule:
   trend_threshold: 0.7
   range_threshold: 0.3
 
-# Commit 4 (agents/labeling.py). atr_multiplier to JEDYNE źródło prawdy dla mnożnika ATR —
-# risk_controller.py (Commit 5.5) MUSI używać tej samej wartości (CLAUDE.md zasada 3, docs/rag/03).
+# Commit 4 (agents/labeling.py). UWAGA (2026-09-22): źródłem prawdy dla mnożnika ATR jest
+# stała `ATR_MULTIPLIER` w agents/labeling.py, importowana przez risk_controller.py — kod NIE
+# czyta tej wartości z configu. Zostaje jako dokumentacja; zgodność ze stałą pilnuje
+# tests/test_atr_consistency.py (CLAUDE.md zasada 3, docs/rag/03).
 # Wartości startowe, do kalibracji WYŁĄCZNIE wewnątrz walk-forward (CLAUDE.md zasada 1).
 labeling:
   atr_multiplier: 1.5               # upper/lower barrier = entry ± atr_multiplier * atr_14
