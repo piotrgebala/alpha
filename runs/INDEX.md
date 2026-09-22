@@ -42,6 +42,7 @@ podsumowanie pod tabelą.
 | **H3** | 2026-09-22 | [h3-noga-timeout-pasmo](2026-09-22_h3-noga-timeout-pasmo/README.md) | Analiza WRAZLIWOSCI na noge wyjscia `timeout` (pasmo maker/taker) + naprawa usterki strukturalnej: bramka kosztowa miala wlasna kopie reguly nog i literal, nic nie wiazalo jej z journalem. Pre-rejestracja w OSOBNYM commicie PRZED kodem | 0 (poprawnosc modelu kosztow, warunek D5) | **RUNDA OBALILA TEZE, KTORA JA ZAMOWILA.** Podejrzenie z H2.0 (`timeout->taker` to blad) NIE broni sie: **noga maker wymaga znanej CENY, a przy barierze pionowej znamy tylko CZAS**; wariant maker bylby tez niespojny z `_resolve_exit_price` (`close` swiecy timeoutu nieosiagalny limitem bez lookaheadu). **Pasmo progu [51,64%; 52,69%], szerokosc 1,05 pp** przy 60,00% timeoutow. **D3: niepewnosc NIEISTOTNA decyzyjnie** — oba krance wymagaja przyrostu trafnosci (+1,37/+2,39 pp nad 50,27% z Z10) wiekszego niz cokolwiek, co dala kiedykolwiek pojedyncza cecha. **Domyslna `TAKER` bez zmian (D1), poprzeczka NIE obnizona (D2), licznik H2 nadal 0/1 (D5).** Walidacja (16a): **READY** — koszt z journalu = policzony z mieszanki wyjsc co do 8. miejsca |
 | **H2.1** | 2026-09-22 | [h2.1-funding-jako-cecha](2026-09-22_h2.1-funding-jako-cecha/README.md) | **JEDYNY EKSPERYMENT HIPOTEZY H2:** funding jako cecha (pierwsze zrodlo informacji SPOZA OHLCV), bez bramki rezimu, 4h, V=3, 6,8 roku. Dwa ramiona (4 cechy vs 4+funding) | **1 — LICZNIK H2 WYCZERPANY (1/1)** | **NIEROZSTRZYGNIETY** (klauzula `n < 1 000`): **n = 98**. Przyczyna NIE jest funding ani dlugosc historii, tylko STRUKTURA ZADANIA UCZENIA: zdjecie bramki podnioslo udzial klasy dominujacej (timeout) **60,83% -> 66,58%**, wiec model z dzialajacym early stoppingiem **odmawia kierunku w 99,32%** swiec. Zdjecie bramki zadzialalo (ocenionych swiec 4x wiecej, **zero pominietych foldow** wobec 22/85 w S1), ale proba spadla 345 -> 98. **Jedyne ustalenie:** funding POTROIL liczbe decyzji modelu (35 -> 98), czyli zostal uznany za informacyjny — ale o trafnosci nie mowi nic (CI szerokie na 20 pp). **UWAGA: `classify_checkpoint` zwrocil GO dla obu ramion — to ARTEFAKT** `mean_sharpe` przy 3 i 11 waznych foldach (21,3 przy skali 1-3), patologia z C2.12. Walidacja (16a): **CAVEATS** |
 | **K1** | 2026-09-22 | [k1-kontrola-pozytywna](2026-09-22_k1-kontrola-pozytywna/README.md) | **KONTROLA POZYTYWNA APARATU** — pierwsza w projekcie. Wstrzykniecie syntetycznej cechy o znanej sile sygnalu do PRAWDZIWYCH swiec BTC 4h + niezmieniony pipeline. Szesc poziomow sily + kontrola negatywna na 6 losowaniach czystego szumu | 0 (kalibracja przyrzadu, POZA licznikami hipotez) | **APARAT DZIALA, ale jest GRUBOZIARNISTY.** (a) Przy wyroczni doskonalej mierzy **100,00%** trafnosci na 4 843 transakcjach — caly lancuch przenosi sygnal bez strat. (b) **Kryterium `ci_low > break_even` jest UCZCIWE: 0 falszywych alarmow na 6 losowaniach szumu** — to uwiarygodnia WSZYSTKIE werdykty projektu. (c) **PROG WYKRYWALNOSCI ~58% trafnosci wobec progu OPLACALNOSCI ~52,7% — luka 5,5 pp, w ktorej sygnal bylby oplacalny i NIEWIDZIALNY.** Przyczyna: abstynencja modelu 99,3-99,7% przy slabym sygnale. (d) **`classify_checkpoint` wystawil GO CZYSTEMU SZUMOWI** — potwierdzenie podejrzenia z H2.1 w mocniejszej formie. (e) Otwarte: trafnosc na szumie 54,09% (z=+1,21, nieistotne, ale n=220 nie wyklucza obciazenia ~7 pp). Walidacja (16a): **CAVEATS** |
+| **K2** | 2026-09-22 | [k2-naprawa-abstynencji](2026-09-22_k2-naprawa-abstynencji/README.md) | **NAPRAWA ABSTYNENCJI + domkniecie T6.** Trzy ramiona na tej samej wyroczni co K1 (A0 baseline / A1 wagi klas / A2 wymuszony kierunek), siatka z REPLIKACJA (12 losowan przy q=0, po 3 na punkt) — K1 mial jedno losowanie na punkt, wiec porownywal szumy. Pre-rejestracja w OSOBNYM commicie PRZED kodem | 0 (kalibracja przyrzadu, POZA licznikami hipotez) | **A1 DZIALA, A2 NIE — i DWIE Z TRZECH WLASNYCH BRAMEK OKAZALY SIE WADLIWE.** (a) **A1 (wagi klas) obniza prog wykrywalnosci o krok siatki** (wykrywa q=0,30 wobec q=0,40 dla A0), podnosi n 644 -> 97 014 i **jako jedyne daje MONOTONICZNY odczyt** przyrzadu (A0: 51,71 -> 53,62 -> 51,43 -> 54,84 -> 59,23 — niemonotonicznie, czyli zgaduje). (b) **A2 (wymuszony kierunek) kupuje n bez zysku informacyjnego** — n rosnie 260x, ale trafnosc spada do 50,33% i prog rosnie do 52,94%; przy q=0,30 margines **-1,31 pp**, czyli sygnal informacyjny staje sie NIEOPLACALNY. Mechanizm zmierzony: wymuszony kierunek na swiecach timeout wygrywa **48,33%** (ponizej rzutu moneta). (c) **T6 ZAMKNIETE: kill-switch NIE jest zrodlem obciazenia** — roznica ON-OFF **+0,04 pp przy CI +/-0,34 pp** na 167 160 transakcjach; 54,09% z K1 przypisane szumowi przy n=220. (d) **Bramka 1 (veto) mierzy NIEPRECYZYJNOSC, nie specyficznosc** — literalnie odrzuca kazde ramie o n > ~1 142, czyli karze cel rundy; usterka wyprowadzalna A PRIORI. Zadne ramie nie podnioslo falszywego alarmu (0/12). (e) **Bramka 3 wskazuje A2**, bo mierzy samo pasmo, ignorujac margines. **DECYZJA O ADOPCJI A1 CZEKA NA UZYTKOWNIKA** (wybor odczytu bramki 1). Walidacja (16a): **READY** — 65,6492% przewidziane z rozkladu etykiet = 65,6492% z journalu |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -59,6 +60,7 @@ podsumowanie pod tabelą.
   **nietestowalna** przy dostępnej historii (brakuje 11,4 lat). Reguła STOP pozostaje
   aktywna — to doprecyzowanie, czego NIE wykazano, nie zaproszenie do kolejnych prób.
 
+- **Kalibracja przyrzadu (Z9, Z19, K1, K2) — POZA licznikami hipotez: 0 wariantow.** Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
 - **Model kosztow / wykonanie — POZA licznikami hipotez: 0 wariantow.** C2.12 policzono jako **1 wariant**, bo raportowal werdykt klasyfikacyjny na tych samych danych. H3 **nie** — pre-rejestracja (regula D5) zakazala raportowania trafnosci, CI, z_stat, marginesu i klasyfikacji jako wyniku; liczby te sa w `raw_output.txt` z jawna adnotacja, ze nie uczestnicza w decyzji. Uzasadnienie mechaniczne: koszt moze ruszyc trafnosc WYLACZNIE przez selekcje (inny moment kill-switcha), czyli bylby to szum selekcyjny.
 - **NOWA HIPOTEZA H2 — funding rate (od H2.0, decyzja użytkownika 2026-09-22): 1/1 ZUŻYTY — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Licznik startował OD ZERA i nie dziedziczy niczego po Fazie 0. H2.0 to **0 wariantów** (wykonalność, zero spojrzeń na target). **H2.1 zużył ten wariant i wyszedł NIEROZSTRZYGNIĘTY** (`n = 98 < 1 000`) — wariant jest zużyty niezależnie od tego, bo porównanie wykonano na tych danych. Reguła STOP zamyka serię: żadnego drugiego `V`, interwału ani wariantu cechy.
 
@@ -205,6 +207,32 @@ podsumowanie pod tabelą.
    **przyrzad nie potrafi porzadnie zwalidowac sam siebie z tego samego powodu, dla ktorego
    nie widzi slabych sygnalow**). Kandydaci na osobna runde: wagi klas w XGBoost, kalibracja
    MIN_VALIDATION_ROWS/validation_fraction, wymuszenie kierunku zamiast trzeciej klasy.
+26. **ABSTYNENCJE NAPRAWIAJA WAGI KLAS, NIE WYMUSZENIE KIERUNKU (K2).** Dwa sposoby na to samo
+   daja przeciwne wyniki. **Wagi klas (`class_weight_mode="balanced"`) obnizaja prog
+   wykrywalnosci** o krok siatki `q` i **prostuja odczyt przyrzadu do monotonicznego** —
+   baseline czyta sile sygnalu niemonotonicznie, bo przy n rzedu 200-900 dominuje szum.
+   **Wymuszenie kierunku (`direction_policy="forced"`) NIE pomaga**: n rosnie 260x, ale sygnal
+   jest rozcienczany swiecami, na ktorych poprawny kierunek NIE ISTNIEJE — tam wymuszony
+   kierunek wygrywa **48,33%**, czyli ponizej rzutu moneta. Trafnosc spada do 50,33%, prog
+   oplacalnosci rosnie do 52,94%, a przy q=0,30 margines robi sie **ujemny (-1,31 pp)**.
+   **Wiecej transakcji != lepszy pomiar** — to czwarty przypadek w tym projekcie, gdy liczba
+   obserwacji mylona jest z iloscia informacji (por. wniosek 19).
+27. **KILL-SWITCH NIE JEST ZRODLEM OBCIAZENIA POMIARU (K2, T6) — sprawa zamknieta.** Podejrzenie
+   z K1 (trafnosc 54,09% na czystym szumie) zostalo rozstrzygniete ramieniem o rozdzielczosci
+   **+/-0,34 pp**: roznica ON-OFF wynosi **+0,04 pp** na 167 160 transakcjach, czyli jest
+   nieodroznialna od zera. Odczyt 54,09% byl szumem przy n=220. Mechanizm jest czysto
+   SELEKCYJNY (zbior kandydatow identyczny w obu ramionach — asercja w skrypcie), wiec nie ma
+   trzeciej drogi, ktora trzeba by jeszcze sprawdzic.
+28. **PRE-REJESTRACJA NIE CHRONI PRZED ZLA REGULA — chroni przed jej ZMIANA PO FAKCIE (K2).**
+   Dwie z trzech bramek K2 okazaly sie wadliwe, i to w sposob **wyprowadzalny a priori**:
+   (a) zadanie, by CI trafnosci ZAWIERALO prog oplacalnosci, jest na czystym szumie rownowazne
+   warunkowi `n <= ~1 142` — mierzy wiec nieprecyzyjnosc, nie specyficznosc, i mechanicznie
+   karze kazde ramie osiagajace cel rundy; (b) metryka wyboru oparta na samym
+   `wald_half_width(n)` ignoruje, czy jest jeszcze co mierzyc, i dlatego wskazuje ramie
+   o UJEMNYM marginesie. **WYMOG na przyszlosc: pre-rejestrujac kryterium, sprawdz, co ono
+   robi w granicy duzego `n` i czy nie jest anty-skorelowane z celem rundy.** Kryterium
+   kalibracyjne powinno brzmiec "najnizsze `q`, przy ktorym `ci_low > break_even`", a pasmo
+   raportowac obok, opisowo.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11 i 14)
 
