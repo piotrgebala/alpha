@@ -255,9 +255,13 @@ def gate_cost_fraction(
 
     Wartości baseline: `maker_limit` → **0,0009**, `taker_only` → **0,0014**.
 
-    Uwaga na asymetrię, którą ta funkcja DZIEDZICZY (zmierzona w H3, osobny kandydat
-    na rundę): bramka jest konserwatywna na nogach, ale pomija funding — na 5m/V=12
-    słusznie (~0,0004% nominału), na 4h/V=3 już nie (~0,015% wobec bramki 0,090%).
+    Bramka pomija funding — i H3 sprawdziła, czy to jej nie psuje. Przed rundą
+    prognoza brzmiała: na 4h/V=3 funding sięgnie ~+0,015% nominału (~17% bramki 0,090%),
+    co czyniłoby ją ANTY-konserwatywną. **Pomiar to obalił:** funding wyszedł
+    **−0,00243% nominału** (2,7% bramki, znak UJEMNY — pozycja średnio funding
+    inkasuje, bo w próbie są obie strony). Pominięcie działa więc w stronę
+    konserwatywną i osobny kandydat na rundę został wycofany
+    (`runs/2026-09-22_h3-noga-timeout-pasmo/`, sekcja 6).
 
     Returns:
         Ułamek nominału — górne oszacowanie kosztu obrotu, bez funding.

@@ -49,6 +49,33 @@ REVERSION_FEATURES = ["return_lag_1", "volume_zscore_20", "rsi_14", "price_zscor
 LABEL_TO_CLASS = {-1.0: 0, 0.0: 1, 1.0: 2}
 CLASS_TO_LABEL = {v: k for k, v in LABEL_TO_CLASS.items()}
 
+# --- K2: nazwane warianty naprawy abstynencji (NIE pokretla do strojenia) ---
+#
+# Ta sama konwencja co `execution_model` (C2.12) i `timeout_leg` (H3): skonczony zbior nazw,
+# kazda z udokumentowanym uzasadnieniem, domyslna odtwarza baseline BIT-IDENTYCZNIE.
+#
+# Diagnoza, ktora je uzasadnia (K1): przy DOSKONALEJ wyroczni abstynencja modelu wynosi 66,48%,
+# a udzial klasy timeout w etykietach 66,58% - zgodnosc do 0,1 pp. Abstynencja NIE jest wiec
+# sama w sobie wada; wada jest jej ZAPASC do 99,7% przy slabym sygnale, gdy posterior kolapsuje
+# do klasy wiekszosciowej. `multi:softprob` z `mlogloss` minimalizuje surowa log-loss na
+# rozkladzie, w ktorym timeout ma 2/3 masy - argmax na klase wiekszosciowa jest wtedy dla
+# modelu odpowiedzia OPTYMALNA.
+CLASS_WEIGHT_NONE = "none"  # BASELINE - brak wazenia, dzisiejsze zachowanie
+CLASS_WEIGHT_BALANCED = "balanced"  # w_c = N / (K_obecnych * n_c); srednia waga na wiersz == 1.0
+CLASS_WEIGHT_MODES = (CLASS_WEIGHT_NONE, CLASS_WEIGHT_BALANCED)
+
+DIRECTION_POLICY_ARGMAX3 = "argmax3"  # BASELINE - argmax po 3 klasach, timeout -> 0.0
+DIRECTION_POLICY_FORCED = "forced"  # argmax po {-1, +1}; abstynencja z konstrukcji = 0%
+DIRECTION_POLICIES = (DIRECTION_POLICY_ARGMAX3, DIRECTION_POLICY_FORCED)
+
+CONFIDENCE_MODE_CLASS = "class"  # BASELINE - p(wybranej klasy)
+CONFIDENCE_MODE_CONDITIONAL = "conditional"  # p / (p_long + p_short), zakres [0.5, 1.0]
+CONFIDENCE_MODES = (CONFIDENCE_MODE_CLASS, CONFIDENCE_MODE_CONDITIONAL)
+
+# Indeksy klas kierunkowych (z pominieciem timeoutu) - wyprowadzone z LABEL_TO_CLASS, nie
+# wpisane literalem, zeby zmiana mapowania nie rozjechala sie po cichu z ta stala.
+DIRECTIONAL_CLASSES = (LABEL_TO_CLASS[-1.0], LABEL_TO_CLASS[1.0])
+
 # Źródło prawdy: config/settings.yaml, sekcja `model`. Wartości startowe — kalibracja
 # WYŁĄCZNIE wewnątrz walk-forward (CLAUDE.md zasada 1).
 DEFAULT_SEED = 42
@@ -99,6 +126,72 @@ def best_iteration_or_last(booster: xgb.Booster, num_boost_round: int = NUM_BOOS
     return int(best)
 
 
+def validate_signal_policy(direction_policy: str, confidence_mode: str) -> None:
+    """
+    Jedyne miejsce, ktore zna dopuszczalne kombinacje `direction_policy`/`confidence_mode`.
+
+    Istnieje po to, zeby `backtest.engine.run_backtest` mogl odrzucic literowke w nazwie
+    wariantu w NAJWCZESNIEJSZYM punkcie przebiegu - przed treningiem pierwszego modelu -
+    nie majac wlasnej kopii regul. To ta sama decyzja co `gate_cost_fraction` w H3:
+    usuwamy klase bledu (dwie kopie reguly, ktore moga sie rozjechac), nie jej instancje.
+
+    Bez tego `predict_signal` wywalalby sie dopiero PO treningu, czyli - na realnych
+    danych 4h - po kilkunastu minutach liczenia.
+
+    Raises:
+        ValueError: nazwa spoza zbioru albo kombinacja, ktorej nie przemyslelismy.
+    """
+    if direction_policy not in DIRECTION_POLICIES:
+        raise ValueError(
+            f"direction_policy musi byc jednym z {DIRECTION_POLICIES}, dostalem: {direction_policy!r}"
+        )
+    if confidence_mode not in CONFIDENCE_MODES:
+        raise ValueError(
+            f"confidence_mode musi byc jednym z {CONFIDENCE_MODES}, dostalem: {confidence_mode!r}"
+        )
+    if direction_policy == DIRECTION_POLICY_ARGMAX3 and confidence_mode == CONFIDENCE_MODE_CONDITIONAL:
+        # Pewnosc warunkowa jest NIEZDEFINIOWANA dla wierszy o kierunku 0 - nie przepuszczamy
+        # kombinacji, ktorej nie przemyslelismy (fail fast zamiast cichej dziwnej liczby).
+        raise ValueError(
+            "confidence_mode='conditional' wymaga direction_policy='forced' - pewnosc warunkowa "
+            "nie ma sensu dla wierszy, na ktorych model odmawia kierunku"
+        )
+
+
+def validate_class_weight_mode(mode: str) -> None:
+    """Jak `validate_signal_policy`, dla wag klas - wolana przez silnik przed treningiem."""
+    if mode not in CLASS_WEIGHT_MODES:
+        raise ValueError(f"class_weight_mode musi byc jednym z {CLASS_WEIGHT_MODES}, dostalem: {mode!r}")
+
+
+def class_weight_map(
+    class_indices: np.ndarray,
+    mode: str = CLASS_WEIGHT_NONE,
+) -> dict[int, float] | None:
+    """
+    Mapa waga-per-klasa dla `xgb.DMatrix(weight=...)`. `None` oznacza BRAK wazenia.
+
+    `balanced`: w_c = N / (K_obecnych * n_c). Suma wag po wierszach == N, wiec skala
+    hesjanow (a przez nia `min_child_weight` i `eta`) jest ta sama co bez wazenia - zmienia
+    sie WYLACZNIE proporcja miedzy klasami, nie ogolna sila sygnalu uczacego.
+
+    Klasy NIEOBECNE w `class_indices` nie trafiaja do mapy - brak dzielenia przez zero przy
+    foldzie, w ktorym jakas klasa nie wystapila.
+
+    UWAGA: `scale_pos_weight` z XGBoost NIE dziala tutaj - to parametr celu BINARNEGO, bez
+    zadnego efektu przy `multi:softprob`. Jedyna poprawna dzwignia jest wektor `weight` per
+    wiersz na DMatrix. (Zapisane, bo kazdy czytelnik najpierw siegnie po scale_pos_weight.)
+    """
+    validate_class_weight_mode(mode)
+    if mode == CLASS_WEIGHT_NONE:
+        return None
+
+    values, counts = np.unique(class_indices, return_counts=True)
+    n_total = int(counts.sum())
+    n_classes = len(values)
+    return {int(c): float(n_total / (n_classes * cnt)) for c, cnt in zip(values, counts)}
+
+
 def train_regime_model(
     train_df: pd.DataFrame,
     test_df: pd.DataFrame,
@@ -110,6 +203,7 @@ def train_regime_model(
     seed: int = DEFAULT_SEED,
     validation_fraction: float | None = None,
     embargo_candles: int = 0,
+    class_weight_mode: str = CLASS_WEIGHT_NONE,
 ) -> xgb.Booster:
     """
     Trenuje pojedynczy model XGBoost (multi-class -1/0/1) na `train_df`, z early
@@ -164,11 +258,35 @@ def train_regime_model(
 
     full_params = {**DEFAULT_XGB_PARAMS, **(params or {}), "seed": seed}
 
-    def _dmatrix(frame: pd.DataFrame) -> xgb.DMatrix:
-        labels = frame[label_column].map(LABEL_TO_CLASS).to_numpy(dtype=np.int32)
-        return xgb.DMatrix(frame[feature_columns], label=labels)
+    if class_weight_mode not in CLASS_WEIGHT_MODES:
+        raise ValueError(
+            f"class_weight_mode musi byc jednym z {CLASS_WEIGHT_MODES}, dostalem: {class_weight_mode!r}"
+        )
+
+    def _class_indices(frame: pd.DataFrame) -> np.ndarray:
+        return frame[label_column].map(LABEL_TO_CLASS).to_numpy(dtype=np.int32)
+
+    def _dmatrix(frame: pd.DataFrame, weight_map: dict[int, float] | None = None) -> xgb.DMatrix:
+        labels = _class_indices(frame)
+        if weight_map is None:
+            # ROZGALEZIENIE, nie `weight=ones`. Matematycznie tozsame, ale to jest DOKLADNIE
+            # ta sama linia kodu co przed K2 - bit-identycznosc baseline'u jest strukturalna,
+            # nie numeryczna (lekcja H3: usuwamy klase watpliwosci, nie jej instancje).
+            return xgb.DMatrix(frame[feature_columns], label=labels)
+        weights = np.array([weight_map[int(c)] for c in labels], dtype=np.float32)
+        return xgb.DMatrix(frame[feature_columns], label=labels, weight=weights)
 
     if validation_fraction is None:
+        if class_weight_mode != CLASS_WEIGHT_NONE:
+            # Ta sciezka to UDOKUMENTOWANY PRZECIEK sprzed Z17 (early stopping na foldzie OOS),
+            # zachowany wylacznie do odtwarzania C6-C2.13. Nowa naprawa nie ma prawa wejsc na
+            # stara wade - inaczej powstalby wariant "Z17 z wagami na wierzchu", ktory wyglada
+            # na ulepszenie, a jest regresja.
+            raise ValueError(
+                "class_weight_mode != 'none' wymaga validation_fraction (sciezka bez early "
+                "stopping na OOS). Sciezka validation_fraction=None to przeciek sprzed Z17, "
+                "zachowany wylacznie do odtwarzania wynikow historycznych."
+            )
         # ŚCIEŻKA SPRZED Z17 — early stopping na foldzie OOS. Zachowana WYŁĄCZNIE po to,
         # żeby dało się odtworzyć wyniki C6-C2.13 co do cyfry. Nie używać do nowych pomiarów.
         booster = xgb.train(
@@ -197,7 +315,7 @@ def train_regime_model(
         # wtedy num_boost_round (patrz best_iteration_or_last).
         return xgb.train(
             full_params,
-            _dmatrix(train_clean),
+            _dmatrix(train_clean, class_weight_map(_class_indices(train_clean), class_weight_mode)),
             num_boost_round=num_boost_round,
             verbose_eval=False,
         )
@@ -207,11 +325,25 @@ def train_regime_model(
     # których się uczy.
     fit_part = train_clean.iloc[:n_fit]
     val_part = train_clean.iloc[n_fit:]
+
+    # JEDNA mapa wag, policzona WYLACZNIE na czesci fit, zastosowana do fit ORAZ walidacji.
+    #
+    # Dlaczego walidacja tez musi byc wazona: early stopping minimalizuje `mlogloss` na ogonie
+    # treningu. Gdyby trening byl wazony, a walidacja nie, wybieralibysmy liczbe drzew wobec
+    # INNEGO celu niz minimalizowany - niewazony mlogloss jest zdominowany przez klase
+    # wiekszosciowa, wiec model odchodzacy od prioru timeoutu wyglada na nim GORZEJ i zostaje
+    # uciety dokladnie wtedy, gdy zaczyna robic to, po co wagi wprowadzono. (Rozjazd celow
+    # znieczylby naprawe tak samo, jak Z17 bez Z21.)
+    #
+    # Dlaczego mapa idzie z czesci FIT, a nie z walidacji: etykieta wiersza nigdy nie moze
+    # decydowac o tym, jak ten wiersz jest oceniany. Dodatkowo ogon walidacyjny bywa dokladnie
+    # MIN_VALIDATION_ROWS = 30 wierszy - estymacja wag na 30 wierszach to szum.
+    weight_map = class_weight_map(_class_indices(fit_part), class_weight_mode)
     return xgb.train(
         full_params,
-        _dmatrix(fit_part),
+        _dmatrix(fit_part, weight_map),
         num_boost_round=num_boost_round,
-        evals=[(_dmatrix(val_part), "validation")],
+        evals=[(_dmatrix(val_part, weight_map), "validation")],
         early_stopping_rounds=early_stopping_rounds,
         verbose_eval=False,
     )
@@ -221,6 +353,8 @@ def predict_signal(
     booster: xgb.Booster,
     df: pd.DataFrame,
     feature_columns: list[str],
+    direction_policy: str = DIRECTION_POLICY_ARGMAX3,
+    confidence_mode: str = CONFIDENCE_MODE_CLASS,
 ) -> pd.DataFrame:
     """
     Generuje sygnały z wytrenowanego modelu (C5.3): `signal_direction` = argmax
@@ -244,14 +378,59 @@ def predict_signal(
         (po dropna) — zachowuje oryginalny index `df`, żeby wywołujący mógł
         zmapować sygnał z powrotem na konkretny wiersz/timestamp.
     """
+    validate_signal_policy(direction_policy, confidence_mode)
+
     clean = df.dropna(subset=feature_columns)
     dmatrix = xgb.DMatrix(clean[feature_columns])
 
     best_iteration = best_iteration_or_last(booster)
     proba = booster.predict(dmatrix, iteration_range=(0, best_iteration + 1))
 
-    class_idx = np.argmax(proba, axis=1)
-    confidence = proba[np.arange(len(proba)), class_idx]
+    if direction_policy == DIRECTION_POLICY_ARGMAX3:
+        # BASELINE - dokladnie ta sama sciezka co przed K2.
+        class_idx = np.argmax(proba, axis=1)
+    else:
+        # Wymuszenie kierunku: argmax WYLACZNIE po klasach kierunkowych. Klasa timeout jest
+        # pomijana, wiec abstynencja spada do zera Z KONSTRUKCJI - to tautologia, nie odkrycie,
+        # i tak jest zapisane w pre-rejestracji K2.
+        #
+        # Remis p_long == p_short rozstrzygamy deterministycznie na +1.0 (przy softmaxie float32
+        # ma miare zero, ale gdyby kiedys przestal - lepiej, zeby byl przewidywalny niz zalezny
+        # od kolejnosci indeksow).
+        # Jawne porownanie, NIE np.argmax po podzbiorze: argmax przy remisie zwraca PIERWSZY
+        # indeks, czyli po cichu klase -1. `>=` przechyla remis na +1, zgodnie z deklaracja.
+        class_short, class_long = LABEL_TO_CLASS[-1.0], LABEL_TO_CLASS[1.0]
+        class_idx = np.where(proba[:, class_long] >= proba[:, class_short], class_long, class_short)
+
+    raw_confidence = proba[np.arange(len(proba)), class_idx]
+    if confidence_mode == CONFIDENCE_MODE_CLASS:
+        confidence = raw_confidence
+    else:
+        # Pewnosc WARUNKOWA: p(wybrany) / (p_long + p_short), zakres [0.5, 1.0].
+        #
+        # To jest posterior modelu O KIERUNKU POD WARUNKIEM, ze pozycja jest otwierana - czyli
+        # dokladnie wielkosc, ktora rzadzi wyplata przy symetrycznych barierach.
+        #
+        # Surowe p(klasy) byloby tu BLEDEM i to bledem zmieniajacym ZNAK udokumentowanego
+        # obciazenia: `engine._train_fold_confidence_threshold` liczy prog z kwantyla na
+        # predykcjach in-sample, gdzie model jest przesadnie pewny - dzis zawyza to prog
+        # i bramka przepuszcza MNIEJ (konserwatywnie). Przy surowej pewnosci i wymuszonym
+        # kierunku na treningu p_kierunkowe ~ 0,02 (bo p_timeout ~ 1), wiec prog wypadalby
+        # ZA NISKO i bramka OOS dopuszczalaby WIECEJ niz nominalne q. Konserwatyzm zmienilby
+        # sie w anty-konserwatyzm po cichu - profil wady Z17.
+        #
+        # Drugi powod: `risk_controller.compute_sizing` skaluje ryzyko przez signal_confidence.
+        # Surowa (~0,02-0,20) dalaby pozycje mniejsze o rzad wielkosci, wiec ramie A2 roznilaby
+        # sie od baseline'u na DWOCH osiach naraz (regula decyzyjna + faktyczna dzwignia).
+        #
+        # CO TRACIMY (zapisane jawnie, docs/rag/03): warunkowa odrzuca informacje "model uwaza,
+        # ze nic sie nie wydarzy". Przy p = [0.015, 0.98, 0.005] daje 0,75 mimo niemal pewnego
+        # timeoutu. Wlasciwym rozwiazaniem, gdyby bramka pewnosci byla wlaczona, jest OSOBNY
+        # filtr na p_timeout - nie przeciazanie signal_confidence dwiema rolami.
+        directional_mass = proba[:, np.asarray(DIRECTIONAL_CLASSES)].sum(axis=1)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            confidence = np.where(directional_mass > 0.0, raw_confidence / directional_mass, 0.5)
+
     direction = np.array([CLASS_TO_LABEL[int(c)] for c in class_idx])
 
     return pd.DataFrame(

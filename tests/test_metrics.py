@@ -20,6 +20,8 @@ from hypothesis import strategies as st
 
 from backtest.metrics import (
     MIN_TRADES_FOR_HIT_RATE_CI,
+    expected_trades,
+    measurability_report,
     min_detectable_hit_rate,
     required_trades,
     wald_half_width,
@@ -840,3 +842,140 @@ def test_half_width_monotonically_decreasing_in_n(n_low: int, extra: int) -> Non
 def test_min_detectable_always_above_break_even(be: float, n: int) -> None:
     """Niezmiennik: nigdy nie wolno orzec rentownosci przy trafnosci rownej progowi."""
     assert min_detectable_hit_rate(be, n) > be
+
+
+# ---------------------------------------------------------------------------
+# K2 — MIERZALNOSC hipotezy PRZED eksperymentem
+# (runs/2026-09-22_k2-naprawa-abstynencji/README.md, sprostowanie 1)
+# ---------------------------------------------------------------------------
+
+
+def test_expected_trades_counts_decisions_not_candles() -> None:
+    """
+    Sedno wniosku skumulowanego 19: liczba OBSERWACJI to nie liczba TRANSAKCJI.
+
+    1 000 swiec przy abstynencji 66,58% (rozklad klas z H2.1) daje ~334 decyzje, a nie
+    1 000. Dokladnie ten czlon brakowal w rachunkach mocy S1, S1b i H2.1 - trzy razy
+    ten sam blad.
+    """
+    assert expected_trades(1_000, abstention_rate=0.0) == pytest.approx(1_000.0)
+    assert expected_trades(1_000, abstention_rate=0.6658) == pytest.approx(334.2)
+    assert expected_trades(1_000, abstention_rate=1.0) == pytest.approx(0.0)
+
+
+def test_expected_trades_applies_remaining_gates_multiplicatively() -> None:
+    """`admission_rate` to przezywalnosc pozostalych bramek (kosztowa, pewnosci, kill-switch)."""
+    assert expected_trades(1_000, 0.5, admission_rate=0.5) == pytest.approx(250.0)
+    assert expected_trades(1_000, 0.5, admission_rate=1.0) == pytest.approx(500.0)
+
+
+def test_expected_trades_reproduces_the_h21_surprise() -> None:
+    """
+    Kontrola na REALNEJ liczbie: H2.1 dostal n=98 przy abstynencji 99,32%.
+
+    Gdyby ta funkcja istniala przed H2.1, rachunek mocy pokazalby to Z GORY. Liczba swiec
+    ocenionych w H2.1 to ~14 400; przy zmierzonej abstynencji wychodzi ~98.
+    """
+    assert expected_trades(14_400, abstention_rate=0.9932) == pytest.approx(98, abs=1.5)
+
+
+@pytest.mark.parametrize(
+    "n_rows, abstention, admission",
+    [(-1, 0.5, 1.0), (100, -0.01, 1.0), (100, 1.01, 1.0), (100, 0.5, 1.5), (100, 0.5, -0.1)],
+)
+def test_expected_trades_returns_nan_outside_domain(n_rows, abstention, admission) -> None:
+    """Spojne z konwencja NaN w compute_sharpe_ratio/compute_t_stat - nigdy cicha liczba."""
+    assert math.isnan(expected_trades(n_rows, abstention, admission))
+
+
+def test_expected_trades_returns_nan_for_nan_inputs() -> None:
+    assert math.isnan(expected_trades(100, float("nan")))
+    assert math.isnan(expected_trades(100, 0.5, float("nan")))
+
+
+def test_detectability_band_depends_only_on_n() -> None:
+    """
+    Sprostowanie 1 z pre-rejestracji K2, przeliczone DRUGA DROGA.
+
+    "Prog wykrywalnosci 58,2%" z K1 to artefakt siatki `q`. Wlasciwoscia przyrzadu jest
+    szerokosc pasma "oplacalne, ale NIEWIDZIALNE" = z*sqrt(0,25/n) - zalezy WYLACZNIE od n,
+    nie od progu oplacalnosci. Ten test pilnuje tego wprost: przy tym samym n dwie rozne
+    wartosci break-even daja te sama szerokosc pasma.
+    """
+    for n in (50, 345, 7_687):
+        szerokosc_a = min_detectable_hit_rate(0.50, n) - 0.50
+        szerokosc_b = min_detectable_hit_rate(0.55, n) - 0.55
+        assert szerokosc_a == pytest.approx(szerokosc_b)
+        assert szerokosc_a == pytest.approx(wald_half_width(n))
+
+
+def test_detectability_band_matches_preregistered_table() -> None:
+    """
+    KOTWICA LICZBOWA: tabela cytowana w pre-rejestracji K2, wpisana literalami.
+
+    Gdyby ktos zmienil `wald_half_width` albo `Z_TWO_SIDED_95`, te liczby przestalyby sie
+    zgadzac z tym, co juz jest opublikowane w `runs/` - i test to pokaze, zamiast pozwolic
+    dokumentacji rozjechac sie z kodem po cichu.
+    """
+    oczekiwane_pp = {50: 13.86, 98: 9.90, 105: 9.56, 220: 6.61, 345: 5.28, 787: 3.49,
+                     4_843: 1.41, 7_687: 1.12}
+    for n, pp in oczekiwane_pp.items():
+        assert 100.0 * wald_half_width(n) == pytest.approx(pp, abs=0.01), f"n={n}"
+
+
+def test_measurability_report_says_measurable_when_effect_clears_the_band() -> None:
+    raport = measurability_report(assumed_hit_rate=0.60, break_even_p=0.52, n_trades_expected=5_000)
+    assert raport["verdict"] == "MIERZALNA"
+    assert raport["measurable"] is True
+    assert raport["margin_pp"] > 0
+
+
+def test_measurability_report_says_unmeasurable_inside_the_invisible_band() -> None:
+    """
+    Przypadek, ktory ta funkcja ma lapac PRZED uruchomieniem: hipoteza oplacalna, ale
+    zbyt slaba, zeby ja odroznic od progu przy tej probie. Taki eksperyment nie
+    rozstrzygnie niczego NIEZALEZNIE OD WYNIKU.
+    """
+    raport = measurability_report(assumed_hit_rate=0.53, break_even_p=0.52, n_trades_expected=98)
+    assert raport["verdict"] == "NIEMIERZALNA"
+    assert raport["measurable"] is False
+    assert raport["margin_pp"] < 0
+
+
+def test_measurability_report_does_not_define_a_second_threshold() -> None:
+    """
+    Wymog z pre-rejestracji: NIE wolno dokladac trzeciej kopii progu (sa juz dwa trupy -
+    MIN_VALIDATION_ROWS=30 i std<0.2). Raport musi WOLAC `min_detectable_hit_rate`,
+    a nie liczyc czegos wlasnego.
+    """
+    be, n = 0.5246, 1_234
+    raport = measurability_report(assumed_hit_rate=0.60, break_even_p=be, n_trades_expected=n)
+    assert raport["p_detectable"] == pytest.approx(min_detectable_hit_rate(be, n))
+    assert raport["band_width_pp"] == pytest.approx(100.0 * wald_half_width(n))
+
+
+@pytest.mark.parametrize(
+    "p, be, n",
+    [(float("nan"), 0.52, 100), (0.6, float("nan"), 100), (0.6, 0.52, float("nan")),
+     (0.6, 0.52, 0), (0.0, 0.52, 100), (1.0, 0.52, 100), (0.6, 0.0, 100), (0.6, 1.0, 100)],
+)
+def test_measurability_report_refuses_to_guess(p, be, n) -> None:
+    """Smieciowe wejscie ma dac jawne N/D, nie liczbe, ktora ktos zacytuje w write-upie."""
+    raport = measurability_report(assumed_hit_rate=p, break_even_p=be, n_trades_expected=n)
+    assert raport["verdict"] == "N/D"
+    assert raport["measurable"] is False
+    assert math.isnan(raport["p_detectable"])
+
+
+def test_measurability_chain_reproduces_h21_verdict_ex_ante() -> None:
+    """
+    Domkniecie petli: gdyby zasada 18 obowiazywala przed H2.1, runda NIE wystartowalaby.
+
+    H2.1 mial ~14 400 swiec, abstynencje 99,32% i prog oplacalnosci 52,69% (sprostowany
+    w H3). Przy zalozonej trafnosci 55% - hojnej wobec wszystkiego, co projekt kiedykolwiek
+    zmierzyl - werdykt musi brzmiec NIEMIERZALNA.
+    """
+    n = expected_trades(14_400, abstention_rate=0.9932)
+    raport = measurability_report(assumed_hit_rate=0.55, break_even_p=0.5269, n_trades_expected=n)
+    assert raport["verdict"] == "NIEMIERZALNA"
+    assert raport["band_width_pp"] > 9.0

@@ -49,7 +49,7 @@ from agents.regime_coherence import (
     regime_episodes,
 )
 from backtest.checkpoint_lib import fetch_data, load_config
-from backtest.costs import MAKER, TAKER, round_trip_cost_fraction
+from backtest.costs import EXECUTION_MAKER_LIMIT, gate_cost_fraction
 from backtest.diagnose_cost_feasibility import _regime_series
 
 # Zmierzone w C2.12 (model wykonania maker_limit) — trafność kierunku per reżim.
@@ -134,9 +134,13 @@ def _print_block_2(regime: pd.Series, df: pd.DataFrame) -> None:
     print("BLOK 2 — konsekwencja dla członu B (domknięcie Backlog Z8 bez wydawania wariantu)")
     print("=" * 96)
 
-    # Koszt zgodnie z modelem wykonania z C2.12: bramka nie zna powodu wyjścia,
-    # więc konserwatywnie maker-wejście + taker-wyjście.
-    cost = round_trip_cost_fraction(entry_leg=MAKER, exit_leg=TAKER)
+    # Koszt zgodnie z modelem wykonania z C2.12: bramka nie zna powodu wyjścia, więc
+    # bierze najdroższy osiągalny. Do H3 stała tu ręczna kopia pary nóg
+    # (`entry_leg=MAKER, exit_leg=TAKER`); dziś to `gate_cost_fraction` — ta sama funkcja,
+    # z której korzysta silnik. Wartość bez zmian (0,0009), więc liczby tego bloku są
+    # odtwarzalne co do cyfry; zmienia się tylko to, że dołożenie czwartego powodu wyjścia
+    # przesunie ten skrypt razem z bramką, zamiast go po cichu zostawić.
+    cost = gate_cost_fraction(EXECUTION_MAKER_LIMIT)
     atr = compute_atr_14(df)
     atr_over_price = (atr / df["close"]).reindex(regime.index)
     episodes = regime_episodes(regime)

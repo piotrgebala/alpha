@@ -41,7 +41,7 @@ from agents.feature_miner import (
 )
 from agents.labeling import ATR_MULTIPLIER, VERTICAL_BARRIER_CANDLES
 from agents.regime_coherence import coherence_table, regime_episodes
-from backtest.costs import MAKER, TAKER, round_trip_cost_fraction
+from backtest.costs import EXECUTION_MAKER_LIMIT, gate_cost_fraction
 from backtest.diagnose_cost_feasibility import _regime_series
 from data.fetch_ohlcv import TIMEFRAME_MINUTES, get_ohlcv_cached, resample_ohlcv
 
@@ -136,7 +136,11 @@ def block_3_geometry(native: dict[str, pd.DataFrame], cfg_rule: dict) -> None:
     print("\n" + "=" * 96)
     print("BLOK 3 — relacja B/C: jak nisko schodzi PRÓG OPŁACALNOŚCI na grubszym interwale?")
     print("=" * 96)
-    cost = round_trip_cost_fraction(entry_leg=MAKER, exit_leg=TAKER)
+    # H3: koszt bramkowy z JEDNEGO źródła (`gate_cost_fraction`), nie z ręcznej kopii
+    # pary nóg. Wartość niezmieniona (0,0009), liczby tego bloku odtwarzalne co do cyfry.
+    # Ten moduł NIE jest zamrożonym zapisem rundy w sensie zasady 13 — importują z niego
+    # `_load`/`_load_cfg` cztery żywe skrypty (S1, H2.1, K1, H3).
+    cost = gate_cost_fraction(EXECUTION_MAKER_LIMIT)
     print(f"koszt round-trip C = {100 * cost:.4f}% nominału (stały per transakcja, model C2.12)\n")
     print(
         f"{'interwał':9s} {'reżim':8s} {'ATR/cena':>10s} {'B=1.5xATR':>11s} "

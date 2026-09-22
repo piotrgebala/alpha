@@ -29,7 +29,14 @@ import pandas as pd
 import pytest
 
 from agents.labeling import ATR_MULTIPLIER
-from agents.ml_optimizer import REVERSION_FEATURES
+from agents.ml_optimizer import (
+    CLASS_WEIGHT_BALANCED,
+    CONFIDENCE_MODE_CLASS,
+    CONFIDENCE_MODE_CONDITIONAL,
+    DIRECTION_POLICY_ARGMAX3,
+    DIRECTION_POLICY_FORCED,
+    REVERSION_FEATURES,
+)
 from agents.risk_controller import MIN_BARRIER_TO_COST_RATIO
 import backtest.engine as engine_module
 from backtest.costs import (
@@ -603,16 +610,33 @@ def test_confidence_threshold_comes_from_train_not_test(monkeypatch) -> None:
         {"signal_direction": [1.0] * 5, "signal_confidence": [0.9, 0.9, 0.9, 0.9, 0.9]}
     )
     seen: list[int] = []
+    przekazane: list[dict] = []
 
-    def fake_predict_signal(booster, df, feature_columns):
+    # K2: fake przyjmuje `direction_policy`/`confidence_mode` i JE ZAPISUJE. Gdyby tylko
+    # je polykal (**_), test przestalby pilnowac, ze prog liczy sie w TEJ SAMEJ przestrzeni
+    # pewnosci co sygnaly OOS - a to jest warunek, bez ktorego ramie A2 porownywaloby
+    # kwantyl rozkladu warunkowego z progiem ze skali surowej.
+    def fake_predict_signal(booster, df, feature_columns, **kwargs):
         seen.append(len(df))
+        przekazane.append(kwargs)
         return train_conf if len(df) == 5 else test_conf
 
     monkeypatch.setattr("backtest.engine.predict_signal", fake_predict_signal)
     threshold = _train_fold_confidence_threshold(
-        _StubBooster(), pd.DataFrame(index=range(5)), [], confidence_quantile=1.0
+        _StubBooster(),
+        pd.DataFrame(index=range(5)),
+        [],
+        confidence_quantile=1.0,
+        direction_policy=DIRECTION_POLICY_FORCED,
+        confidence_mode=CONFIDENCE_MODE_CONDITIONAL,
     )
     assert threshold == pytest.approx(0.5)  # max z TRENINGU, nie 0.9 z testu
+    assert przekazane == [
+        {
+            "direction_policy": DIRECTION_POLICY_FORCED,
+            "confidence_mode": CONFIDENCE_MODE_CONDITIONAL,
+        }
+    ], "prog musi byc liczony w tej samej przestrzeni pewnosci co sygnaly OOS"
 
 
 def test_confidence_threshold_ignores_flat_signals(monkeypatch) -> None:
@@ -805,14 +829,68 @@ def test_folds_summary_counts_model_abstention() -> None:
 
 
 def test_skipped_folds_report_zero_funnel_counters() -> None:
+    # `min_train_rows` nie do spelnienia - inaczej test jest PUSTY: przy samych oknach
+    # 5/2/2 ta fikstura nie produkuje ani jednego pominietego folda, wiec petla ponizej
+    # nie wykonywala sie ani razu i test przechodzil, nie sprawdzajac niczego.
     result = run_backtest(
         _make_pipeline_test_ohlcv(seed=7),
         train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0,
+        min_train_rows=10_000,
     )
-    for fold in result["folds_summary"]:
-        if fold["skipped"]:
-            assert fold["n_signals_no_direction"] == 0
-            assert fold["n_rows_evaluated"] == 0
+    skipped = [f for f in result["folds_summary"] if f["skipped"]]
+    assert skipped, "fikstura musi wyprodukowac co najmniej jeden pominiety fold"
+    for fold in skipped:
+        assert fold["n_signals_no_direction"] == 0
+        assert fold["n_rows_evaluated"] == 0
+
+
+def test_all_fold_summaries_share_one_key_set() -> None:
+    """
+    KAZDY rekord `folds_summary` - aktywny, pominiety przez `min_train_rows` i pominiety
+    przez pusty rezim - musi miec DOKLADNIE ten sam zestaw kluczy.
+
+    Powod nie jest estetyczny. Konsumenci agreguja po calej liscie bez patrzenia na
+    `skipped` (tak robi kontrola lejka w `backtest/run_timeout_leg_band.py`), wiec rekord
+    z wezszym zestawem kluczy wywala przebieg KeyError-em - i to dopiero PO pelnym
+    walk-forwardzie, czyli po kilkunastu minutach liczenia. Galaz "pusty rezim" byla do
+    H3 wlasnie takim rekordem: miala 12 kluczy zamiast 17, w tym zadnego z trzech
+    licznikow lejka poza `n_signals_cost_gated`.
+
+    Obie galezie pominiecia wymuszamy JAWNIE, a nie liczac na fiksture: pusty rezim -
+    nazwa, ktorej `classify_regime` nie produkuje; prog `min_train_rows` - wartoscia nie
+    do spelnienia. Bez tego test bylby pusty, bo przy oknach 5/2/2 ta fikstura nie
+    produkuje ani jednego pominietego folda sama z siebie.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+    feature_sets = [("range", REVERSION_FEATURES), ("bez_swiec", REVERSION_FEATURES)]
+
+    normal = run_backtest(raw, regime_feature_sets=feature_sets, **kwargs)["folds_summary"]
+    # Prog nie do spelnienia -> KAZDY fold leci galezia `min_train_rows`.
+    starved = run_backtest(
+        raw, regime_feature_sets=feature_sets, min_train_rows=10_000, **kwargs
+    )["folds_summary"]
+    summaries = normal + starved
+
+    active = [f for f in summaries if not f["skipped"]]
+    empty = [f for f in summaries if f["skip_reason"] and "regime_df jest puste" in f["skip_reason"]]
+    starved_folds = [f for f in summaries if f["skip_reason"] and "min_train_rows" in f["skip_reason"]]
+    assert active, "brak rekordu aktywnego - test nie porownuje wszystkich trzech ksztaltow"
+    assert empty, "brak rekordu 'pusty rezim'"
+    assert starved_folds, "brak rekordu 'min_train_rows'"
+
+    reference = set(active[0].keys())
+    for fold in summaries:
+        assert set(fold.keys()) == reference, (
+            f"rekord regime={fold['regime']} fold_idx={fold['fold_idx']} ma inny zestaw "
+            f"kluczy: brakuje {reference - set(fold.keys())}, nadmiar {set(fold.keys()) - reference}"
+        )
+
+    # Konsument sumujacy lejek po CALEJ liscie nie moze sie wywrocic ani zafalszowac.
+    for key in _FUNNEL_KEYS:
+        assert sum(f[key] for f in summaries) >= 0
+        for skipped in empty + starved_folds:
+            assert skipped[key] == 0
 
 
 # --- H3: noga "timeout" jako pasmo + bramka niemogaca rozjechac sie z journalem ---
@@ -1004,15 +1082,32 @@ def test_run_backtest_timeout_leg_changes_trade_set_only_via_kill_switch() -> No
     momenty zadzialania kill-switcha - wiec ZBIOR wykonanych transakcji sie rozni, mimo
     identycznego lejka sygnalow. To jest jedyny kanal, ktorym pasmo moze ruszyc trafnosc,
     i powod, dla ktorego regula D5 rundy H3 zakazuje jej raportowania.
+
+    Test NIE twierdzi, ze tanszy wariant tlumi MNIEJ transakcji. To nie jest niezmiennik:
+    kill-switch mierzy obsuniecie od BIEZACEGO `peak_equity`, wiec krzywa lezaca punktowo
+    wyzej moze osiagnac wyzszy wczesny szczyt i przez to GLEBSZE pozniejsze obsuniecie.
+    Asercja o monotonicznosci liczby stlumien przewracalaby sie przy kazdej zmianie
+    fikstury, seeda albo okien `_H3_KWARGS` - bez zadnego bledu w kodzie.
     """
     raw = _make_pipeline_test_ohlcv(seed=7)
     taker = run_backtest(raw, timeout_leg=TAKER, **_H3_KWARGS)["trades"]
     maker = run_backtest(raw, timeout_leg=MAKER, **_H3_KWARGS)["trades"]
     merged = taker.merge(maker, on=["timestamp", "regime", "fold_idx"], suffixes=("_t", "_m"))
     assert len(merged) == len(taker) == len(maker), "lejek sygnalow musi byc identyczny"
-    n_killed_t = merged["kill_switch_active_t"].astype(bool).sum()
-    n_killed_m = merged["kill_switch_active_m"].astype(bool).sum()
-    assert n_killed_m <= n_killed_t, "tanszy koszt nie moze zwiekszac liczby stlumien"
+
+    # WLASCIWY niezmiennik: wejscia decyzji sa od kosztu niezalezne i oba warianty
+    # journaluja je identycznie - takze w wierszach stlumionych, bo powstaja PRZED
+    # sizingiem i przed rozstrzygnieciem wyjscia. Skoro kandydaci i ich parametry sa te
+    # same, ZBIOR wykonanych transakcji moze sie rozjechac WYLACZNIE przez suppresje.
+    for col in ("signal_direction", "signal_confidence", "entry_price", "exit_bar_offset"):
+        assert merged[f"{col}_t"].equals(merged[f"{col}_m"]), f"{col} sie rozjechalo"
+
+    # ...i ten kanal jest na tej fiksturze realnie otwarty. To CHARAKTERYSTYKA FIKSTURY,
+    # nie niezmiennik - ale bez niej test przestalby cokolwiek o kanale mowic (na realnych
+    # danych 4h zbiory wyszly identyczne), wiec zapala sie swiadomie.
+    suppressed_t = merged["kill_switch_active_t"].astype(bool)
+    suppressed_m = merged["kill_switch_active_m"].astype(bool)
+    assert (suppressed_t != suppressed_m).any(), "fikstura przestala pokazywac kanal kill-switcha"
 
 
 def test_run_backtest_rejects_unknown_timeout_leg() -> None:
@@ -1107,3 +1202,178 @@ def test_regime_gated_run_reproduces_baseline_after_sentinel_added() -> None:
     explicit = run_backtest(raw, regime_feature_sets=REGIME_FEATURE_SETS, **kwargs)
     assert base["final_equity"] == explicit["final_equity"]
     pd.testing.assert_frame_equal(base["trades"], explicit["trades"])
+
+
+# --- K2: naprawa abstynencji + T6 (kill-switch jako zrodlo obciazenia) ---
+#
+# runs/2026-09-22_k2-naprawa-abstynencji/README.md. Ramiona: A0 baseline / A1 wagi klas /
+# A2 wymuszenie kierunku. Testy pilnuja MECHANIZMU i baseline'u - nie rozstrzygaja rundy.
+
+_K2_KWARGS = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+
+
+def test_run_backtest_k2_defaults_are_bit_identical_to_baseline() -> None:
+    """
+    REGRESJA BASELINE'U na poziomie calego pipeline'u - warunek ramienia A0.
+
+    Jawne podanie domyslnych wariantow K2 musi dac journal i equity IDENTYCZNE co do
+    wartosci z wywolaniem sprzed K2. Gdyby K2 przesunelo baseline choc o cyfre, zadne
+    porownanie A0/A1/A2 nie mialoby punktu odniesienia, a wyniki C6-H3 przestalyby byc
+    odtwarzalne.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    bez_argumentow = run_backtest(raw, **_K2_KWARGS)
+    jawne_domyslne = run_backtest(
+        raw,
+        class_weight_mode=engine_module.CLASS_WEIGHT_NONE,
+        direction_policy=DIRECTION_POLICY_ARGMAX3,
+        confidence_mode=CONFIDENCE_MODE_CLASS,
+        kill_switch_enabled=True,
+        **_K2_KWARGS,
+    )
+    pd.testing.assert_frame_equal(bez_argumentow["trades"], jawne_domyslne["trades"])
+    assert bez_argumentow["final_equity"] == jawne_domyslne["final_equity"]
+
+
+def test_forced_direction_removes_abstention_end_to_end() -> None:
+    """
+    Ramie A2 przepiete przez CALY silnik, nie tylko przez `predict_signal`.
+
+    Wzrost liczby sygnalow jest TAUTOLOGIA (klasa timeout pomijana z konstrukcji) i tak
+    jest zapisany w pre-rejestracji - test pilnuje, ze przepiecie faktycznie dociera do
+    lejka, a nie ze A2 jest lepsze.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    baseline = run_backtest(raw, **_K2_KWARGS)
+    forced = run_backtest(
+        raw,
+        direction_policy=DIRECTION_POLICY_FORCED,
+        confidence_mode=CONFIDENCE_MODE_CONDITIONAL,
+        **_K2_KWARGS,
+    )
+
+    def _bez_kierunku(res):
+        return sum(f["n_signals_no_direction"] for f in res["folds_summary"] if not f["skipped"])
+
+    assert _bez_kierunku(baseline) > 0, "fikstura musi pokazywac abstynencje w baseline"
+    assert _bez_kierunku(forced) == 0, "wymuszenie kierunku ma zbic abstynencje do zera"
+    assert len(forced["trades"]) > len(baseline["trades"])
+    assert set(forced["trades"]["signal_direction"].unique()).issubset({-1.0, 1.0})
+
+
+def test_class_weights_reach_the_engine_and_change_the_run() -> None:
+    """Ramie A1: gdyby `class_weight_mode` nie docieralo przez silnik, byloby puste."""
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    baseline = run_backtest(raw, validation_fraction=0.2, **_K2_KWARGS)
+    balanced = run_backtest(
+        raw, validation_fraction=0.2, class_weight_mode=CLASS_WEIGHT_BALANCED, **_K2_KWARGS
+    )
+    assert not baseline["trades"].equals(balanced["trades"])
+
+
+# --- T6: dwie asercje OBOWIAZKOWE z pre-rejestracji ---
+
+
+def test_kill_switch_disabled_suppresses_nothing() -> None:
+    """
+    T6, asercja obowiazkowa nr 1.
+
+    Pre-rejestracja zada jej wprost, bo alternatywa - konwencja "0,99 znaczy wylaczony" -
+    to klasa bledu, na ktora projekt wpadl juz trzy razy (Z17b, Z9, H3): cicha umowa
+    zamiast jawnego przelacznika. Tu przelacznik jest jawny, a test tego pilnuje.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    off = run_backtest(
+        raw, risk_controller_fn=_oversized_risk_controller_fn, kill_switch_enabled=False, **_K2_KWARGS
+    )
+    on = run_backtest(
+        raw, risk_controller_fn=_oversized_risk_controller_fn, kill_switch_enabled=True, **_K2_KWARGS
+    )
+
+    assert off["trades"]["kill_switch_active"].sum() == 0
+    assert on["trades"]["kill_switch_active"].sum() > 0, (
+        "fikstura musi wywolywac kill-switcha w ramieniu ON - inaczej test nie porownuje niczego"
+    )
+
+
+def test_kill_switch_arms_share_identical_candidate_set() -> None:
+    """
+    T6, asercja obowiazkowa nr 2: klucz (regime, fold_idx, timestamp) daje IDENTYCZNY
+    zbior w obu ramionach.
+
+    To jest dowod, ze T6 jest eksperymentem czysto SELEKCYJNYM. `_collect_candidate_signals`
+    biegnie PRZED petla equity i nie przyjmuje zadnego argumentu zaleznego od equity, wiec
+    kill-switch nie moze zmienic tego, KTORE swiece kandyduja - tylko to, ktore z nich
+    zostaly wykonane. Gdyby zbiory sie rozjechaly, roznica trafnosci mieszalaby selekcje
+    z czyms innym i cala interpretacja T6 by upadla.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(risk_controller_fn=_oversized_risk_controller_fn, **_K2_KWARGS)
+    off = run_backtest(raw, kill_switch_enabled=False, **kwargs)["trades"]
+    on = run_backtest(raw, kill_switch_enabled=True, **kwargs)["trades"]
+
+    klucz = ["regime", "fold_idx", "timestamp"]
+    assert set(map(tuple, off[klucz].to_numpy())) == set(map(tuple, on[klucz].to_numpy()))
+    assert len(off) == len(on)
+
+
+def test_hit_rate_inputs_are_insensitive_to_kill_switch() -> None:
+    """
+    Drugi filar interpretacji T6: `hit_rate` zalezy od ZNAKU `direction*(exit-entry)`,
+    a ten nie zalezy od `position_size`. Kill-switch rusza sizing i equity, wiec moze
+    ruszyc trafnosc WYLACZNIE przez sklad populacji.
+
+    Test sprawdza to na wierszach wykonanych w OBU ramionach: cena wejscia, wyjscia
+    i kierunek musza byc identyczne.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(risk_controller_fn=_oversized_risk_controller_fn, **_K2_KWARGS)
+    off = run_backtest(raw, kill_switch_enabled=False, **kwargs)["trades"]
+    on = run_backtest(raw, kill_switch_enabled=True, **kwargs)["trades"]
+
+    merged = off.merge(on, on=["timestamp", "regime", "fold_idx"], suffixes=("_off", "_on"))
+    wykonane_w_obu = merged[~merged["kill_switch_active_on"].astype(bool)]
+    assert len(wykonane_w_obu) > 0
+
+    for kolumna in ("signal_direction", "entry_price", "exit_price", "exit_reason"):
+        assert wykonane_w_obu[f"{kolumna}_off"].equals(
+            wykonane_w_obu[f"{kolumna}_on"]
+        ), f"{kolumna} sie rozjechalo - T6 przestalby byc eksperymentem czysto selekcyjnym"
+
+
+# --- fail fast na nazwach wariantow (precedens H3: walidacja PRZED treningiem) ---
+
+
+@pytest.mark.parametrize(
+    "kwargs, oczekiwany_komunikat",
+    [
+        ({"class_weight_mode": "inverse"}, "class_weight_mode"),
+        ({"direction_policy": "force"}, "direction_policy"),
+        ({"confidence_mode": "raw"}, "confidence_mode"),
+        (
+            {"direction_policy": DIRECTION_POLICY_ARGMAX3, "confidence_mode": CONFIDENCE_MODE_CONDITIONAL},
+            "conditional",
+        ),
+    ],
+)
+def test_run_backtest_rejects_bad_k2_variants_before_training(monkeypatch, kwargs, oczekiwany_komunikat) -> None:
+    """
+    Literowka w nazwie wariantu ma padac w NAJWCZESNIEJSZYM punkcie przebiegu, a nie po
+    wytrenowaniu pierwszego modelu.
+
+    Precedens jest w tym samym pliku: `timeout_leg` jest walidowany tak wlasnie od H3
+    ("fail fast, nie po 20 minutach"). Bez tego blad w nazwie kosztuje pelny walk-forward,
+    a przy `direction_policy`/`confidence_mode` wyszedlby dopiero z `predict_signal`,
+    czyli PO treningu.
+
+    Straznik: `train_regime_model` jest podmieniony na wybuchajacy, wiec test przejdzie
+    WYLACZNIE wtedy, gdy walidacja wypadnie przed pierwszym treningiem.
+    """
+
+    def _nie_wolno_trenowac(*args, **kw):
+        raise AssertionError("walidacja wariantu musi wypasc PRZED treningiem pierwszego modelu")
+
+    monkeypatch.setattr("backtest.engine.train_regime_model", _nie_wolno_trenowac)
+
+    with pytest.raises(ValueError, match=oczekiwany_komunikat):
+        run_backtest(_make_pipeline_test_ohlcv(seed=7), **kwargs, **_K2_KWARGS)

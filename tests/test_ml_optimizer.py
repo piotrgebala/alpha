@@ -18,9 +18,16 @@ import xgboost as xgb
 
 from agents.ml_optimizer import (
     CLASS_TO_LABEL,
+    CLASS_WEIGHT_BALANCED,
+    CLASS_WEIGHT_NONE,
+    CONFIDENCE_MODE_CLASS,
+    CONFIDENCE_MODE_CONDITIONAL,
+    DIRECTION_POLICY_ARGMAX3,
+    DIRECTION_POLICY_FORCED,
     LABEL_TO_CLASS,
     MIN_VALIDATION_ROWS,
     best_iteration_or_last,
+    class_weight_map,
     predict_signal,
     train_regime_model,
 )
@@ -355,3 +362,287 @@ def test_fold_too_small_for_any_split_still_skips_early_stopping(monkeypatch) ->
     )
     assert captured["eval_rows"] == []
     assert captured["early_stopping_rounds"] is None
+
+
+# ---------------------------------------------------------------------------
+# K2 — naprawa abstynencji: wagi klas, polityka kierunku, tryb pewnosci
+# (runs/2026-09-22_k2-naprawa-abstynencji/README.md, ramiona A1 i A2)
+# ---------------------------------------------------------------------------
+
+
+def _imbalanced_frame(n_timeout: int = 300, n_directional: int = 30, seed: int = 0) -> pd.DataFrame:
+    """
+    Rozklad klas przypominajacy realia projektu: klasa `timeout` dominuje.
+
+    Proporcja celowo ostrzejsza niz 66,58% z H2.1 (tu ~83%), zeby efekt wazenia byl
+    widoczny na malej probie testowej. To fikstura do testowania MECHANIZMU, nie
+    odwzorowanie rynku.
+    """
+    rng = np.random.default_rng(seed)
+    rows = []
+    for label, n, (m1, m2) in (
+        (0.0, n_timeout, (0.0, 0.0)),
+        (1.0, n_directional, (5.0, 5.0)),
+        (-1.0, n_directional, (-5.0, -5.0)),
+    ):
+        for a, b in zip(rng.normal(m1, 0.5, n), rng.normal(m2, 0.5, n)):
+            rows.append({"f1": a, "f2": b, "label": label})
+    return pd.DataFrame(rows).sample(frac=1.0, random_state=seed).reset_index(drop=True)
+
+
+def test_class_weight_map_none_means_no_weighting() -> None:
+    """`none` to BASELINE - musi zwrocic None, a nie mape samych jedynek."""
+    assert class_weight_map(np.array([0, 1, 1, 2]), mode=CLASS_WEIGHT_NONE) is None
+    assert class_weight_map(np.array([0, 1, 1, 2])) is None  # domyslny = baseline
+
+
+def test_class_weight_map_balanced_keeps_average_row_weight_at_one() -> None:
+    """
+    To jest WLASCIWOSC, na ktorej opiera sie docstring: suma wag po wierszach == N.
+
+    Bez niej wazenie zmienialoby nie tylko proporcje miedzy klasami, ale i ogolna skale
+    hesjanow - a przez nia `min_child_weight` i `eta` dzialalyby na innej skali niz
+    w baseline. Wtedy ramie A1 roznilo by sie od A0 na DWOCH osiach naraz i porownanie
+    nie mowiloby o wagach klas.
+    """
+    classes = np.array([0] * 10 + [1] * 60 + [2] * 30)
+    weights = class_weight_map(classes, mode=CLASS_WEIGHT_BALANCED)
+
+    per_row = np.array([weights[int(c)] for c in classes])
+    assert per_row.sum() == pytest.approx(len(classes))
+    assert per_row.mean() == pytest.approx(1.0)
+
+    # Kazda klasa dostaje laczna mase N/K - to jest sens slowa "balanced".
+    for c in (0, 1, 2):
+        mass = per_row[classes == c].sum()
+        assert mass == pytest.approx(len(classes) / 3)
+
+
+def test_class_weight_map_balanced_weights_are_inverse_frequency() -> None:
+    classes = np.array([0] * 10 + [1] * 60 + [2] * 30)
+    weights = class_weight_map(classes, mode=CLASS_WEIGHT_BALANCED)
+    for c, n_c in ((0, 10), (1, 60), (2, 30)):
+        assert weights[c] == pytest.approx(100 / (3 * n_c))
+    # Klasa rzadsza wazy wiecej - kierunek, nie tylko wartosc.
+    assert weights[0] > weights[2] > weights[1]
+
+
+def test_class_weight_map_skips_absent_classes_instead_of_dividing_by_zero() -> None:
+    """
+    Fold, w ktorym jakas klasa nie wystapila, jest w tym projekcie REALNY (rezim `trend`
+    to 0,53% swiec - C2.5). Mapa nie moze wtedy zawierac wpisu z dzieleniem przez zero.
+    """
+    weights = class_weight_map(np.array([1, 1, 1, 2]), mode=CLASS_WEIGHT_BALANCED)
+    assert set(weights) == {1, 2}
+    assert all(np.isfinite(w) for w in weights.values())
+
+
+@pytest.mark.parametrize("bad", ["inverse", "auto", "balanced ", "", "None"])
+def test_class_weight_map_rejects_unknown_mode(bad: str) -> None:
+    with pytest.raises(ValueError, match="class_weight_mode"):
+        class_weight_map(np.array([0, 1, 2]), mode=bad)
+
+
+def test_train_regime_model_default_is_bit_identical_to_pre_k2_baseline() -> None:
+    """
+    REGRESJA BASELINE'U - warunek, ktory pre-rejestracja K2 stawia ramieniu A0.
+
+    Domyslny `class_weight_mode` musi dawac model IDENTYCZNY co do bajtu z wywolaniem
+    bez tego argumentu. Gdyby K2 przesunelo baseline, zadne porownanie A0/A1/A2 nie
+    mialoby punktu odniesienia, a wszystkie wczesniejsze rundy stalyby sie nieodtwarzalne.
+    """
+    df = _imbalanced_frame(seed=11)
+    train_df, test_df = _train_test_split(df)
+
+    bez_argumentu = train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
+    jawny_baseline = train_regime_model(
+        train_df, test_df, FEATURE_COLUMNS, seed=42, class_weight_mode=CLASS_WEIGHT_NONE
+    )
+    assert bez_argumentu.save_raw("json") == jawny_baseline.save_raw("json")
+
+
+def test_train_regime_model_balanced_actually_changes_the_model() -> None:
+    """Gdyby `balanced` nie zmienialo modelu, ramie A1 byloby pustym ramieniem."""
+    df = _imbalanced_frame(seed=12)
+    train_df, test_df = _train_test_split(df)
+    kwargs = dict(seed=42, validation_fraction=0.2)
+
+    baseline = train_regime_model(train_df, test_df, FEATURE_COLUMNS, **kwargs)
+    balanced = train_regime_model(
+        train_df, test_df, FEATURE_COLUMNS, class_weight_mode=CLASS_WEIGHT_BALANCED, **kwargs
+    )
+    assert baseline.save_raw("json") != balanced.save_raw("json")
+
+
+def test_class_weights_refused_on_the_pre_z17_leaking_path() -> None:
+    """
+    Strażnik, ktory nie pozwala polaczyc naprawy z udokumentowana wada.
+
+    `validation_fraction=None` to sciezka sprzed Z17: early stopping mierzony na foldzie
+    OOS, czyli przeciek. Zostala w repo WYLACZNIE po to, zeby dalo sie odtworzyc wyniki
+    C6-C2.13. Gdyby wolno bylo dolozyc do niej wagi klas, powstalby wariant "Z17 z wagami
+    na wierzchu" - wygladajacy na ulepszenie, a bedacy regresja. Stad twardy blad zamiast
+    cichego dzialania.
+
+    Baseline (`none`) na tej sciezce MUSI dalej dzialac - inaczej stare wyniki przestalyby
+    byc odtwarzalne.
+    """
+    df = _imbalanced_frame(n_timeout=120, n_directional=40, seed=19)
+    train_df, test_df = _train_test_split(df)
+
+    with pytest.raises(ValueError, match="validation_fraction"):
+        train_regime_model(
+            train_df,
+            test_df,
+            FEATURE_COLUMNS,
+            seed=42,
+            validation_fraction=None,
+            class_weight_mode=CLASS_WEIGHT_BALANCED,
+        )
+
+    stara_sciezka = train_regime_model(
+        train_df, test_df, FEATURE_COLUMNS, seed=42, validation_fraction=None
+    )
+    assert stara_sciezka is not None
+
+
+def test_predict_signal_defaults_are_bit_identical_to_pre_k2_baseline() -> None:
+    """Druga polowa regresji baseline'u: sciezka predykcji (ramie A0)."""
+    df = _imbalanced_frame(seed=13)
+    train_df, test_df = _train_test_split(df)
+    booster = train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
+
+    bez_argumentow = predict_signal(booster, test_df, FEATURE_COLUMNS)
+    jawny_baseline = predict_signal(
+        booster,
+        test_df,
+        FEATURE_COLUMNS,
+        direction_policy=DIRECTION_POLICY_ARGMAX3,
+        confidence_mode=CONFIDENCE_MODE_CLASS,
+    )
+    pd.testing.assert_frame_equal(bez_argumentow, jawny_baseline)
+
+
+def test_forced_policy_drives_abstention_to_zero() -> None:
+    """
+    Sedno ramienia A2. Uwaga interpretacyjna zapisana w pre-rejestracji: to jest
+    TAUTOLOGIA (klasa timeout jest pomijana z konstrukcji), a nie odkrycie - test
+    pilnuje mechanizmu, nie dostarcza argumentu za adopcja A2.
+    """
+    df = _imbalanced_frame(seed=14)
+    train_df, test_df = _train_test_split(df)
+    booster = train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
+
+    baseline = predict_signal(booster, test_df, FEATURE_COLUMNS)
+    forced = predict_signal(
+        booster,
+        test_df,
+        FEATURE_COLUMNS,
+        direction_policy=DIRECTION_POLICY_FORCED,
+        confidence_mode=CONFIDENCE_MODE_CONDITIONAL,
+    )
+
+    assert (baseline["signal_direction"] == 0.0).any(), "fikstura musi pokazywac abstynencje"
+    assert (forced["signal_direction"] != 0.0).all()
+    assert set(forced["signal_direction"].unique()).issubset({-1.0, 1.0})
+    assert len(forced) == len(baseline), "wymuszenie kierunku nie moze gubic wierszy"
+
+
+def test_conditional_confidence_equals_directional_posterior() -> None:
+    """
+    Pewnosc warunkowa to p(wybrany) / (p_long + p_short) - przeliczone DRUGA DROGA,
+    wprost z `booster.predict`, a nie przez `predict_signal` (zasada 16a).
+    """
+    df = _imbalanced_frame(seed=15)
+    train_df, test_df = _train_test_split(df)
+    booster = train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
+
+    forced = predict_signal(
+        booster,
+        test_df,
+        FEATURE_COLUMNS,
+        direction_policy=DIRECTION_POLICY_FORCED,
+        confidence_mode=CONFIDENCE_MODE_CONDITIONAL,
+    )
+
+    proba = booster.predict(
+        xgb.DMatrix(test_df[FEATURE_COLUMNS]),
+        iteration_range=(0, best_iteration_or_last(booster) + 1),
+    )
+    long_idx, short_idx = LABEL_TO_CLASS[1.0], LABEL_TO_CLASS[-1.0]
+    p_long, p_short = proba[:, long_idx], proba[:, short_idx]
+    oczekiwane = np.maximum(p_long, p_short) / (p_long + p_short)
+
+    np.testing.assert_allclose(forced["signal_confidence"].to_numpy(), oczekiwane, rtol=1e-6)
+    assert (forced["signal_confidence"] >= 0.5 - 1e-9).all()
+    assert (forced["signal_confidence"] <= 1.0 + 1e-9).all()
+
+
+def test_forced_policy_breaks_ties_towards_long_deterministically() -> None:
+    """
+    Remis `p_long == p_short` ma miare zero przy float32, ale gdyby kiedys przestal -
+    ma byc PRZEWIDYWALNY, nie zalezny od kolejnosci indeksow. `np.argmax` po podzbiorze
+    zwrocilby przy remisie PIERWSZY indeks, czyli po cichu short.
+    """
+
+    class _RemisBooster:
+        """Podstawia rozklad z dokladnym remisem miedzy long i short."""
+
+        best_iteration = 0
+
+        def predict(self, dmatrix, iteration_range=None):
+            n = dmatrix.num_row()
+            proba = np.zeros((n, 3), dtype=np.float32)
+            proba[:, LABEL_TO_CLASS[-1.0]] = 0.25
+            proba[:, LABEL_TO_CLASS[1.0]] = 0.25
+            proba[:, LABEL_TO_CLASS[0.0]] = 0.50
+            return proba
+
+    df = _imbalanced_frame(n_timeout=5, n_directional=5, seed=16)
+    signals = predict_signal(
+        _RemisBooster(),
+        df,
+        FEATURE_COLUMNS,
+        direction_policy=DIRECTION_POLICY_FORCED,
+        confidence_mode=CONFIDENCE_MODE_CONDITIONAL,
+    )
+    assert (signals["signal_direction"] == 1.0).all()
+    assert signals["signal_confidence"].to_numpy() == pytest.approx(0.5)
+
+
+def test_conditional_confidence_rejected_without_forced_direction() -> None:
+    """
+    Pewnosc warunkowa jest NIEZDEFINIOWANA dla wierszy o kierunku 0, wiec kombinacja
+    argmax3+conditional ma padac, a nie produkowac cicho dziwna liczbe.
+    """
+    df = _imbalanced_frame(n_timeout=60, n_directional=30, seed=17)
+    train_df, test_df = _train_test_split(df)
+    booster = train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
+
+    with pytest.raises(ValueError, match="conditional"):
+        predict_signal(
+            booster,
+            test_df,
+            FEATURE_COLUMNS,
+            direction_policy=DIRECTION_POLICY_ARGMAX3,
+            confidence_mode=CONFIDENCE_MODE_CONDITIONAL,
+        )
+
+
+@pytest.mark.parametrize(
+    "policy, mode, oczekiwany_komunikat",
+    [
+        ("force", CONFIDENCE_MODE_CLASS, "direction_policy"),
+        (DIRECTION_POLICY_ARGMAX3, "raw", "confidence_mode"),
+    ],
+)
+def test_predict_signal_rejects_unknown_variant_names(policy, mode, oczekiwany_komunikat) -> None:
+    """Nazwane warianty, nie pokretla (precedens C2.12): literowka ma padac, nie milczec."""
+    df = _imbalanced_frame(n_timeout=60, n_directional=30, seed=18)
+    train_df, test_df = _train_test_split(df)
+    booster = train_regime_model(train_df, test_df, FEATURE_COLUMNS, seed=42)
+
+    with pytest.raises(ValueError, match=oczekiwany_komunikat):
+        predict_signal(
+            booster, test_df, FEATURE_COLUMNS, direction_policy=policy, confidence_mode=mode
+        )

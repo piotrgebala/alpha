@@ -320,6 +320,44 @@ def test_gate_cost_fraction_equals_max_over_exit_reasons(execution_model, timeou
     assert gate_cost_fraction(execution_model, timeout_leg) == expected
 
 
+@pytest.mark.parametrize(
+    "execution_model, exit_reason, timeout_leg, expected",
+    [
+        (EXECUTION_MAKER_LIMIT, EXIT_REASON_TP, TAKER, 0.0004),
+        (EXECUTION_MAKER_LIMIT, EXIT_REASON_SL, TAKER, 0.0009),
+        (EXECUTION_MAKER_LIMIT, EXIT_REASON_TIMEOUT, TAKER, 0.0009),
+        (EXECUTION_MAKER_LIMIT, EXIT_REASON_TP, MAKER, 0.0004),
+        (EXECUTION_MAKER_LIMIT, EXIT_REASON_SL, MAKER, 0.0009),
+        (EXECUTION_MAKER_LIMIT, EXIT_REASON_TIMEOUT, MAKER, 0.0004),
+        (EXECUTION_TAKER_ONLY, EXIT_REASON_TP, TAKER, 0.0014),
+        (EXECUTION_TAKER_ONLY, EXIT_REASON_SL, TAKER, 0.0014),
+        (EXECUTION_TAKER_ONLY, EXIT_REASON_TIMEOUT, TAKER, 0.0014),
+        (EXECUTION_TAKER_ONLY, EXIT_REASON_TIMEOUT, MAKER, 0.0014),
+    ],
+)
+def test_leg_cost_table_matches_hardcoded_literals(
+    execution_model, exit_reason, timeout_leg, expected
+) -> None:
+    """
+    KOTWICA NIEZALEZNA od `execution_legs`: pelna tabela kosztu round-trip per (model
+    wykonania, powod wyjscia, noga timeout), wpisana LITERALAMI.
+
+    Po co, skoro `test_gate_cost_fraction_equals_max_over_exit_reasons` juz sprawdza
+    bramke: tamten test wyprowadza oczekiwana wartosc z tej samej `execution_legs`, ktora
+    testuje, wiec blad w MAPOWANIU nog przesunalby obie strony rownosci naraz i przeszedl
+    niezauwazony. Dokladnie ta sama dziura byla w walidacji "druga droga" w sekcji 4 rundy
+    H3 (`backtest/run_timeout_leg_band.py`), ktora tez konsumowala `execution_legs`.
+    Literaly ponizej sa jedynym miejscem w repo, ktore ZNA te liczby bez pytania kodu.
+
+    Arytmetyka do recznego sprawdzenia (fee maker 0,02%, fee taker 0,05%, slippage 2 bps,
+    slippage tylko na nogach taker):
+      maker+maker = 0,02 + 0,02                       = 0,04%
+      maker+taker = 0,02 + 0,05 + 0,02                = 0,09%
+      taker+taker = 0,05 + 0,05 + 0,02 + 0,02         = 0,14%
+    """
+    assert _journal_cost(execution_model, exit_reason, timeout_leg) == pytest.approx(expected)
+
+
 def test_gate_cost_fraction_baseline_values() -> None:
     """
     Regresja dwoch liczb cytowanych w runs/INDEX.md i w write-upie H2.0.

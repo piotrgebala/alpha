@@ -31,8 +31,13 @@
 
 | Plik | Jednozdaniowy opis |
 |---|---|
-| [`clas5-runda/SKILL.md`](skills/clas5-runda/SKILL.md) | Procedura rundy badawczej krok po kroku (synchronizacja, czytanie runów, pre-rejestracja, dokumentacja, bramki, DoD) — kopiowana do `.claude/skills/` jako skill projektowy |
 | [`bramki-jakosci.md`](skills/bramki-jakosci.md) | Pełna ściąga trzech bramek jakości z CLAUDE.md zasady 16: walidacja write-upu, standard statystyk, przegląd kodu — listy kontrolne, pułapki z naszych rund, wzory, format werdyktów |
+
+**Procedura rundy `clas5-runda` NIE mieszka tutaj**, tylko w
+[`.claude/skills/clas5-runda/SKILL.md`](../.claude/skills/clas5-runda/SKILL.md) — i tylko tam.
+Powód: Claude Code ładuje jako skill wyłącznie kopię z `.claude/skills/`. Do 2026-09-22 były
+DWIE kopie (druga w `docs/skills/`) utrzymywane ręcznie i rozjechały się — aktualizowana była
+kopia w `docs/`, a wykonywana ta w `.claude/`, o dwie zasady starsza. Duplikat usunięty.
 
 ## Legenda `status` (YAML frontmatter w `docs/rag/*.md`)
 

@@ -98,6 +98,9 @@ from agents.labeling import (
     generate_walk_forward_folds,
 )
 from agents.ml_optimizer import (
+    CLASS_WEIGHT_NONE,
+    CONFIDENCE_MODE_CLASS,
+    DIRECTION_POLICY_ARGMAX3,
     DEFAULT_SEED,
     DEFAULT_VALIDATION_FRACTION,
     EARLY_STOPPING_ROUNDS,
@@ -107,6 +110,8 @@ from agents.ml_optimizer import (
     best_iteration_or_last,
     predict_signal,
     train_regime_model,
+    validate_class_weight_mode,
+    validate_signal_policy,
 )
 from agents.risk_controller import (
     KILL_SWITCH_COOLDOWN_DAYS,
@@ -121,12 +126,10 @@ from backtest.costs import (
     CANDLE_MINUTES,
     DEFAULT_TIMEOUT_LEG,
     EXECUTION_MAKER_LIMIT,
-    EXECUTION_TAKER_ONLY,
+    EXECUTION_TAKER_ONLY,  # noqa: F401 — re-eksport, patrz komentarz przy DEFAULT_EXECUTION_MODEL
     EXIT_REASON_SL,
     EXIT_REASON_TIMEOUT,
     EXIT_REASON_TP,
-    MAKER,
-    TAKER,
     execution_legs,
     gate_cost_fraction,
     total_round_trip_cost,
@@ -144,8 +147,11 @@ from backtest.costs import (
 PREREGISTERED_CONFIDENCE_QUANTILE = 0.75
 
 # H3: definicje `EXECUTION_*` przeniesione do `backtest/costs.py` (model wykonania jest
-# pojęciem kosztowym). Tutaj zostaje re-eksport, żeby importy z `backtest.engine`
-# w testach i skryptach działały bez zmian.
+# pojęciem kosztowym). Tutaj zostaje re-eksport SAMYCH NAZW MODELI (`EXECUTION_MAKER_LIMIT`
+# jest użyte niżej, `EXECUTION_TAKER_ONLY` importują testy z `backtest.engine`) — żeby te
+# importy działały bez zmian. Nazwy nóg (`MAKER`/`TAKER`) re-eksportu NIE dostają:
+# każdy konsument w repo bierze je wprost z `backtest.costs`, a druga ścieżka importu do
+# tej samej stałej to tylko kolejne miejsce, które może się rozjechać.
 DEFAULT_EXECUTION_MODEL = EXECUTION_MAKER_LIMIT
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
@@ -199,6 +205,9 @@ def _collect_candidate_signals(
     regime_feature_sets: list[tuple[str, list[str]]],
     execution_model: str,
     timeout_leg: str,
+    class_weight_mode: str,
+    direction_policy: str,
+    confidence_mode: str,
     confidence_quantile: float | None,
     validation_fraction: float | None,
     embargo_candles: int,
@@ -239,6 +248,15 @@ def _collect_candidate_signals(
     # Walidacja `timeout_leg` wypada tutaj celowo: to najwcześniejszy punkt przebiegu,
     # czyli PRZED treningiem pierwszego modelu (fail fast, nie po 20 minutach).
     cost_fraction = gate_cost_fraction(execution_model, timeout_leg)
+
+    # K2: nazwy wariantow walidowane w TYM SAMYM miejscu i z tego samego powodu co
+    # `timeout_leg` wyzej - najwczesniejszy punkt przebiegu, przed treningiem pierwszego
+    # modelu. Bez tego literowka w `direction_policy` wyszlaby dopiero z `predict_signal`,
+    # czyli PO treningu; na danych 4h to kilkanascie minut do komunikatu o bledzie.
+    # Silnik NIE ma wlasnej kopii regul - konsumuje walidatory z `agents.ml_optimizer`,
+    # te same, ktorych uzywa `predict_signal` (lekcja H3: jedno zrodlo reguly).
+    validate_class_weight_mode(class_weight_mode)
+    validate_signal_policy(direction_policy, confidence_mode)
     candidate_signals: list[dict] = []
     folds_summary: list[dict] = []
 
@@ -269,8 +287,19 @@ def _collect_candidate_signals(
                     "test_end": None,
                     "skipped": True,
                     "skip_reason": "regime_df jest puste — brak świec sklasyfikowanych jako ten reżim",
+                    # Pełny komplet liczników lejka, nie podzbiór. Konsument agreguje po
+                    # `folds_summary` bez patrzenia na `skipped` (tak robi np. kontrola
+                    # lejka w rundzie H3), więc rekord z brakującym kluczem wywala przebieg
+                    # KeyError-em dopiero PO pełnym walk-forwardzie. Niezmiennik „każdy
+                    # rekord ma ten sam zestaw kluczy" pilnuje test
+                    # `test_all_fold_summaries_share_one_key_set`.
                     "n_signals": 0,
                     "n_signals_cost_gated": 0,
+                    "n_signals_confidence_gated": 0,
+                    "n_signals_no_direction": 0,
+                    "n_rows_evaluated": 0,
+                    "early_stopping_used": None,
+                    "confidence_threshold": None,
                     "best_iteration": None,
                     "seed": seed,
                 }
@@ -325,11 +354,23 @@ def _collect_candidate_signals(
                 seed=seed,
                 validation_fraction=validation_fraction,
                 embargo_candles=embargo_candles,
+                class_weight_mode=class_weight_mode,
             )
             confidence_threshold = _train_fold_confidence_threshold(
-                booster, train_df, feature_columns, confidence_quantile
+                booster,
+                train_df,
+                feature_columns,
+                confidence_quantile,
+                direction_policy=direction_policy,
+                confidence_mode=confidence_mode,
             )
-            signals = predict_signal(booster, test_df, feature_columns)
+            signals = predict_signal(
+                booster,
+                test_df,
+                feature_columns,
+                direction_policy=direction_policy,
+                confidence_mode=confidence_mode,
+            )
 
             n_signals = 0
             n_signals_cost_gated = 0
@@ -445,6 +486,8 @@ def _train_fold_confidence_threshold(
     train_df: pd.DataFrame,
     feature_columns: list[str],
     confidence_quantile: float | None,
+    direction_policy: str = DIRECTION_POLICY_ARGMAX3,
+    confidence_mode: str = CONFIDENCE_MODE_CLASS,
 ) -> float | None:
     """
     Commit 2.13: prog `signal_confidence` wyznaczony WYLACZNIE na foldzie TRENINGOWYM.
@@ -463,7 +506,16 @@ def _train_fold_confidence_threshold(
     """
     if confidence_quantile is None:
         return None
-    train_signals = predict_signal(booster, train_df, feature_columns)
+    # K2: prog MUSI byc liczony w TEJ SAMEJ przestrzeni pewnosci co sygnaly OOS - inaczej
+    # porownywalibysmy kwantyl rozkladu warunkowego z surowym (albo odwrotnie), czyli prog
+    # z innej skali niz to, co filtruje.
+    train_signals = predict_signal(
+        booster,
+        train_df,
+        feature_columns,
+        direction_policy=direction_policy,
+        confidence_mode=confidence_mode,
+    )
     directional = train_signals.loc[
         train_signals["signal_direction"] != 0.0, "signal_confidence"
     ]
@@ -523,6 +575,10 @@ def run_backtest(
     candle_minutes: int = CANDLE_MINUTES,
     execution_model: str = DEFAULT_EXECUTION_MODEL,
     timeout_leg: str = DEFAULT_TIMEOUT_LEG,
+    class_weight_mode: str = CLASS_WEIGHT_NONE,
+    direction_policy: str = DIRECTION_POLICY_ARGMAX3,
+    confidence_mode: str = CONFIDENCE_MODE_CLASS,
+    kill_switch_enabled: bool = True,
     confidence_quantile: float | None = None,
     validation_fraction: float | None = DEFAULT_VALIDATION_FRACTION,
     embargo_candles: int | None = None,
@@ -650,6 +706,9 @@ def run_backtest(
         regime_feature_sets=active_feature_sets,
         execution_model=execution_model,
         timeout_leg=timeout_leg,
+        class_weight_mode=class_weight_mode,
+        direction_policy=direction_policy,
+        confidence_mode=confidence_mode,
         confidence_quantile=confidence_quantile,
         validation_fraction=validation_fraction,
         embargo_candles=effective_embargo,
@@ -690,7 +749,7 @@ def run_backtest(
             peak_equity = equity
             kill_switch_tripped_at = None
 
-        if check_kill_switch(equity, peak_equity, kill_switch_drawdown_pct):
+        if kill_switch_enabled and check_kill_switch(equity, peak_equity, kill_switch_drawdown_pct):
             if kill_switch_tripped_at is None:
                 kill_switch_tripped_at = signal["timestamp"]
             trades.append(
