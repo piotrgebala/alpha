@@ -496,3 +496,67 @@ def summarize_by_regime(fold_metrics: pd.DataFrame) -> pd.DataFrame:
         result = classify_checkpoint(group)
         rows.append({"regime": regime, **result})
     return pd.DataFrame(rows)
+
+# --- Z19 (Backlog II): moc statystyczna pomiaru trafności ---
+
+# Kwantyle rozkładu normalnego — wpisane jako stałe, bo repo nie ma scipy w zależnościach,
+# a to jedyne dwie wartości, których potrzebujemy. z dla 95% dwustronnego i 80% mocy.
+Z_TWO_SIDED_95 = 1.959964
+Z_POWER_80 = 0.841621
+
+
+def wald_half_width(n_trades: int, z: float = Z_TWO_SIDED_95) -> float:
+    """
+    Połowa szerokości przedziału ufności dla proporcji, liczona KONSERWATYWNIE przy
+    p = 0.5 (wtedy wariancja p(1-p) jest maksymalna): z * sqrt(0.25 / n).
+
+    Używamy wariantu konserwatywnego, bo przedział liczymy PRZED pomiarem — nie znamy
+    jeszcze p, a zakładanie korzystniejszej wariancji zawyżałoby moc.
+    """
+    if n_trades <= 0:
+        return float("nan")
+    return float(z * np.sqrt(0.25 / n_trades))
+
+
+def min_detectable_hit_rate(break_even_p: float, n_trades: int, z: float = Z_TWO_SIDED_95) -> float:
+    """
+    Z19: jaką trafność trzeba ZMIERZYĆ, żeby dolny kraniec przedziału ufności przekroczył
+    próg opłacalności — czyli żeby dało się uczciwie powiedzieć "to jest rentowne".
+
+        p_min = break_even_p + z * sqrt(0.25 / n)
+
+    To jest pytanie o WYKONALNOŚĆ eksperymentu, zadawane PRZED jego uruchomieniem.
+    Jeśli p_min wypada absurdalnie wysoko, eksperyment nie rozstrzygnie niczego niezależnie
+    od wyniku — i uczciwiej go nie uruchamiać, niż potem interpretować nierozstrzygalną
+    liczbę jako przesłankę.
+    """
+    if n_trades <= 0 or pd.isna(break_even_p):
+        return float("nan")
+    return float(break_even_p + wald_half_width(n_trades, z))
+
+
+def required_trades(
+    p_true: float,
+    p_null: float,
+    z_alpha: float = Z_TWO_SIDED_95,
+    z_power: float = Z_POWER_80,
+) -> float:
+    """
+    Liczba transakcji potrzebna, by odróżnić `p_true` od `p_null` przy zadanym poziomie
+    istotności i mocy (standardowy wzór dla dwóch proporcji, wariant jednopróbkowy):
+
+        n = (z_alpha * sqrt(p0(1-p0)) + z_power * sqrt(p1(1-p1)))^2 / (p1 - p0)^2
+
+    Zwraca inf, gdy p_true == p_null (nie da się odróżnić czegoś od samego siebie), oraz
+    NaN dla argumentów spoza (0, 1).
+    """
+    for value in (p_true, p_null):
+        if pd.isna(value) or not 0.0 < value < 1.0:
+            return float("nan")
+    delta = p_true - p_null
+    if delta == 0:
+        return float("inf")
+    numerator = (
+        z_alpha * np.sqrt(p_null * (1.0 - p_null)) + z_power * np.sqrt(p_true * (1.0 - p_true))
+    ) ** 2
+    return float(numerator / (delta**2))
