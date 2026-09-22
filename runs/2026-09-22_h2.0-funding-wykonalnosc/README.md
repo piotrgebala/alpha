@@ -338,8 +338,7 @@ eksperymentem rozstrzygnął dwa z nich **na nie**, za zero wariantów:
 jest to **jedyny nieprzetestowany zbiór informacyjny**, a koszt rozstrzygnięcia wynosi 1 wariant.
 
 **Dwa kandydaci na osobne rundy, jawnie NIE włączone do H2.1:**
-1. **`timeout → maker`** w `exit_leg_for_reason` — najwyżej dźwigniowa pojedyncza zmiana
-   w projekcie: próg 53,12% → 52,08%, wymagany przyrost `p` 2,85 → 1,81 pp.
+1. ~~**`timeout → maker`** w `exit_leg_for_reason`~~ — **SPROSTOWANE w H3 (`runs/2026-09-22_h3-noga-timeout-pasmo/`): teza OBALONA.** Noga maker wymaga znanej CENY, a przy barierze pionowej znamy tylko CZAS. Ponadto próg **53,12% był tu ZAWYŻONY** — policzony kosztem bramkowym zamiast zmierzonym; poprawnie **52,69%**. Zmierzone pasmo: [51,64%; 52,69%], niepewność nieistotna decyzyjnie.
 2. **Carry przekrojowy** na wielu instrumentach — wykonalny statystycznie, ale wymaga silnika
    portfelowego i łamie zasadę 9.
 

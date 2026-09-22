@@ -119,6 +119,34 @@ position_size = min(size_risk, size_leverage)
 ATR → mały stop_distance) fixed-fractional może wypluć pozycję większą niż limit leverage. Reguła
 musi być jawna, nie coś do odkrycia w runtime.
 
+## Bramka kosztowa — GORNE oszacowanie kosztu, nigdy wartosc oczekiwana (H3, 2026-09-22)
+
+`agents.risk_controller.is_cost_feasible` dziala PRZED wejsciem w pozycje, wiec **nie zna powodu
+wyjscia** — a ten decyduje o typie nogi (limit czy market), czyli o koszcie. Musi wiec zalozyc
+**najdrozszy osiagalny** powod wyjscia, i robi to przez `backtest.costs.gate_cost_fraction`,
+ktora bierze `max` po wszystkich osiagalnych nogach.
+
+**Dlaczego `max`, a nie wartosc oczekiwana.** Zadaniem bramki jest odrzucic swiece, na ktorych
+nawet pelne trafienie bariery nie pokrywa kosztu (Commit 2d). Koszt oczekiwany jest tanszy, bo
+`tp` wychodzi zleceniem limit (0,0004 wobec 0,0009 dla `sl`) — bramka liczaca go przepuszczalaby
+swiece, na ktorych stop-out jest arytmetycznie nie do pokrycia. Czyli dokladnie ten blad, ktory
+bramka ma lapac.
+
+**Usterka strukturalna naprawiona w H3.** Do tej rundy bramka miala WLASNA, reczna kopie reguly
+nog plus literal `exit_leg=TAKER` w `backtest/engine.py`. Nic nie wiazalo jej z kosztem liczonym
+w journalu, wiec rozjazd byl kwestia czasu, nie dyscypliny — i faktycznie rozjechala sie
+z kotwica testowa w `tests/test_risk_controller.py` (0,0014 vs produkcyjne 0,0009). Teraz bramka
+**nie ma wlasnej wiedzy o nogach**: konsumuje wyjscie tej samej `execution_legs`, co journal.
+Pelny ADR (kiedy noga jest maker, a kiedy taker): `docs/rag/04`.
+
+**Funding poza bramka — zmierzone, nie zalozone.** Bramka swiadomie pomija funding, bo ten
+zalezy od kierunku i czasu trzymania, wiec nie da sie go wyrazic jako staly ulamek nominalu.
+H3 zmierzyl, ile to kosztuje na 4h/V=3: **-0,00243% nominalu, czyli 2,7% bramki, ze ZNAKIEM
+UJEMNYM** (short OTRZYMUJE dodatni funding, a w probie sa obie strony). Pominiecie dziala wiec
+w strone **konserwatywna**. Wczesniejsze oszacowanie "~17%, anty-konserwatywne" bylo bledne
+co do znaku i rzedu wielkosci — zakladalo trzymanie przez pelne `V` swiec (bariera pada
+wczesniej) i ignorowalo znak.
+
 ## Kill-switch
 
 Prosta reguła, obecna już w backteście Fazy 0 (nie dopiero w Fazie 3): drawdown equity > X% od

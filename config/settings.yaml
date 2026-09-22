@@ -78,6 +78,19 @@ costs:
   # ZAŁOŻENIE JAWNE: noga maker zakłada, że limit się wypełnia — model pomija adverse
   # selection (limit wypełnia się częściej, gdy rynek idzie przeciw pozycji), więc realny
   # koszt maker jest wyższy niż modelowany. To ograniczenie modelu, nie wynik.
+  #
+  # H3 (2026-09-22) — noga TIMEOUT rozstrzygnięta na stałe. Kryterium: noga maker jest dobrze
+  # zdefiniowana tylko wtedy, gdy CENA zlecenia jest znana przy składaniu. Przy timeoucie
+  # znamy CZAS (świeca t+V), a NIE cenę — więc `taker` jest POPRAWNE, nie błędne. Wariant
+  # `maker` istnieje wyłącznie jako drugi kraniec analizy wrażliwości (`timeout_leg`
+  # w `run_backtest`), NIE jako opcja do włączenia: byłby niespójny z tym, jak silnik liczy
+  # cenę wyjścia timeoutu (`close` tej świecy, nieosiągalny limitem bez lookaheadu).
+  # Zmierzone pasmo progu opłacalności: [51,64%; 52,69%] — niepewność NIEISTOTNA decyzyjnie.
+  # Wartości pośrednie (ciągła stopa wypełnienia) wymagają danych o fillach — bez nich nie
+  # wchodzą do repo. Pełny ADR: docs/rag/04, runda: runs/2026-09-22_h3-noga-timeout-pasmo/.
+  #
+  # Świadomie BEZ klucza runtime dla `timeout_leg` — tak samo jak `execution_model`, który
+  # też jest stałą modułową. Drugie źródło prawdy byłoby kolejnym miejscem na rozjazd.
   maker_fee_rate: 0.0002            # 0.02% za stronę (Binance USDS-M Futures, VIP0 maker)
   funding_rate_8h: 0.0001           # 0.01% / 8h — przybliżenie, brak jeszcze realnych danych funding
   slippage_bps: 2                   # 2 bps = 0.02%, stała wartość startowa

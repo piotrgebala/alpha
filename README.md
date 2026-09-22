@@ -39,7 +39,7 @@ przy 50%. Wszystkie 10 cech to transformacje tej samej informacji: ceny i wolume
 testów**, funding rate jako sygnał — **nigdy nie zaimplementowany**, ekonomia dźwigni —
 **niezbadana**. Pełna lista: [Z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md).
 
-Budżet zużyty: **10 wariantów**, 17 rund, 2 uruchomione reguły STOP. Stan testów: **265/265**.
+Budżet zużyty: **10 wariantów**, 17 rund, 2 uruchomione reguły STOP. Stan testów: **308/308**.
 Surowe wyniki każdej rundy: [`runs/`](runs/INDEX.md) (tabela + wnioski skumulowane).
 Backlog i zasady pracy: [`STATUS.md`](STATUS.md).
 
@@ -47,7 +47,7 @@ Backlog i zasady pracy: [`STATUS.md`](STATUS.md).
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Własny licznik od zera (**0/1 zużytych**), własna reguła STOP, rachunek mocy **przed** eksperymentem.
 
-[H2.0](runs/2026-09-22_h2.0-funding-wykonalnosc/README.md) pobrał dane (7 457 rekordów funding, 6,8 roku, zero dziur) i **odrzucił 2 z 3 sformułowań za 0 wariantów**. Wykonalne zostaje jedno: **funding jako 11. cecha, bez bramki reżimu, 4h** — pre-rejestrowane jako **H2.1**, kryterium `ci_low > 53,12%`, wymagany przyrost trafności **+2,85 pp**. Uczciwy prior: **niski** — żadna pojedyncza cecha w tym projekcie nie dała takiego efektu.
+[H2.0](runs/2026-09-22_h2.0-funding-wykonalnosc/README.md) pobrał dane (7 457 rekordów funding, 6,8 roku, zero dziur) i **odrzucił 2 z 3 sformułowań za 0 wariantów**. Wykonalne zostaje jedno: **funding jako 11. cecha, bez bramki reżimu, 4h** — pre-rejestrowane jako **H2.1**, kryterium `ci_low > 52,69%` (**sprostowane w H3** z 53,12% — pierwotnie policzyłem je najdroższym możliwym kosztem zamiast zmierzonym), wymagany przyrost trafności **+2,39 pp**. Uczciwy prior: **niski** — żadna pojedyncza cecha w tym projekcie nie dała takiego efektu.
 
 Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 
@@ -72,6 +72,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | S1b — S1 po naprawie early stoppingu | 2026-09-22 | **NIEROZSTRZYGALNY** (klauzula `n<925`): naprawa podniosła foldy z early stoppingiem 5/63→53/63, ale ścięła próbę 1 037→345 (abstynencja modelu 70,9%→90,5%). Konfiguracja 4h/V=3 jest przy poprawnym pipelinie **nietestowalna** — brakuje 11,4 lat danych | [runs/s1b](runs/2026-09-22_s1b-early-stopping-naprawiony/README.md) |
 | **Z10 — ZAMKNIĘCIE FAZY 0** | 2026-09-22 | **DECYZJA BRAMKOWA UŻYTKOWNIKA: Faza 0 zamknięta wynikiem negatywnym.** Pooled trafność **50,27%** (n=7 687, CI95 [49,15%; 51,38%]) — górny kraniec **1,30 pp poniżej** najniższego progu opłacalności (52,69%) przy mocy **2,8×**: dowód braku, nie brak dowodu. Wąskie gardło **informacyjne, nie inżynieryjne** — wszystkie 10 cech to transformacje ceny i wolumenu. Jawnie NIEPRZETESTOWANE: momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni | [runs/z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md) |
 | **H2.0 — wykonalność nowej hipotezy (funding)** | 2026-09-22 | **Rachunek mocy odrzucił 2 z 3 sformułowań ZA 0 WARIANTÓW.** Bramka na skrajny funding — moc 0,05–0,44× (zagładza próbę jak `trend`). Carry — moc 0,03–0,12×, choć próg opłacalności spada **poniżej 50%** (48,13%): ogranicza liczba nienakładających się okien 48h, więc żyje w formule przekrojowej. Zostaje **funding jako 11. cecha bez bramki na 4h** — pre-rejestrowane jako H2.1 (1 wariant, reguła STOP) | [runs/h2.0](runs/2026-09-22_h2.0-funding-wykonalnosc/README.md) |
+| **H3 — noga „timeout” w modelu kosztów** | 2026-09-22 | **Runda obaliła tezę, która ją zamówiła.** Podejrzenie z H2.0 nie broni się: **zlecenie oczekujące wymaga znanej CENY, a przy wyjściu „z upływem czasu” znamy tylko MOMENT**. Zmierzone pasmo progu **[51,64%; 52,69%]** — niepewność **nieistotna decyzyjnie**, poprzeczka NIE obniżona. Przy okazji: naprawiona usterka (koszt liczony w dwóch miejscach niezależnie) i sprostowany mój błąd rachunkowy z H2.0 (53,12% → **52,69%**) | [runs/h3](runs/2026-09-22_h3-noga-timeout-pasmo/README.md) |
 
 ## Hipoteza w skrócie
 
@@ -117,7 +118,7 @@ clas5_core/
 ├── backtest/                     — silnik backtestu, koszty, metryki, checkpoint v2,
 │                                    skrypty analityczne (zamrożone zapisy eksperymentów)
 ├── runs/                         — surowy output ciężkich przebiegów (INDEX.md = spis treści)
-├── tests/                        — testy jednostkowe/integracyjne/property-based (265)
+├── tests/                        — testy jednostkowe/integracyjne/property-based (308)
 └── requirements.txt
 ```
 
@@ -128,7 +129,7 @@ git clone <adres-repo>
 cd clas5_core
 pip install -r requirements.txt --break-system-packages   # lub w wirtualnym środowisku
 
-pytest -v          # 265 passed (stan na H2.0, 2026-09-22)
+pytest -v          # 308 passed (stan na H3, 2026-09-22)
 ```
 
 Przed pierwszym pobraniem prawdziwych danych: zweryfikuj dokładny symbol ccxt na swojej maszynie
