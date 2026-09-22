@@ -44,12 +44,14 @@ kolumny rośnie z każdą rundą — im większa, tym ostrożniej trzeba traktow
 
 | Z5b | 2026-09-22 | [2026-09-22_z5b-long-history-4h-preregistration.md](2026-09-22_z5b-long-history-4h-preregistration.md) | Backlog II: pełna historia 4h (2019-09→2026-07, **14 916 świec, 6,8 roku**, zero dziur) do trwałego cache + okna walk-forward skalowane per interwał + pomiar konfliktu spójność↔ekonomia per horyzont. **PRE-REJESTRACJA** eksperymentu (nieuruchomionego) | 0 (dane + wybór specyfikacji) | **4h przeszło z „niewykonalne" na WYKONALNE** (foldy 21,5→48,0; próba 1 551→4 076). **Nowy pomiar koryguje Z19:** przy V=3 aż **60,8% transakcji to timeouty**, więc efektywne B spada i próg rośnie 52,30%→**54,60%** (Z19 zakładał, że każda transakcja trafia barierę). Wybrano **V=3** mimo wyższego progu — spójność to wymóg poprawności, nie preferencja. Margines mocy **4,3×**. Kryterium sukcesu: trafność **≥ 56,15%** |
 
+| S1 | 2026-09-22 | [2026-09-22_s1-single-regime-4h.md](2026-09-22_s1-single-regime-4h.md) | **NOWA SERIA:** architektura jednoreżimowa (`range`, bez `trend`) na natywnych świecach 4h, historia 6,8 roku, V=3, walk-forward 60/28/28. Konfiguracja ZAMROŻONA w pre-rejestracji Z5b przed uruchomieniem | 1 (nowa seria) | **KRYTERIUM NIESPEŁNIONE, rozstrzygająco.** n=1 037 (>925, klauzula nierozstrzygalności nie weszła). Trafność **48,60%**, CI [45,56%; 51,64%] — **górny kraniec PONIŻEJ progu 53,07%**, więc z 95% pewnością trafność jest niższa od progu opłacalności. Bramka kosztowa odrzuciła **0%** sygnałów (geometria naprawiona — nie pomogło). `mean_sharpe` −0,59 zamiast −60, co potwierdza, że patologia z C2.12 była artefaktem małych foldów. **REGUŁA STOP URUCHOMIONA** — koniec tej linii hipotezy |
+
 **Suma wariantów na nowej bazie (2023-07→2026-07 BTC 5m, od C2.10): 0** — licznik rozwidla się
 per zbiór danych; wyniki C6–C2.9 pozostają zamrożone na starym oknie i nie są porównywalne 1:1.
 C2.11 to instrumentacja (0 wariantów); C2.12 to +1 wariant (model kosztów); C2.13 to +1 wariant
 (próg pewności) => **licznik = 2**. Z16, Z17+Z21, Z18, Z9, Z19 i Z5b to 0 wariantów (pomiar/naprawa/walidacja/wykonalność/dane) — licznik na tej bazie nadal **2**.
 
-**Nowa seria — architektura jednoreżimowa 4h (od Z5b):** to NOWA hipoteza wobec dwureżimowej z docs/rag/01, więc własny licznik. Eksperyment pre-zarejestrowany, jeszcze nieuruchomiony: **0/1**.
+**Nowa seria — architektura jednoreżimowa 4h (Z5b → S1):** NOWA hipoteza wobec dwureżimowej z docs/rag/01, własny licznik. **Zużyte: 1/1.** Wynik S1 negatywny ⇒ **reguła STOP uruchomiona**, seria zamknięta.
 
 ## Jak dodać nowy wpis
 
