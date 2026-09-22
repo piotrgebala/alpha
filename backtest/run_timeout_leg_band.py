@@ -104,12 +104,26 @@ def _cost_breakdown(trades: pd.DataFrame) -> dict:
             )
         ]
     )
-    total_frac = trades["cost"] / notional
+    # Mianownik z zerem zamaskowanym na NaN — dokładnie jak w
+    # `metrics.summarize_edge_by_regime`.
+    #
+    # Zakres ochrony, żeby nie przecenić: przy DZISIEJSZYM modelu kosztu zerowy nominał
+    # daje też zerowy koszt, więc dzielenie to 0/0 = NaN, a `Series.mean()` NaN pomija —
+    # nic się nie psuje. Dziura otwiera się dopiero, gdy koszt przestanie być czysto
+    # proporcjonalny do nominału (np. opłata minimalna per transakcja): wtedy jest to
+    # `nonzero/0 = inf`, `.mean()` robi się `inf` i CAŁE pasmo progu z tej jednej liczby
+    # wychodzi błędne — po cichu, bo nic nie rzuca wyjątkiem. Maskowanie zamyka to
+    # zawczasu i robi wykluczenie takiego wiersza jawnym, a nie przypadkowym.
+    #
+    # W przebiegu H3 zerowych nominałów nie było, więc `raw_output.txt` zostaje bez
+    # zmian — to zabezpieczenie na ponowne uruchomienie, nie korekta wyniku.
+    denom = notional.replace(0.0, np.nan)
+    total_frac = trades["cost"] / denom
     return {
         "cost_frac_mean": float(total_frac.mean()),
         "cost_frac_median": float(total_frac.median()),
-        "funding_frac_mean": float((funding / notional).mean()),
-        "fee_slip_frac_mean": float(((trades["cost"] - funding) / notional).mean()),
+        "funding_frac_mean": float((funding / denom).mean()),
+        "fee_slip_frac_mean": float(((trades["cost"] - funding) / denom).mean()),
     }
 
 

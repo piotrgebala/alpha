@@ -66,8 +66,8 @@ jako źródło stałych zasad.
     checkpoint go/no-go, decyzja bramkowa fazy, uruchomienie/zatrzymanie programu badawczego.
     README jest widokiem z lotu ptaka dla CZŁOWIEKA — aktualizacja domyka rundę tak samo
     obowiązkowo jak wpis do `runs/INDEX.md` (zasada 11).
-16. **Bramki jakości rundy** (procedury ze skilli `data:validate-data` /
-    `data:statistical-analysis` / `engineering:code-review`, przystosowane do projektu):
+16. **Bramki jakości rundy** (procedury przystosowane do projektu; obowiązują ZAWSZE,
+    niezależnie od tego, czy w sesji są jakiekolwiek wtyczki ze skillami):
     (a) **PRZED publikacją write-upu rundy** — walidacja: przeliczenie co najmniej JEDNEJ
     kluczowej liczby drugą, niezależną drogą; jawne pytanie **"kogo NIE ma w zbiorze"**
     (filtry/bramki/warmupy — dokładnie ten bias złapał nas w C2d, gdzie pozorny edge
@@ -78,8 +78,10 @@ jako źródło stałych zasad.
     średniej, zawsze w kontekście licznika multiple-testing (zasada 11);
     (c) **PRZED merge rundy do master** — przegląd diffu (korektność/edge-case'y/testy/
     czytelność) z werdyktem jednym zdaniem w README rundy.
-    **Pełna ściąga „jak dokładnie"** (listy kontrolne, pułapki z naszych rund, wzory do
-    przeliczeń, format werdyktów) — `docs/skills/bramki-jakosci.md`; działa bez pluginów.
+    **Źródłem procedury jest `docs/skills/bramki-jakosci.md`** (listy kontrolne, pułapki
+    z naszych rund, wzory do przeliczeń, format werdyktów) — plik w repo, bez zależności od
+    wtyczek. Jeśli w sesji są skille `engineering:code-review` / `engineering:architecture`,
+    używaj ich jako wsparcia; brak skilla NIE zwalnia z bramki.
 17. **Rozmowa z użytkownikiem toczy się prostym, zrozumiałym językiem.** Odpowiedzi na czacie
     i raporty z rund mają być zrozumiałe dla osoby, która nie zna żargonu statystyki, tradingu
     ani programowania: krótkie zdania, bez skrótów myślowych. Jeśli fachowe pojęcie jest
@@ -109,10 +111,17 @@ jako źródło stałych zasad.
   zadań/zasady pracy/backlog — wiersz zadania to status + jednozdaniowa uwaga + link;
   `README.md` = widok dla człowieka + kamienie milowe (zasada 15). Nie kopiuj pełnych syntez
   do PLAN/TASKS (historyczna duplikacja do odchudzenia: Backlog Z25).
-- **Mapowanie skilli na momenty pracy:** procedura rundy → `clas5-runda`; bramki jakości
-  (walidacja write-upu, standard statystyk, przegląd diffu) → zasada 16 (skille
-  `data:validate-data` / `data:statistical-analysis` / `engineering:code-review`); decyzja
-  architektoniczna → `engineering:architecture` jako ADR do `docs/rag/`; wykresy → `dataviz`.
+- **Mapowanie na momenty pracy — najpierw pliki w repo, wtyczki dopiero jako wsparcie.**
+  Procedura rundy → skill `clas5-runda` (**jedyna kopia: `.claude/skills/clas5-runda/SKILL.md`**
+  — to plik, który Claude Code faktycznie ładuje; nie rób drugiej kopii w `docs/`, bo rozjazd
+  jest wtedy kwestią czasu, a ładowana zostaje wersja starsza). Bramki jakości →
+  `docs/skills/bramki-jakosci.md` (zasada 16). Decyzja architektoniczna → ADR do `docs/rag/`,
+  wsparcie: `engineering:architecture`. Wykresy → `dataviz`.
+  **Zanim oprzesz procedurę na skillu z wtyczki, sprawdź, czy on w tej sesji istnieje** —
+  wtyczki włącza się per maszyna i per projekt, a nie da się tego wyczytać z repo. Zasady
+  16a/16b wskazywały kiedyś `data:validate-data` i `data:statistical-analysis`; w praktyce
+  wtyczka `data` bywa wyłączona i obie bramki po cichu nie miały jak zadziałać. Dlatego
+  procedura mieszka w repo, a skill jest udogodnieniem, nie warunkiem.
 - Lint/format: `ruff` + `black` na plikach dotykanych w rundzie; plików zamrożonych (zasada 13)
   nie reformatuj. Różnice CRLF/LF między repo (Windows) a środowiskiem pracy są normalne.
 - **Dwa środowiska pracują na tym repo** (sesja chmurowa Cowork + lokalna sesja Claude Code na

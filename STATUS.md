@@ -2171,6 +2171,54 @@ Te zadania nie zależą od żadnej hipotezy i poprawiają wszystko, co policzymy
 | **T5** ⭐ | **ABSTYNENCJA MODELU — problem numer jeden** (K1). To ona, nie brak sygnału, ograniczyła S1b (345), H2.1 (98) i samą kontrolę negatywną K1 (n≈37). Kandydaci: wagi klas w XGBoost, wymuszenie kierunku zamiast trzeciej klasy `timeout` | 0 (poprawność pomiaru) | **Obniżenie progu wykrywalności jest warte więcej niż kolejna hipoteza** — dziś każda hipoteza poniżej 58% trafności jest niemierzalna, cokolwiek testujemy |
 | **T6** | Kill-switch jako źródło obciążenia na szumie (przebieg z wyłączonym kill-switchem) | 0 (diagnostyka) | K1 zmierzył 54,09% trafności na czystym szumie (nieistotne, ale niewykluczone). Kill-switch tłumi transakcje po serii strat, więc może podnosić trafność wśród tych, które przetrwały — walidacja S1 zmierzyła ten efekt jako +0,30 pp przy n=1 037 |
 
+#### ✅ T7 — usterki z przeglądu kodu po H3 (2026-09-22, 0 wariantów)
+
+Przegląd diffu H3 (`/code-review`) zgłosił 15 uwag. Naprawione **wszystkie dotyczące kodu**;
+zero zmian w wynikach jakiejkolwiek rundy (sprawdzone), testy **312/312**.
+
+- **`engine.py`** — rekord „pusty reżim" w `folds_summary` miał 12 kluczy zamiast 17.
+  Konsument sumujący liczniki po całej liście wywalał się `KeyError` — i to dopiero po pełnym
+  walk-forwardzie. Klucze dołożone u źródła, niezmiennik pilnuje nowy test.
+- **`costs.py`** — docstring bramki podawał jako „zmierzone w H3" prognozę, którą H3 **obaliła**
+  (funding: prognoza +0,015% nominału, pomiar **−0,00243%**, czyli przeciwny znak). Wpisany
+  faktyczny pomiar. To ta sama liczba, która stoi za zadaniem **T1** wyżej.
+- **Trzy moduły `diagnose_*`** odtwarzały regułę nóg ręcznie zamiast wołać `gate_cost_fraction`.
+  H3 ogłosiła, że „klasa błędu usunięta" — nieprawda, dopóki te trzy kopie istniały. Teraz
+  jedno źródło; wartość identyczna co do bitu (0,0009), więc zapisy rund pozostają odtwarzalne.
+- **Testy** — kotwica historyczna C2d wróciła do literału `0.0014` (wyprowadzona z żywych stałych
+  przesuwałaby się razem z tym, co ma przytwierdzać); usunięta asercja o kill-switchu, która nie
+  była niezmiennikiem, tylko właściwością fikstury; dodana tabela kosztów nóg wpisana literałami
+  — jedyne miejsce w repo znające te liczby bez pytania kodu (odpowiedź na zarzut, że walidacja
+  „drugą drogą" w H3 nie była niezależna); jeden test okazał się **pusty** (pętla nie wykonywała
+  się ani razu) i został naprawiony.
+
+**Niezamknięte, świadomie:** formatowanie `black`/`ruff` — patrz **T2** (brak na maszynie).
+Otwarta pozostaje jedna uwaga metodologiczna do H3: pasmo progu policzono `break_even_hit_rate`
+przy 60% timeoutów, a `backtest/metrics.py` sam ostrzega, że przy dominacji timeoutów ta funkcja
+jest miarą **diagnostyczną, nie progiem opłacalności** (próg z realnego rozkładu wypłat dla tej
+konfiguracji to 54,60% z Z5b). Hipoteza H2 jest zamknięta regułą STOP, więc nic z tego nie wisi
+— ale gdyby ta konfiguracja wróciła, liczby H3 trzeba przeliczyć.
+
+#### ✅ T8 — skille: procedura rundy nie miała jak zadziałać (2026-09-22, 0 wariantów)
+
+Trzy niezależne usterki, wszystkie mechaniczne:
+
+1. **Zasada 16 wskazywała na skille, których w sesji nie ma.** `data:validate-data`
+   i `data:statistical-analysis` pochodzą z wtyczki `data`, wyłączonej w konfiguracji maszyny
+   (`~/.claude/settings.json`: `"data@synced": false`). Dwie z trzech bramek jakości nie miały
+   jak zadziałać od chwili zapisania zasady. Zasada 16 i mapowanie skilli przepisane tak, żeby
+   **źródłem procedury był plik w repo** (`docs/skills/bramki-jakosci.md`), a skill był
+   udogodnieniem, nie warunkiem.
+2. **Skill `clas5-runda` istniał w TRZECH kopiach o różnej treści:** `docs/skills/` (zasady 1–17,
+   aktualna), `.claude/skills/` (1–16, **ta się ładowała**) i kopia w chmurze konta (1–15).
+   Wykonywana była wersja o dwie zasady starsza, odsyłająca do plików skasowanych przy
+   konsolidacji dokumentacji. Duplikat w `docs/` **usunięty**; została jedna kopia w
+   `.claude/skills/` — tam, gdzie Claude Code faktycznie czyta.
+3. **Konfiguracja maszyny nie została ruszona.** Wtyczki `data` świadomie nie włączam: to plik
+   poza repo, wyłączony celowo razem z sześcioma innymi, a działający na wszystkie projekty
+   użytkownika. Rozwiązanie z punktu 1 jest odporniejsze — działa też w sesji chmurowej.
+   Gdybyś chciał ją mimo wszystko włączyć, to jedna linia w `~/.claude/settings.json`.
+
 ---
 
 ### ETAP 4 — hipotezy otwarte, WYMAGAJĄCE DECYZJI UŻYTKOWNIKA

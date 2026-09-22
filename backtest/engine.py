@@ -121,12 +121,10 @@ from backtest.costs import (
     CANDLE_MINUTES,
     DEFAULT_TIMEOUT_LEG,
     EXECUTION_MAKER_LIMIT,
-    EXECUTION_TAKER_ONLY,
+    EXECUTION_TAKER_ONLY,  # noqa: F401 — re-eksport, patrz komentarz przy DEFAULT_EXECUTION_MODEL
     EXIT_REASON_SL,
     EXIT_REASON_TIMEOUT,
     EXIT_REASON_TP,
-    MAKER,
-    TAKER,
     execution_legs,
     gate_cost_fraction,
     total_round_trip_cost,
@@ -144,8 +142,11 @@ from backtest.costs import (
 PREREGISTERED_CONFIDENCE_QUANTILE = 0.75
 
 # H3: definicje `EXECUTION_*` przeniesione do `backtest/costs.py` (model wykonania jest
-# pojęciem kosztowym). Tutaj zostaje re-eksport, żeby importy z `backtest.engine`
-# w testach i skryptach działały bez zmian.
+# pojęciem kosztowym). Tutaj zostaje re-eksport SAMYCH NAZW MODELI (`EXECUTION_MAKER_LIMIT`
+# jest użyte niżej, `EXECUTION_TAKER_ONLY` importują testy z `backtest.engine`) — żeby te
+# importy działały bez zmian. Nazwy nóg (`MAKER`/`TAKER`) re-eksportu NIE dostają:
+# każdy konsument w repo bierze je wprost z `backtest.costs`, a druga ścieżka importu do
+# tej samej stałej to tylko kolejne miejsce, które może się rozjechać.
 DEFAULT_EXECUTION_MODEL = EXECUTION_MAKER_LIMIT
 
 # Zabezpieczenie przed degenerate foldami (np. bardzo mało danych w rzadkim reżimie —
@@ -269,8 +270,19 @@ def _collect_candidate_signals(
                     "test_end": None,
                     "skipped": True,
                     "skip_reason": "regime_df jest puste — brak świec sklasyfikowanych jako ten reżim",
+                    # Pełny komplet liczników lejka, nie podzbiór. Konsument agreguje po
+                    # `folds_summary` bez patrzenia na `skipped` (tak robi np. kontrola
+                    # lejka w rundzie H3), więc rekord z brakującym kluczem wywala przebieg
+                    # KeyError-em dopiero PO pełnym walk-forwardzie. Niezmiennik „każdy
+                    # rekord ma ten sam zestaw kluczy" pilnuje test
+                    # `test_all_fold_summaries_share_one_key_set`.
                     "n_signals": 0,
                     "n_signals_cost_gated": 0,
+                    "n_signals_confidence_gated": 0,
+                    "n_signals_no_direction": 0,
+                    "n_rows_evaluated": 0,
+                    "early_stopping_used": None,
+                    "confidence_threshold": None,
                     "best_iteration": None,
                     "seed": seed,
                 }

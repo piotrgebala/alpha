@@ -358,17 +358,35 @@ def test_should_rearm_kill_switch_false_before_cooldown_elapsed_property(
 # backtest/diagnose_cost_feasibility.py.
 # ---------------------------------------------------------------------------
 
-# H3: wyprowadzone, nie literał (DoD punkt 5 — zero magic numbers). Wartość liczbowa
-# BEZ ZMIAN (0,0014), więc żadna asercja poniżej się nie rusza.
-#
 # UWAGA — to jest KOTWICA HISTORYCZNA, nie wartość produkcyjna. Diagnoza Commitu 2d
 # powstała w erze modelu `taker_only` (2× taker + 2× slippage). PRODUKCYJNA bramka to
 # dziś `gate_cost_fraction(EXECUTION_MAKER_LIMIT)` = 0,0009 — od Commitu 2.12 koszt jest
 # o 36% niższy. Podmiana tej stałej na produkcyjną ZMIENIŁABY wniosek testu niżej
 # (`ratio` skoczyłby z 0,93 na 1,44), więc historyczny zapis zostaje, a stan dzisiejszy
 # dopisuje osobny test `test_range_regime_still_rejected_at_production_gate_value`.
-COST_FRACTION_TAKER_ONLY = round_trip_cost_fraction(entry_leg=TAKER, exit_leg=TAKER)
+#
+# Dlatego LITERAŁ, a nie `round_trip_cost_fraction(TAKER, TAKER)`: kotwica ma stać
+# w miejscu także wtedy, gdy stałe opłat zostaną przekalibrowane (docstring
+# `backtest/costs.py`: „wartości startowe, do kalibracji"; źródło prawdy
+# `config/settings.yaml`). Wyprowadzona kotwica przesuwałaby się razem z tym, co ma
+# przytwierdzać — test dalej by przechodził, a PRZESTAŁBY odtwarzać diagnozę C2d.
+# Zgodność literału z dzisiejszym modelem `taker_only` pilnuje osobno
+# `test_historical_anchor_still_matches_taker_only_model`.
+COST_FRACTION_TAKER_ONLY = 0.0014
 COST_FRACTION_STARTOWY = COST_FRACTION_TAKER_ONLY  # alias historyczny
+
+
+def test_historical_anchor_still_matches_taker_only_model() -> None:
+    """
+    Kotwica C2d jest literałem (patrz komentarz wyżej), ale DZIŚ musi nadal odpowiadać
+    modelowi `taker_only`. Ten test jest jedynym miejscem, w którym te dwie wielkości się
+    spotykają: jeśli stałe opłat zostaną przekalibrowane, zapali się TUTAJ — z informacją
+    „kotwica historyczna rozjechała się z bieżącym modelem" — zamiast po cichu przesunąć
+    wszystkie asercje niżej na nową wartość.
+    """
+    assert COST_FRACTION_TAKER_ONLY == pytest.approx(
+        round_trip_cost_fraction(entry_leg=TAKER, exit_leg=TAKER)
+    )
 
 
 def test_barrier_to_cost_ratio_matches_manual_formula() -> None:

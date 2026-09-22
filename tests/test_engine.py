@@ -805,14 +805,68 @@ def test_folds_summary_counts_model_abstention() -> None:
 
 
 def test_skipped_folds_report_zero_funnel_counters() -> None:
+    # `min_train_rows` nie do spelnienia - inaczej test jest PUSTY: przy samych oknach
+    # 5/2/2 ta fikstura nie produkuje ani jednego pominietego folda, wiec petla ponizej
+    # nie wykonywala sie ani razu i test przechodzil, nie sprawdzajac niczego.
     result = run_backtest(
         _make_pipeline_test_ohlcv(seed=7),
         train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0,
+        min_train_rows=10_000,
     )
-    for fold in result["folds_summary"]:
-        if fold["skipped"]:
-            assert fold["n_signals_no_direction"] == 0
-            assert fold["n_rows_evaluated"] == 0
+    skipped = [f for f in result["folds_summary"] if f["skipped"]]
+    assert skipped, "fikstura musi wyprodukowac co najmniej jeden pominiety fold"
+    for fold in skipped:
+        assert fold["n_signals_no_direction"] == 0
+        assert fold["n_rows_evaluated"] == 0
+
+
+def test_all_fold_summaries_share_one_key_set() -> None:
+    """
+    KAZDY rekord `folds_summary` - aktywny, pominiety przez `min_train_rows` i pominiety
+    przez pusty rezim - musi miec DOKLADNIE ten sam zestaw kluczy.
+
+    Powod nie jest estetyczny. Konsumenci agreguja po calej liscie bez patrzenia na
+    `skipped` (tak robi kontrola lejka w `backtest/run_timeout_leg_band.py`), wiec rekord
+    z wezszym zestawem kluczy wywala przebieg KeyError-em - i to dopiero PO pelnym
+    walk-forwardzie, czyli po kilkunastu minutach liczenia. Galaz "pusty rezim" byla do
+    H3 wlasnie takim rekordem: miala 12 kluczy zamiast 17, w tym zadnego z trzech
+    licznikow lejka poza `n_signals_cost_gated`.
+
+    Obie galezie pominiecia wymuszamy JAWNIE, a nie liczac na fiksture: pusty rezim -
+    nazwa, ktorej `classify_regime` nie produkuje; prog `min_train_rows` - wartoscia nie
+    do spelnienia. Bez tego test bylby pusty, bo przy oknach 5/2/2 ta fikstura nie
+    produkuje ani jednego pominietego folda sama z siebie.
+    """
+    raw = _make_pipeline_test_ohlcv(seed=7)
+    kwargs = dict(train_days=5, test_days=2, step_days=2, min_barrier_to_cost_ratio=0.0)
+    feature_sets = [("range", REVERSION_FEATURES), ("bez_swiec", REVERSION_FEATURES)]
+
+    normal = run_backtest(raw, regime_feature_sets=feature_sets, **kwargs)["folds_summary"]
+    # Prog nie do spelnienia -> KAZDY fold leci galezia `min_train_rows`.
+    starved = run_backtest(
+        raw, regime_feature_sets=feature_sets, min_train_rows=10_000, **kwargs
+    )["folds_summary"]
+    summaries = normal + starved
+
+    active = [f for f in summaries if not f["skipped"]]
+    empty = [f for f in summaries if f["skip_reason"] and "regime_df jest puste" in f["skip_reason"]]
+    starved_folds = [f for f in summaries if f["skip_reason"] and "min_train_rows" in f["skip_reason"]]
+    assert active, "brak rekordu aktywnego - test nie porownuje wszystkich trzech ksztaltow"
+    assert empty, "brak rekordu 'pusty rezim'"
+    assert starved_folds, "brak rekordu 'min_train_rows'"
+
+    reference = set(active[0].keys())
+    for fold in summaries:
+        assert set(fold.keys()) == reference, (
+            f"rekord regime={fold['regime']} fold_idx={fold['fold_idx']} ma inny zestaw "
+            f"kluczy: brakuje {reference - set(fold.keys())}, nadmiar {set(fold.keys()) - reference}"
+        )
+
+    # Konsument sumujacy lejek po CALEJ liscie nie moze sie wywrocic ani zafalszowac.
+    for key in _FUNNEL_KEYS:
+        assert sum(f[key] for f in summaries) >= 0
+        for skipped in empty + starved_folds:
+            assert skipped[key] == 0
 
 
 # --- H3: noga "timeout" jako pasmo + bramka niemogaca rozjechac sie z journalem ---
@@ -1004,15 +1058,32 @@ def test_run_backtest_timeout_leg_changes_trade_set_only_via_kill_switch() -> No
     momenty zadzialania kill-switcha - wiec ZBIOR wykonanych transakcji sie rozni, mimo
     identycznego lejka sygnalow. To jest jedyny kanal, ktorym pasmo moze ruszyc trafnosc,
     i powod, dla ktorego regula D5 rundy H3 zakazuje jej raportowania.
+
+    Test NIE twierdzi, ze tanszy wariant tlumi MNIEJ transakcji. To nie jest niezmiennik:
+    kill-switch mierzy obsuniecie od BIEZACEGO `peak_equity`, wiec krzywa lezaca punktowo
+    wyzej moze osiagnac wyzszy wczesny szczyt i przez to GLEBSZE pozniejsze obsuniecie.
+    Asercja o monotonicznosci liczby stlumien przewracalaby sie przy kazdej zmianie
+    fikstury, seeda albo okien `_H3_KWARGS` - bez zadnego bledu w kodzie.
     """
     raw = _make_pipeline_test_ohlcv(seed=7)
     taker = run_backtest(raw, timeout_leg=TAKER, **_H3_KWARGS)["trades"]
     maker = run_backtest(raw, timeout_leg=MAKER, **_H3_KWARGS)["trades"]
     merged = taker.merge(maker, on=["timestamp", "regime", "fold_idx"], suffixes=("_t", "_m"))
     assert len(merged) == len(taker) == len(maker), "lejek sygnalow musi byc identyczny"
-    n_killed_t = merged["kill_switch_active_t"].astype(bool).sum()
-    n_killed_m = merged["kill_switch_active_m"].astype(bool).sum()
-    assert n_killed_m <= n_killed_t, "tanszy koszt nie moze zwiekszac liczby stlumien"
+
+    # WLASCIWY niezmiennik: wejscia decyzji sa od kosztu niezalezne i oba warianty
+    # journaluja je identycznie - takze w wierszach stlumionych, bo powstaja PRZED
+    # sizingiem i przed rozstrzygnieciem wyjscia. Skoro kandydaci i ich parametry sa te
+    # same, ZBIOR wykonanych transakcji moze sie rozjechac WYLACZNIE przez suppresje.
+    for col in ("signal_direction", "signal_confidence", "entry_price", "exit_bar_offset"):
+        assert merged[f"{col}_t"].equals(merged[f"{col}_m"]), f"{col} sie rozjechalo"
+
+    # ...i ten kanal jest na tej fiksturze realnie otwarty. To CHARAKTERYSTYKA FIKSTURY,
+    # nie niezmiennik - ale bez niej test przestalby cokolwiek o kanale mowic (na realnych
+    # danych 4h zbiory wyszly identyczne), wiec zapala sie swiadomie.
+    suppressed_t = merged["kill_switch_active_t"].astype(bool)
+    suppressed_m = merged["kill_switch_active_m"].astype(bool)
+    assert (suppressed_t != suppressed_m).any(), "fikstura przestala pokazywac kanal kill-switcha"
 
 
 def test_run_backtest_rejects_unknown_timeout_leg() -> None:

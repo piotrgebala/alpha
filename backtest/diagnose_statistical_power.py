@@ -35,7 +35,7 @@ from agents.feature_miner import (
     compute_direction_persistence_10,
 )
 from agents.labeling import ATR_MULTIPLIER, STEP_DAYS, TEST_WINDOW_DAYS, TRAIN_WINDOW_DAYS
-from backtest.costs import MAKER, TAKER, round_trip_cost_fraction
+from backtest.costs import EXECUTION_MAKER_LIMIT, gate_cost_fraction
 from backtest.diagnose_cost_feasibility import _regime_series
 from backtest.engine import MIN_TRAIN_ROWS
 from backtest.metrics import break_even_hit_rate, min_detectable_hit_rate, required_trades
@@ -60,7 +60,9 @@ def main() -> None:
     with open("config/settings.yaml", encoding="utf-8") as f:
         cfg_rule = yaml.safe_load(f)["regime_rule"]
 
-    cost = round_trip_cost_fraction(entry_leg=MAKER, exit_leg=TAKER)
+    # H3: koszt bramkowy z JEDNEGO źródła (`gate_cost_fraction`), nie z ręcznej kopii
+    # pary nóg. Wartość niezmieniona (0,0009), liczby tego skryptu odtwarzalne co do cyfry.
+    cost = gate_cost_fraction(EXECUTION_MAKER_LIMIT)
     print("=" * 100)
     print("Z19 — czy eksperyment na grubszym interwale może cokolwiek rozstrzygnąć?")
     print("=" * 100)
