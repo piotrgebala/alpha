@@ -1182,11 +1182,25 @@ reguły STOP** — zdejmuje ją wyłącznie decyzja użytkownika (Z10).
   naprawiona — nie pomogło). **Reguła STOP uruchomiona, licznik serii 1/1 zużyty**
   → [runs/s1](runs/2026-09-22_s1-single-regime-4h/README.md).
 
-**Stan po S1:** obie architektury (dwureżimowa 5m/1h/4h i jednoreżimowa 4h) wyczerpane; po
-usunięciu wszystkich znanych wad pomiaru `p` ani razu nie drgnęło w górę. Rekomendacja:
-**Z10 opcja 1 — udokumentowane zamknięcie Fazy 0 wynikiem negatywnym** (decyzja bramkowa
-przy użytkowniku). Ewentualne nowe hipotezy (funding rate jako sygnał, inny instrument,
-target zmienności) = osobna pre-rejestracja, osobny licznik, osobna reguła STOP.
+**STAN KOŃCOWY — FAZA 0 ZAMKNIĘTA (Z10, decyzja użytkownika 2026-09-22).** Obie
+architektury (dwureżimowa 5m/1h/4h i jednoreżimowa 4h) wyczerpane; po usunięciu wszystkich
+znanych wad pomiaru `p` ani razu nie drgnęło w górę. Liczba zamykająca: pooled `p` =
+**50,27%** (n=7 687, CI95 [49,15%; 51,38%], z=+0,47) — **górny kraniec CI leży 1,30 pp
+poniżej najniższego progu opłacalności zmierzonego w projekcie (52,69%), przy mocy 2,8×
+wymaganej próby.** To dowód braku, nie brak dowodu.
+
+Wąskie gardło okazało się **informacyjne, nie inżynieryjne**: wszystkie 10 cech to
+transformacje ceny i wolumenu, a każda kolejna naprawa inżynieryjna (geometria, koszty,
+spójność bramki, dane, przeciek, metodologia) zostawiała `p` przy 50%.
+
+**Jawnie NIEPRZETESTOWANE** (nie wolno cytować zamknięcia jako dowodu w tych sprawach):
+momentum (próba zagłodzona przez bramkę — 0,53% świec), konfiguracja 4h po naprawie
+(nietestowalna, brak 11,4 lat danych), ETH/SOL/BNB (zero testów), funding rate jako sygnał
+(nigdy nie zaimplementowany), ekonomia dźwigni, target inny niż kierunek.
+
+Pełny bilans: [runs/z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md).
+**Nowa hipoteza (H2)** = osobna pre-rejestracja, **własny licznik od zera**, własna reguła
+STOP, rachunek mocy PRZED uruchomieniem. Nie dziedziczy budżetu ani progów po Fazie 0.
 
 ---
 
@@ -1998,7 +2012,7 @@ negatywnym.** Decyzja przy użytkowniku.
 | Z7 | Reguła regime na `adx_14` zamiast/obok dyskretnej `direction_persistence_10` | ⏳ | Osobny, z góry zarejestrowany eksperyment NA REGULE (nie modelu). Motywacja z trzech niezależnych rund: dyskretność persistence (C2.5), corr adx↔persistence=+0,07 (C2.7), błędna klasyfikacja trendu spadkowego jako `range` (C2c) |
 | Z8 | Rozdzielić timeframe od horyzontu trzymania | ⏳ | Nierozdzielony confound C2.6: `VERTICAL_BARRIER_CANDLES=12` = 1h @ 5m, ale 48h @ 4h. Przeliczyć proporcjonalnie jako jawnie nazwany eksperyment |
 | Z9 | Walidacja natywnych świec 1h/4h vs resample z 5m | ✅ **ZROBIONE** | WYNIK: ceny zgodne co do grosza, ale **wolumen rozjezdza sie w 11% swiec 1h i 6% swiec 4h** (bledy do 284%) — a `volume_zscore_20` jest cecha obu modeli, wiec C2.6 dostawal czesciowo zepsute wejscie. Dane 1h/4h pobrane i odlozone w `data/raw/` (cache trwaly). **Dodatkowo:** prog oplacalnosci `range` spada 82,81% (5m) -> 56,77% (1h) -> **52,74% (4h)** — pierwszy realistyczny prog w projekcie. `runs/2026-09-22_z9-timeframe-geometry/README.md`. Pierwotny opis: Wymaga maszyny użytkownika (dostęp do Binance); sprawdza, czy agregacja z 5m nie zniekształca wyniku C2.6 |
-| Z10 | **DECYZJA STRATEGICZNA: rewizja hipotezy czy domknięcie Fazy 0** | ⬜ | Po pięciu wynikach w paśmie szumu — decyzja UŻYTKOWNIKA, nie zadanie implementacyjne. Opcje: inna definicja reżimu / inny driver (funding rate) / inny instrument — albo udokumentowany wynik negatywny jako poprawne zamknięcie Fazy 0 |
+| Z10 | **DECYZJA STRATEGICZNA: rewizja hipotezy czy domknięcie Fazy 0** | ✅ **ROZSTRZYGNIĘTE 2026-09-22** | **Decyzja użytkownika: ZAMKNĄĆ Fazę 0 wynikiem negatywnym ORAZ otworzyć nową hipotezę (H2) jako osobny byt.** Liczba zamykająca (policzona od zera z `raw_output.txt`, nie z syntez): pooled `p` = **50,27%**, n=7 687, CI95 [49,15%; 51,38%], z=+0,47 — **górny kraniec CI leży 1,30 pp poniżej najniższego progu opłacalności (52,69%) przy mocy 2,8×**, czyli dowód braku, nie brak dowodu. Wąskie gardło **informacyjne** (wszystkie 10 cech to transformacje ceny/wolumenu). Jawnie NIEPRZETESTOWANE: momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni, target≠kierunek. Obie reguły STOP **aktywne na stałe**; H2 ma własny licznik od zera. → [runs/z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md) |
 
 ### E. Backlog II — po programie „droga do GO" (C2.11–C2.13), audyt 2026-09-21
 

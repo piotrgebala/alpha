@@ -15,17 +15,37 @@ Pełne uzasadnienie tej decyzji i wszystkich pozostałych: [`docs/rag/01_hipotez
 
 ## Status
 
-**Faza 0: hipoteza dwureżimowa (trend/range na 5m) jest po serii C2.5–C2.13 wyczerpana jako
-kierunek** — NO-GO odporne na perturbacje pomiaru, strata per trade istotna statystycznie w obu
-reżimach, program naprawczy "droga do GO" zakończony regułą STOP (C2.13), a przyczyna
-zlokalizowana strukturalnie: geometria wypłaty + niespójność reżimu `trend` z horyzontem
-etykiety (C2.11, Z16). **Hipoteza jednoreżimowa 4h (Z5b → S1) również odrzucona,
-rozstrzygająco:** trafność 48,60%, 95% CI [45,56%; 51,64%] — górny kraniec PONIŻEJ progu
-opłacalności 53,07%; reguła STOP uruchomiona, seria zamknięta (licznik 1/1). Po usunięciu
-wszystkich znanych wad pomiaru obraz jest spójny: **brak sygnału kierunkowego**. Rekomendacja:
-**Z10 opcja 1 — udokumentowane zamknięcie Fazy 0 wynikiem negatywnym** (decyzja bramkowa przy
-użytkowniku). Stan testów: 246/246. Surowe wyniki każdej rundy:
-[`runs/`](runs/INDEX.md) (tabela + wnioski skumulowane). Backlog i zasady pracy: `STATUS.md`.
+### 🔴 FAZA 0 ZAMKNIĘTA WYNIKIEM NEGATYWNYM (decyzja użytkownika, 2026-09-22 — [Z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md))
+
+Hipoteza, dla której Faza 0 powstała — **regime-gated momentum/mean-reversion na cechach
+OHLCV** — nie ma edge'u kierunkowego wystarczającego do pokrycia kosztów transakcyjnych.
+
+To **dowód braku, a nie brak dowodu**:
+
+| | |
+|---|---|
+| pooled trafność kierunku (3 najczystsze pomiary, n = 7 687) | **50,27%**, CI95 [49,15%; **51,38%**], z = +0,47 |
+| najniższy próg opłacalności zmierzony w projekcie | **52,69%** |
+| górny kraniec CI vs ten próg | **−1,30 pp — przedział ufności nie sięga progu** |
+| moc statystyczna | **2,8×** próby wymaganej do wykrycia p = 52,69% |
+
+Wąskie gardło okazało się **informacyjne, nie inżynieryjne**: projekt naprawił po kolei
+geometrię wypłaty, model kosztów, spójność bramki z horyzontem etykiety, jakość danych,
+przeciek w treningu i metodologię pomiaru — i po **każdej** z tych napraw trafność pozostawała
+przy 50%. Wszystkie 10 cech to transformacje tej samej informacji: ceny i wolumenu.
+
+**Czego Faza 0 NIE wykazała** (czytać razem z powyższym): momentum pozostaje
+**nieprzetestowane** (bramka reżimu zagłodziła próbę do 0,53% świec), ETH/SOL/BNB — **zero
+testów**, funding rate jako sygnał — **nigdy nie zaimplementowany**, ekonomia dźwigni —
+**niezbadana**. Pełna lista: [Z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md).
+
+Budżet zużyty: **10 wariantów**, 17 rund, 2 uruchomione reguły STOP. Stan testów: **251/251**.
+Surowe wyniki każdej rundy: [`runs/`](runs/INDEX.md) (tabela + wnioski skumulowane).
+Backlog i zasady pracy: [`STATUS.md`](STATUS.md).
+
+**Następny krok:** nowa hipoteza (H2) jako osobny byt — własna pre-rejestracja, własny licznik
+od zera, własna reguła STOP, rachunek mocy przed uruchomieniem. Nie dziedziczy budżetu ani
+progów po Fazie 0.
 
 Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 
@@ -47,8 +67,8 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | Z16–Z21 — diagnostyka strukturalna + naprawy pomiaru | 2026-09-22 | Reżim `trend` strukturalnie niespójny z horyzontem etykiety (nie do naprawienia barierą); przeciek early stopping naprawiony — najczystsze p=50,38% (brak edge'u kierunkowego) | [runs/z16](runs/2026-09-22_z16-regime-coherence/README.md), [runs/z17+z21](runs/2026-09-22_z17-z21-early-stopping-leak/README.md) |
 | Z9/Z19/Z5b — pivot na 4h | 2026-09-22 | Natywne dane 1h/4h (resample psuł wolumen!), rachunek mocy przed eksperymentem, **pre-rejestracja hipotezy jednoreżimowej 4h** (6,8 roku, kryterium: trafność ≥ 56,15%) | [runs/z5b](runs/2026-09-22_z5b-long-history-4h-preregistration/README.md) |
 | S1 — eksperyment jednoreżimowy 4h | 2026-09-22 | **Kryterium NIESPEŁNIONE** (trafność 48,60%, CI [45,56%; 51,64%] wobec pre-rejestrowanego progu >54,60% — przepada o 9,04 pp) — **reguła STOP: seria zamknięta**. Walidacja (zasada 16a): **CAVEATS** — liczby potwierdzone co do cyfry, werdykt odporny, ale wynik obowiązuje na **6,95% historii** (krach COVID i szybkie ruchy poza zbiorem). Rekomendacja: zamknięcie Fazy 0 wynikiem negatywnym (Z10 opcja 1, decyzja przy użytkowniku) | [runs/s1](runs/2026-09-22_s1-single-regime-4h/README.md) |
-
 | S1b — S1 po naprawie early stoppingu | 2026-09-22 | **NIEROZSTRZYGALNY** (klauzula `n<925`): naprawa podniosła foldy z early stoppingiem 5/63→53/63, ale ścięła próbę 1 037→345 (abstynencja modelu 70,9%→90,5%). Konfiguracja 4h/V=3 jest przy poprawnym pipelinie **nietestowalna** — brakuje 11,4 lat danych | [runs/s1b](runs/2026-09-22_s1b-early-stopping-naprawiony/README.md) |
+| **Z10 — ZAMKNIĘCIE FAZY 0** | 2026-09-22 | **DECYZJA BRAMKOWA UŻYTKOWNIKA: Faza 0 zamknięta wynikiem negatywnym.** Pooled trafność **50,27%** (n=7 687, CI95 [49,15%; 51,38%]) — górny kraniec **1,30 pp poniżej** najniższego progu opłacalności (52,69%) przy mocy **2,8×**: dowód braku, nie brak dowodu. Wąskie gardło **informacyjne, nie inżynieryjne** — wszystkie 10 cech to transformacje ceny i wolumenu. Jawnie NIEPRZETESTOWANE: momentum, ETH/SOL/BNB, funding-jako-sygnał, ekonomia dźwigni | [runs/z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md) |
 
 ## Hipoteza w skrócie
 
@@ -64,8 +84,12 @@ czterech strategii naraz.
 
 **Hipoteza druga (pre-zarejestrowana w Z5b, sfalsyfikowana w S1):** architektura jednoreżimowa
 na natywnych świecach 4h, pełna historia 6,8 roku, wygładzona bramka `range` (V=3), kryterium
-sukcesu: trafność kierunku ≥ 56,15%. Wynik: 48,60% przy progu 53,07% — odrzucona z zapasem,
-reguła STOP zamknęła serię po pierwszym (jedynym pre-zarejestrowanym) wariancie.
+sukcesu: trafność kierunku ≥ 56,15%. Wynik: **48,60%** wobec pre-rejestrowanego progu >54,60% —
+kryterium przepadło o **9,04 pp**; reguła STOP zamknęła serię po pierwszym (jedynym
+pre-zarejestrowanym) wariancie. **Sformułowanie „odrzucona z zapasem” zostało WYCOFANE
+w walidacji zasady 16a** — odporne jest kryterium pre-rejestrowane, nie zapas wobec progu
+liczonego z tych samych danych. Powtórzenie po naprawie early stoppingu (S1b) wyszło
+**nierozstrzygalne** (n=345 < 925).
 
 ## Struktura projektu
 
@@ -90,7 +114,7 @@ clas5_core/
 ├── backtest/                     — silnik backtestu, koszty, metryki, checkpoint v2,
 │                                    skrypty analityczne (zamrożone zapisy eksperymentów)
 ├── runs/                         — surowy output ciężkich przebiegów (INDEX.md = spis treści)
-├── tests/                        — testy jednostkowe/integracyjne/property-based (246)
+├── tests/                        — testy jednostkowe/integracyjne/property-based (251)
 └── requirements.txt
 ```
 
@@ -101,7 +125,7 @@ git clone <adres-repo>
 cd clas5_core
 pip install -r requirements.txt --break-system-packages   # lub w wirtualnym środowisku
 
-pytest -v          # 246 passed (stan na S1, 2026-09-22)
+pytest -v          # 251 passed (stan na Z10, 2026-09-22)
 ```
 
 Przed pierwszym pobraniem prawdziwych danych: zweryfikuj dokładny symbol ccxt na swojej maszynie
@@ -151,7 +175,8 @@ Pełna, aktualna lista: [`CLAUDE.md`](CLAUDE.md). W skrócie:
 Ten kod służy do celów badawczych i edukacyjnych. Nie stanowi porady inwestycyjnej. Trading
 kontraktów perpetual futures z dźwignią wiąże się z wysokim ryzykiem utraty kapitału. Żadna
 część tego repozytorium nie została zwalidowana na prawdziwym kapitale — checkpoint go/no-go
-(`STATUS.md`, Commit 6) jeszcze nie został osiągnięty. Nie uruchamiaj tego z
+(`STATUS.md`, Commit 6) **nie został osiągnięty — Faza 0 zamknięta wynikiem NEGATYWNYM**
+(Z10, 2026-09-22): hipoteza Fazy 0 nie ma edge'u pokrywającego koszty. Nie uruchamiaj tego z
 prawdziwymi środkami przed przejściem pełnej sekwencji: walidacja → paper trading → mały kapitał
 w pełni tolerowalny do stracenia.
 
