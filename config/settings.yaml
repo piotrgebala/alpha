@@ -10,7 +10,12 @@ data:
     - "SOL/USDT:USDT"
     - "BNB/USDT:USDT"
   primary_symbol: "BTC/USDT:USDT"   # jedyny używany do Commit 1-6; reszta niezaangażowana do dalszej decyzji
-  timeframe: "5m"
+  timeframe: "5m"                   # interwał PODSTAWOWY pipeline'u (walk-forward, cechy, target)
+  # Z9 (2026-09-22): komplet interwałów pobieranych przez `py -m data.fetch_ohlcv`.
+  # Cache w `cache_dir` jest trwały i kluczowany po (symbol, timeframe, start, end), więc
+  # każdy interwał ściągany jest RAZ — `data/raw/` to jedno miejsce na wszystkie dane.
+  # 1h/4h służą walidacji, czy agregacja z 5m (C2.6) nie zniekształca wyniku.
+  timeframes: ["5m", "1h", "4h"]
   # Commit 2.10 (Backlog Z5): 3 lata historii. Poprzednie okno 2025-07-01→2026-07-01 to
   # zamrożone źródło wyników C6–C2.9 (runs/); jego parquet ZOSTAJE w data/raw nietknięty
   # (nazwa pliku koduje zakres, więc nowy zakres = nowy plik, bez nadpisywania).

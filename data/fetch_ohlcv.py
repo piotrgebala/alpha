@@ -60,6 +60,10 @@ def _clean_ohlcv(df: pd.DataFrame, end: str) -> pd.DataFrame:
 # nie ogólna funkcja "zmień timeframe na cokolwiek".
 RESAMPLE_TARGET_TIMEFRAMES = {"1h": "1h", "4h": "4h"}
 
+# Z9: długość świecy w minutach per interwał — potrzebne, bo `find_gaps` i koszty funding
+# liczą się z realnego czasu, nie z liczby świec. Zamknięty zbiór, jak RESAMPLE_TARGET_TIMEFRAMES.
+TIMEFRAME_MINUTES = {"5m": 5, "1h": 60, "4h": 240}
+
 
 def resample_ohlcv(df: pd.DataFrame, target_timeframe: str) -> pd.DataFrame:
     """
@@ -267,18 +271,37 @@ if __name__ == "__main__":
     # generalizacji), nie równoległa walidacja teraz.
     symbols_to_fetch = [cfg["primary_symbol"]]
 
-    for symbol in symbols_to_fetch:
-        df = get_ohlcv_cached(
-            symbol=symbol,
-            timeframe=cfg["timeframe"],
-            start=cfg["start"],
-            end=cfg["end"],
-            cache_dir=cfg["cache_dir"],
-            exchange_id=cfg["exchange_id"],
-        )
-        print(f"[{symbol}] Pobrano {len(df)} świec: {df['timestamp'].min()} -> {df['timestamp'].max()}")
+    # Z9: pobieraj WSZYSTKIE interwały z `cfg["timeframes"]` (domyślnie tylko podstawowy).
+    # Cache jest trwały i kluczowany po (symbol, timeframe, start, end), więc raz pobrany
+    # interwał nie jest ściągany ponownie — `data/raw/` to jedno miejsce na komplet danych.
+    timeframes = cfg.get("timeframes") or [cfg["timeframe"]]
 
-        gaps = find_gaps(df, timeframe_minutes=5)
-        if len(gaps) > 0:
-            print(f"[{symbol}] UWAGA: znaleziono {len(gaps)} dziur w danych:")
-            print(gaps)
+    for symbol in symbols_to_fetch:
+        for timeframe in timeframes:
+            cache_file = _cache_path(cfg["cache_dir"], symbol, timeframe, cfg["start"], cfg["end"])
+            cached = cache_file.exists()
+            df = get_ohlcv_cached(
+                symbol=symbol,
+                timeframe=timeframe,
+                start=cfg["start"],
+                end=cfg["end"],
+                cache_dir=cfg["cache_dir"],
+                exchange_id=cfg["exchange_id"],
+            )
+            source = "z cache" if cached else "POBRANE z giełdy"
+            print(
+                f"[{symbol} {timeframe}] {len(df)} świec ({source}): "
+                f"{df['timestamp'].min()} -> {df['timestamp'].max()}"
+            )
+            print(f"    -> {cache_file}")
+
+            minutes = TIMEFRAME_MINUTES.get(timeframe)
+            if minutes is None:
+                print(f"    [uwaga] nieznana długość świecy dla {timeframe} — pomijam raport dziur")
+                continue
+            gaps = find_gaps(df, timeframe_minutes=minutes)
+            if len(gaps) > 0:
+                print(f"    [uwaga] {len(gaps)} dziur w danych:")
+                print(gaps)
+            else:
+                print("    brak dziur.")
