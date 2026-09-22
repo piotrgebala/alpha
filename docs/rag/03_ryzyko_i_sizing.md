@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-09-21
+last_verified: 2026-09-22
 depends_on: [01_hipoteza_i_architektura.md, 02_cechy_i_leakage.md]
 ---
 
@@ -11,9 +11,17 @@ depends_on: [01_hipoteza_i_architektura.md, 02_cechy_i_leakage.md]
 ```
 upper barrier:    entry + 1.5 × atr_14
 lower barrier:    entry − 1.5 × atr_14
-vertical barrier: 12 świec (1h) — timeout
+vertical barrier: V świec — timeout (V=12 ≡ 1h na 5m; patrz uwaga o skalowaniu niżej)
 label: która bariera trafiona pierwsza → +1 / −1 / 0
 ```
+
+> **AKTUALIZACJA (2026-09-22, Z16/Z5b/S1):** `V` jest parametrem, nie stałą — `run_backtest`
+> przyjmuje `vertical_barrier_candles` (Z22), a `embargo_candles` domyślnie podąża za nim.
+> Dobór `V` podlega **twardemu ograniczeniu spójności**: nieprzerwany epizod reżimu musi być
+> dłuższy niż okno etykiety, inaczej etykieta opisuje ruch spoza reżimu, który uzasadnił wejście.
+> Zmierzone (Z16, 3 lata 5m): mediana epizodu `trend` = **2 świece**, `range` = **5**, przy
+> V=12 → w `trend` tylko **0,49%** świec ma pełne okno wewnątrz reżimu. Na 4h spójny jest
+> wyłącznie **V=3**. Narzędzie: `agents/regime_coherence.py::is_rule_admissible`.
 
 Symetryczne progi na start w obu testach (asymetria — np. szerszy target dla momentum — to
 Faza 1, nie teraz).
@@ -30,8 +38,10 @@ rozjadą, model jest trenowany na innym zdarzeniu niż to, na którym faktycznie
 
 ## Walk-forward split — zawsze chronologiczny, nigdy random
 
-Okno: 2 miesiące train / 2 tygodnie test, przesuwane co 2 tygodnie → kilkanaście foldów na 12
-miesiącach danych. Test na tym samym zbiorze co train (random split) tworzy leakage czasowy —
+Okno: **skalowane per interwał** — na 5m 60 dni train / 14 test / krok 14; na 4h 60/28/28
+(Z5b: przy 14 dniach fold ma ~22 świece `range`, poniżej `MIN_TRAIN_ROWS=30`, więc byłby
+pomijany — to artefakt jednostek, bo okna są w DNIACH, a próg w ŚWIECACH). Na 6,8 roku danych
+4h daje to **85 foldów**. Wartości startowe: `agents/labeling.py`. Test na tym samym zbiorze co train (random split) tworzy leakage czasowy —
 model "widzi" przyszłość względem części danych treningowych.
 
 **Diagnostyka efektywnej liczby próbek** (informuje interpretację wyniku, nie blokuje pipeline'u):
@@ -49,8 +59,28 @@ interpretacji Sharpe'a z checkpointu.
 `01_hipoteza_i_architektura.md` (momentum i reversion to sprzeczne zakłady).
 
 Start hiperparametrów (oba modele, na razie identyczne): `max_depth=4`, `learning_rate=0.05`,
-`n_estimators=200`, `early_stopping_rounds=20` na foldzie OOS (nigdy na train — inaczej model
-dopasowuje się do szumu treningowego). Output: `predict_proba`, nie tylko klasa — potrzebne jako
+`n_estimators=200`, `early_stopping_rounds=20` na **wydzielonym, chronologicznym OGONIE zbioru
+treningowego** (`validation_fraction`, `agents/ml_optimizer.py`).
+
+> **SPROSTOWANIE (2026-09-22, Z17+Z21+Z17b) — ta linia zakodowała buga.** Do 2026-09-22 stało
+> tutaj: *„na foldzie OOS (nigdy na train — inaczej model dopasowuje się do szumu treningowego)"*.
+> To **fałszywa alternatywa**: wybór nie jest między „OOS" a „cały train", bo istnieje trzecia
+> opcja — wydzielony ogon treningu. Early stopping na foldzie OOS oznacza, że **liczba drzew jest
+> dobierana na danych, na których mierzymy wynik**, czyli przeciek decyzji.
+>
+> **Zmierzony skutek (Z17):** `p` było ZAWYŻONE — `range` 51,07% → **50,38%**, a `z_stat`
+> **+1,81 → +0,63**. Jedyny wynik w historii projektu wyglądający na „bliski istotności"
+> (C2.12) okazał się artefaktem tej instrukcji.
+>
+> **Druga pułapka (Z17b):** samo wydzielenie ogona nie wystarczy, jeśli próg minimalnej wielkości
+> walidacji wyłącza mechanizm po cichu. Przy `n_val = round(n·0,2)` i `MIN_VALIDATION_ROWS = 30`
+> na świecach 4h **58 z 63 foldów (92,1%) trenowało się BEZ early stoppingu** — naprawa była
+> formalnie w kodzie, ale martwa. Poprawka: `n_val = max(MIN_VALIDATION_ROWS, round(n·frac))`
+> plus pole `early_stopping_used` w `folds_summary`, żeby ten stan nigdy nie był niewidoczny.
+>
+> **Konieczne uzupełnienie:** ogon treningu przylega do okna testowego, więc etykiety
+> triple-barrier ostatnich `V` świec sięgają w test. Bez **embarga** (`embargo_candles = V`)
+> walidacja jest skażona ruchem z okresu testowego i naprawa jest pozorna. Output: `predict_proba`, nie tylko klasa — potrzebne jako
 `signal_confidence`.
 
 **Dobór parametrów wskaźników i modelu — zasada:** zacznij od wartości branżowych/domyślnych

@@ -45,7 +45,10 @@ jako źródło stałych zasad.
     `runs/INDEX.md`, sekcja "Jak dodać nowy wpis".
 12. **Wyniki raportuje się metodologią checkpointu v2** (`backtest/run_checkpoint_v2.py` /
     `backtest/checkpoint_lib.py`: sweep fold-jitter, per-fold t-stat, pooled per regime, N_eff;
-    od C2.11 także rozbicie edge'u: trafność `p`, break-even, margines `(2p−1)·B − C`).
+    od C2.11 także rozbicie edge'u: trafność `p`, break-even, margines). **Uwaga na dwie
+    wielkości pod nazwą „margines":** kolumna `margin` w `summarize_edge_by_regime` to
+    `hit_rate − break_even_p` w PUNKTACH TRAFNOŚCI, a `(2p−1)·B − C` to margines
+    w JEDNOSTKACH ZWROTU. Dla S1: −0,0447 vs −0,00113. Zawsze podawaj, o którą chodzi.
     **Nigdy nie cytuj "stabilności na 10 seedach"** — XGBoost w konfiguracji Fazy 0 jest
     deterministyczny, więc ten sweep nie mierzy niczego (`docs/rag/03`, aktualizacja 2026-09-21).
 13. **Historyczne skrypty analityczne są ZAMROŻONE** — to odtwarzalne zapisy zakończonych
