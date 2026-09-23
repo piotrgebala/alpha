@@ -49,7 +49,11 @@
 > D1 (2026-09-23): produkt carry ma sens tylko w konstrukcji COIN-M (zabezpieczenie w BTC,
 > bez likwidacji, kapitał 1×): +9,1 %/rok [5,9; 12,3], od 2022 ~+1,8 pp ponad T-bill
 > (od −1,5 do +7,2); USDT-M z depozytem 1× i miesięcznym uzupełnianiem bezpieczne, ale od 2022
-> poniżej T-bill; basis kwartalny ≈ funding. Decyzja o produkcie = użytkownik.**
+> poniżej T-bill; basis kwartalny ≈ funding. Decyzja o produkcie = użytkownik.
+> X1 (2026-09-23): momentum przekrojowe top-20 (long zwycięzcy / short przegrani 4 tygodni,
+> trzymanie tydzień) **+22 %/rok netto [−5; +49], dodatni w 6/6 lat, ale NIEROZSTRZYGNIĘTY**
+> (t 1,58; 2025 = połowa sumy) — pierwszy dodatni punktowo zakład o kierunek relatywny;
+> seria X 1/1 STOP; rozstrzygnięcie tylko większą próbą (decyzja użytkownika).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2553,6 +2557,22 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Seria X — momentum przekrojowe (B1) ⚪ ZAMKNIĘTA 2026-09-23 (X1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY (punktowo wyraźnie dodatni)
+
+Hipoteza odwrotna do R1 (wniosek 57). Uniwersum point-in-time top-20 (jak R1), sygnał = zwrot
+28 dni, long top-5 / short bottom-5, trzymanie 7 dni, koszty 0,07 % × obrót obu nóg, funding per
+symbol z cache P2; rachunek mocy PRZED wynikiem ze 100 losowych rankingów (half-width 21 %/rok)
+→ MIERZALNA dla obietnicy literatury (52 %/rok). **Wynik: +0,060 %/dzień [−0,015; +0,135],
++22,0 %/rok netto [−5,3; +49,3], t 1,58; Σ +119 % w 5,4 roku, dodatni w 6/6 lat (2025 = 52 %
+sumy), korelacja z BTC −0,13, IC +0,028 [−0,007; +0,064]; obrót 0,87/formowanie, koszty
+3 %/rok, funding +1 %/rok; efekt z nogi short (przegrani tracą dalej).** Pierwszy zakład
+o kierunek (relatywny) z dodatnim punktowo odczytem — hipoteza z poparciem, nie dowód
+(rozdzielczość 27 %/rok, potrzeba ~4× próby). Wnioski 64–65. **Decyzja użytkownika:** (a) STOP
+i archiwum, (b) nowa pre-rejestracja na szerszym uniwersum (top-50, nogi po 10), (c) pomiar
+prospektywny (paper) od dziś — bez zużycia licznika. Realny kapitał: p(efekt ≤ 0) ≈ 6 %, koszty
+shorta na przegranych wyższe niż w modelu.
+→ [runs/x1](runs/2026-09-23_x1-momentum-przekrojowe/README.md)
 
 #### D1 — produkt cash-and-carry: depozyt, COIN-M, basis, T-bill ⚪ ZAMKNIĘTA 2026-09-23 (0 wariantów reguł)
 
