@@ -234,3 +234,24 @@ positioning:
     dof: "okno 6 świec (24h) — jedno, zapisane przed danymi"
     leakage_risk: "niskie: snapshot ściśle wewnątrz świecy (open, open+3h55m], funkcja trailing; ryzyko leży w dopięciu (odczyt po zamknięciu) — test attach + test shift-forward"
     added: "2026-09-23"
+
+# --- L1/V1/G1 (2026-09-23): cechy z DZIENNYCH źródeł zewnętrznych (P3) --------------------------
+# Liczone w agents/external_features.py na świecach 4h z dopiętą wartością dzienną znaną w chwili
+# otwarcia świecy (opóźnienie publikacji per źródło; staleness > 7 dni = NaN). Jedna cecha na
+# serię; pre-rejestracje: runs/2026-09-23_l1-onchain-podaz/, _v1-premia-zmiennosci/, _g1-strach-chciwosc/.
+external:
+  ex_supply_change_7d:
+    formula: "log(SplyExNtv_d / SplyExNtv_{d-7}) na ramce dziennej CoinMetrics; wartość dnia d dopięta do świec o open >= d + 2 dni (opóźnienie publikacji)"
+    dof: "okno 7 dni — jedno, zapisane przed danymi"
+    leakage_risk: "niskie: dopięcie z jawnym opóźnieniem 2 dni (test: dni późniejsze niewidoczne); ryzyko rewizji historycznych CoinMetrics (heurystyki adresów giełd) — nieweryfikowalne, zapisane"
+    added: "2026-09-23"
+  vrp_30d:
+    formula: "DVOL_d/100 (zamknięcie 1D Deribit, dopięte od d + 1 dzień) − std log-zwrotów 4h w 180 świecach × sqrt(2190)"
+    dof: "okno realized 30 dni — jedno; horyzont DVOL (30 dni) narzucony przez indeks"
+    leakage_risk: "niskie: DVOL dopięty z opóźnieniem 1 dnia, realized trailing; DVOL od 2021-03-24 → NaN przed"
+    added: "2026-09-23"
+  fng_level:
+    formula: "Fear & Greed / 100, wartość dnia d dopięta od d + 4h (publikacja ok. 00:00 UTC)"
+    dof: "brak (poziom indeksu; bez progów — masa punktowa 3,2 % na 50)"
+    leakage_risk: "niskie: dopięcie z opóźnieniem 4h; indeks składa się częściowo z ceny/wolumenu (redundancja z cechami kontroli — korelacja raportowana)"
+    added: "2026-09-23"

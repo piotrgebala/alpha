@@ -62,7 +62,12 @@
 > na transakcję, trafność 50,25 % vs próg 53,07 %), ale pierwsza cecha spoza wykresu, która
 > porusza model (+0,024 pp [−0,019; +0,067] wobec kontroli, inny kierunek w 21 % transakcji);
 > seria O 1/1 STOP. Pozostałe kolumny archiwum i inne źródła P3 (DVOL, on-chain, F&G) =
-> osobne serie, każda po decyzji użytkownika.**
+> osobne serie, każda po decyzji użytkownika.
+> L1/V1/G1 (2026-09-23, decyzja użytkownika „wykonaj po kolei 3 warianty"): on-chain podaż na
+> giełdach, DVOL − zrealizowana, Fear & Greed jako 5. cecha modelu 4h — **trzy razy NEGATYWNY**
+> (p 49,8 / 50,5 / 49,9 % vs próg ~53,5 %; parowo +0,003 / +0,018 / +0,002 pp, wszystkie z zerem
+> w CI). Wniosek 67: dokładanie pojedynczych cech spoza wykresu nie wyprowadzi modelu 4h ponad
+> próg; serie L/V/G 1/1 STOP.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2566,6 +2571,21 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Serie L / V / G — cechy dzienne spoza wykresu jako 5. cecha modelu 4h 🔴 ZAMKNIĘTE 2026-09-23 (L1, V1, G1), każda 1/1, reguła STOP, trzy razy NEGATYWNY
+
+Decyzja użytkownika 2026-09-23: „wykonaj po kolei 3 warianty celem zebrania informacji na
+przyszłość". Trzy serie pre-rejestrowane W JEDNYM COMMICIE (`3278442`) przed jakimkolwiek
+przebiegiem, ten sam przyrząd co O1; wspólny moduł `agents/external_features.py` (dopięcie
+wartości dziennej z jawnym opóźnieniem publikacji: CoinMetrics +2 dni, DVOL +1 dzień, F&G +4h;
+staleness > 7 dni = NaN), rejestr `external:`, testy przecieku. **Wyniki:** L1 (`ex_supply_change_7d`)
+−0,097 % [−0,140; −0,054], p 49,79 %, parowo +0,003 pp [−0,047; +0,052]; V1 (`vrp_30d`) −0,076 %
+[−0,120; −0,031], p 50,49 %, parowo +0,018 pp [−0,037; +0,074]; G1 (`fng_level`) −0,102 %
+[−0,144; −0,059], p 49,90 %, parowo +0,002 pp [−0,045; +0,049], korelacja z RSI 0,29. Wspólny
+wzorzec: cechy o skali dni podnoszą abstynencję (+4–7 pp), nie trafność. **Wniosek 67:** pięć
+źródeł spoza wykresu (F1, O1, L1, V1, G1) — żadne nie zbliża się do progu; kierunek „dokładaj
+cechę do modelu 4h" wyczerpany; obiecujący sygnał (X1) mieszka w innej formule.
+→ [runs/l1](runs/2026-09-23_l1-onchain-podaz/README.md) · [runs/v1](runs/2026-09-23_v1-premia-zmiennosci/README.md) · [runs/g1](runs/2026-09-23_g1-strach-chciwosc/README.md)
 
 #### Seria O — pozycjonowanie jako cecha modelu 4h 🔴 ZAMKNIĘTA 2026-09-23 (O1), 1/1, reguła STOP, NEGATYWNY
 

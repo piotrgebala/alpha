@@ -61,6 +61,9 @@ podsumowanie pod tabelą.
 | **D1** | 2026-09-23 | [d1-produkt-carry](2026-09-23_d1-produkt-carry/README.md) | **Produkt cash-and-carry po C1a — cztery otwarte pytania:** Q1 depozyt/likwidacja USDT-M (siatka 4 × 4, run-up), Q2 COIN-M (zabezpieczenie w BTC, kapitał 1×, wartość USD stała — tożsamość), Q3 basis 24 kontraktów kwartalnych vs funding zrealizowany, Q4 T-bill (FRED). Pre-rejestracja + kod `93b3c6e`; Poprawka 1 (koszt uzupełnień depozytu) przed zamrożeniem | **0 — POZA licznikami** (0 reguł; COIN-M i basis = generalizacja C1a na inny instrument) | **COIN-M: +9,07 %/rok [5,88; 12,26] na kapitale 1×, bez likwidacji z konstrukcji** (stawka niższa od USDT-M o 1,82 pp [0,53; 3,11], N_eff 153). USDT-M: M = 1,0 + uzupełnianie miesięczne → 0 likwidacji, +5,29 % na kapitale 2×; tanie depozyty (0,25–0,5) mają zapas kilku pp po `high` i koszt uzupełnień do 1,43 %/rok. Basis kwartalny ≈ funding (różnica median +1,8 / −0,9 pp, rozstęp ±17). Ponad T-bill od 2022: COIN-M **+1,8 pp/rok** (−1,5…+7,2), USDT-M 2× −1,0 pp. Walidacja (16a): **READY** |
 | **X1** | 2026-09-23 | [x1-momentum-przekrojowe](2026-09-23_x1-momentum-przekrojowe/README.md) | **NOWA SERIA X — momentum przekrojowe (B1), hipoteza odwrotna do R1:** top-20 point-in-time, sygnał = zwrot 28 dni, long top-5 / short bottom-5, trzymanie 7 dni, koszty 0,07 % × obrót + funding per symbol; rachunek mocy ze 100 losowych rankingów (half-width 21,2 %/rok, koszt pod H0 5,6 %/rok) → MIERZALNA; pre-rejestracja `dfca77b` | **1 — LICZNIK X WYCZERPANY (1/1)** | **NIEROZSTRZYGNIĘTY, punktowo WYRAŹNIE DODATNI:** netto **+22,0 %/rok [−5,3; +49,3]**, t_neff 1,58, Σ +119 % w 5,4 roku, dodatni w 6/6 lat (2025 = 52 % sumy), korelacja z BTC −0,13, odporny na ogony; IC +0,028 [−0,007; +0,064]; obrót 0,87/formowanie, koszty 3 %/rok, funding +1 %/rok; efekt głównie z nogi short (przegrani tracą dalej). Obietnica literatury 52 % na granicy CI brutto. Rozdzielczość 27 %/rok — trzeba ~4× próby. Walidacja (16a): **READY** |
 | **O1** | 2026-09-23 | [o1-pozycjonowanie](2026-09-23_o1-pozycjonowanie/README.md) | **NOWA SERIA O — pozycjonowanie (archiwum P3) jako 5. cecha modelu 4h:** `oi_change_24h` = log(OI_t/OI_t−6) z ostatniego odczytu 5-min WEWNĄTRZ świecy (bez lookaheadu: test jednostkowy + shift-forward + walidacja na realnych danych); jedna cecha po mechanizmie (dźwignia → kaskady likwidacji); kontrola vs O1 parowo, kryterium dwóch warunków, m = 1; pre-rejestracja `faa11e1` | **1 — LICZNIK O WYCZERPANY (1/1)** | **NEGATYWNY:** −0,074 % [−0,116; −0,032] na transakcję, t_neff −2,90, p 50,25 % [49,06; 51,44] vs p* 53,07 %. **Ale pierwsza cecha spoza OHLCV, która porusza model:** wobec kontroli +0,024 pp [−0,019; +0,067], inny kierunek w 20,6 % transakcji, trafność +0,67 pp, korelacja z wolumenem 0,045; kontrola odtworzona co do sztuki. Walidacja (16a): **READY** |
+| **L1** | 2026-09-23 | [l1-onchain-podaz](2026-09-23_l1-onchain-podaz/README.md) | **NOWA SERIA L — on-chain:** `ex_supply_change_7d` (log-zmiana podaży BTC na giełdach 7 dni, CoinMetrics, dostępność +2 dni) jako 5. cecha modelu 4h; jedna z trzech serii pre-rejestrowanych w jednym commicie `3278442` (wzorzec O1) | **1 — LICZNIK L WYCZERPANY (1/1)** | **NEGATYWNY:** −0,097 % [−0,140; −0,054], t_neff −4,23, p 49,79 % [48,56; 51,02] vs p* 53,51 %; parowo +0,003 pp [−0,047; +0,052]; abstynencja 40,4 → 44,3 %; korelacje z kontrolą ≤ 0,08. Walidacja: **READY** |
+| **V1** | 2026-09-23 | [v1-premia-zmiennosci](2026-09-23_v1-premia-zmiennosci/README.md) | **NOWA SERIA V — opcje/vol:** `vrp_30d` = DVOL/100 − zrealizowana 30 dni (Deribit, +1 dzień; od 2021-03-24) jako 5. cecha modelu 4h | **1 — LICZNIK V WYCZERPANY (1/1)** | **NEGATYWNY:** −0,076 % [−0,120; −0,031], t_neff −2,60, p 50,49 % [49,21; 51,77] vs p* 53,42 %; parowo +0,018 pp [−0,037; +0,074]; abstynencja 47,7 %; punktowo najlepsza z trzech (jak O1), za mało o rząd wielkości. Walidacja: **READY** |
+| **G1** | 2026-09-23 | [g1-strach-chciwosc](2026-09-23_g1-strach-chciwosc/README.md) | **NOWA SERIA G — sentyment:** `fng_level` = Fear & Greed / 100 (alternative.me, +4h) jako 5. cecha modelu 4h | **1 — LICZNIK G WYCZERPANY (1/1)** | **NEGATYWNY:** −0,102 % [−0,144; −0,059], t_neff −3,48, p 49,90 % [48,66; 51,13] vs p* 53,86 %; parowo +0,002 pp [−0,045; +0,049]; korelacja z `rsi_14` 0,29 (częściowo przebranie kontroli). Walidacja: **READY** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -81,6 +84,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
+- **NOWE SERIE L / V / G — cechy dzienne spoza OHLCV jako 5. cecha modelu 4h (L1 on-chain, V1 DVOL/VRP, G1 Fear & Greed; 2026-09-23): każda 1/1 ZUŻYTE — ZAMKNIĘTE REGUŁĄ STOP.** Pre-rejestrowane razem (jeden commit, bez dobierania po wyniku poprzedniej). Zakazane bez decyzji użytkownika: inne metryki CoinMetrics, inne okna, poziom/zmiana DVOL, skew, VRP jako target, zmiany F&G, progi skrajności, inne horyzonty.
 - **NOWA SERIA O — pozycjonowanie jako cecha modelu 4h (od O1, 2026-09-23): 1/1 ZUŻYTE — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Zakazane bez decyzji użytkownika: pozostałe kolumny archiwum (top-trader L/S konta/pozycje, global L/S, taker ratio, OI w USD), inne okna (8h/72h), reguły z progiem na OI, inne bazy (1h/5m). Kolejna kolumna = kolejny wariant tej samej rodziny.
 - **NOWA SERIA X — momentum przekrojowe, rodzina B1 (od X1, 2026-09-23): 1/1 ZUŻYTE — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Zakazane bez decyzji użytkownika: inne okna sygnału, trzymanie, kwantyle, N, wagi, long-only, inne uniwersum (families.md B1: warianty tej samej rodziny). Rozstrzygnięcie tylko przez WIĘKSZĄ PRÓBĘ (szerokość top-50 = nowa pre-rejestracja; czas = pomiar prospektywny), nie przez wariant.
 - **Analiza produktu carry (D1, 2026-09-23) — POZA licznikami: 0 wariantów reguł.** Siatka depozytu = zakres inżynierski (raportowany w całości); COIN-M i basis kwartalny = ta sama reguła „zawsze w pozycji" na innym instrumencie (generalizacja C1a, jak zasada 9), nie warianty serii C (STOP dla reguł bez zmian).
@@ -593,6 +597,26 @@ podsumowanie pod tabelą.
     i kosztem 0,08 %. Wzorzec dopięcia snapshotu z wnętrza świecy (trzy testy lookaheadu)
     gotowy dla DVOL/on-chain/F&G. Seria O 1/1 STOP; kolejne kolumny archiwum = decyzja
     użytkownika (jedna na rundę).
+67. **PIĘĆ ŹRÓDEŁ SPOZA WYKRESU JAKO CECHY MODELU 4H — ŻADNE NIE PRZEKRACZA PROGU, DWA LEKKO
+    PORUSZAJĄ MODEL (F1, O1, L1, V1, G1):** ten sam przyrząd (kontrola 4 cechy REVERSION vs
+    kontrola + 1 cecha, parowo, próg p* ≈ 53,1–53,9 %):
+
+      | seria | cecha | p | r̄ netto | parowo O − kontrola | abstynencja |
+      | F1 | funding | 50,34 % | — | — | — |
+      | O1 | zmiana OI 24h | 50,25 % [49,06; 51,44] | −0,074 % | +0,024 pp [−0,019; +0,067] | 40,9 % |
+      | L1 | podaż na giełdach 7d | 49,79 % [48,56; 51,02] | −0,097 % | +0,003 pp [−0,047; +0,052] | 44,3 % |
+      | V1 | DVOL − zrealizowana | 50,49 % [49,21; 51,77] | −0,076 % | +0,018 pp [−0,037; +0,074] | 47,7 % |
+      | G1 | Fear & Greed | 49,90 % [48,66; 51,13] | −0,102 % | +0,002 pp [−0,045; +0,049] | 45,1 % |
+      (kontrola: 49,58 % [48,39; 50,77], −0,107 %, abstynencja 40,4 %)
+
+    Wzorzec: cechy o skali dni (acf1 ≥ 0,98) czynią model 4h mniej pewnym (abstynencja +4–7 pp),
+    a nie lepszym; jedyne cechy, które przesuwają decyzje na tych samych świecach, to te o skali
+    godzin (OI 24h) albo z innego rynku (DVOL) — i to o +0,02 pp przy potrzebie ~+0,15 pp do progu.
+    Odczyt: **model kierunkowy 4h z barierą 1,5·ATR i kosztem 0,08 % nie wyjdzie ponad próg
+    przez dokładanie pojedynczych cech spoza wykresu** — nawet realna, niezależna informacja
+    (O1, V1: |r| z kontrolą ≤ 0,05) jest o rząd wielkości za słaba. Kolejne cechy z tych źródeł
+    = decyzje użytkownika; obiecujący sygnał tego dnia (X1 momentum przekrojowe, +22 %/rok
+    nierozstrzygnięte) mieszka w INNEJ formule (przekrój, tygodnie), nie w tym modelu.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
