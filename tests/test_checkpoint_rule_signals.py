@@ -187,3 +187,16 @@ def test_summarize_trade_returns_refuses_two_regimes(rule_result):
     two = pd.concat([summary["edge_per_regime"]] * 2, ignore_index=True)
     with pytest.raises(ValueError):
         summarize_trade_returns({**summary, "edge_per_regime": two})
+
+
+def test_n_eff_is_capped_at_n_so_correction_never_adds_confidence(rule_result, monkeypatch):
+    """A1 (Poprawka 2): ujemna autokorelacja daje N/(1+2Σρ) > n — cap jak w metrics.py."""
+    import backtest.checkpoint_lib as lib
+
+    _, result = rule_result
+    monkeypatch.setattr(
+        lib, "effective_sample_size", lambda r, max_lag=50: {"n": len(r), "n_eff": 3.0 * len(r)}
+    )
+    w = summarize_trade_returns(summarize_result(result, 42))
+    assert w["n_eff"] == w["n"]
+    assert w["t_neff"] == pytest.approx(w["t"])

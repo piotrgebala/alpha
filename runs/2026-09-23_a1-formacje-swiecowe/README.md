@@ -1,12 +1,39 @@
 # A1 — formacje świecowe jako sposób szukania pozycji (2026-09-23)
 
-> **STATUS: PRE-REJESTRACJA (przed kodem).** Wszystko do sekcji „Definition of Done" włącznie
-> zapisano **przed napisaniem linijki kodu produkcyjnego** i trafia do repo w osobnym commicie,
-> który poprzedza commit z kodem. Sekcje od „Wynik" w dół dopisuje się po przebiegu.
-> Runda otwiera **NOWĄ SERIĘ A (analiza techniczna)** z własnym licznikiem — decyzja użytkownika
-> 2026-09-23: „szukamy pozycji na podstawie analizy technicznej i formacji świecowych" (skill
-> `ta-toolkit`). Liczby przed kodem pochodzą wyłącznie z ZLICZENIA formacji na świecach
-> (ile razy występują) — bez spojrzenia na jakikolwiek wynik transakcji.
+> **STATUS: ZAMKNIĘTA — OBA RAMIONA NEGATYWNE.** Pre-rejestracja w commicie `f514bcf` (przed
+> kodem), kod w `26f187b` (przed uruchomieniem — kolejność dowodliwa z gita), wynik w commicie
+> scalającym gałąź. Runda otworzyła i zamknęła **SERIĘ A — formacje świecowe: licznik 2/2,
+> reguła STOP.** Walidacja (16a): **READY**; przegląd diffu (16c): **Approve**.
+> **Poprawka 2 (po przebiegu, raportowa, bez wpływu na werdykt):** N_eff w statystykach per
+> transakcja ograniczone do n, jak w kanonicznej tabeli pooled — szczegóły w „Walidacji".
+
+## Wynik w skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+**Formacje świecowe z podręcznika nie znajdują na wykresie BTC 4h pozycji, które zarabiają —
+znajdują raczej pozycje, które tracą.** Reguła „formacja bycza → kupuj, niedźwiedzia → sprzedaj"
+dała na 2 477 transakcjach trafność **46,4 %** (przedział ufności od 44,4 % do 48,3 % — czyli
+cały przedział leży **poniżej rzutu monetą**) i stratę **0,18 % na transakcji** (przedział od
+−0,25 % do −0,11 %). To gorzej niż model bez formacji (49,6 %, −0,11 %).
+
+**Dlaczego tak?** 84 % sygnałów to „objęcie" — duża świeca w kierunku sygnału. Na BTC 4h po
+dużej świecy cena w ciągu 12 godzin częściej zawraca, niż idzie dalej. Podręcznik czyta objęcie
+jako początek ruchu; dane mówią, że to raczej jego koniec. Dwie rzadkie formacje (gwiazdy: 26
+i 60 przypadków) wyglądają lepiej, ale przy tak małej liczbie ich przedziały ufności są tak
+szerokie, że nic z nich nie wynika — a przy sześciu podgrupach jedna–dwie „lepsze" wychodzą
+z samego przypadku.
+
+**Ta sama informacja podana modelowi jako dodatkowa cecha nic nie zmienia:** różnica wobec
+modelu bez niej to −0,001 % na transakcję (przedział od −0,012 % do +0,010 %) — zero; 6 444
+z 6 577 wspólnych transakcji jest identycznych.
+
+**Pokusa, której nie ulegamy:** skoro formacje wskazują odwrotnie, „odwróćmy regułę". To nie
+jest wniosek z tej rundy, tylko nowa hipoteza wymyślona po obejrzeniu wyniku — dokładnie ten
+mechanizm, który produkuje fałszywe strategie. Rachunek pokazuje też, że odwrócona reguła
+zarobiłaby około +0,01 % na transakcji (zysk brutto ≈ koszt), czyli nic — a informacja „po dużej
+świecy cena zawraca" to ta sama, którą model już ma w cesze „zwrot z poprzedniej świecy"
+i z którą trafia 49,6 %.
+
+---
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
 
@@ -56,10 +83,11 @@ w 53–55 % (opłacalnie, ale słabo), runda tego **nie rozstrzygnie** — zapis
   ±1,5·ATR, V = 3 (12 h), walk-forward 60/28/28 dni, wagi klas `balanced`, seed 42,
   wykonanie `path`: wejście `limit_close` k = 1, pojedyncze wyjście TP/SL/timeout, model
   kosztów `maker_limit`, sizing 0,5 % ryzyka, dźwignia ≤ 3×, kill-switch jak dotąd.
-- **Skrypt rundy:** `backtest/run_ta_a1.py` (powstaje PO tej pre-rejestracji; komenda
-  uruchamialna trafi tu przy zamknięciu razem z wpisem na `runs/ZAMROZONE.txt`). Buduje na
-  `checkpoint_lib` (`fetch_window`, `summarize_result`, nowy pomocnik `build_rule_signals`)
-  i `engine.collect_signals` / `simulate_equity`.
+- **Komenda:** `py -m backtest.run_ta_a1` (na Windows z `PYTHONUTF8=1`, bo raport zawiera znaki
+  spoza strony kodowej konsoli; pełny output: `raw_output.txt`; skrypt na liście
+  `runs/ZAMROZONE.txt`). Buduje na `checkpoint_lib` (`fetch_window`, `summarize_result`,
+  nowe pomocniki `build_rule_signals` i `summarize_trade_returns`) i `engine.collect_signals` /
+  `simulate_equity`. Czas przebiegu: 6 s (dwa treningi).
 - **Nowa cecha:** `cdl_score_6` w `agents/feature_miner.py` + wpis w `feature_registry.yaml`
   + test przecieku (parametryzowany po `FEATURE_FUNCTIONS`) PRZED wejściem do modelu (zasada 2).
 - **Biblioteka:** TA-Lib 0.7.1 (`talib.CDL*`).
@@ -254,28 +282,210 @@ zdarzeń wewnątrz świecy 4h bez 5m (konserwatywnie, W1).
 
 ## Wynik
 
-_(po przebiegu)_
+### 0. Dane i lejek
 
-## Co na plus (+) / Co na minus (−)
+12 042 świece 4h, 2021-01-01 → 2026-06-30, 69 okien walk-forward (wszystkie aktywne), **11 592
+świece OOS** — ta sama populacja dla modelu i dla reguły (sprawdzone: 11 592 = 11 592).
+Kontrola: abstynencja 40,38 %, 6 911 kandydatów (= N1 co do sztuki). A1b: abstynencja 40,37 %,
+6 912 kandydatów. **A1a (reguła):** 9 051 świec bez formacji z zestawu lub z konfliktem,
+0 bez etykiety, 0 odrzuconych bramką kosztową, **2 541 sygnałów** (long 1 380, short 1 161);
+rozkład wskaźnika w oknie OOS {−2: 13, −1: 1 161, +1: 1 353, +2: 39}. Wypełnione: 2 527
+(14 niewypełnionych), stłumione kill-switchem 50 → **journal 2 477**.
 
-_(po przebiegu)_
+### 1. Kryterium — zwrot netto per trade i trafność wobec p* (dwa warunki)
 
-## Walidacja (zasada 16a)
+| ramię | n | r̄ netto | CI 95 % | mediana | t | N_eff | t_neff | p | CI 95 % (p) | p* | BE ±B | odczyt kryterium |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| kontrola (model, 4 cechy) | 6 789 | −0,107 % | [−0,149; −0,065] | −0,104 % | −5,01 | 4 919 | −4,26 | 49,58 % | [48,39; 50,77] | 53,64 % | 53,07 % | odniesienie (= N1 co do cyfry) |
+| **A1a — reguła z formacji** | 2 477 | **−0,177 %** | **[−0,245; −0,109]** | −0,188 % | −5,11 | 2 477 | **−5,11** | **46,35 %** | **[44,38; 48,31]** | 53,24 % | 53,23 % | **NEGATYWNY** (n ≥ 1 870) |
+| **A1b — model + cecha** | 6 779 | **−0,113 %** | [−0,155; −0,071] | −0,109 % | −5,31 | 4 573 | **−4,36** | 49,39 % | [48,20; 50,58] | 53,70 % | 53,08 % | **NEGATYWNY** (n ≥ 2 057) |
 
-_(po przebiegu)_
+Guard negatywu `required_trades(0,50; BE ramienia)`: A1a 1 870 (n 2 477 ✔), A1b 2 057
+(n 6 779 ✔). **Regresja kontroli wobec N1: ZGODNA** (n 6 789, p 49,58 %, r̄ −0,1069 %).
 
-## Przegląd diffu (zasada 16c)
+**A1a trafia ISTOTNIE PONIŻEJ 50 %:** górny kraniec CI 48,31 % leży 1,7 pp pod rzutem monetą
+i 4,9 pp pod progiem opłacalności. To nie „brak sygnału" — to sygnał o odwrotnym znaku wobec
+podręcznika, na populacji 22 % świec.
 
-_(po przebiegu)_
+### 2. Porównanie parowane A1b − kontrola (obserwacja, nie kryterium)
+
+6 577 wspólnych transakcji; **6 444 identycznych** (ten sam kierunek, ten sam wynik); tylko
+w kontroli 212, tylko w A1b 202. Średnia różnica **−0,0012 %** nominału, 95 % CI
+**[−0,0120; +0,0096]**, t = −0,21, mediana 0. Cecha zmienia decyzję modelu w ~3 % świec
+i nie zmienia wyniku.
+
+### 3. A1a opisowo — skąd biorą się pieniądze (bez werdyktów na podzbiorach)
+
+| grupa | n | udział | p | CI 95 % (p) | r̄ netto |
+|---|---|---|---|---|---|
+| wyjście: cel (tp) | 393 | 15,9 % | 100 % | — | +2,216 % |
+| wyjście: stop (sl) | 445 | 18,0 % | 0 % | — | −2,427 % |
+| wyjście: timeout | 1 639 | 66,2 % | 46,06 % | [43,65; 48,48] | −0,140 % |
+| kierunek: long (formacje bycze) | 1 345 | 54,3 % | 47,43 % | [44,77; 50,10] | −0,178 % |
+| kierunek: short (niedźwiedzie) | 1 132 | 45,7 % | 45,05 % | [42,15; 47,95] | −0,176 % |
+| formacja: objęcie | 2 117 | 83,8 % | 45,68 % | [43,56; 47,80] | −0,171 % |
+| formacja: młot | 303 | 12,0 % | 47,52 % | [41,90; 53,15] | −0,272 % |
+| formacja: spadająca gwiazda | 60 | 2,4 % | 60,00 % | [47,60; 72,40] | +0,123 % |
+| formacja: gwiazda poranna | 26 | 1,0 % | 61,54 % | [42,84; 80,24] | +0,200 % |
+| formacja: gwiazda wieczorna | 19 | 0,8 % | 42,11 % | [19,90; 64,31] | −0,379 % |
+| formacja: trójka | 2 | 0,1 % | 50 % | — | −0,508 % |
+| \|score\| = 1 | 2 427 | 98,0 % | 46,31 % | [44,33; 48,30] | −0,181 % |
+| \|score\| ≥ 2 | 50 | 2,0 % | 48,00 % | [34,15; 61,85] | +0,005 % |
+
+Stopy przeważają nad celami (445 : 393), a timeouty (66 %) wygrywają w 46 %. Oba kierunki
+tracą tyle samo — to nie jest błąd znaku w jedną stronę. **Objęcie (84 % sygnałów) ma CI
+w całości pod 50 %**; gwiazdy (n 26–60) mają CI szerokie na 25–37 pp, obejmujące i 45 %, i 75 % —
+przy 6 podgrupach 1–2 powyżej 50 % to oczekiwany szum, nie sygnał (pre-rejestracja: bez
+werdyktów per formacja). W̄ = 1,286 %, L̄ = 1,286 %, C = 0,083 %, std zwrotu 1,73 %.
+
+### 4. Mierzalność (zasada 18) — ex ante i ex post
+
+A1a: `expected_trades` ex ante 2 523, ex post 2 527, journal 2 477 (różnica = 50 stłumionych);
+pasmo trafności 1,95 / 1,97 pp; se zwrotu 0,0347 % → wykrywalny |r̄| ≥ 0,097 % (zmierzone
+−0,177 %, czyli 1,8× dalej). A1b: 6 870 / 6 865 / 6 779; pasmo 1,18 / 1,19 pp; se 0,0213 % →
+|r̄| ≥ 0,060 %. Rachunek ex ante zgadza się z ex post do 2 % w obu ramionach — pierwsza runda,
+w której `n` nie zależało od abstynencji modelu (reguła), i pierwsza bez zaskoczenia próbą.
+
+## Co na plus (+)
+
+- **Runda rozstrzygnęła pytanie użytkownika na obu drogach naraz** (reguła i cecha), za dwa
+  warianty, na tej samej populacji świec co kontrola — bez kolejnych rund „a może jako cecha".
+- **Zero stopni swobody w definicji sygnału** (TA-Lib, zestaw z podręcznika zapisany przed
+  danymi, doji wyłączone z podanym powodem) — wynik nie może być artefaktem doboru formacji.
+- **Wynik jest silniejszy niż oczekiwanie:** prior brzmiał „p ≈ 50 %", a wyszło 46,4 % z CI
+  pod 50 % — rzadki przypadek, w którym runda mówi coś więcej niż „brak sygnału": podręcznikowa
+  interpretacja objęcia jest na 4h BTC odwrotna do danych.
+- **Rachunek mocy z częstości formacji trafił w journal do 2 %** — wniosek 19 (n z abstynencji)
+  ma teraz drugi wariant: n z częstości zdarzenia, gdy sygnał jest regułą.
+- **Regresja kontroli = N1 co do cyfry** w tym samym skrypcie — aparat spójny między rundami.
+- **Poprawka 2 wykryta przed publikacją** (N_eff > n) przez porównanie dwóch tabel tego samego
+  raportu — dokładnie po to bramka 16a każe liczyć drugą drogą.
+
+## Co na minus (−)
+
+- **Tryb 4h bez świec 5m:** kolejność cel/stop wewnątrz świecy przybliżona (W1: ≤ 1,4 pp na
+  niekorzyść strategii). Nie zmienia to znaku wyniku: nawet +1,4 pp daje p < 48 %.
+- **Populacja reguły ≠ populacja kontroli** (22 % świec z formacją vs 60 % świec z decyzją
+  modelu) — dlatego A1a ma kryterium absolutne, a nie porównanie z kontrolą; liczby obok siebie
+  są kontekstem, nie testem różnicy.
+- **Kill-switch stłumił 50 z 2 527 wypełnionych (2,0 %)** wobec 1,1 % w kontroli — reguła
+  traci szybciej, więc częściej dobija do 15 % obsunięcia; stłumione świece nie są w journalu
+  (raportowane, nie ukryte).
+- **Objęcie dominuje (84 %)** — o pozostałych pięciu formacjach runda nie mówi prawie nic
+  (n 2–303); zapisano to z góry i tak zostaje.
+- **Poprawka 2 to zmiana biblioteki po obejrzeniu wyniku** — raportowa (cap N_eff ≤ n, jak
+  w `metrics.py`), zawęża tylko wielkość pomocniczą; kryterium `t_neff < −1,96` spełnione
+  przed i po (−7,61 → −5,11); test w repo.
+- Jeden instrument, jeden seed, pozycje nakładające się sizowane niezależnie, przebicie =
+  wypełnienie — jak we wszystkich rundach serii W/N.
+
+## Walidacja (zasada 16a) — werdykt: **READY**
+
+- **Kluczowe liczby drugą drogą** (z liczb wydrukowanych, poza funkcjami skryptu):
+  p* A1a = (L̄ + C)/(W̄ + L̄) = (1,2860 + 0,0832)/(1,2857 + 1,2860) = **53,24 %** ✔;
+  zwrot netto A1a z mieszanki wyjść: 393/2 477 · 2,2164 + 445/2 477 · (−2,4274) + 1 639/2 477 ·
+  (−0,1404) = 0,3517 − 0,4361 − 0,0929 = **−0,1773 %** wobec −0,1774 % ✔; trafność z podziału
+  long/short: (1 345 · 0,4743 + 1 132 · 0,4505)/2 477 = **46,34 %** ✔; CI Walda: 0,4635 ± 1,96 ·
+  √(0,4635 · 0,5365 / 2 477) = ±1,96 pp → **[44,38; 48,31]** ✔; lejek: 11 592 = 9 051 + 2 541,
+  2 541 = 2 477 + 14 + 50, 1 380 + 1 161 = 2 541, 1 345 + 1 132 = 2 477 ✔; ex ante 2 523 vs
+  journal 2 477 ✔.
+- **Kogo NIE ma w zbiorze:** 9 051 świec OOS bez formacji (78 %); pierwsze 60 dni (trening);
+  50 stłumionych kill-switchem (2,0 %); 14 niewypełnionych; świece sprzed 2021; kolejność
+  wewnątrz świecy 4h.
+- **Red flag odwrotny:** wynik NIE potwierdza oczekiwania (p ≈ 50 %) — jest istotnie niżej.
+  Sprawdzono błąd znaku: TA-Lib +100 = formacja bycza → `signal_direction = +1` = long (jak
+  etykieta +1 = górna bariera); gwiazda poranna (bycza) i spadająca gwiazda (niedźwiedzia)
+  trafiają > 50 %, objęcie < 50 % — globalny błąd znaku odwróciłby wszystkie naraz. Oba kierunki
+  tracą po równo (−0,178 % / −0,176 %). Sygnał na świecy `t` używa wyłącznie barów ≤ t
+  (lookback TA-Lib), wejście od świecy t + 1 — bez przecieku.
+- **Anomalia znaleziona i naprawiona przed publikacją:** N_eff 5 495 > n 2 477 w statystykach
+  per transakcja (wzór N/(1 + 2Σρ) przy ujemnej autokorelacji) wobec 2 477 w tabeli pooled
+  → Poprawka 2: cap jak w `metrics.summarize_pooled_by_regime`; t_neff −7,61 → −5,11; werdykt
+  bez zmian; test `test_n_eff_is_capped_at_n…`; skrypt uruchomiony ponownie (wynik
+  deterministyczny — pozostałe liczby identyczne).
+- **Rząd wielkości:** trafności 45–50 %, progi 53 %, koszt 0,08 %, std 1,7 %, udziały sumują
+  się do 100 % — w zakresach z listy kontrolnej.
+
+## Przegląd diffu (zasada 16c) — werdykt: **Approve**
+
+Zakres: `git diff master...HEAD` — `agents/feature_miner.py` (+cecha, +wpis; black scalił
+4 wywołania sprzed rundy — kosmetyka), `feature_registry.yaml` (+wpis), `backtest/checkpoint_lib.py`
+(+`build_rule_signals`, +`summarize_trade_returns`, Poprawka 2), `backtest/run_ta_a1.py` (nowy),
+2 nowe pliki testów (15 testów, w tym hypothesis), README rundy.
+
+**Korektność:** (1) brak lookaheadu — `compute_cdl_score_6` woła TA-Lib na całej serii, ale
+każda funkcja CDL* używa barów ≤ t (test przecieku df[:T] vs df[:T+k] bit w bit — zielony);
+sygnał na `close(t)`, wypełnienie od t + 1 (silnik). (2) Okno OOS = suma okien testowych
+aktywnych foldów, półotwartych jak w `generate_walk_forward_folds`; parytet populacji
+z modelem potwierdzony liczbą (11 592). (3) Pola sygnału = dokładnie zbiór czytany przez
+`simulate_equity` (test na równość zbiorów); `original_index` pozycyjny — guard na RangeIndex.
+(4) Bramka kosztowa woła tę samą `is_cost_feasible` z tym samym `gate_cost_fraction`, co silnik.
+(5) Dodanie kolumny do `FEATURE_FUNCTIONS` nie zmienia starych wyników: listy cech modeli są
+jawne, `dropna` po jawnych kolumnach — 650 testów sprzed rundy zielone, literały bit w bit.
+(6) Poprawka 2: `min(n_eff, n)` — identyczna z `metrics.py`, test na monkeypatchu.
+
+**Edge-case'y:** score NaN → brak sygnału (TA-Lib nie zwraca NaN, ale guard jest); konflikt
+formacji → 0 → brak sygnału; brak aktywnych foldów / brak kolumny / zły indeks → `ValueError`;
+`summarize_trade_returns` przy dwóch reżimach → `ValueError` (test).
+
+**Czytelność / uwagi (bez blokady):** skrypt liczy formacje per świeca drugi raz (do tabeli 3c)
+zamiast brać je z kolumny — świadomie, bo journal nie niesie `original_index`, a złączenie po
+`timestamp` jest jednoznaczne (test: 1:1). `assert` w skrypcie na równość cechy między
+treningami — dopuszczalny w skrypcie badawczym, nie w bibliotece. Ostrzeżenia `security-guidance`:
+brak.
+
+**Werdykt jednym zdaniem:** diff poprawny, bez przecieku, z regresją bit w bit i testami
+własności — **Approve**, do scalenia.
 
 ## Wniosek
 
-_(po przebiegu)_
+Sześć klasycznych formacji świecowych z podręcznika analizy technicznej, użytych dokładnie tak,
+jak uczy podręcznik (bycza → long, niedźwiedzia → short, bez dobierania parametrów), **daje na
+BTC 4h trafność 46,4 % [44,4; 48,3] i stratę 0,18 % [0,11; 0,25] na transakcję** — gorzej niż
+moneta i gorzej niż model bez formacji. Winne jest objęcie (84 % sygnałów): duża świeca
+w kierunku sygnału jest na tym rynku i horyzoncie częściej końcem ruchu niż jego początkiem.
+Jako **dodatkowa cecha modelu** formacje nie zmieniają nic (−0,001 % [−0,012; +0,010]) — model
+ma już tę informację w `return_lag_1`. Seria A (formacje świecowe) zamknięta: 2/2, STOP.
+Prior z `ta-toolkit` („to zostało zmierzone") potwierdzony w mocniejszej formie: formacje nie
+są ani nową informacją, ani nawet neutralną — na 4h BTC czytane po podręcznikowemu szkodzą.
 
 ## Rekomendacja
 
-_(po przebiegu)_
+1. **Nie odwracać reguły.** „Formacje wskazują odwrotnie, więc grajmy przeciw nim" to nowa
+   hipoteza wymyślona po wyniku (STW 1999 w czystej postaci), nie lustro tej rundy (wypełnienia
+   limitem różnią się per kierunek), a jej ekonomia ex ante to ≈ +0,01 % na transakcję (brutto
+   +0,094 % − koszt 0,083 %) — nieodróżnialne od zera i już zawarte w `return_lag_1`. Gdyby
+   użytkownik mimo to chciał ją zmierzyć, to osobna runda z własną pre-rejestracją i decyzją
+   bramkową, nie kontynuacja A.
+2. **Nie testować podzbiorów formacji** (gwiazdy „wyglądają lepiej"): n 26–60, CI 25–37 pp,
+   2 z 6 podgrup nad 50 % = oczekiwany szum. STOP obejmuje podzbiory, wagi, progi, konteksty.
+3. **Pozostałe rodziny AT ze skilla** (wsparcie/opór, wybicie z zakresu, struktura trendu,
+   podwójny szczyt, przecięcia średnich, linia trendu, Fibonacci) mają ten sam prior
+   (transformacja OHLCV) i wymagają każda osobnej pre-rejestracji z rachunkiem mocy —
+   **decyzja użytkownika, czy którąkolwiek uruchamiać**; z tej rundy nie wynika żadna
+   rekomendacja „za". Najbardziej odrębny mechanizm (skupienie zleceń na pamiętanych
+   poziomach — `sr_distance`) jest jedynym, dla którego `ta-toolkit` podaje wiarygodny
+   mechanizm ekonomiczny; reszta go nie ma.
+4. **Metodologicznie:** cap N_eff ≤ n obowiązuje w każdej statystyce per transakcja (Poprawka 2,
+   już w bibliotece); rachunek mocy dla reguły liczy się z częstości zdarzenia — drugi wariant
+   wniosku 19.
 
 ## Użyte skille
 
-_(po przebiegu — z `py tools/skill_audit.py raport --galaz a1-analiza-techniczna`)_
+Rejestr gałęzi `a1-analiza-techniczna` (`py tools/skill_audit.py raport --galaz a1-analiza-techniczna`):
+
+| skill | co wniósł |
+|---|---|
+| `anthropic-skills:ta-toolkit` | mapa pojęć AT → funkcje deterministyczne, DoF per narzędzie, zestaw 6 formacji z podręcznika (CDL_MAP), status „nietknięte", literatura (MYR 2006, STW 1999) → prior; lista, gdzie AT leakuje (swingi) — dlatego pierwsza runda na formacjach (0 DoF, bez swingów) |
+| `anthropic-skills:clas5-runda` | procedura: gałąź → skille → INDEX → pre-rejestracja w osobnym commicie → kod → run → bramki → DoD |
+| `anthropic-skills:clas5-quant` | kryterium dwóch warunków, rachunek mocy z częstości zdarzenia (nie z abstynencji — reguła jej nie ma), masa punktowa (score dyskretny → bez percentyli), „nie cytuj t_neff bez sprawdzenia" |
+| `anthropic-skills:quant-strategy-catalog` | pięć pól: ten sam zbiór informacyjny, inna formuła (reguła), status NIETKNIĘTE → nowa seria z własnym licznikiem; mechanizm jednym zdaniem z jawną słabością |
+| `engineering:testing-strategy` | plan testów: fixture TA-Lib z wariantem −80, doji, hypothesis na losowych świecach; lejek reguły domknięty, silnik end-to-end, arytmetyka statystyk, cap N_eff |
+| `data:validate-data` | bramka 16a: p*, zwrot z mieszanki wyjść, p z podziału kierunków, CI Walda, lejek; red flag odwrotny (błąd znaku); wykrycie N_eff > n |
+| `data:statistical-analysis` | bramka 16b: CI zwrotu i trafności, mediana obok średniej, test parowany, jak raportować 6 podgrup bez werdyktów |
+| `engineering:code-review` | bramka 16c (sekcja „Przegląd diffu") |
+
+Z tabeli zasady 19 pominięte: `dataviz` (bez wykresów), `data:explore-data` (te same parquety
+co N1; nowa kolumna to funkcja istniejących), `engineering:architecture` (bez decyzji
+architektonicznej — pomocniki w bibliotece są rozszerzeniem istniejącego wzorca W1/N1),
+`update-config`, `security-review` (bez kluczy, zleceń i sieci), `lean-research` (bez LEAN).

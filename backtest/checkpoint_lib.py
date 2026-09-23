@@ -253,7 +253,11 @@ def summarize_trade_returns(summary: dict) -> dict:
     r = real["net_ret"]
     se = float(r.std(ddof=1) / np.sqrt(n)) if n > 1 else float("nan")
     t = float(r.mean() / se) if se and se > 0 else float("nan")
-    n_eff = float(effective_sample_size(r)["n_eff"]) if n > 1 else float("nan")
+    # Jak `metrics.summarize_pooled_by_regime`: N_eff ograniczone do n. Ujemna autokorelacja
+    # zwrotów (A1a: nakładające się pozycje z kolejnych świec z formacją) daje ze wzoru
+    # N / (1 + 2Σρ) wartość > n, a to zawyżałoby |t_neff| ponad |t| — korekta ma tylko
+    # ODEJMOWAĆ pewność, nigdy dodawać. Wykryte po przebiegu A1 (Poprawka 2, raportowa).
+    n_eff = min(float(effective_sample_size(r)["n_eff"]), float(n)) if n > 1 else float("nan")
     t_neff = float(t * np.sqrt(n_eff / n)) if n > 1 else float("nan")
     wins = real["gross_ret"] > 0
     w_mean = float(real.loc[wins, "gross_ret"].mean()) if wins.any() else float("nan")
