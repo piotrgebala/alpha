@@ -33,11 +33,13 @@
 |---|---|
 | [`bramki-jakosci.md`](skills/bramki-jakosci.md) | Pełna ściąga trzech bramek jakości z CLAUDE.md zasady 16: walidacja write-upu, standard statystyk, przegląd kodu — listy kontrolne, pułapki z naszych rund, wzory, format werdyktów |
 
-**Procedura rundy `clas5-runda` NIE mieszka tutaj**, tylko w
-[`.claude/skills/clas5-runda/SKILL.md`](../.claude/skills/clas5-runda/SKILL.md) — i tylko tam.
-Powód: Claude Code ładuje jako skill wyłącznie kopię z `.claude/skills/`. Do 2026-09-22 były
-DWIE kopie (druga w `docs/skills/`) utrzymywane ręcznie i rozjechały się — aktualizowana była
-kopia w `docs/`, a wykonywana ta w `.claude/`, o dwie zasady starsza. Duplikat usunięty.
+**Skille projektu (`clas5-runda`, `clas5-quant`) NIE mieszkają w repo**, tylko w chmurze
+konta claude.ai (decyzja użytkownika 2026-09-23, `CLAUDE.md` — wytyczna „Skille projektu
+mieszkają w chmurze konta”). Modyfikacja skilla = nowa wersja wgrana do chmury, nie edycja
+pliku w repo. Historia: do 2026-09-22 istniały trzy kopie `clas5-runda` (tu, w `.claude/skills/`
+i w chmurze) i rozjechały się; 2026-09-22 zostawiono kopię w `.claude/skills/`, 2026-09-23 —
+po sprawdzeniu, że była bajt w bajt zgodna z chmurową — usunięto i ją. `bramki-jakosci.md`
+to dokument procedury (zasada 16), nie skill, więc zostaje tutaj.
 
 ## Legenda `status` (YAML frontmatter w `docs/rag/*.md`)
 

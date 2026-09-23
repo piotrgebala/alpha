@@ -2236,6 +2236,10 @@ Trzy niezależne usterki, wszystkie mechaniczne:
    Wykonywana była wersja o dwie zasady starsza, odsyłająca do plików skasowanych przy
    konsolidacji dokumentacji. Duplikat w `docs/` **usunięty**; została jedna kopia w
    `.claude/skills/` — tam, gdzie Claude Code faktycznie czyta.
+   **Aktualizacja 2026-09-23 (decyzja użytkownika): źródłem skilli jest CHMURA konta.** Kopia
+   w `.claude/skills/clas5-runda/` była bajt w bajt identyczna z chmurową (sprawdzone `diff`
+   z `~/.claude/skills/synced/`), więc usunięta bez utraty treści. Zmiana skilla = nowa
+   wersja wgrana do chmury (procedura w `CLAUDE.md`).
 3. **Konfiguracja maszyny nie została ruszona.** Wtyczki `data` świadomie nie włączam: to plik
    poza repo, wyłączony celowo razem z sześcioma innymi, a działający na wszystkie projekty
    użytkownika. Rozwiązanie z punktu 1 jest odporniejsze — działa też w sesji chmurowej.
