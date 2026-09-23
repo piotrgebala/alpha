@@ -110,8 +110,16 @@ def hedged_carry_pnl(frame: pd.DataFrame, state: pd.Series, costs: CarryCosts) -
     return out
 
 
-def summarize_pnl(pnl: pd.Series, z: float = 1.959964) -> dict:
-    """Średni P&L per okres z CI (se z N_eff ≤ n), t, t_neff, annualizacja na nominale i kapitale."""
+def summarize_pnl(
+    pnl: pd.Series,
+    z: float = 1.959964,
+    periods_per_year: int = PERIODS_PER_YEAR,
+    capital_per_notional: float = CAPITAL_PER_NOTIONAL,
+) -> dict:
+    """
+    Średni P&L per okres z CI (se z N_eff ≤ n), t, t_neff, annualizacja na nominale i kapitale.
+    Domyślne stałe = C1 (8h, kapitał 2× nominał); R1 podaje 365 dni i kapitał 1× (koszyk spot).
+    """
     x = pnl.dropna().astype(float)
     n = len(x)
     if n < 2:
@@ -123,6 +131,7 @@ def summarize_pnl(pnl: pd.Series, z: float = 1.959964) -> dict:
     se_neff = sd / np.sqrt(n_eff)
     t = mean / se if se > 0 else float("nan")
     t_neff = mean / se_neff if se_neff > 0 else float("nan")
+    lo, hi = mean - z * se_neff, mean + z * se_neff
     return {
         "n": n,
         "mean": mean,
@@ -133,17 +142,14 @@ def summarize_pnl(pnl: pd.Series, z: float = 1.959964) -> dict:
         "se_neff": se_neff,
         "t": t,
         "t_neff": t_neff,
-        "ci_low": mean - z * se_neff,
-        "ci_high": mean + z * se_neff,
-        "annual_notional": mean * PERIODS_PER_YEAR,
-        "annual_notional_ci": (
-            (mean - z * se_neff) * PERIODS_PER_YEAR,
-            (mean + z * se_neff) * PERIODS_PER_YEAR,
-        ),
-        "annual_capital": mean * PERIODS_PER_YEAR / CAPITAL_PER_NOTIONAL,
+        "ci_low": lo,
+        "ci_high": hi,
+        "annual_notional": mean * periods_per_year,
+        "annual_notional_ci": (lo * periods_per_year, hi * periods_per_year),
+        "annual_capital": mean * periods_per_year / capital_per_notional,
         "annual_capital_ci": (
-            (mean - z * se_neff) * PERIODS_PER_YEAR / CAPITAL_PER_NOTIONAL,
-            (mean + z * se_neff) * PERIODS_PER_YEAR / CAPITAL_PER_NOTIONAL,
+            lo * periods_per_year / capital_per_notional,
+            hi * periods_per_year / capital_per_notional,
         ),
         "total": float(x.sum()),
     }

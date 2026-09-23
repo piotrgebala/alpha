@@ -38,7 +38,9 @@
 > analiza techniczna na BTC 4h zamknięta jako kierunek. C1 (2026-09-23): cash-and-carry z hedgem
 > spot — PIERWSZY POZYTYW, ale jako przepływ za dźwignię, nie prognoza: +5,4 %/rok kapitału
 > [3,5; 7,4], połowa z 2021, ostatnie 3 lata 3,6 %; przełączanie po znaku fundingu NEGATYWNE;
-> decyzja o produkcie należy do użytkownika. Kolektor pozycjonowania aktywny (codziennie 09:00).**
+> decyzja o produkcie należy do użytkownika. R1 (2026-09-23): premia rebalansowa koszyka top-20
+> −3,6 %/rok [−9,5; +2,4] — ruchy względne w krypto trwają, rebalans nie zarabia; seria R 1/1.
+> Kolektor pozycjonowania aktywny (codziennie 09:00). Punkt 2 zlecenia zamknięty.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2524,8 +2526,23 @@ szumu 5,6× (autokorelacja fundingu — wniosek 56). Nie wyceniono: likwidacja s
 z zysków spot, limit na giełdę, porównanie z lokatą USD ~4–5 % w 2023–2025). Jeśli tak — następny
 krok to inżynieria (symulacja depozytu, stress +90 %/30 dni), nie pomiar.
 
-**Pozostałe z punktu 2:** „inny cel niż kierunek" poza carry — premia rebalansowa na koszyku
-(B2, dane P2 są w cache) w przygotowaniu; pozycjonowanie — kolektor AKTYWNY (niżej).
+#### Seria R — premia rebalansowa koszyka ⚪ ZAMKNIĘTA 2026-09-23 (R1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY (punktowo ujemny)
+
+„Inny cel niż kierunek" (punkt 2 zlecenia użytkownika) — rodzina B2: koszyk top-20 po
+30-dniowym obrocie (uniwersum P2 z wycofanymi, skład point-in-time miesięcznie, od 2021-02),
+rebalans dzienny (A) vs trzymanie w miesiącu (B); premia = r_A − r_B − 0,10 % × obrót; czyste
+funkcje `backtest/rebalance_premium.py` z testami. **Wynik:** netto **−3,55 %/rok [−9,50; +2,40]**,
+wartość A względem B −12,1 % przez 5,4 roku, 36/65 miesięcy dodatnich; scenariusz „ruchy
+niezależne" (6–11 %/rok brutto) wykluczony — w krypto ruchy względne wewnątrz miesiąca trwają
+(wniosek 57). Rozdzielczość 8,5 %/rok, 3× gorsza niż proxy ex ante (wniosek 58). Proces: kod
+scommitowany z padającym testem (potok zamaskował kod wyjścia) — naprawa przed przebiegiem
+końcowym; odtąd `set -o pipefail`.
+→ [runs/r1](runs/2026-09-23_r1-premia-rebalansowa/README.md)
+
+**Punkt 2 zlecenia użytkownika 2026-09-23 ZAMKNIĘTY:** carry z hedgem (C1: POZYTYWNY jako
+przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), pozycjonowanie
+(kolektor AKTYWNY — niżej). Otwarte pozostają wyłącznie kierunki wymagające nowych danych
+(pozycjonowanie za ~3 lata, on-chain — brama danych) i decyzja o produkcie cash-and-carry.
 
 #### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
 
