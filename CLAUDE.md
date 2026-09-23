@@ -145,6 +145,10 @@ jako źródło stałych zasad.
     edytuje się ręcznie; commituje się je razem z pracą na gałęzi (wpisy z master — przed
     scaleniem rundy). Plik na gałąź, nie jeden wspólny: przy wspólnym wczytanie skilla na
     master blokowało `git merge` każdej rundy (wykryte w przeglądzie przed scaleniem T9).
+    **Monitor CSV dla użytkownika:** te same wpisy trafiają na bieżąco do JEDNEGO lokalnego
+    pliku `runs/skille/uzycie_skilli.csv` w głównym repo (także z worktree; średnik + UTF-8
+    z BOM pod polskiego Excela; poza gitem). Otwarty w Excelu plik jest zablokowany — wiersze
+    czekają wtedy w buforze obok. `py tools/skill_audit.py csv` odbudowuje CSV z JSONL.
     Komendy `/skill` wpisane przez użytkownika trafiają do rejestru, o ile Claude Code poda
     ich nazwę; nierozpoznany format zapisuje się jako `nierozpoznana-komenda` (sama lista pól,
     bez treści). Rejestr przypisuje użycia do gałęzi git, dlatego **rundę zaczyna się od
@@ -240,7 +244,8 @@ STATUS.md                                                 — plan, historia run
                                                             2026-09-22; numeracja §1–§12 zachowana)
 config/settings.yaml, agents/feature_registry.yaml        — źródło prawdy dla parametrów
 tools/skill_audit.py + runs/skille/<gałąź>.jsonl         — rejestr użycia skilli (zasada 19):
-                                                            hook zapisuje, `raport` czyta
+                                                            hook zapisuje, `raport` czyta;
+                                                            lokalny monitor uzycie_skilli.csv
 ```
 
 ## Zanim zmienisz coś w `risk_controller.py`, `labeling.py`, `feature_miner.py` lub metodologii pomiaru

@@ -13,6 +13,7 @@ Testy integracyjne pracują na prawdziwym gicie: zapis do pliku gałęzi, scalen
 
 from __future__ import annotations
 
+import csv
 import json
 import subprocess
 from datetime import datetime, timedelta, timezone
@@ -21,16 +22,22 @@ from pathlib import Path
 import pytest
 
 from tools.skill_audit import (
+    CSV_BUFFER_NAME,
+    CSV_COLUMNS,
+    CSV_NAME,
     LOG_DIR,
     UNKNOWN_COMMAND,
     _plural,
+    append_csv,
     append_record,
     build_record,
+    csv_row,
     extract_skill_use,
     hook_main,
     load_records,
     log_file_for_branch,
     main,
+    rebuild_csv,
     render_report,
 )
 
@@ -73,9 +80,10 @@ def repo(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def repo_with_master(repo: Path) -> Path:
-    """Repo z commitem bazowym na `master` i PRAWDZIWYM `.gitattributes` projektu."""
+    """Repo z commitem bazowym na `master` i PRAWDZIWYMI `.gitattributes`/`.gitignore`."""
     _git("checkout", "-q", "-b", "master", cwd=repo)
     (repo / ".gitattributes").write_bytes((REPO / ".gitattributes").read_bytes())
+    (repo / ".gitignore").write_bytes((REPO / ".gitignore").read_bytes())
     (repo / "runs" / "INDEX.md").write_text("spis\n", encoding="utf-8")
     _git("add", "-A", cwd=repo)
     _git("commit", "-q", "-m", "baza", cwd=repo)
@@ -414,3 +422,118 @@ def test_gitattributes_declares_union_merge_for_branch_logs():
     rules = [r.split() for r in (REPO / ".gitattributes").read_text(encoding="utf-8").splitlines()]
     pattern = (LOG_DIR / "*.jsonl").as_posix()
     assert any(r and r[0] == pattern and "merge=union" in r for r in rules)
+
+
+# --------------------------------------------------------------------------- monitor CSV
+
+
+def _read_csv(path: Path) -> list[list[str]]:
+    with open(path, encoding="utf-8-sig", newline="") as fh:
+        return list(csv.reader(fh, delimiter=";"))
+
+
+def test_csv_row_splits_date_and_time_in_column_order():
+    rec = build_record(
+        extract_skill_use(_skill_payload("clas5-quant", "kalibracja")),
+        now=NOW,
+        branch="runda-x",
+        session="s1",
+    )
+    row = dict(zip(CSV_COLUMNS, csv_row(rec), strict=True))
+    assert row["data"] == "2026-09-23"
+    assert row["godzina"] == "10:00:00"
+    assert (row["skill"], row["galaz"], row["kto"]) == ("clas5-quant", "runda-x", "claude")
+
+
+@pytest.mark.parametrize("dangerous", ["=HYPERLINK(1)", "+1", "-cmd", "@SUM(A1)", "\tx"])
+def test_csv_neutralizes_cells_excel_would_run_as_formulas(dangerous):
+    rec = {"skill": "s", "argumenty": dangerous, "czas": "2026-09-23T10:00:00+02:00"}
+    cell = dict(zip(CSV_COLUMNS, csv_row(rec), strict=True))["argumenty"]
+    assert cell == "'" + dangerous
+
+
+def test_hook_writes_excel_friendly_csv(repo):
+    payload = _skill_payload("clas5-quant", "kalibracja ąęśź; z średnikiem", cwd=str(repo))
+    hook_main(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+    path = repo / LOG_DIR / CSV_NAME
+    assert path.read_bytes().startswith(b"\xef\xbb\xbf")  # BOM: polskie znaki w Excelu
+    header, row = _read_csv(path)
+    assert header == list(CSV_COLUMNS)
+    got = dict(zip(header, row, strict=True))
+    assert got["argumenty"] == "kalibracja ąęśź; z średnikiem"  # średnik w cudzysłowie
+    assert got["galaz"] == "runda-test"
+
+
+def test_hook_in_worktree_writes_csv_to_main_repo(repo_with_master, tmp_path_factory):
+    repo = repo_with_master
+    wt = tmp_path_factory.mktemp("wt") / "runda"
+    _git("worktree", "add", "-q", "-b", "runda-wt", str(wt), cwd=repo)
+    hook_main(json.dumps(_skill_payload("clas5-runda", cwd=str(wt))))
+
+    assert log_file_for_branch(wt, "runda-wt").exists()  # audyt: JSONL w worktree rundy
+    assert not (wt / LOG_DIR / CSV_NAME).exists()  # monitor: JEDEN plik w głównym repo
+    rows = _read_csv(repo / LOG_DIR / CSV_NAME)
+    assert [r[CSV_COLUMNS.index("skill")] for r in rows[1:]] == ["clas5-runda"]
+
+
+def test_locked_csv_rows_wait_in_buffer_and_are_flushed_in_order(tmp_path):
+    path = tmp_path / "runs" / "skille" / CSV_NAME
+    path.mkdir(parents=True)  # katalog w miejscu pliku = zapis niemożliwy, jak przy Excelu
+    first = csv_row({"skill": "pierwszy", "czas": "2026-09-23T10:00:00+02:00"})
+    assert append_csv(path, [first]) is False
+    assert (path.parent / CSV_BUFFER_NAME).exists()
+
+    path.rmdir()  # „Excel zamknięty”
+    second = csv_row({"skill": "drugi", "czas": "2026-09-23T10:05:00+02:00"})
+    assert append_csv(path, [second]) is True
+    skills = [r[CSV_COLUMNS.index("skill")] for r in _read_csv(path)[1:]]
+    assert skills == ["pierwszy", "drugi"]
+    assert not (path.parent / CSV_BUFFER_NAME).exists()
+
+
+def test_csv_failure_never_blocks_the_jsonl_audit_entry(repo, capsys):
+    (repo / LOG_DIR / CSV_NAME).mkdir(parents=True)
+    (repo / LOG_DIR / CSV_BUFFER_NAME).mkdir(parents=True)  # nawet bufor niezapisywalny
+    assert hook_main(json.dumps(_skill_payload("clas5-quant", cwd=str(repo)))) == 0
+    assert capsys.readouterr().out == ""
+    records, _ = load_records(repo / LOG_DIR)
+    assert [r["skill"] for r in records] == ["clas5-quant"]
+
+
+def test_rebuild_csv_restores_full_history_from_jsonl(repo_with_master, capsys, monkeypatch):
+    repo = repo_with_master
+    skille = repo / LOG_DIR
+    append_record(skille / "b.jsonl", {"skill": "drugi", "galaz": "b", "czas": "2026-09-23T11:00"})
+    append_record(
+        skille / "a.jsonl", {"skill": "pierwszy", "galaz": "a", "czas": "2026-09-23T09:00"}
+    )
+    (skille / CSV_NAME).write_text("stary;smieci\n", encoding="utf-8")
+    (skille / CSV_BUFFER_NAME).write_text("x\n", encoding="utf-8")
+
+    path, count = rebuild_csv(repo)
+    assert count == 2
+    rows = _read_csv(path)
+    assert rows[0] == list(CSV_COLUMNS)
+    assert [r[CSV_COLUMNS.index("skill")] for r in rows[1:]] == ["pierwszy", "drugi"]
+    assert not (skille / CSV_BUFFER_NAME).exists()
+
+    monkeypatch.chdir(repo)
+    assert main(["csv"]) == 0
+    assert "2 wiersze" in capsys.readouterr().out
+
+
+def test_csv_monitor_never_shows_up_in_git_status(repo_with_master):
+    repo = repo_with_master
+    hook_main(json.dumps(_skill_payload("clas5-quant", cwd=str(repo))))
+    status = _git("status", "--porcelain", "--untracked-files=all", cwd=repo).stdout
+    assert "master.jsonl" in status  # audyt JSONL: do commita
+    assert ".csv" not in status  # monitor CSV: lokalny, ignorowany
+
+
+def test_cli_csv_on_locked_file_explains_instead_of_crashing(repo_with_master, capsys, monkeypatch):
+    repo = repo_with_master
+    (repo / LOG_DIR / CSV_NAME).mkdir(parents=True)  # plik niezapisywalny, jak otwarty w Excelu
+    monkeypatch.chdir(repo)
+    assert main(["csv"]) == 1
+    assert "Excelu" in capsys.readouterr().err
