@@ -57,7 +57,12 @@
 > **DECYZJA UŻYTKOWNIKA 2026-09-23 (po D1): „carry odpuszczamy — nie o takie zwroty mi
 > chodzi"** — kierunek cash-and-carry (C1/D1) ZAMKNIĘTY bez produktu; cel projektu to zwroty
 > rzędu zakładu o kierunek, nie kilkuprocentowy przepływ. Program idzie dalej: O1
-> (pozycjonowanie jako cecha modelu 4h) i kolejne źródła z P3.**
+> (pozycjonowanie jako cecha modelu 4h) i kolejne źródła z P3.
+> O1 (2026-09-23): zmiana open interest 24h jako 5. cecha modelu 4h — **NEGATYWNY** (−0,074 %
+> na transakcję, trafność 50,25 % vs próg 53,07 %), ale pierwsza cecha spoza wykresu, która
+> porusza model (+0,024 pp [−0,019; +0,067] wobec kontroli, inny kierunek w 21 % transakcji);
+> seria O 1/1 STOP. Pozostałe kolumny archiwum i inne źródła P3 (DVOL, on-chain, F&G) =
+> osobne serie, każda po decyzji użytkownika.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2561,6 +2566,19 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Seria O — pozycjonowanie jako cecha modelu 4h 🔴 ZAMKNIĘTA 2026-09-23 (O1), 1/1, reguła STOP, NEGATYWNY
+
+Pierwsze użycie archiwum z P3. Jedna cecha po mechanizmie (dźwignia → kaskady likwidacji):
+`oi_change_24h` = log(OI_t/OI_t−6), OI z ostatniego odczytu 5-min WEWNĄTRZ świecy (bez lookaheadu
+— test jednostkowy, shift-forward, walidacja na realnych danych), rejestr `positioning:`,
+`agents/positioning_features.py`. Kontrola vs O1 parowo (ten sam seed, te same świece).
+**Wynik: NEGATYWNY** — −0,074 % [−0,116; −0,032] na transakcję, t_neff −2,90, p 50,25 %
+[49,06; 51,44] vs p* 53,07 %. **Ale:** wobec kontroli +0,024 pp [−0,019; +0,067], inny kierunek
+w 20,6 % transakcji, trafność +0,67 pp, korelacja z wolumenem 0,045 — pierwsza cecha spoza OHLCV,
+która w ogóle porusza model (wniosek 66). Pozostałe 5 kolumn archiwum (top-trader L/S, global
+L/S, taker ratio, OI USD) = warianty tej samej rodziny → decyzja użytkownika, jedna na rundę.
+→ [runs/o1](runs/2026-09-23_o1-pozycjonowanie/README.md)
 
 #### Seria X — momentum przekrojowe (B1) ⚪ ZAMKNIĘTA 2026-09-23 (X1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY (punktowo wyraźnie dodatni)
 
