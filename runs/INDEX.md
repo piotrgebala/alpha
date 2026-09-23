@@ -548,7 +548,8 @@ podsumowanie pod tabelą.
     kapitale wychodzi **+9,07 %/rok [5,88; 12,26]** wobec +5,44 % [3,44; 7,45] dla USDT-M 2×.
     Ponad T-bill 3M od 2022 (5 obserwacji rocznych): COIN-M +1,8 pp/rok (od −1,5 do +7,2),
     USDT-M 2× −1,0 pp, basis kwartalny 2× −0,9 pp. Nadal przepływ za dźwignię innych z ryzykiem
-    giełdy; decyzja o produkcie = użytkownik.
+    giełdy; decyzja o produkcie = użytkownik. **Decyzja użytkownika 2026-09-23: carry
+    odpuszczone („nie o takie zwroty mi chodzi") — kierunek C/D zamknięty bez produktu.**
 62. **DEPOZYT KRÓTKIEJ NOGI USDT-M: 1× Z MIESIĘCZNYM UZUPEŁNIANIEM PRZEŻYWA 5,5 ROKU BEZ
     LIKWIDACJI (D1):** run-up 30 dni max +89,6 % (p99 58,5 %), 90 dni +112 %; siatka 4 × 4:
     M = 1,0 / 30 dni → 0 likwidacji, max wykorzystanie 70,9 % (po `high` 70,0 %), +5,29 %

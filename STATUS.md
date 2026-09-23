@@ -53,7 +53,11 @@
 > X1 (2026-09-23): momentum przekrojowe top-20 (long zwycięzcy / short przegrani 4 tygodni,
 > trzymanie tydzień) **+22 %/rok netto [−5; +49], dodatni w 6/6 lat, ale NIEROZSTRZYGNIĘTY**
 > (t 1,58; 2025 = połowa sumy) — pierwszy dodatni punktowo zakład o kierunek relatywny;
-> seria X 1/1 STOP; rozstrzygnięcie tylko większą próbą (decyzja użytkownika).**
+> seria X 1/1 STOP; rozstrzygnięcie tylko większą próbą (decyzja użytkownika).
+> **DECYZJA UŻYTKOWNIKA 2026-09-23 (po D1): „carry odpuszczamy — nie o takie zwroty mi
+> chodzi"** — kierunek cash-and-carry (C1/D1) ZAMKNIĘTY bez produktu; cel projektu to zwroty
+> rzędu zakładu o kierunek, nie kilkuprocentowy przepływ. Program idzie dalej: O1
+> (pozycjonowanie jako cecha modelu 4h) i kolejne źródła z P3.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2588,6 +2592,8 @@ pre-rejestracji); (Q2) **COIN-M: wartość USD stała (tożsamość), brak likwi
 zawyżony 8× (wniosek 63). Wnioski 61–63. **Decyzja o produkcie (realny kapitał, ryzyko giełdy)
 należy do użytkownika.** Opcja tania: kontrakty COIN-M datowane (archiwum od 2020-09) —
 stopa zamknięta bez likwidacji; nie mierzone.
+**Decyzja użytkownika 2026-09-23: „carry odpuszczamy — nie o takie zwroty mi chodzi."**
+Kierunek zamknięty bez produktu; kontrakty COIN-M datowane nie będą mierzone.
 → [runs/d1](runs/2026-09-23_d1-produkt-carry/README.md)
 
 #### P3 — sonda źródeł danych II + podłączenie ⚪ ZAMKNIĘTA 2026-09-23 (0 wariantów)
