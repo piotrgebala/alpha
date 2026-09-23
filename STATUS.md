@@ -2246,9 +2246,10 @@ Trzy niezależne usterki, wszystkie mechaniczne:
      i `methodology.md`, odwołanie do kopii w repo, stan projektu uzupełniony o P2 i T4;
      `quant-strategy-catalog` — carry przekrojowy „NIETKNIĘTE, priorytet 1” → „NIEMIERZALNY
      w P2, żyje tylko wersja z hedgem spot”, odwołanie do repo.
-   - Partia 2 — przygotowana, czeka na wgranie: `clas5-runda` — „operacje git po stronie
-     użytkownika” sprzeczne z „Podziałem ról” w `CLAUDE.md`; `quant-strategy-catalog` —
-     historia danych 4h to 6,8 roku (od 2019-09), nie 3 lata.
+   - Partia 2 — wgrana i zweryfikowana (synchronizacja 09:04, treść bajt w bajt = paczki,
+     poprawki partii 1 zachowane): `clas5-runda` — „operacje git po stronie użytkownika”
+     sprzeczne z „Podziałem ról” w `CLAUDE.md`; `quant-strategy-catalog` — historia danych 4h
+     to 6,8 roku (od 2019-09), nie 3 lata (dwa miejsca).
 3. **Konfiguracja maszyny nie została ruszona.** Wtyczki `data` świadomie nie włączam: to plik
    poza repo, wyłączony celowo razem z sześcioma innymi, a działający na wszystkie projekty
    użytkownika. Rozwiązanie z punktu 1 jest odporniejsze — działa też w sesji chmurowej.
