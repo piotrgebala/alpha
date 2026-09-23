@@ -2276,18 +2276,29 @@ i pomijałby skille z ukośnikiem w nazwie. Wszystkie trzy naprawione przed scal
 **Przegląd diffu (16c): Approve** — po dwóch przebiegach `engineering:code-review` (drugi
 dołożył odmianę liczebników w raporcie i limit długości nazwy pliku); 484 → 491 testów zielonych.
 `update-config` i `engineering:testing-strategy` wczytano PRZED uruchomieniem hooka, więc
-rejestr tej gałęzi ich nie zawiera — pierwszy wpis to przegląd kodu.
-**Dopisek (prośba użytkownika, 2026-09-23): monitor CSV.** Hook dopisuje też każdy wpis do
+rejestr tej gałęzi ich nie zawiera — pierwszy wpis to przegląd kodu. Paczki skilli
+`clas5-runda` (kroki z zasady 19) i `clas5-quant` (odwołania do zasad bez numerów) wgrane
+i zweryfikowane (synchronizacja 10:55, treść = paczki).
+
+**Otwarte:** format zdarzenia `UserPromptExpansion` jest nieudokumentowany — pierwsza komenda
+`/skill` wpisana przez użytkownika pokaże w rejestrze, czy nazwa jest rozpoznawana (w przeciwnym
+razie wpis `nierozpoznana-komenda` z listą samych nazw pól).
+
+**Dopisek 1 — monitor CSV (prośba użytkownika, 2026-09-23).** Hook dopisuje też każdy wpis do
 jednego lokalnego `runs/skille/uzycie_skilli.csv` w głównym repo (Excel: średnik, UTF-8 z BOM;
 komórki zaczynające się od `= + - @` poprzedzone apostrofem — ochrona przed wykonaniem
 formuły; bufor, gdy plik jest otwarty w Excelu; `py tools/skill_audit.py csv` odbudowuje
-z JSONL). Paczki `clas5-runda`/`clas5-quant` z trzeciej partii wgrane i zweryfikowane
-(synchronizacja 10:55, treść = paczki).
-Przegląd diffu (16c, `engineering:code-review`): **Approve** — dołożony zrozumiały komunikat
-zamiast błędu Pythona, gdy odbudowa trafi na plik otwarty w Excelu; 504 testy zielone. **Otwarte:** format zdarzenia `UserPromptExpansion` jest nieudokumentowany —
-pierwsza komenda `/skill` pokaże w rejestrze, czy nazwa jest rozpoznawana (w przeciwnym razie
-wpis `nierozpoznana-komenda` z listą samych nazw pól). Paczki skilli `clas5-runda` (kroki
-z zasady 19) i `clas5-quant` (odwołania „zasady 1–18” bez numerów) czekają na wgranie.
+z JSONL). Przegląd diffu (16c, `engineering:code-review`): **Approve** — dołożony zrozumiały
+komunikat zamiast błędu Pythona, gdy odbudowa trafi na plik otwarty w Excelu; 504 testy zielone.
+
+**Dopisek 2 — wtyczki z GitHuba (decyzja użytkownika 2026-09-23).** Użytkownik zainstalował
+`document-skills` i `example-skills` z `anthropics/skills` (zakres projektu). Weryfikacja:
+brak synchronizacji z chmurą, a 5 skilli (`docx`, `pdf`, `pptx`, `xlsx`, `skill-creator`)
+w innych wersjach niż chmurowe. Obie wtyczki odinstalowane, ustawienia projektu bez zmian
+(instalacja przestawiła tylko kolejność pól). Skille ogólne — włączać na claude.ai. Zasada
+dopisana do `CLAUDE.md` (wytyczna o skillach w chmurze). Przegląd diffu (16c): **Approve** —
+przegląd wyłapał nieaktualny punkt „Otwarte” (paczki opisane jako niewgrane) i sklejone
+akapity tej sekcji; poprawione.
 
 ---
 

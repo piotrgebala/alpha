@@ -194,6 +194,15 @@ jako źródło stałych zasad.
   wersję (w scratchpadzie, na bazie aktualnej kopii z `synced/`) i paczkę do wgrania,
   a użytkownik wgrywa ją na claude.ai. Dopóki zmiana nie trafi do chmury, nie jest
   obowiązująca. Zmianę treści skilla odnotuj jednym zdaniem w `STATUS.md` (co i dlaczego).
+  **Wtyczki instalowane z GitHuba (`/plugin install`) NIE synchronizują się z chmurą**
+  (decyzja użytkownika 2026-09-23) — działają tylko na maszynie, na której je zainstalowano,
+  a sesja Cowork ich nie ma. Skille ogólne włącza się więc na claude.ai, żeby trafiły do obu
+  środowisk. Duplikatów skilli, które już przychodzą z chmury, nie instaluje się wcale:
+  próba z `anthropics/skills` dała drugie, INNE wersje `docx`/`pdf`/`pptx`/`xlsx`/
+  `skill-creator` (inny opis wyzwalania, inne skrypty) — usunięte. Lokalnej wtyczki nie
+  wpisuje się do `.claude/settings.json` projektu; wyjątek do rozstrzygnięcia:
+  `code-review@claude-plugins-official` (od 2026-09-22, funkcja pokrywa się z
+  `engineering:code-review`).
 - **Mapowanie „moment pracy → skill” jest zasadą 19** (obowiązkową), nie wytyczną. Procedura
   bramek jakości mieszka w repo jako **dokument** (`docs/skills/bramki-jakosci.md`), nie
   skill — powód: zasady 16a/16b wskazywały kiedyś wyłącznie skille wtyczki `data`, a ta
