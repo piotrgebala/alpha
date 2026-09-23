@@ -7,7 +7,8 @@ danych). **Konwencja od 2026-09-22 (CLAUDE.md zasada 11): każdy run ma WŁASNY 
 - `README.md` — pełny write-up: **ID testu**, **Metadane** (branch/komenda/parametry/dane),
   **Poprzedzające wyniki** (które wcześniejsze runy motywują/ograniczają projekt tej rundy —
   obowiązkowe dla nowych rund, CLAUDE.md zasada 14), **Wynik**, **Co na plus (+) / Co na minus
-  (-)**, **Wniosek**, **Rekomendacja**;
+  (-)**, **Wniosek**, **Rekomendacja**, **Użyte skille** (od 2026-09-23, CLAUDE.md zasada 19 —
+  tabela z `py tools/skill_audit.py raport --galaz <gałąź rundy>`);
 - `raw_output.txt` — pełny, nieskrócony stdout przebiegu (obowiązkowy dla nowych rund;
   historyczne runy mają output w README, C2.7–C2.9 uzupełnione wstecznie);
 - ewentualne artefakty (CSV, wykresy).
@@ -365,8 +366,12 @@ podsumowanie pod tabelą.
    „nie ucz sie”. Kalibracja przyrzadu musi sie odbywac na danych ze ZNANYM sygnalem (wyrocznia K1/K2),
    nigdy na realnych danych, na ktorych sygnalu nie ma — inaczej stroimy przyrzad pod slepote.
 
-## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11 i 14)
+## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
+0. **Najpierw gałąź rundy, potem skille** (`clas5-runda`, `clas5-quant` i pozostałe z tabeli
+   w zasadzie 19). Rejestr zapisuje każde użycie do pliku bieżącej gałęzi
+   `runs/skille/<gałąź>.jsonl`, więc skill wczytany jeszcze na master nie trafi do raportu
+   rundy.
 1. **PRZED projektowaniem rundy:** przeczytaj tabelę + liczniki + "Wnioski skumulowane" +
    README runów powiązanych z planowaną zmianą. W README nowej rundy wypełnij sekcję
    **"Poprzedzające wyniki"** — które runy motywują/ograniczają projekt i dlaczego runda nie
@@ -377,7 +382,10 @@ podsumowanie pod tabelą.
    Uruchom skrypt (nowe budują na `backtest/checkpoint_lib.py`; raport metodologią checkpointu
    v2 + rozbicie edge'u — CLAUDE.md zasada 12), przechwyć pełny stdout.
 3. Utwórz katalog `runs/YYYY-MM-DD_<id>-<slug>/` z `README.md` (sekcje jak w nagłówku tego
-   pliku) i `raw_output.txt` (pełny stdout, nieskrócony).
+   pliku) i `raw_output.txt` (pełny stdout, nieskrócony). Sekcja **„Użyte skille”**: wynik
+   `py tools/skill_audit.py raport --galaz <gałąź rundy>` + jedno zdanie, co wniósł każdy
+   skill + pominięte skille z tabeli zasady 19 z powodem. Plik `runs/skille/<gałąź>.jsonl`
+   commituj razem z rundą.
 4. Dodaj wiersz do tabeli (z licznikiem **Warianty**), zaktualizuj WŁAŚCIWY licznik pod tabelą
    (per baza/hipoteza) ORAZ sekcję **"Wnioski skumulowane"**.
 5. Zsynchronizuj syntezę w `STATUS.md` §5/§7 i `STATUS.md` — te dokumenty dostają

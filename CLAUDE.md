@@ -39,7 +39,8 @@ jako źródło stałych zasad.
 11. **Każdy ciężki przebieg na realnych danych** (checkpoint, kalibracja, sweep, screening)
     **dostaje WŁASNY KATALOG `runs/YYYY-MM-DD_<id>-<slug>/`** zawierający `README.md`
     (write-up: ID, Metadane, **Poprzedzające wyniki**, Wynik, "Co na plus (+) / Co na minus
-    (-)", Wniosek, Rekomendacja) **+ `raw_output.txt`** (pełny, nieskrócony stdout) + ewentualne
+    (-)", Wniosek, Rekomendacja, **Użyte skille** — zasada 19) **+ `raw_output.txt`** (pełny,
+    nieskrócony stdout) + ewentualne
     artefakty. Do tego **wiersz w `runs/INDEX.md` z licznikiem wariantów** (księga budżetu
     multiple-testing) **i aktualizacja sekcji "Wnioski skumulowane"** tamże. Pełna procedura:
     `runs/INDEX.md`, sekcja "Jak dodać nowy wpis".
@@ -80,8 +81,9 @@ jako źródło stałych zasad.
     czytelność) z werdyktem jednym zdaniem w README rundy.
     **Źródłem procedury jest `docs/skills/bramki-jakosci.md`** (listy kontrolne, pułapki
     z naszych rund, wzory do przeliczeń, format werdyktów) — plik w repo, bez zależności od
-    wtyczek. Jeśli w sesji są skille `engineering:code-review` / `engineering:architecture`,
-    używaj ich jako wsparcia; brak skilla NIE zwalnia z bramki.
+    wtyczek. Skille wspierające bramki (`data:validate-data`, `data:statistical-analysis`,
+    `engineering:code-review`) są OBOWIĄZKOWE według zasady 19; ich brak w sesji NIE zwalnia
+    z bramki.
 17. **Rozmowa z użytkownikiem toczy się prostym, zrozumiałym językiem.** Odpowiedzi na czacie
     i raporty z rund mają być zrozumiałe dla osoby, która nie zna żargonu statystyki, tradingu
     ani programowania: krótkie zdania, bez skrótów myślowych. Jeśli fachowe pojęcie jest
@@ -114,6 +116,49 @@ jako źródło stałych zasad.
     opłacalności, co na czystym szumie jest równoważne warunkowi `n ≤ ~1 142`: mierzyła
     nieprecyzyjność zamiast specyficzności i karała każde ramię osiągające cel rundy
     (wniosek skumulowany 28).
+19. **Skille i wtyczki: w wyznaczonych momentach OBOWIĄZKOWE, a ślad ich użycia prowadzi
+    program, nie Claude (decyzja użytkownika 2026-09-23).** O tym, czy skill jest potrzebny,
+    nie decyduje ocena Claude'a w danej chwili — w samej rundzie T4 pominął dwa pasujące
+    (`clas5-quant`, `engineering:code-review`). Decyduje tabela; skill wczytuje się PRZED
+    pracą, nie po:
+
+    | moment pracy | skill |
+    |---|---|
+    | cechy, wskaźniki, etykiety, backtest, walk-forward, trening, hiperparametry, ryzyko/sizing, mierzalność, werdykt, nowe źródło danych, diagnoza „czemu nie działa” | `clas5-quant` |
+    | start rundy na realnych danych — po utworzeniu gałęzi rundy | `clas5-runda` |
+    | nowa hipoteza lub strategia, „co jeszcze przetestować”, pomysł z biblioteki strategii | `quant-strategy-catalog` |
+    | analiza techniczna: formacja, świeca, wskaźnik, wsparcie/opór, Fibonacci, TradingView/Pine | `ta-toolkit` |
+    | LEAN / QuantConnect | `lean-research` |
+    | przed publikacją write-upu rundy (bramka 16a) | `data:validate-data` |
+    | liczby i przedziały w raporcie (bramka 16b) | `data:statistical-analysis` |
+    | przed scaleniem do master (bramka 16c) | `engineering:code-review` |
+    | wykres | `dataviz` |
+    | decyzja architektoniczna (ADR do `docs/rag/`) | `engineering:architecture` |
+    | błąd, którego przyczyny nie widać od razu | `engineering:debug` |
+    | testy nowego modułu | `engineering:testing-strategy` |
+    | konfiguracja Claude Code (hooki, uprawnienia, `settings.json`) | `update-config` |
+
+    **Rejestr audytowy:** hook w `.claude/settings.json` uruchamia `tools/skill_audit.py`,
+    który po każdym wczytaniu skilla dopisuje wiersz do pliku BIEŻĄCEJ GAŁĘZI
+    `runs/skille/<gałąź>.jsonl` (czas, skill, kto: Claude/użytkownik, gałąź, sesja) — jeden
+    plik na przebieg. Wpis robi program — Claude nie może go pominąć ani dopisać. Plików nie
+    edytuje się ręcznie; commituje się je razem z pracą na gałęzi (wpisy z master — przed
+    scaleniem rundy). Plik na gałąź, nie jeden wspólny: przy wspólnym wczytanie skilla na
+    master blokowało `git merge` każdej rundy (wykryte w przeglądzie przed scaleniem T9).
+    Komendy `/skill` wpisane przez użytkownika trafiają do rejestru, o ile Claude Code poda
+    ich nazwę; nierozpoznany format zapisuje się jako `nierozpoznana-komenda` (sama lista pól,
+    bez treści). Rejestr przypisuje użycia do gałęzi git, dlatego **rundę zaczyna się od
+    utworzenia gałęzi, a skille wczytuje dopiero na niej**.
+    **README rundy — sekcja „Użyte skille”:** wynik
+    `py tools/skill_audit.py raport --galaz <gałąź rundy>` + przy każdym skillu jedno zdanie,
+    co wniósł + każdy skill z tabeli, którego moment runda obejmowała, a którego NIE ma
+    w rejestrze — z powodem pominięcia. Rozstrzyga rejestr, nie tekst README. Brak sekcji =
+    runda niezrobiona (jak brak testów w zasadzie 10).
+    **Wtyczki:** potrzebne wtyczki włącza się w `.claude/settings.json` PROJEKTU (dziś
+    `engineering`, `data`), nie globalnie. Skill niedostępny w sesji (wtyczka wyłączona,
+    chmura niezsynchronizowana) → w README „niedostępny w sesji” i procedura z repo: bramki
+    z `docs/skills/bramki-jakosci.md`, runda z zasad 11–19 i `runs/INDEX.md` („Jak dodać nowy
+    wpis”). Dokument w repo pozostaje źródłem procedury; skill jest drugą parą oczu.
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 
@@ -145,18 +190,10 @@ jako źródło stałych zasad.
   wersję (w scratchpadzie, na bazie aktualnej kopii z `synced/`) i paczkę do wgrania,
   a użytkownik wgrywa ją na claude.ai. Dopóki zmiana nie trafi do chmury, nie jest
   obowiązująca. Zmianę treści skilla odnotuj jednym zdaniem w `STATUS.md` (co i dlaczego).
-- **Mapowanie na momenty pracy.** Procedura rundy → skill `clas5-runda` (chmura). Metodologia
-  quant → skill `clas5-quant` (chmura). Bramki jakości →
-  `docs/skills/bramki-jakosci.md` (zasada 16). Decyzja architektoniczna → ADR do `docs/rag/`,
-  wsparcie: `engineering:architecture`. Wykresy → `dataviz`.
-  **Zanim oprzesz procedurę na skillu z wtyczki, sprawdź, czy on w tej sesji istnieje** —
-  wtyczki włącza się per maszyna i per projekt, a nie da się tego wyczytać z repo. Zasady
-  16a/16b wskazywały kiedyś `data:validate-data` i `data:statistical-analysis`; w praktyce
-  wtyczka `data` bywa wyłączona i obie bramki po cichu nie miały jak zadziałać. Dlatego
-  procedura bramek jakości mieszka w repo jako **dokument** (`docs/skills/bramki-jakosci.md`,
-  nie skill), a skill z wtyczki jest udogodnieniem, nie warunkiem. Jeśli skill `clas5-runda`
-  w danej sesji nie jest dostępny (np. chmura niezsynchronizowana), procedura rundy jest
-  i tak wyprowadzalna z zasad 11–18 i `runs/INDEX.md` („Jak dodać nowy wpis”).
+- **Mapowanie „moment pracy → skill” jest zasadą 19** (obowiązkową), nie wytyczną. Procedura
+  bramek jakości mieszka w repo jako **dokument** (`docs/skills/bramki-jakosci.md`), nie
+  skill — powód: zasady 16a/16b wskazywały kiedyś wyłącznie skille wtyczki `data`, a ta
+  bywała wyłączona na maszynie i obie bramki po cichu nie miały jak zadziałać (T8).
 - Lint/format: `ruff` + `black` na plikach dotykanych w rundzie; plików zamrożonych (zasada 13)
   nie reformatuj. Różnice CRLF/LF między repo (Windows) a środowiskiem pracy są normalne.
 - **Dwa środowiska pracują na tym repo** (sesja chmurowa Cowork + lokalna sesja Claude Code na
@@ -178,10 +215,10 @@ kapitał) i wszystko nieodwracalne (usuwanie danych/historii).
 > i bez sieci, sesja lokalna ma oba. **Niezmienne pozostaje to, co wyżej:** decyzje bramkowe
 > i operacje nieodwracalne zawsze wymagają zgody użytkownika.
 
-**Claude — pełna autonomia badawcza W RAMACH zasad 1–18:** samodzielnie wybiera i uruchamia
-kolejne eksperymenty (w tym z backlogu w `STATUS.md`), może wprowadzać wynikające z wyników
-zmiany parametrów/cech/configu — **raportując po fakcie, w tej samej rundzie** (plik `runs/` +
-`STATUS.md` §5/§7 + `STATUS.md`). Autonomia nie uchyla dyscypliny: jedna zmiana na
+**Claude — pełna autonomia badawcza W RAMACH zasad nienaruszalnych powyżej:** samodzielnie
+wybiera i uruchamia kolejne eksperymenty (w tym z backlogu w `STATUS.md`), może wprowadzać
+wynikające z wyników zmiany parametrów/cech/configu — **raportując po fakcie, w tej samej
+rundzie** (plik `runs/` + `STATUS.md` §5/§7 + `STATUS.md`). Autonomia nie uchyla dyscypliny: jedna zmiana na
 raz, warianty rejestrowane z góry (przed obejrzeniem wyniku), licznik multiple-testing
 aktualizowany, każda decyzja udokumentowana z uzasadnieniem i ścieżką odwrotu (co i jak
 zrevertować). Skrypty pozostają neutralnymi reporterami — decyzję podejmuje i podpisuje w
@@ -202,6 +239,8 @@ STATUS.md                                                 — plan, historia run
                                                             (scalone IMPLEMENTATION_PLAN+TASKS,
                                                             2026-09-22; numeracja §1–§12 zachowana)
 config/settings.yaml, agents/feature_registry.yaml        — źródło prawdy dla parametrów
+tools/skill_audit.py + runs/skille/<gałąź>.jsonl         — rejestr użycia skilli (zasada 19):
+                                                            hook zapisuje, `raport` czyta
 ```
 
 ## Zanim zmienisz coś w `risk_controller.py`, `labeling.py`, `feature_miner.py` lub metodologii pomiaru

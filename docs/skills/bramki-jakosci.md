@@ -331,9 +331,10 @@ blokują merge. Sugestie można odłożyć do backlogu z numerem Z.
 1. Przy końcu rundy otwórz ten plik i przejdź sekcję **A** po kolei. Wpisz werdykt do README.
 2. Pisząc tabelę wyników i wnioski — sekcja **B**, zwłaszcza B2 (przedziały) i B7 (język).
 3. Przed merge — sekcja **C**, wpisz werdykt jednym zdaniem.
-4. Jeśli plugin `data` / `engineering` jest zainstalowany, skille dadzą dodatkowe listy
-   ogólne — ale ten plik jest wersją dopasowaną do projektu i ma pierwszeństwo tam, gdzie
-   się różnią.
+4. Skille `data:validate-data` (A), `data:statistical-analysis` (B) i `engineering:code-review`
+   (C) są od 2026-09-23 OBOWIĄZKOWE w swoich momentach (`CLAUDE.md` zasada 19) — dają
+   dodatkowe listy ogólne, a ich użycie widać w rejestrze `runs/skille/<gałąź>.jsonl`. Ten plik
+   pozostaje wersją dopasowaną do projektu i ma pierwszeństwo tam, gdzie się różnią.
 
 Ten plik aktualizuj, gdy runda odkryje nową pułapkę (tak jak C2d, Z17, S1 trafiły tutaj) —
 to żywa lista, nie stała.
