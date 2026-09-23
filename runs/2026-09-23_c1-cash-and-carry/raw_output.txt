@@ -1,0 +1,50 @@
+========================================================================================================
+C1 — CASH-AND-CARRY Z HEDGEM SPOT (BTC): C1a zawsze w pozycji, C1b po dodatnim fundingu; konfiguracja ZAMROŻONA
+========================================================================================================
+dane      : spot 6021 / perp 6021 / funding 6021 od 2021-01-01T00:00:00Z (zasada 20); okresów po wyrównaniu 6019: 2021-01-01 08:00:00+00:00 → 2026-06-30 08:00:00+00:00
+koszty    : spot 0.10% + perp 0.05% + poślizg 2×0.02% = 0.19% nominału na wejście i tyle samo na wyjście; kapitał = 2× nominał
+kryterium : pozytyw t_neff > z_2 = 2.241 (Bonferroni m = 2); negatyw: górny kraniec CI 95% < 0
+
+1. KRYTERIUM — średni P&L netto per okres 8h (% nominału), CI z N_eff, annualizacja
+  ramię |     n |   średnia |                  CI 95% |   mediana |       t |  N_eff |  t_neff |              rocznie nominał |              rocznie KAPITAŁ
+  ------------------------------------------------------------------------------------------------------------------------------------------------------
+   C1a |  6019 | +0.00992% | [+0.00632; +0.01353] | +0.00637% |  +24.77 |    286 |   +5.40 | +10.87% [+6.92; +14.81] |  +5.43% [+3.46; +7.41]
+   C1b |  6019 | -0.01698% | [-0.02531; -0.00864] | +0.00224% |  -17.27 |    322 |   -3.99 | -18.59% [-27.72; -9.46] |  -9.29% [-13.86; -4.73]
+  >>> ODCZYT KRYTERIUM C1a: POZYTYWNY — t_neff > z_2 = 2.241 (dolny kraniec CI przy z_2 nad zerem)
+  >>> ODCZYT KRYTERIUM C1b: NEGATYWNY — górny kraniec CI 95% średniego P&L netto poniżej zera
+
+2. DEKOMPOZYCJA — skąd bierze się wynik (suma za całą próbę, % nominału)
+  ramię | okresy w pozycji |  Σ funding | Σ hedge (Δbazy) |  Σ koszty |    Σ P&L | przełączenia | max obsunięcie
+  ----------------------------------------------------------------------------------------------------------------
+   C1a |    6019 (100.0%) |    +60.23% |          -0.13% |     0.38% |  +59.72% |            1 |          0.64%
+   C1b |    5146 ( 85.5%) |    +61.08% |          +3.18% |   166.44% | -102.18% |          875 |        124.93%
+  baza na wejściu C1a +0.076%, na wyjściu -0.044% (efekt poziomu bazy: +0.120% dla short perp)
+  funding: średnia 0.0100%/8h, dodatni w 85.5% okresów
+
+3. PER ROK (OPISOWO, bez werdyktów) — C1a: średni P&L/8h, rocznie na nominale, składowe
+   rok | okresy |     P&L/8h | rocznie nom. |   funding |     hedge |  koszty
+  ------------------------------------------------------------------------------
+  2021 |   1094 |  +0.02778% |      +30.41% |   +30.57% |    +0.01% |   0.19%
+  2022 |   1095 |  +0.00377% |       +4.13% |    +4.16% |    -0.03% |   0.00%
+  2023 |   1095 |  +0.00705% |       +7.72% |    +7.89% |    -0.17% |   0.00%
+  2024 |   1098 |  +0.01093% |      +11.97% |   +11.93% |    +0.07% |   0.00%
+  2025 |   1095 |  +0.00467% |       +5.12% |    +5.13% |    -0.01% |   0.00%
+  2026 |    542 |  +0.00068% |       +0.75% |    +0.55% |    +0.01% |   0.19%
+  C1b per rok (średni P&L/8h, koszty):
+  2021 |  +0.01644% | koszty  13.87% | w pozycji  92.7% | przełączenia 73
+  2022 |  -0.04081% | koszty  50.16% | w pozycji  77.9% | przełączenia 264
+  2023 |  -0.01637% | koszty  25.84% | w pozycji  89.9% | przełączenia 136
+  2024 |  -0.00545% | koszty  18.24% | w pozycji  91.6% | przełączenia 96
+  2025 |  -0.02409% | koszty  31.92% | w pozycji  87.1% | przełączenia 168
+  2026 |  -0.04647% | koszty  26.41% | w pozycji  61.8% | przełączenia 138
+
+4. RYZYKO NOGI SHORT (OPISOWO — nie modelowane w P&L)
+  max wzrost perp w oknie 30 dni: +90% (short 1× bez uzupełnień depozytu z zysków spot: likwidacja przy ~+100%)
+  max wzrost perp w oknie 90 dni: +112% (short 1× bez uzupełnień depozytu z zysków spot: likwidacja przy ~+100%)
+  baza: std 0.051%, p1/p99 [-0.076; +0.145]%
+
+5. MIERZALNOŚĆ (zasada 18) — ex ante vs ex post
+  ex ante: n 6019, se(Δ) 0.00033% → wykrywalny |efekt| 0.00092%/8h (1.01%/rok nominału); funding 0.0100% → t ≈ 30.4
+  ex post C1a: sd P&L 0.03108%, N_eff 286/6019, se_neff 0.00184% → wykrywalny |efekt| 0.00515%/8h (5.64%/rok nominału)
+
+  czas całkowity: 0 s

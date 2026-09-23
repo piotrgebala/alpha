@@ -35,8 +35,10 @@
 > zmieniają (−0,001 % [−0,012; +0,010]); rodzina formacji zamknięta 2/2. A2 (2026-09-23): reszta
 > analizy technicznej jako reguły — struktura trendu 48,2 %, wsparcie/opór 49,9 %, Fibonacci 51,5 %
 > (nierozstrzygnięte), zdarzenia AT 48,3 %, model + 10 cech AT bez zmian; seria A zamknięta 7/7,
-> analiza techniczna na BTC 4h zamknięta jako kierunek. W toku: punkt 2 zlecenia użytkownika
-> (kierunki spoza ceny i wolumenu).**
+> analiza techniczna na BTC 4h zamknięta jako kierunek. C1 (2026-09-23): cash-and-carry z hedgem
+> spot — PIERWSZY POZYTYW, ale jako przepływ za dźwignię, nie prognoza: +5,4 %/rok kapitału
+> [3,5; 7,4], połowa z 2021, ostatnie 3 lata 3,6 %; przełączanie po znaku fundingu NEGATYWNE;
+> decyzja o produkcie należy do użytkownika. Kolektor pozycjonowania aktywny (codziennie 09:00).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2501,14 +2503,40 @@ konsekwentnie pod monetą (wniosek 51); reguły stanowe pogłębiają obsunięci
 zdarzenia → test rodziny (53). Analiza techniczna na BTC 4h zamknięta jako kierunek.
 → [runs/a2](runs/2026-09-23_a2-rodziny-at/README.md)
 
-**Następny krok (punkt 2 zlecenia użytkownika 2026-09-23):** kierunki spoza ceny i wolumenu —
-inny cel niż kierunek, cash-and-carry z hedgem spot, pozycjonowanie (kolektor już działa).
+#### Seria C — cash-and-carry z hedgem spot ⚪ ZAMKNIĘTA 2026-09-23 (C1), 2/2, reguła STOP, C1a POZYTYWNY / C1b NEGATYWNY
+
+Punkt 2 zlecenia użytkownika („wykonaj": kierunki spoza ceny i wolumenu); kierunek otwarty po
+P2. Nowe źródło: świece 8h spot Binance (ccxt, publiczne API; profil `data:explore-data`: 0 dziur,
+znaczniki = perp = funding). P&L per okres 8h = funding otrzymany + (r_spot − r_perp) − koszty
+przełączeń (0,19 %); czyste funkcje `backtest/carry_hedged.py` z testami; target = **przepływ,
+nie kierunek** (próg 0, N_eff z autokorelacji, z_2 = 2,241).
+
+**Wynik:** C1a (zawsze w pozycji) **+5,4 %/rok na kapitale [3,5; 7,4]** (+10,9 % nominału),
+t_neff 5,40 przy N_eff 286 — **pierwszy pozytywny odczyt w projekcie, ale to kontraktowy przepływ
+za dźwignię, nie prognoza**; hedge ≈ 0 (−0,13 %), obsunięcie 0,64 %; **połowa wyniku z 2021**,
+2022–2026: 0,4–6 %/rok kapitału, ostatnie 3 lata 3,6 % brutto (wniosek 54). C1b (po znaku
+fundingu) NEGATYWNY: 875 przełączeń = 166 % kosztów (wniosek 55). Rachunek mocy niedoszacował
+szumu 5,6× (autokorelacja fundingu — wniosek 56). Nie wyceniono: likwidacja shorta
+(+90 %/30 dni), ryzyko giełdy, koszt kapitału.
+→ [runs/c1](runs/2026-09-23_c1-cash-and-carry/README.md)
+
+**Decyzja użytkownika (bramkowa):** czy budować produkt cash-and-carry (zarządzanie depozytem
+z zysków spot, limit na giełdę, porównanie z lokatą USD ~4–5 % w 2023–2025). Jeśli tak — następny
+krok to inżynieria (symulacja depozytu, stress +90 %/30 dni), nie pomiar.
+
+**Pozostałe z punktu 2:** „inny cel niż kierunek" poza carry — premia rebalansowa na koszyku
+(B2, dane P2 są w cache) w przygotowaniu; pozycjonowanie — kolektor AKTYWNY (niżej).
 
 #### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
 
 `data/collect_positioning.py`: OI + 4 proporcje long/short, 1h, BTC/ETH/SOL/BNB, dopisywane do
-`data/raw/positioning/`. Pierwszy przebieg 2026-09-22 (od 2026-09-01). **Do aktywacji po scaleniu
-do master:** zadanie Harmonogramu Windows (komenda w docstringu modułu). Użyteczne za ~3,4 roku.
+`data/raw/positioning/`. Pierwszy przebieg 2026-09-22 (od 2026-09-01). **AKTYWNE (sprawdzone
+2026-09-23 17:40):** zadanie Harmonogramu Windows `CLAS5-positioning` istnieje, stan Ready,
+codziennie 09:00, ostatni przebieg 2026-09-23 09:00:01 z wynikiem 0, następny 2026-09-24;
+`collect.log`: +221 wierszy 2026-09-23, 0 błędów; BTC OI 512 punktów 1h od 2026-09-01 23:00.
+Ograniczenia zadania: „Logon Mode: Interactive only" (działa tylko przy zalogowanym
+użytkowniku) i „No Start On Batteries" — dni bez logowania zostawią dziurę, którą kolejny
+przebieg częściowo nadrobi (500 punktów = ~20,8 dnia). Użyteczne za ~3,4 roku.
 
 #### P1 — sonda wykonalności źródeł danych (2026-09-22)
 

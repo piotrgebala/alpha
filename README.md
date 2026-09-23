@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **691/691** (2026-09-23).
+Stan testów: **701/701** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -140,6 +140,24 @@ zniesienia Fibonacciego, strefy wsparcia i oporu. [A2](runs/2026-09-23_a2-rodzin
 policzyliśmy je jako grupę. „Graj z trendem" jest na BTC 4h konsekwentnie gorsze od rzutu monetą.
 Analiza techniczna na BTC 4h jest zamknięta jako kierunek (7 wariantów w trzech rundach).
 
+### 🟢 Cash-and-carry z hedgem spot — C1 (2026-09-23): pierwszy dodatni wynik, ale to odsetki, nie prognoza
+
+Co 8 godzin posiadacze pozycji na wzrost na kontrakcie wieczystym płacą opłatę („funding") tym,
+którzy mają pozycję na spadek — na BTC od 2021 w 85 % rozliczeń. Kupując tyle samo BTC na
+zwykłym rynku spot, zdejmujemy ryzyko kierunku i zostaje sama opłata. [C1](runs/2026-09-23_c1-cash-and-carry/README.md)
+zmierzyło to na 5,5 roku:
+
+| | rocznie na zaangażowanym kapitale | uwaga |
+|---|---|---|
+| zawsze w pozycji | **+5,4 %** [3,5; 7,4] | połowa zysku z 2021 (15 %); 2022–2026: 0,4–6 %; ostatnie 3 lata 3,6 % |
+| tylko gdy ostatnia opłata dodatnia | −9,3 % | 875 przełączeń, koszty 166 % — przegrywa z arytmetyką |
+
+**Co to znaczy:** to działa, ale jest czymś innym niż wszystko wcześniej: nie przewiduje rynku,
+tylko pobiera opłatę za dostarczanie dźwigni. Wynik w ostatnich latach jest porównywalny
+z bezpieczną lokatą w dolarze, a dochodzą ryzyka, których pomiar nie obejmuje: krótka pozycja
+wymaga depozytu, a BTC potrafi urosnąć o 90 % w miesiąc; pieniądze leżą na giełdzie. **Czy z tego
+budować produkt — to decyzja użytkownika**, nie kolejna runda.
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -200,6 +218,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **N1 — połowa zysku wcześniej i stop na wejście: pieniądze bez zmian** | 2026-09-23 | **Pierwsza runda na danych tylko od 2021 roku** (nowa zasada). Schemat prowadzenia pozycji użytkownika (50 % przy +1,67 %, stop na wejście, reszta do bariery) sprawdzony na tych samych sygnałach co zwykłe wyjście: różnica **+0,007 % na transakcji w przedziale od −0,009 do +0,024** — zero. Trafność skoczyła z 49,6 % na **53,3 %**, ale to iluzja: wygrane zmalały, straty nie, a próg opłacalności dla takich wypłat to 57 %. **Prowadzenie pozycji nie tworzy informacji.** Przy okazji: testy wykryły wadę w mojej własnej regule zanim cokolwiek uruchomiono (poprawka przed wynikiem). Seria zamknięta (1/1) | [runs/n1](runs/2026-09-23_n1-nowy-cel-czesciowe-tp/README.md) |
 | **A1 — formacje świecowe: podręcznik wskazuje kierunek odwrotny** | 2026-09-23 | Sześć formacji z podręcznika (bez parametrów do dobrania) jako reguła: trafność **46,4 %** w przedziale [44,4; 48,3] — **cały przedział poniżej rzutu monetą**, strata 0,18 % na transakcji. Jako dodatkowa cecha modelu: zero zmiany (−0,001 % [−0,012; +0,010]). Winne objęcie (84 % sygnałów): duża świeca jest częściej końcem ruchu. Odwracanie reguły = pomysł po wyniku, wart ok. +0,01 %, nie testujemy. Rodzina zamknięta (2/2) | [runs/a1](runs/2026-09-23_a1-formacje-swiecowe/README.md) |
 | **A2 — reszta analizy technicznej: nic nie zarabia** | 2026-09-23 | Struktura trendu, wsparcie/opór, Fibonacci, zdarzenia AT (wybicie, podwójny szczyt/dno, głowa z ramionami, przecięcie średnich, linia trendu) jako reguły z parametrami ze skilla oraz wszystkie 10 cech AT w modelu — na tych samych świecach co model. Trzy ramiona NEGATYWNE (struktura trendu **48,2 %**, wsparcie/opór 49,9 %, model + AT bez zmian), dwa nierozstrzygnięte przez za małą liczbę sygnałów (Fibonacci 51,5 %, zdarzenia 48,3 %), żadne pozytywne. „Graj z trendem" konsekwentnie gorsze od monety. **Analiza techniczna na BTC 4h zamknięta (7/7)** | [runs/a2](runs/2026-09-23_a2-rodziny-at/README.md) |
+| **C1 — cash-and-carry: pierwszy dodatni wynik, ale to odsetki za dźwignię, nie prognoza** | 2026-09-23 | Long spot + short kontrakt na BTC zbiera opłatę funding bez ryzyka kierunku: **+5,4 % rocznie na kapitale** w przedziale [3,5; 7,4] za 5,5 roku, z czego połowa z 2021; ostatnie 3 lata 3,6 %. Hedge działa (rozjazdy ≈ 0, obsunięcie 0,64 %). Przełączanie po znaku opłaty przegrywa z kosztami (−9,3 %). Nie wyceniono: depozyt i likwidacja krótkiej nogi (BTC +90 % w 30 dni), ryzyko giełdy. **Decyzja o produkcie należy do użytkownika.** Seria zamknięta (2/2) | [runs/c1](runs/2026-09-23_c1-cash-and-carry/README.md) |
 
 ## Hipoteza w skrócie
 

@@ -1,10 +1,47 @@
 # C1 — cash-and-carry z hedgem spot: czy funding da się zebrać bez ryzyka kierunku? (2026-09-23)
 
-> **STATUS: PRE-REJESTRACJA (przed pomiarem).** Dane spot pobrane i sprofilowane (skill
-> `data:explore-data`), rachunek mocy policzony z SZUMU hedgu i ŚREDNIEGO fundingu — **średni
-> wynik hedgu (Δ) ani P&L nie były liczone**. Kod pomiaru i przebieg następują PO commicie tego
-> pliku. Punkt 2 zlecenia użytkownika 2026-09-23 („wykonaj": kierunki spoza ceny i wolumenu),
-> kierunek otwarty po P2 (wniosek 40: „żyje tylko wersja z hedgem spot — inny produkt").
+> **STATUS: ZAMKNIĘTA — C1a POZYTYWNY (pierwszy pozytywny odczyt w historii projektu — ale to
+> przepływ kontraktowy, nie przewidywanie), C1b NEGATYWNY.** Kolejność w gicie: pre-rejestracja
+> `a8ce150` → kod `ae169f4` → przebieg → wynik w commicie scalającym. Seria C: **2/2, STOP.**
+> Walidacja (16a): **READY** (z jedną nieścisłością etykiety w `raw_output.txt`, opisaną niżej);
+> przegląd diffu (16c): **Approve**. Punkt 2 zlecenia użytkownika 2026-09-23.
+
+## Wynik w skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+**Tak — opłatę funding da się zebrać bez ryzyka kierunku, i to jest pierwszy dodatni wynik w tym
+projekcie.** Ale trzeba go przeczytać ostrożnie: to nie jest „strategia, która przewiduje rynek",
+tylko odsetki za pożyczanie dźwigni innym, obarczone ryzykami, których ta runda nie mierzyła.
+
+| ramię | wynik na 8 h | rocznie na nominale | rocznie na KAPITALE (spot + depozyt) | werdykt |
+|---|---|---|---|---|
+| **C1a — zawsze w pozycji** | +0,0099 % [+0,0063; +0,0135] | **+10,9 %** [6,9; 14,8] | **+5,4 %** [3,5; 7,4] | **POZYTYWNY** |
+| C1b — tylko po dodatnim fundingu | −0,0170 % [−0,0253; −0,0086] | −18,6 % | −9,3 % | NEGATYWNY |
+
+**Skąd bierze się wynik C1a:** z samej opłaty — 60,2 % nominału przez 5,5 roku. Hedge robi to, co
+ma robić: rozjazdy między kontraktem a spotem dały łącznie −0,13 % (prawie nic), a największe
+obsunięcie skumulowanego wyniku to 0,64 %. Koszty raz na wejściu i raz na wyjściu: 0,38 %.
+
+**Trzy zastrzeżenia, bez których ta liczba wprowadza w błąd:**
+1. **Połowa zysku pochodzi z 2021 roku** (30,6 % z 60,2 %). Od 2022 opłaty są 3–10 razy niższe:
+   na kapitale 2022 +2,1 %, 2023 +3,9 %, 2024 +6,0 %, 2025 +2,6 %, pierwsze półrocze 2026 +0,4 %
+   w skali roku. Przedział ufności średniej z 5,5 roku NIE jest prognozą — uczciwa prognoza to
+   „niskie jednocyfrowe procenty rocznie na kapitale, zmienne z roku na rok" (ostatnie 3 lata:
+   3,6 % brutto).
+2. **Krótka pozycja na kontrakcie wymaga depozytu, a BTC potrafi urosnąć o 90 % w miesiąc.** Bez
+   dokładania depozytu z zysków na spocie pozycja zostałaby zlikwidowana. Runda tego nie
+   modelowała — na żywo to główny problem inżynierski i główne ryzyko.
+3. **Ryzyko giełdy** (pieniądze i coiny leżą na Binance), koszt kapitału, podatki — poza pomiarem.
+
+**C1b (przełączanie po znaku fundingu) przegrywa z arytmetyką, jak zapisano przed startem:**
+875 przełączeń po 0,19 % kosztuje 166 % nominału, a zbiera te same ~61 % opłat. Reguła
+„wychodź, gdy przestają płacić" jest droższa niż to, co chroni.
+
+**Czym ten wynik NIE jest:** nie jest edge'em w sensie tego projektu (trafność, przewidywanie).
+Jest zmierzoną ekonomią produktu „pożycz dźwignię za opłatę". Czy ten produkt uruchamiać —
+z zarządzaniem depozytem, limitem na giełdę i porównaniem z bezpieczną lokatą w dolarze — to
+decyzja użytkownika, nie kolejna runda pomiarowa.
+
+---
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
 
@@ -61,9 +98,10 @@ zarządzanie depozytem to osobny problem inżynierski, zapisany niżej jako ogra
   1×) → **kapitał = 2× nominał**; zwrot na kapitale = zwrot na nominale / 2. Bez modelowania
   likwidacji i uzupełnień depozytu (ograniczenie).
 - **Kod:** czyste funkcje w `backtest/carry_hedged.py` (P&L per okres, koszty przełączeń,
-  wyrównanie funding ↔ świece) z testami; skrypt `backtest/run_cash_and_carry_c1.py` (po tej
-  pre-rejestracji; komenda przy zamknięciu, wpis na `runs/ZAMROZONE.txt`). N_eff z
-  `agents.labeling.effective_sample_size` (≤ n).
+  wyrównanie funding ↔ świece) z testami (10, w tym hypothesis). **Komenda:**
+  `py -m backtest.run_cash_and_carry_c1` (Windows: `PYTHONUTF8=1`; czyta wyłącznie cache
+  i config; pełny output `raw_output.txt`; skrypt na `runs/ZAMROZONE.txt`; czas < 1 s).
+  N_eff z `agents.labeling.effective_sample_size` (≤ n).
 
 ## Poprzedzające wyniki (zasada 14)
 
@@ -197,28 +235,181 @@ w czasie (przyjęte dzisiejsze VIP0).
 
 ## Wynik
 
-_(po przebiegu)_
+### 1. Kryterium (próg 0; pozytyw przy z_2 = 2,241)
 
-## Co na plus (+) / Co na minus (−)
+| ramię | n | średni P&L / 8h | CI 95 % (N_eff) | mediana | t | N_eff | t_neff | rocznie nominał | rocznie kapitał | odczyt |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **C1a** zawsze w pozycji | 6 019 | **+0,00992 %** | [+0,00632; +0,01353] | +0,00637 % | +24,8 | **286** | **+5,40** | **+10,87 %** [6,92; 14,81] | **+5,43 %** [3,46; 7,41] | **POZYTYWNY** |
+| **C1b** po dodatnim fundingu | 6 019 | −0,01698 % | [−0,02531; −0,00864] | +0,00224 % | −17,3 | 322 | −3,99 | −18,59 % [−27,72; −9,46] | −9,29 % [−13,86; −4,73] | **NEGATYWNY** |
 
-_(po przebiegu)_
+`N_eff = 286` z 6 019: opłata funding jest silnie trwała (autokorelacja lag-1 0,84, lag-30 0,52),
+więc 5,5 roku okresów 8-godzinnych to ~290 niezależnych obserwacji. Mediana (0,0064 %) niżej
+niż średnia (0,0099 %): rozkład prawoskośny — 31 % okresów siedzi dokładnie na stawce bazowej
+0,0100 %, a wysokie stawki z 2021 ciągną średnią w górę.
 
-## Walidacja (zasada 16a)
+### 2. Dekompozycja (suma za 5,5 roku, % nominału)
 
-_(po przebiegu)_
+| ramię | okresy w pozycji | Σ funding | Σ hedge (Δ bazy) | Σ koszty | Σ P&L | przełączenia | max obsunięcie |
+|---|---|---|---|---|---|---|---|
+| C1a | 6 019 (100 %) | +60,23 % | −0,13 % | 0,38 % | **+59,72 %** | 1 | 0,64 % |
+| C1b | 5 146 (85,5 %) | +61,08 % | +3,18 % | **166,44 %** | −102,18 % | 875 | 124,93 % |
 
-## Przegląd diffu (zasada 16c)
+Hedge zdejmuje ryzyko kierunku niemal doskonale: zmiany bazy sumują się do −0,13 %, a rozjazd
+jednego okresu nie przekracza ±0,32 %. Rok 2021 wnosi 30,6 % z 60,2 % opłat.
 
-_(po przebiegu)_
+### 3. Per rok (opisowo, bez werdyktów) — C1a
+
+| rok | okresy | P&L / 8h | rocznie nominał | rocznie kapitał | Σ funding | Σ hedge |
+|---|---|---|---|---|---|---|
+| 2021 | 1 094 | +0,0278 % | +30,4 % | +15,2 % | +30,57 % | +0,01 % |
+| 2022 | 1 095 | +0,0038 % | +4,1 % | +2,1 % | +4,16 % | −0,03 % |
+| 2023 | 1 095 | +0,0071 % | +7,7 % | +3,9 % | +7,89 % | −0,17 % |
+| 2024 | 1 098 | +0,0109 % | +12,0 % | +6,0 % | +11,93 % | +0,07 % |
+| 2025 | 1 095 | +0,0047 % | +5,1 % | +2,6 % | +5,13 % | −0,01 % |
+| 2026 (do 30.06) | 542 | +0,0007 % | +0,8 % | +0,4 % | +0,55 % | +0,01 % |
+
+Ostatnie 3 lata (2023-07 → 2026-06, 3 287 okresów, brutto): **7,3 %/rok nominału = 3,6 %/rok
+kapitału.** C1b per rok: koszty 14–50 % rocznie (73–264 przełączeń), P&L ujemny w każdym roku
+poza 2021.
+
+### 4. Ryzyko nogi short (opisowo — poza P&L)
+
+Największy wzrost ceny perp: **+90 % w 30 dni, +112 % w 90 dni** (2021). Short 1× bez uzupełnień
+depozytu z zysków spot zostałby zlikwidowany; produkt na żywo wymaga reguły przenoszenia
+zysków ze spotu na depozyt (koszt, opóźnienie, ryzyko operacyjne) — nie mierzone. Baza:
+std 0,051 %, p1/p99 [−0,076 %; +0,145 %] — nieduża, ale ujemna od 2022 (perp poniżej spot).
+
+### 5. Mierzalność — ex ante vs ex post
+
+Ex ante: se 0,00033 %/8h (szum hedgu, N_eff = n) → t ≈ 30. Ex post C1a: sd P&L 0,031 %, **N_eff
+286**, se 0,00184 % → t_neff 5,40; wykrywalny efekt 0,0052 %/8h = 5,6 %/rok nominału.
+**Rachunek ex ante niedoszacował szumu 5,6×:** brał autokorelację hedgu (brak), a nośnikiem
+autokorelacji jest sam funding (lag-1 0,84). Werdykt się nie zmienia (5,40 > 2,24), lekcja
+zapisana we wniosku skumulowanym.
+
+## Co na plus (+)
+
+- **Pierwszy pozytywny wynik z prawidłowo działającym przyrządem:** próg 0, dwa ramiona
+  z korektą Bonferroniego, N_eff z autokorelacji, kryterium zapisane przed wynikiem, przewidziany
+  z góry znak obu ramion (C1a +, C1b − z arytmetyki kosztów).
+- **Mechanizm potwierdzony liczbą:** cały wynik to opłata (60,2 %), hedge ≈ 0 (−0,13 %),
+  koszty 0,38 % — dekompozycja przeliczona drugą drogą co do 0,003 %.
+- **Nowe źródło danych sprofilowane przed pomiarem:** spot 8h, 0 dziur, znaczniki identyczne
+  z perp i funding; konwencja czasu (świeca = otwarcie; stawka na zamknięciu = otrzymana)
+  zapisana i przetestowana.
+- **Definicja P&L jest czystą funkcją z testami** (znak fundingu, wyrównanie, koszty przy
+  przejściach, hypothesis) — kolejne warianty produktu mierzy się tym samym kodem.
+
+## Co na minus (−)
+
+- **Niestacjonarność:** średnia z 5,5 roku miesza 2021 (15 % na kapitale) z 2022–2026
+  (0,4–6 %). CI średniej nie jest prognozą; właściwa prognoza to zakres per rok i ostatnie 3 lata.
+- **N_eff = 286** — rozdzielczość ~5,6 %/rok nominału; różnic między latami nie da się testować.
+- **Ryzyko likwidacji nogi short nie jest w P&L** — a to ono decyduje, czy produkt przeżyje
+  rok taki jak 2021. Kapitał 2× nominał to założenie, nie pomiar.
+- **Ryzyko giełdy/kontrahenta, koszt kapitału, podatki, zniżki opłat** — poza zakresem;
+  wynik netto dla konkretnego rachunku będzie inny.
+- **Baza mierzona na zamknięciach 8h**, wejście/wyjście po zamknięciu — poślizg 2 bp przyjęty,
+  nie zmierzony; C1a wchodzi raz, więc to nieistotne, ale dla produktu z rebalansem depozytu już nie.
+- **Etykieta w `raw_output.txt`:** „baza na wejściu C1a +0,076 %" to zamknięcie PIERWSZEGO
+  okresu ramki, nie cena wejścia (zamknięcie świecy poprzedniej: +0,051 %); precyzyjna
+  dekompozycja jest w walidacji niżej. Wartość opisowa, bez wpływu na kryterium; nie
+  uruchamiamy ponownie skryptu dla etykiety.
+
+## Walidacja (zasada 16a) — werdykt: **READY**
+
+- **Drugą drogą:** Σ funding = 6 019 × 0,01001 % = **60,23 %** ✔; Σ P&L C1a = 60,23 − 0,13 − 0,38 =
+  **59,72 %** ✔; **Σ hedge (zwroty proste)** = tożsamość logarytmiczna `ln((1+b_start)/(1+b_end))`
+  = +0,0953 % (b_start +0,0511 %, b_end −0,0442 %) plus człon wariancji `½Σ(r_spot² − r_perp²)`
+  = −0,2216 % → **−0,1263 %** wobec −0,1291 % w skrypcie (reszta = wyrazy trzeciego rzędu) ✔ —
+  hedge „traci" 0,22 % przez 5,5 roku, bo perp jest odrobinę bardziej zmienny niż spot; koszty
+  C1b = 875 przejść (z wejściem na starcie) + 1 zamknięcie = 876 × 0,19 % = **166,44 %** ✔;
+  N_eff: autokorelacja fundingu lag-1 0,838, lag-3 0,754, lag-30 0,518 → 286 spójne ✔.
+- **Konwencje (red flag pozytywu):** `f_next` = stawka rozliczona na ZAMKNIĘCIU okresu — to
+  przepływ otrzymany, nie sygnał; short otrzymuje przy > 0 (test „short pays negative rates");
+  C1b decyduje po `f_now` (stawka na otwarciu, znana) — test; hedge = `r_spot − r_perp` (short perp
+  zarabia, gdy perp spada względem spot — test). Wynik nie może pochodzić z przecieku, bo nie ma
+  w nim żadnej predykcji: opłata jest kontraktowa.
+- **Kogo NIE ma:** okresy, w których short zostałby zlikwidowany (2021: +90 %/30 dni); koszt
+  kapitału; ryzyko giełdy; zmiany opłat w czasie; świece sprzed 2021; poślizg przy wyjściu
+  awaryjnym.
+- **Red flag „idealnie potwierdza":** C1a wyszło dokładnie jak arytmetyka (11 % nominału) — bo to
+  arytmetyka opłat, nie hipoteza o rynku; niespodzianką był N_eff (286), zapisany jako lekcja.
+- **Rząd wielkości:** funding 0,01 %/8h = 11 %/rok, baza ±0,05 %, koszty 0,19 % na przełączenie,
+  874 przełączenia = 60 %/rok — wszystko w zakresach sprzed pomiaru.
+
+## Przegląd diffu (zasada 16c) — werdykt: **Approve**
+
+Zakres: `backtest/carry_hedged.py` (nowy, czyste funkcje), `tests/test_carry_hedged.py` (10),
+`backtest/run_cash_and_carry_c1.py`, `config/settings.yaml` (+`spot_fee_rate`), README rundy.
+
+**Korektność:** (1) `align_carry_frame`: merge 1:1 po `timestamp` z `validate`, zbiory znaczników
+muszą być identyczne (fail loud), `r = pct_change` zamknięć, `f_next = f_now.shift(−1)`, pierwszy
+i ostatni okres odpadają — bez lookaheadu w decyzji (stan z `f_now`), a `f_next` to przepływ
+otrzymany. (2) `hedged_carry_pnl`: koszty przy przejściach 0→1 i 1→0 + zamknięcie na końcu,
+gdy `s = 1`; `n_switches` liczone spójnie; walidacja stanu {0, 1}. (3) `summarize_pnl`: N_eff ≤ n,
+CI z `se_neff`, annualizacja ×1 095 i /2 (stała `CAPITAL_PER_NOTIONAL` nazwana). (4) Skrypt:
+argumenty `get_ohlcv_cached` identyczne z nazwą pliku cache → bez sieci; funding z cache
+(start z `timeframe_start_overrides["4h"]`) i filtr ≥ 2021.
+
+**Edge-case'y:** pusta/1-elementowa ramka → `summarize_pnl` zwraca `{"n"}`; `max_runup` z NaN
+na początku okna (rolling) — `max()` ignoruje NaN; `align` przy różnych zbiorach znaczników →
+`ValueError` (test).
+
+**Uwagi (bez blokady):** zwroty proste zamiast log — sumowanie `hedge` niesie człon wariancji
+(−0,22 %); to własność definicji z pre-rejestracji (hedge rebalansowany co okres), zapisana
+w walidacji; etykieta „baza na wejściu" w skrypcie odnosi się do zamknięcia pierwszego okresu
+(kosmetyka raportu, opisane w „minusach").
+
+**Przegląd bezpieczeństwa (`security-review`, wczytany przy nowym źródle danych):** diff nie
+zawiera sekretów ani kluczy; nowe dane pobrane istniejącym fetcherem przez publiczne API ccxt
+(bez uwierzytelniania); skrypt rundy nie otwiera połączeń sieciowych, nie wykonuje poleceń,
+pisze tylko do stdout; `spot_fee_rate` to stała liczbowa. **Brak ustaleń.**
+
+**Werdykt jednym zdaniem:** kod poprawny, definicja P&L z pre-rejestracji odtworzona
+w testach, bez lookaheadu i bez sieci — **Approve**, do scalenia.
 
 ## Wniosek
 
-_(po przebiegu)_
+Long spot + short perpetual na BTC zbiera opłatę funding bez ryzyka kierunku: **+5,4 %/rok na
+kapitale [3,5; 7,4] za 5,5 roku, w tym 15 % w 2021 i 0,4–6 % w latach 2022–2026** (ostatnie
+3 lata: 3,6 % brutto). Hedge działa (rozjazdy bazy ≈ 0, obsunięcie 0,64 %), koszty są pomijalne,
+jeśli się nie przełącza; przełączanie po znaku fundingu (C1b) kosztuje 60 %/rok i przegrywa
+z pewnością. To pierwszy dodatni wynik w projekcie, ale **innego rodzaju niż wszystkie
+poprzednie pytania**: nie ma tu prognozy, jest kontraktowy przepływ za dostarczanie dźwigni —
+z ryzykami (likwidacja nogi short bez uzupełnień depozytu, giełda, koszt kapitału), których
+runda nie wycenia. Seria C zamknięta 2/2.
 
 ## Rekomendacja
 
-_(po przebiegu)_
+1. **Decyzja bramkowa użytkownika, nie kolejna runda:** czy budować produkt cash-and-carry
+   (zarządzanie depozytem z zysków spot, limit ekspozycji na giełdę, porównanie z bezpieczną
+   lokatą w dolarze — w latach 2023–2025 rzędu 4–5 % rocznie, bez ryzyka giełdy). Przy 2–6 %
+   rocznie na kapitale i ryzyku kontrahenta odpowiedź nie jest oczywista.
+2. **Jeśli tak — następny krok to inżynieria, nie pomiar:** symulacja depozytu (uzupełnienia,
+   próg likwidacji, koszt przenoszenia), stress na +90 %/30 dni, monitoring znaku fundingu
+   z histerezą liczoną z kosztu (nie C1b), ETH jako drugi instrument dopiero po BTC (zasada 9).
+3. **Nie testować wariantów pomiarowych** (progi na stawkę, inne interwały, zniżki opłat) —
+   STOP 2/2; ich wynik wynika z arytmetyki.
+4. **Metodologicznie (wniosek 56):** rachunek mocy dla szeregów z trwałym sygnałem musi brać
+   autokorelację SYGNAŁU, nie tylko szumu — inaczej `se` wychodzi kilkakrotnie za małe.
 
 ## Użyte skille
 
-_(po przebiegu — z `py tools/skill_audit.py raport --galaz c1-cash-and-carry`)_
+Rejestr gałęzi `c1-cash-and-carry` (`py tools/skill_audit.py raport --galaz c1-cash-and-carry`):
+
+| skill | co wniósł |
+|---|---|
+| `anthropic-skills:clas5-runda` | procedura: gałąź → skille → dane → profil → pre-rejestracja → kod → run → bramki → DoD |
+| `anthropic-skills:clas5-quant` | przyrząd dla targetu „carry" (próg 0, brak trafności/BE), N_eff, koszty obu nóg, kapitał, ryzyko likwidacji jako ograniczenie, jedna zmienna między ramionami |
+| `anthropic-skills:quant-strategy-catalog` | rodzina D2 z hedgem, pięć pól, mechanizm i kto traci, pułapki perpetuali (likwidacja, baza, zmiana znaku) |
+| `data:explore-data` | profil nowego zbioru (dziury, duplikaty, zgodność znaczników, baza, konwencja otwarcie/zamknięcie) PRZED pomiarem |
+| `security-review` | nowe źródło danych przez sieć: brak sekretów, publiczne API, skrypt bez sieci — brak ustaleń |
+| `engineering:testing-strategy` | plan testów modułu `carry_hedged` PRZED napisaniem (znak, wyrównanie, koszty, hypothesis, fail loud) |
+| `data:validate-data` | bramka 16a: dekompozycja drugą drogą (tożsamość bazy + człon wariancji), koszty C1b, N_eff z autokorelacji, konwencje |
+| `data:statistical-analysis` | bramka 16b: mediana obok średniej, niestacjonarność (per rok, ostatnie 3 lata) zamiast CI jako prognozy, Bonferroni |
+| `engineering:code-review` | bramka 16c (sekcja „Przegląd diffu") |
+
+Z tabeli zasady 19 pominięte: `dataviz` (bez wykresów), `engineering:architecture` (decyzja
+o produkcie należy do użytkownika — ADR dopiero po niej), `update-config`, `lean-research`,
+`ta-toolkit` (bez AT).
