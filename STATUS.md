@@ -28,7 +28,10 @@
 > early stoppingu, 2026-09-23) zamknięte bez zmian w kodzie. **W1 (2026-09-23): backtest mierzy
 > wykonanie „po konkretnej cenie" (symulacja wypełnień); limit po close wypełnia się w 99,4 % i nic
 > nie zmienia; cofnięcie podnosi trafność do 53,15 %, ale traci pieniądze (t = −3,9) — seria W
-> zamknięta 3/3. Następna runda: nowy cel modelu (częściowe TP), czeka na pre-rejestrację.**
+> zamknięta 3/3. N1 (2026-09-23, NOWA BAZA od 2021 — zasada 20): częściowe wyjście 50 % + stop
+> na wejściu nie zmienia pieniędzy (różnica parowana +0,007 % [−0,009; +0,024]), trafność 53,3 %
+> to iluzja geometrii (p\* 57,2 %) — seria N zamknięta 1/1. Następna: seria A (analiza techniczna
+> i formacje świecowe, `ta-toolkit`), czeka na pre-rejestrację.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2433,11 +2436,28 @@ kryterium trafności, ekonomicznie strata. Stop na wybiciu: 46,13 % vs 54,83 %, 
 wypłatach asymetrycznych — każda przyszła pre-rejestracja dopisuje `t_stat > 0`.**
 → [runs/w1](runs/2026-09-23_w1-wykonanie-po-cenie/README.md)
 
-**Następna runda (decyzja użytkownika 2026-09-23, czeka na pre-rejestrację): nowy cel modelu** —
-częściowe wyjście 50 % pozycji przy +5 % depozytu (przy dźwigni 3× ≈ 1,67 % ceny), stop
-przesunięty na cenę wejścia, reszta do drugiego TP / trailing stopu (poziom do ustalenia);
-sizing bez zmian (0,5 % ryzyka, dźwignia ≤ 3×). Wymaga nowych etykiet i retreningu, własnego
-licznika i rachunku mocy; werdykt na zwrocie netto z CI, nie na trafności (lekcja W1b).
+#### Seria N — nowy cel modelu (częściowe wyjście) ⚪ ZAMKNIĘTA 2026-09-23 (N1), 1/1, reguła STOP, NEGATYWNY
+
+Decyzje użytkownika 2026-09-23: 50 % pozycji zamykane przy +5 % depozytu przy dźwigni 3× (= +1,67 %
+ceny), stop na cenę wejścia, reszta do 1,5·ATR, limit czasu 12 h; sizing bez zmian; **dane od
+2021-01-01 (zasada 20 — NOWA BAZA, nowe liczniki)**. Zrealizowane jako nakładka zarządzania na
+ścieżce (`ManagedExitRule`, koszt per noga), etykieta bez zmian — jedna zmienna, ten sam model
+i te same wejścia co kontrola. Poprawka 1 do pre-rejestracji (reguła 6) wykryta testami
+przykładowymi PRZED uruchomieniem (commit `4683669`).
+
+**Wynik:** zwrot netto **−0,094 %** [−0,131; −0,058] na transakcję (t_neff −4,08), kontrola −0,107 %;
+**różnica parowana +0,007 % [−0,009; +0,024]** na 6 736 wspólnych transakcjach — zero. Trafność
+49,6 → 53,3 % („na styk" starego progu 53,32 %) przy progu uogólnionym **p\* = 57,24 %** — iluzja
+W1b. **Zarządzanie pozycją nie tworzy informacji** (wniosek skumulowany 45). Kontrola na nowej
+bazie: p 49,58 %, −0,107 % (wniosek 46) — baza 2021+ jest trudniejsza niż 6,8 roku.
+→ [runs/n1](runs/2026-09-23_n1-nowy-cel-czesciowe-tp/README.md)
+
+**Następna runda (decyzja użytkownika 2026-09-23, czeka na pre-rejestrację): seria A — sygnały
+z analizy technicznej i formacji świecowych (`ta-toolkit`)** jako nowa hipoteza: deterministyczne
+cechy `compute_*` z testem przecieku PRZED wejściem do modelu (zasada 2), jedna cecha na raz
+(zasada 4), własny licznik i rachunek mocy; wykonanie jak w N1 (limit po close, pojedyncze
+wyjście); dane od 2021 (zasada 20). Prior niski (ten sam zbiór informacyjny OHLCV — wniosek 11,
+`ta-toolkit`: „to zostało zmierzone"), ale konkretne pomysły użytkownika dostają uczciwy test.
 
 #### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
 

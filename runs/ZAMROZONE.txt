@@ -33,4 +33,5 @@ backtest/run_positive_control_k1.py          # K1
 backtest/run_single_regime_4h.py             # S1 / S1b
 backtest/run_timeout_leg_band.py             # H3
 backtest/run_execution_w1.py                 # W1
+backtest/run_partial_tp_n1.py                # N1
 backtest/screen_feature_candidates.py        # C2.7
