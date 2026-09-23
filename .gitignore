@@ -18,3 +18,8 @@ data/raw/*
 # trafic do repo. Do T3 (2026-09-22) chronil go wylacznie globalny gitignore
 # uzytkownika, wiec na innej maszynie wyladowalby w commitcie.
 .claude/settings.local.json
+
+# Monitor CSV rejestru skilli (CLAUDE.md zasada 19): lokalny widok do Excela, dopisywany
+# przez hook ze wszystkich worktree tej maszyny. Wersjonowanym zrodlem prawdy sa pliki
+# runs/skille/<galaz>.jsonl; `py tools/skill_audit.py csv` odbudowuje CSV z nich.
+runs/skille/*.csv

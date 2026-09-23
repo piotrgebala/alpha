@@ -20,6 +20,17 @@ w kopii roboczej, a gałąź rundy zmieniała go w commitach — `git merge` odm
 scalenie rundy tylko DODAJE jej plik. Reguła `merge=union` w `.gitattributes` zostaje na
 rzadki przypadek dwóch sesji dopisujących do tej samej gałęzi w dwóch klonach.
 
+3. MONITOR CSV (prośba użytkownika, 2026-09-23). Ten sam wpis trafia też do JEDNEGO pliku
+   `runs/skille/uzycie_skilli.csv` w GŁÓWNYM katalogu repo — także gdy sesja pracuje
+   w worktree — żeby wszystkie wywołania na tej maszynie dało się oglądać w Excelu w jednym
+   miejscu. Format pod polskiego Excela: średnik jako separator, UTF-8 z BOM. Plik jest
+   lokalny (`.gitignore`): wersjonowanym źródłem prawdy pozostają pliki JSONL, a
+   `py tools/skill_audit.py csv` odbudowuje CSV z nich od zera. Excel blokuje otwarty plik
+   przed zapisem, więc gdy CSV jest otwarty, wiersze czekają w `uzycie_skilli.bufor.csv`
+   i są dopisywane przy pierwszym udanym zapisie. Awaria CSV nigdy nie blokuje wpisu JSONL.
+   Podgląd BEZ blokowania: Excel → Dane → Z pliku tekstowego/CSV (Power Query), potem
+   „Odśwież wszystko”. Nie zapisuj tego pliku z Excela — zmieniłby separator i kodowanie.
+
 Trzy twarde reguły hooka (każda ma test w `tests/test_skill_audit.py`):
 - NIGDY nie blokuje sesji — każdy błąd jest połykany, kod wyjścia zawsze 0.
 - NIGDY nie pisze na stdout — przy części zdarzeń (np. UserPromptSubmit) stdout trafia do
@@ -34,6 +45,7 @@ pakietami repo.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import re
@@ -57,6 +69,26 @@ _SLASH_RE = re.compile(r"/([A-Za-z0-9][A-Za-z0-9_.:-]{0,99})(?:\s|$)")
 # Kandydaci na pole z nazwą komendy w zdarzeniach komend użytkownika (nieudokumentowane).
 _COMMAND_NAME_KEYS = ("command_name", "commandName", "command", "skill", "name")
 UNKNOWN_COMMAND = "nierozpoznana-komenda"
+
+# Monitor CSV (lokalny, poza gitem) — patrz punkt 3 docstringu.
+CSV_NAME = "uzycie_skilli.csv"
+CSV_BUFFER_NAME = "uzycie_skilli.bufor.csv"
+CSV_DELIMITER = ";"  # polski Excel: przecinek jest separatorem dziesiętnym
+CSV_COLUMNS = (
+    "data",
+    "godzina",
+    "kto",
+    "skill",
+    "wtyczka",
+    "galaz",
+    "argumenty",
+    "sesja",
+    "agent",
+    "zdarzenie",
+)
+# Komórka zaczynająca się od tych znaków jest w Excelu FORMUŁĄ (tzw. CSV injection) —
+# poprzedzamy ją apostrofem, żeby tekst argumentów nigdy nie został wykonany.
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 # --------------------------------------------------------------------------- ekstrakcja
@@ -198,6 +230,87 @@ def append_record(log_path: Path, record: dict) -> None:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+def main_repo_root(root: Path) -> Path:
+    """Główny katalog repo (także z worktree: katalog nadrzędny wspólnego `.git`)."""
+    common = _git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
+    if common:
+        common_path = Path(common)
+        if common_path.name == ".git":
+            return common_path.parent
+    return Path(root)
+
+
+def csv_path(root: Path) -> Path:
+    return main_repo_root(root) / LOG_DIR / CSV_NAME
+
+
+def _cell(value: object) -> str:
+    text = "" if value is None else str(value)
+    return "'" + text if text.startswith(_FORMULA_PREFIXES) else text
+
+
+def csv_row(record: dict) -> list[str]:
+    date, _, time = str(record.get("czas") or "").partition("T")
+    values = {**record, "data": date, "godzina": time[:8]}
+    return [_cell(values.get(column)) for column in CSV_COLUMNS]
+
+
+def _csv_writer(handle):
+    return csv.writer(handle, delimiter=CSV_DELIMITER, lineterminator="\r\n")
+
+
+def _write_csv_rows(path: Path, rows: list[list[str]]) -> None:
+    """Dopisuje wiersze; nowy plik dostaje BOM i nagłówek. Błąd zapisu = OSError do góry."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists() or path.stat().st_size == 0:
+        with open(path, "w", encoding="utf-8-sig", newline="") as fh:
+            _csv_writer(fh).writerow(CSV_COLUMNS)
+    with open(path, "a", encoding="utf-8", newline="") as fh:
+        _csv_writer(fh).writerows(rows)
+
+
+def _read_csv_buffer(buffer: Path) -> list[list[str]]:
+    if not buffer.exists():
+        return []
+    with open(buffer, encoding="utf-8", newline="") as fh:
+        return [row for row in csv.reader(fh, delimiter=CSV_DELIMITER) if row]
+
+
+def append_csv(path: Path, rows: list[list[str]]) -> bool:
+    """
+    Dopisuje wiersze do monitora CSV. Gdy plik jest zablokowany (np. otwarty w Excelu),
+    wiersze trafiają do bufora obok i zostaną dopisane przy pierwszym udanym zapisie.
+    Zwraca True, gdy wiersze są już w głównym pliku.
+    """
+    buffer = path.with_name(CSV_BUFFER_NAME)
+    pending = _read_csv_buffer(buffer)
+    try:
+        _write_csv_rows(path, pending + rows)
+    except OSError:
+        buffer.parent.mkdir(parents=True, exist_ok=True)
+        with open(buffer, "a", encoding="utf-8", newline="") as fh:
+            _csv_writer(fh).writerows(rows)
+        return False
+    if pending:
+        buffer.unlink(missing_ok=True)
+    return True
+
+
+def rebuild_csv(root: Path) -> tuple[Path, int]:
+    """Odbudowuje monitor CSV od zera z plików JSONL głównego repo. Zwraca (ścieżka, wiersze)."""
+    main_root = main_repo_root(root)
+    records, _bad = load_records(main_root / LOG_DIR)
+    path = main_root / LOG_DIR / CSV_NAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8-sig", newline="") as fh:
+        writer = _csv_writer(fh)
+        writer.writerow(CSV_COLUMNS)
+        writer.writerows(csv_row(r) for r in records)
+    # Wiersze z bufora są już w JSONL (JSONL zapisuje się pierwszy), więc bufor jest zbędny.
+    path.with_name(CSV_BUFFER_NAME).unlink(missing_ok=True)
+    return path, len(records)
+
+
 def hook_main(raw: bytes | str) -> int:
     """Wejście hooka. Zawsze zwraca 0 i nic nie drukuje — patrz docstring modułu."""
     try:
@@ -220,6 +333,11 @@ def hook_main(raw: bytes | str) -> int:
             session=str(payload.get("session_id") or ""),
         )
         append_record(log_file_for_branch(root, branch), record)
+        try:
+            # Monitor CSV jest drugorzędny: jego awaria nie może cofnąć wpisu JSONL wyżej.
+            append_csv(csv_path(root), [csv_row(record)])
+        except Exception:  # noqa: BLE001
+            pass
     except Exception:  # noqa: BLE001 — hook NIE MOŻE przerwać sesji, patrz docstring
         pass
     return 0
@@ -325,7 +443,28 @@ def main(argv: list[str] | None = None) -> int:
     rep.add_argument(
         "--plik", help="plik albo katalog rejestru (domyślnie runs/skille/ w bieżącym repo)"
     )
+    sub.add_parser(
+        "csv", help=f"odbuduj monitor {LOG_DIR.as_posix()}/{CSV_NAME} od zera z rejestrów JSONL"
+    )
     args = parser.parse_args(argv)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    if args.cmd == "csv":
+        root = repo_root(os.getcwd())
+        if root is None:
+            parser.error("nie jestem w repozytorium git")
+        try:
+            path, count = rebuild_csv(root)
+        except OSError as exc:
+            print(
+                f"Nie mogę zapisać monitora CSV ({exc.strerror or exc}). Jeśli jest otwarty "
+                "w Excelu, zamknij go i uruchom komendę ponownie.",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"Odbudowano {path} — {_plural(count, 'wiersz', 'wiersze', 'wierszy')}.")
+        return 0
 
     if args.plik:
         path = Path(args.plik)
@@ -335,8 +474,6 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("nie jestem w repozytorium git — podaj --plik")
         path = root / LOG_DIR
     records, bad = load_records(path)
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
     print(render_report(records, bad, args.galaz))
     return 0
 
