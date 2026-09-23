@@ -74,31 +74,43 @@ def liquidation_events(
     odtwarzana po `P_t` (koszt LIQUIDATION_FEE + PERP_REENTRY_COST nominału).
 
     Returns: n_liquidations, liquidation_cost (ułamek nominału), max_usage (największy wzrost od
-    P_ref, ułamek nominału), n_resets.
+    P_ref, ułamek nominału), n_resets, rebalance_turnover (Σ|P_t/P_ref − 1| przy każdym
+    uzupełnieniu i likwidacji = ułamek nominału przycinany na OBU nogach, żeby wrócić do
+    nominału USD sprzed ruchu — Poprawka 1: bez tego siatka pomijała koszt uzupełnień).
     """
     if margin <= maintenance:
         raise ValueError("depozyt musi przekraczać maintenance margin")
     p = price.astype(float).to_numpy()
     if len(p) == 0:
-        return {"n_liquidations": 0, "liquidation_cost": 0.0, "max_usage": 0.0, "n_resets": 0}
+        return {
+            "n_liquidations": 0,
+            "liquidation_cost": 0.0,
+            "max_usage": 0.0,
+            "n_resets": 0,
+            "rebalance_turnover": 0.0,
+        }
     threshold = margin - maintenance
     p_ref = p[0]
     n_liq = n_resets = 0
     max_usage = 0.0
+    turnover = 0.0
     for t in range(1, len(p)):
         if reset_periods is not None and t % reset_periods == 0:
+            turnover += abs(p[t] / p_ref - 1.0)
             p_ref = p[t]
             n_resets += 1
         usage = p[t] / p_ref - 1.0
         max_usage = max(max_usage, usage)
         if usage >= threshold:
             n_liq += 1
+            turnover += abs(usage)
             p_ref = p[t]
     return {
         "n_liquidations": n_liq,
         "liquidation_cost": n_liq * (LIQUIDATION_FEE + PERP_REENTRY_COST),
         "max_usage": max_usage,
         "n_resets": n_resets,
+        "rebalance_turnover": turnover,
     }
 
 
@@ -108,10 +120,12 @@ def margin_grid(
     margins=MARGIN_GRID,
     reset_days=RESET_DAYS_GRID,
     years: float | None = None,
+    switch_cost: float = 0.0,
 ) -> pd.DataFrame:
     """
-    Siatka depozyt × częstość uzupełnień: likwidacje, ich koszt, wykorzystanie depozytu i zwrot
-    C1a na kapitale (1 + M) po odjęciu kosztów likwidacji (rozłożonych na `years` lat).
+    Siatka depozyt × częstość uzupełnień: likwidacje, ich koszt, wykorzystanie depozytu, koszt
+    uzupełnień (obrót × `switch_cost`; Poprawka 1) i zwrot C1a na kapitale (1 + M) po odjęciu
+    obu kosztów (rozłożonych na `years` lat).
     """
     if years is None:
         years = len(price) / (PERIODS_PER_DAY * DAYS_PER_YEAR)
@@ -120,6 +134,9 @@ def margin_grid(
         for rd in reset_days:
             ev = liquidation_events(price, m, None if rd is None else rd * PERIODS_PER_DAY)
             annual_liq_cost = ev["liquidation_cost"] / years if years > 0 else np.nan
+            annual_reb_cost = (
+                ev["rebalance_turnover"] * switch_cost / years if years > 0 else np.nan
+            )
             rows.append(
                 {
                     "margin": m,
@@ -128,7 +145,12 @@ def margin_grid(
                     "n_resets": ev["n_resets"],
                     "max_usage": ev["max_usage"],
                     "annual_liq_cost": annual_liq_cost,
-                    "annual_on_capital": (annual_notional_return - annual_liq_cost) / (1.0 + m),
+                    "rebalance_turnover": ev["rebalance_turnover"],
+                    "annual_rebalance_cost": annual_reb_cost,
+                    "annual_on_capital": (
+                        annual_notional_return - annual_liq_cost - annual_reb_cost
+                    )
+                    / (1.0 + m),
                 }
             )
     return pd.DataFrame(rows)

@@ -58,6 +58,7 @@ podsumowanie pod tabelą.
 | **C1** | 2026-09-23 | [c1-cash-and-carry](2026-09-23_c1-cash-and-carry/README.md) | **NOWA SERIA C — cash-and-carry z hedgem spot na BTC** (punkt 2 zlecenia użytkownika; kierunek otwarty po P2): long spot + short perp, P&L per okres 8h = funding otrzymany + (r_spot − r_perp) − koszty przełączeń (0,19 % na wejście/wyjście: spot 0,10 % + perp 0,05 % + poślizg). **Nowe źródło: świece 8h spot Binance** (6 021, 0 dziur, znaczniki = perp = funding). Target: **carry (przepływ), nie kierunek**; próg 0; N_eff z autokorelacji; z_2 = 2,241. Ramiona: C1a zawsze w pozycji, C1b po dodatnim ostatnim fundingu. Pre-rejestracja `a8ce150`, kod `ae169f4` | **2 — LICZNIK C WYCZERPANY (2/2)** | **C1a POZYTYWNY — pierwszy w projekcie, ale to przepływ kontraktowy, nie prognoza:** +0,0099 %/8h [+0,0063; +0,0135], t_neff **+5,40** przy **N_eff 286** (funding lag-1 0,84); rocznie **+10,9 % nominału [6,9; 14,8] = +5,4 % kapitału [3,5; 7,4]**; Σ funding 60,2 %, Σ hedge −0,13 %, koszty 0,38 %, obsunięcie 0,64 %. **Połowa z 2021** (15 %/rok kapitału); 2022–2026: 0,4–6 %/rok; ostatnie 3 lata 3,6 % brutto. **C1b NEGATYWNY:** 875 przełączeń = 166 % kosztów, −9,3 %/rok kapitału. Nie mierzone: likwidacja shorta (+90 %/30 dni w 2021), ryzyko giełdy, koszt kapitału. Walidacja (16a): **READY** |
 | **R1** | 2026-09-23 | [r1-premia-rebalansowa](2026-09-23_r1-premia-rebalansowa/README.md) | **NOWA SERIA R — premia rebalansowa (B2), „inny cel niż kierunek"**: koszyk top-20 po 30-dniowym obrocie, skład point-in-time miesięcznie (uniwersum P2 z wycofanymi, 281 symboli), od 2021-02 (zasada 20), 65 koszyków, 1 976 dni; A = równe wagi codziennie vs B = równe wagi na starcie miesiąca; premia = r_A − r_B − 0,10 % × obrót. Próg 0, jedno ramię. Pre-rejestracja `fb18d98`, kod `f4569bd` + naprawa testu `db16af7` | **1 — LICZNIK R WYCZERPANY (1/1)** | **NIEROZSTRZYGNIĘTY, punktowo UJEMNY:** netto **−3,55 %/rok [−9,50; +2,40]**, brutto −2,68 %, koszt 0,87 %; wartość A względem B **−12,1 %** przez 5,4 roku; 36/65 miesięcy dodatnich. Scenariusz „ruchy niezależne" (6–11 %/rok brutto, zapisany przed wynikiem) POZA CI (górny kraniec +3,3 %) → momentum względne wewnątrz miesiąca zjada premię. Rozdzielczość 8,5 %/rok (3× gorsza niż proxy ex ante — ogony dyspersji). Walidacja (16a): **READY** |
 | **P3** | 2026-09-23 | [p3-sonda-zrodel-ii](2026-09-23_p3-sonda-zrodel-ii/README.md) | **Sonda źródeł danych II + podłączenie** (decyzja użytkownika: „podpięcie dodatkowych danych"): brama G1–G4 zapisana PRZED pobraniem; kolektor `data/fetch_external.py` (8 źródeł, bez kluczy, idempotentny) + profil `data/profile_external.py`; przegląd bezpieczeństwa (1 znalezisko poprawione) | **0 — POZA licznikami** (0 korelacji ze zwrotem) | **Archiwum `data.binance.vision` ma pozycjonowanie (OI, L/S top traderów i wszystkich kont, taker ratio) co 5 min od 2020-09-01: 2 213 dni, zero brakujących, pokrycie bazy 99,90 % — P1 sprawdziło tylko REST (30 dni).** Przechodzą też: funding COIN-M od 2020-08 (masa 42,7 % na 0,0001), 24 kontrakty kwartalne 8h (330 pustych świec po wygaśnięciu), DVOL od 2021-03-24 (95,9 %), CoinMetrics 14 metryk on-chain (0 braków), F&G, Coinbase; FRED jako tło. Dziura: top-trader L/S 2021-12→2022-12 (16 % bazy). Odpadły: likwidacje (archiwum puste), OKX, bookDepth (od 2023). Walidacja (16a): **READY** |
+| **D1** | 2026-09-23 | [d1-produkt-carry](2026-09-23_d1-produkt-carry/README.md) | **Produkt cash-and-carry po C1a — cztery otwarte pytania:** Q1 depozyt/likwidacja USDT-M (siatka 4 × 4, run-up), Q2 COIN-M (zabezpieczenie w BTC, kapitał 1×, wartość USD stała — tożsamość), Q3 basis 24 kontraktów kwartalnych vs funding zrealizowany, Q4 T-bill (FRED). Pre-rejestracja + kod `93b3c6e`; Poprawka 1 (koszt uzupełnień depozytu) przed zamrożeniem | **0 — POZA licznikami** (0 reguł; COIN-M i basis = generalizacja C1a na inny instrument) | **COIN-M: +9,07 %/rok [5,88; 12,26] na kapitale 1×, bez likwidacji z konstrukcji** (stawka niższa od USDT-M o 1,82 pp [0,53; 3,11], N_eff 153). USDT-M: M = 1,0 + uzupełnianie miesięczne → 0 likwidacji, +5,29 % na kapitale 2×; tanie depozyty (0,25–0,5) mają zapas kilku pp po `high` i koszt uzupełnień do 1,43 %/rok. Basis kwartalny ≈ funding (różnica median +1,8 / −0,9 pp, rozstęp ±17). Ponad T-bill od 2022: COIN-M **+1,8 pp/rok** (−1,5…+7,2), USDT-M 2× −1,0 pp. Walidacja (16a): **READY** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -78,6 +79,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
+- **Analiza produktu carry (D1, 2026-09-23) — POZA licznikami: 0 wariantów reguł.** Siatka depozytu = zakres inżynierski (raportowany w całości); COIN-M i basis kwartalny = ta sama reguła „zawsze w pozycji" na innym instrumencie (generalizacja C1a, jak zasada 9), nie warianty serii C (STOP dla reguł bez zmian).
 - **Sonda źródeł II + podłączenie (P3, 2026-09-23) — POZA licznikami: 0 wariantów.** Pobranie i profil 13 zbiorów, zero korelacji ze zwrotem. Każda hipoteza na nowych danych (O1 pozycjonowanie, VRP z DVOL, on-chain, F&G, premia Coinbase, basis/COIN-M) = NOWA SERIA z własnym licznikiem.
 - **Sonda wykonalnosci carry przekrojowego (P2) — POZA licznikami: 0 wariantow.** Liczy tylko mechanizm (funding − koszt) i rozrzut do rachunku mocy; srednia zwrotu z cen i P&L NIE policzone. Werdykt NIEMIERZALNA ⇒ hipoteza C (carry przekrojowy na perpetualach) NIE dostaje licznika.
 - **Kalibracja przyrzadu (Z9, Z19, K1, K2, K3, T4) — POZA licznikami hipotez: 0 wariantow.** Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
@@ -537,6 +539,29 @@ podsumowanie pod tabelą.
     historii), księga zleceń (od 2023). Każde źródło = nowa seria z własną pre-rejestracją
     i rachunkiem mocy; cecha 4h na tej bazie ma n ≈ 6 950 transakcji, half-width ≈ 1,2 pp.
     Kolektor REST `CLAS5-positioning` zbędny dla historii (archiwum, opóźnienie ~1 dnia).
+61. **CASH-AND-CARRY MA SENS TYLKO W KONSTRUKCJI COIN-M (D1):** 1 BTC zabezpieczenia + short
+    inverse 1× ma STAŁĄ wartość USD (P + N(1/P − 1/P₀)·P = P₀ — tożsamość, test hypothesis),
+    więc nie ma likwidacji ani uzupełnień, a kapitał to 1×. Stawka COIN-M jest niższa od USDT-M
+    o **1,82 pp/rok [0,53; 3,11]** (korelacja 0,70; masa punktowa 41,7 % na 0,01 %), ale na
+    kapitale wychodzi **+9,07 %/rok [5,88; 12,26]** wobec +5,44 % [3,44; 7,45] dla USDT-M 2×.
+    Ponad T-bill 3M od 2022 (5 obserwacji rocznych): COIN-M +1,8 pp/rok (od −1,5 do +7,2),
+    USDT-M 2× −1,0 pp, basis kwartalny 2× −0,9 pp. Nadal przepływ za dźwignię innych z ryzykiem
+    giełdy; decyzja o produkcie = użytkownik.
+62. **DEPOZYT KRÓTKIEJ NOGI USDT-M: 1× Z MIESIĘCZNYM UZUPEŁNIANIEM PRZEŻYWA 5,5 ROKU BEZ
+    LIKWIDACJI (D1):** run-up 30 dni max +89,6 % (p99 58,5 %), 90 dni +112 %; siatka 4 × 4:
+    M = 1,0 / 30 dni → 0 likwidacji, max wykorzystanie 70,9 % (po `high` 70,0 %), +5,29 %
+    na kapitale; M = 0,5 / 7 dni → 0, ale po `high` 46,3 % z 49,5 %; M = 0,25 / 1 dzień → 0,
+    ale koszt uzupełnień 1,43 %/rok (obrót 41×) i skok 21 %/dzień o 3 pp od progu. Uzupełnienie
+    depozytu = przycięcie obu nóg (obrót × 0,19 %) — koszt pominięty w pre-rejestracji
+    (Poprawka 1); bez niego siatka faworyzowała najtańszy depozyt. Basis kontraktów kwartalnych
+    (mediana frontu 5,9 %/rok; 2022: 16 % dni ujemnych) ≈ funding zrealizowany (różnica median
+    +1,8 pp przy 30 dniach, −0,9 pp przy 90; rozstęp ±17 pp na 21–22 kontraktach) — kontrakt
+    zamyka stopę, nie podnosi jej.
+63. **N_EFF Z SAMEJ AUTOKORELACJI LAG-1 ZAWYŻA PRÓBĘ 8× DLA SZEREGÓW O DŁUGIEJ PAMIĘCI (D1):**
+    funding COIN-M acf1 0,675 → `n(1−ρ)/(1+ρ)` = 1 169, kanoniczny `effective_sample_size`
+    (suma całej funkcji autokorelacji) = 149; half-width 3,2 %/rok zamiast pre-rejestrowanych
+    1,2 %. Piąty wariant wniosku 19 (po 56 i 58): rachunek mocy dla PRZEPŁYWU liczy N_eff
+    kanoniczną funkcją na własnościach danych, nigdy z proxy lag-1.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

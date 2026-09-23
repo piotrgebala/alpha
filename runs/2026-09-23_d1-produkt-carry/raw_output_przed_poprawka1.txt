@@ -1,0 +1,99 @@
+========================================================================================================
+D1 — PRODUKT CASH-AND-CARRY: depozyt/likwidacja (Q1), COIN-M (Q2), basis kwartalny (Q3), T-bill (Q4)
+========================================================================================================
+dane   : spot 6021 / perp 6021 / funding USDT-M 6021 od 2021-01-01 do 2026-07-01 (5.50 roku); C1a odtworzone: +10.87%/rok nominału [+6.92; +14.81], kapitał 2×: +5.43%
+koszty : wejście 0.19% nominału i tyle samo wyjście; likwidacja 1,25% + 0,07% ponowne wejście; maintenance 0.5%
+
+Q1. DEPOZYT I LIKWIDACJA KRÓTKIEJ NOGI USDT-M — run-up ceny perp w oknie (rozkład, % ceny startowej)
+  okno [dni] |      max |      p99 |      p95 | udział > 50% | udział > 100%
+  ------------------------------------------------------------------------
+           1 |   +21.1% |    +9.5% |    +5.2% |        0.00% |         0.00%
+           7 |   +39.9% |   +25.2% |   +16.5% |        0.00% |         0.00%
+          30 |   +89.6% |   +58.5% |   +40.6% |        2.11% |         0.00%
+          90 |  +112.4% |   +91.2% |   +71.9% |       17.64% |         0.48%
+
+  siatka depozyt M (nominału) × uzupełnienie depozytu co N dni: likwidacje 2021→2026-07, koszt, maks. wykorzystanie depozytu, zwrot C1a na kapitale (1+M) po kosztach likwidacji
+      M | uzupełnienie | likwidacje | uzupełnień | max wykorzystanie | koszt likw./rok | rocznie na kapitale
+  --------------------------------------------------------------------------------------------------------
+   0.25 |        nigdy |          6 |          0 |            +28.5% |           1.44% |              +7.54%
+   0.25 |       30 dni |         12 |         66 |            +31.7% |           2.88% |              +6.39%
+   0.25 |        7 dni |          3 |        286 |            +29.9% |           0.72% |              +8.12%
+   0.25 |        1 dni |          0 |       2006 |            +18.2% |           0.00% |              +8.69%
+   0.50 |        nigdy |          3 |          0 |            +52.9% |           0.72% |              +6.76%
+   0.50 |       30 dni |          2 |         66 |            +54.0% |           0.48% |              +6.92%
+   0.50 |        7 dni |          0 |        286 |            +35.7% |           0.00% |              +7.24%
+   0.50 |        1 dni |          0 |       2006 |            +18.2% |           0.00% |              +7.24%
+   1.00 |        nigdy |          2 |          0 |           +105.4% |           0.48% |              +5.19%
+   1.00 |       30 dni |          0 |         66 |            +70.9% |           0.00% |              +5.43%
+   1.00 |        7 dni |          0 |        286 |            +35.7% |           0.00% |              +5.43%
+   1.00 |        1 dni |          0 |       2006 |            +18.2% |           0.00% |              +5.43%
+   1.50 |        nigdy |          1 |          0 |           +150.7% |           0.24% |              +4.25%
+   1.50 |       30 dni |          0 |         66 |            +70.9% |           0.00% |              +4.35%
+   1.50 |        7 dni |          0 |        286 |            +35.7% |           0.00% |              +4.35%
+   1.50 |        1 dni |          0 |       2006 |            +18.2% |           0.00% |              +4.35%
+  próg likwidacji = M − 0.5% (wzrost ceny od ostatniego uzupełnienia)
+
+Q2. CARRY COIN-M (1 BTC zabezpieczenia + short inverse; wartość USD stała, kapitał 1×) vs USDT-M
+    rynek |     n |  średnia/8h |              CI 95% (N_eff) |   mediana |  N_eff |  t_neff |              rocznie nominał |          rocznie na kapitale
+  ------------------------------------------------------------------------------------------------------------------------------------------------------
+   COIN-M |  6020 |   +0.00828% | [ +0.00537;  +0.01119] | +0.01000% |    153 |   +5.58 |  +9.07% [+5.88; +12.26] |  +9.07% [+5.88; +12.26] (kapitał 1×)
+   USDT-M |  6019 |   +0.00994% | [ +0.00628;  +0.01361] | +0.00789% |    113 |   +5.32 | +10.89% [+6.87; +14.90] |  +5.44% [+3.44; +7.45] (kapitał 2×)
+  różnica stawek COIN-M − USDT-M na wspólnych 6018 rozliczeniach: -0.00166%/8h [-0.00284; -0.00049] (N_eff 596) = -1.82%/rok [-3.11; -0.53]; masa punktowa COIN-M na 0,0100%: 41.7%, ujemne: 19.6%; korelacja stawek 0.70
+  half-width ex post COIN-M: 3.19%/rok (pre-rejestracja: ~1,2%/rok)
+
+Q3. BASIS KONTRAKTÓW KWARTALNYCH (F − S)/S annualizowany, front = najkrótszy ≥ 7 dni do wygaśnięcia
+  świec kontraktów po filtrach: 8802 (24 kontraktów), front: 5880 świec 8h, 2021-02-03 → 2026-06-30
+     rok |     n |  mediana |      p25 |      p75 |      p05 |      p95 | udział < 0 |  średnia
+  --------------------------------------------------------------------------------------------
+    2021 |   982 |  +12.92% |   +7.34% |  +25.13% |   +3.49% |  +48.68% |       0.8% |  +18.01%
+    2022 |  1078 |   +2.25% |   +1.09% |   +3.70% |   -2.36% |   +6.86% |      16.4% |   +2.30%
+    2023 |  1084 |   +5.52% |   +4.33% |   +7.94% |   +2.26% |  +11.74% |       0.1% |   +6.36%
+    2024 |  1098 |  +11.23% |   +8.83% |  +14.51% |   +6.11% |  +25.45% |       0.0% |  +12.85%
+    2025 |  1095 |   +5.70% |   +4.72% |   +7.22% |   +3.66% |  +11.72% |       0.0% |   +6.25%
+    2026 |   543 |   +2.52% |   +1.57% |   +3.68% |   +0.61% |   +4.63% |       0.6% |   +2.60%
+   razem |  5880 |   +5.88% |   +3.63% |  +10.09% |   +0.77% |  +25.50% |       3.2% |   +8.41%
+
+  ex post: baza zamknięta na wejściu vs funding USDT-M zrealizowany do wygaśnięcia — kontrakty wygasłe do 2026-07-01: 22; obie wielkości annualizowane
+   wejście |   n | baza: mediana | funding: mediana | różnica: mediana | różnica: min | różnica: max | baza > funding
+  --------------------------------------------------------------------------------------------------------------------
+     30 dni |  22 |        +6.72% |           +5.22% |           +1.78% |      -19.41% |       +6.82% |            64%
+     60 dni |  21 |        +6.30% |           +5.10% |           +1.41% |      -16.84% |       +9.81% |            62%
+     90 dni |  21 |        +6.12% |           +5.42% |           -0.91% |      -11.67% |      +16.86% |            48%
+
+  per kontrakt, wejście 90 dni przed wygaśnięciem (annualizowane; baza zamknięta / funding zrealizowany / różnica):
+     BTCUSDT_210625 wejście 2021-03-27  baza +23.72%  funding +30.60%  różnica  -6.88%
+     BTCUSDT_210924 wejście 2021-06-26  baza  +6.12%  funding  +7.94%  różnica  -1.82%
+     BTCUSDT_211231 wejście 2021-10-02  baza  +8.82%  funding +20.49%  różnica -11.67%
+     BTCUSDT_220325 wejście 2021-12-25  baza +11.09%  funding  +5.24%  różnica  +5.85%
+     BTCUSDT_220624 wejście 2022-03-26  baza  +5.11%  funding  +4.28%  różnica  +0.83%
+     BTCUSDT_220930 wejście 2022-07-02  baza  +1.33%  funding  +4.64%  różnica  -3.31%
+     BTCUSDT_221230 wejście 2022-10-01  baza  +2.04%  funding  +2.95%  różnica  -0.91%
+     BTCUSDT_230331 wejście 2022-12-31  baza  +1.96%  funding  +8.21%  różnica  -6.24%
+     BTCUSDT_230630 wejście 2023-04-01  baza  +5.31%  funding  +6.23%  różnica  -0.92%
+     BTCUSDT_230929 wejście 2023-07-01  baza  +7.01%  funding  +4.76%  różnica  +2.25%
+     BTCUSDT_231229 wejście 2023-09-30  baza  +4.59%  funding +11.44%  różnica  -6.85%
+     BTCUSDT_240329 wejście 2023-12-30  baza +18.54%  funding +22.19%  różnica  -3.65%
+     BTCUSDT_240628 wejście 2024-03-30  baza +26.62%  funding  +9.76%  różnica +16.86%
+     BTCUSDT_240927 wejście 2024-06-29  baza +11.52%  funding  +3.50%  różnica  +8.02%
+     BTCUSDT_241227 wejście 2024-09-28  baza  +8.06%  funding +12.62%  różnica  -4.56%
+     BTCUSDT_250328 wejście 2024-12-28  baza +12.86%  funding  +5.42%  różnica  +7.44%
+     BTCUSDT_250627 wejście 2025-03-29  baza  +4.24%  funding  +3.51%  różnica  +0.73%
+     BTCUSDT_250926 wejście 2025-06-28  baza  +4.29%  funding  +7.11%  różnica  -2.82%
+     BTCUSDT_251226 wejście 2025-09-27  baza  +6.53%  funding  +4.55%  różnica  +1.98%
+     BTCUSDT_260327 wejście 2025-12-27  baza  +5.06%  funding  +1.65%  różnica  +3.41%
+     BTCUSDT_260626 wejście 2026-03-28  baza  +1.89%  funding  +0.75%  różnica  +1.14%
+
+Q4. PER ROK: stopa T-bill 3M (FRED DTB3, % p.a.) obok zwrotu na KAPITALE (lata niepełne annualizowane)
+     rok |  T-bill |  C1a USDT-M 2× |  nadwyżka |  COIN-M 1× |  nadwyżka |  basis front 2× |  nadwyżka
+  ----------------------------------------------------------------------------------------------------
+    2021 |   0.05% |        +15.21% |   +15.16% |    +22.15% |   +22.11% |          +9.01% |    +8.96%
+    2022 |   2.02% |         +2.07% |    +0.04% |     +1.82% |    -0.21% |          +1.15% |    -0.88%
+    2023 |   5.07% |         +3.86% |    -1.21% |     +7.52% |    +2.45% |          +3.18% |    -1.89%
+    2024 |   4.97% |         +5.98% |    +1.01% |    +12.20% |    +7.23% |          +6.42% |    +1.45%
+    2025 |   4.07% |         +2.56% |    -1.51% |     +5.08% |    +1.01% |          +3.13% |    -0.94%
+    2026 |   3.61% |         +0.37% |    -3.23% |     +2.12% |    -1.48% |          +1.30% |    -2.31%
+  uwagi: C1a i COIN-M = zrealizowany P&L (funding + hedge − koszty) / kapitał; basis front = ŚREDNIA stopa zamknięta
+  na wejściu w danym roku (nie P&L), na kapitale 2× jak każdy kontrakt USDT-M; T-bill = średnia dzienna stopa w roku.
+
+========================================================================================================
+czas: 0.3s

@@ -52,12 +52,14 @@ def test_liquidation_avoided_by_frequent_resets_and_absent_on_declines():
     assert cp.liquidation_events(price, 1.0, None)["n_liquidations"] >= 1
     ev = cp.liquidation_events(price, 1.0, 1)  # uzupełnienie co okres: nigdy > 20 % od P_ref
     assert ev["n_liquidations"] == 0 and ev["n_resets"] == 7
+    assert ev["rebalance_turnover"] == pytest.approx(7 * 0.2)  # co okres przycinane 20 % nominału
     down = pd.Series(100.0 * 0.9 ** np.arange(8))
     assert cp.liquidation_events(down, 0.25, None) == {
         "n_liquidations": 0,
         "liquidation_cost": 0.0,
         "max_usage": 0.0,
         "n_resets": 0,
+        "rebalance_turnover": 0.0,
     }
     with pytest.raises(ValueError):
         cp.liquidation_events(price, cp.MAINTENANCE_MARGIN, None)
@@ -65,10 +67,18 @@ def test_liquidation_avoided_by_frequent_resets_and_absent_on_declines():
 
 def test_margin_grid_shape_and_capital_scaling():
     price = pd.Series([100.0] * 30)
-    g = cp.margin_grid(price, 0.10, margins=(0.5, 1.0), reset_days=(None, 1), years=1.0)
+    g = cp.margin_grid(
+        price, 0.10, margins=(0.5, 1.0), reset_days=(None, 1), years=1.0, switch_cost=0.0019
+    )
     assert len(g) == 4 and g["n_liquidations"].eq(0).all()
+    assert g["annual_rebalance_cost"].eq(0).all()  # cena stała → nic do przycinania
     row = g[(g["margin"] == 1.0) & (g["reset_days"].isna())].iloc[0]
     assert row["annual_on_capital"] == pytest.approx(0.10 / 2.0)
+    up = pd.Series(100.0 * 1.1 ** np.arange(4))
+    g2 = cp.margin_grid(up, 0.10, margins=(1.0,), reset_days=(1,), years=1.0, switch_cost=0.01)
+    # reset_days=1 = co 3 okresy 8h: jedno uzupełnienie po t=3, obrót |1,1^3 − 1| = 0,331
+    assert g2.loc[0, "rebalance_turnover"] == pytest.approx(1.1**3 - 1)
+    assert g2.loc[0, "annual_on_capital"] == pytest.approx((0.10 - (1.1**3 - 1) * 0.01) / 2.0)
 
 
 # ---------------------------------------------------------------- Q2: COIN-M

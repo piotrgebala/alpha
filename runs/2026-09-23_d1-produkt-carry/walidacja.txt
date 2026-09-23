@@ -1,0 +1,24 @@
+== A. likwidacje po cenach HIGH (zamiast close) dla konfiguracji z 0 likwidacji po close ==
+  M=1.00 reset 30 d: close → likw. 0, max wyk. 70.9% | high → likw. 0, max wyk. 70.0%
+  M=0.50 reset  7 d: close → likw. 0, max wyk. 35.7% | high → likw. 0, max wyk. 46.3%
+  M=0.25 reset  1 d: close → likw. 0, max wyk. 18.2% | high → likw. 0, max wyk. 19.5%
+  M=1.50 reset 30 d: close → likw. 0, max wyk. 70.9% | high → likw. 0, max wyk. 70.0%
+== B. run-up 30 dni z close vs C1 (+90 %): == 89.6 %
+== C. COIN-M: suma fundingu 2021→2026-07 drugą drogą ==
+  n 6020, Σ funding 50.24% nominału, − koszty 0,38% = 49.86%; /5.50 roku = 9.07%/rok (skrypt: 9,07%)
+  USDT-M: n 6021, Σ 60.28% → 10.89%/rok (skrypt 10,89%); różnica sum/rok -1.83% (skrypt −1,82%)
+  N_eff z samej autokorelacji lag-1 (proxy pre-rejestracji) vs kanoniczny:
+  acf1 0.675 → n(1−ρ)/(1+ρ) = 1169; effective_sample_size → 149
+== D. T-bill: średnie roczne DTB3 drugą drogą (mediana zamiast średniej) ==
+      mean  median  count
+date                     
+2021  0.05    0.05    251
+2022  2.02    1.78    249
+2023  5.07    5.23    250
+2024  4.97    5.22    250
+2025  4.07    4.20    249
+2026  3.61    3.60    124
+== E. basis: front 2024 mediana z niezależnego rachunku (perp jako S zamiast spot) ==
+  front n 5880; mediana 2024 z perp jako S: 11.26% (skrypt ze spot: 11,23%); razem 6.33% (5,88%)
+== F. kogo nie ma: świece kontraktów odrzucone filtrem ==
+  wszystkich 9948, po wygaśnięciu 334, wolumen 0 330, < 7 dni do wygaśnięcia 774, po 2026-07-01 372

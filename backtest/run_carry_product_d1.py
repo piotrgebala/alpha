@@ -127,19 +127,20 @@ def main() -> None:
         )
     print(
         "\n  siatka depozyt M (nominału) × uzupełnienie depozytu co N dni: likwidacje 2021→2026-07, koszt, "
-        "maks. wykorzystanie depozytu, zwrot C1a na kapitale (1+M) po kosztach likwidacji"
+        "maks. wykorzystanie depozytu, koszt uzupełnień (obrót × 0,19%), zwrot C1a na kapitale (1+M) po obu kosztach"
     )
-    grid = margin_grid(price, w_c1a["annual_notional"], years=years)
+    grid = margin_grid(price, w_c1a["annual_notional"], years=years, switch_cost=costs.switch_cost)
     print(
         f"  {'M':>5} | {'uzupełnienie':>12} | {'likwidacje':>10} | {'uzupełnień':>10} | {'max wykorzystanie':>17} | "
-        f"{'koszt likw./rok':>15} | {'rocznie na kapitale':>19}"
+        f"{'koszt likw./rok':>15} | {'obrót uzup.':>11} | {'koszt uzup./rok':>15} | {'rocznie na kapitale':>19}"
     )
-    print("  " + "-" * 104)
+    print("  " + "-" * 136)
     for _, r in grid.iterrows():
         reset = "nigdy" if pd.isna(r["reset_days"]) else f"{int(r['reset_days'])} dni"
         print(
             f"  {r['margin']:5.2f} | {reset:>12} | {int(r['n_liquidations']):10d} | {int(r['n_resets']):10d} | "
-            f"{100 * r['max_usage']:+16.1f}% | {100 * r['annual_liq_cost']:14.2f}% | {100 * r['annual_on_capital']:+18.2f}%"
+            f"{100 * r['max_usage']:+16.1f}% | {100 * r['annual_liq_cost']:14.2f}% | {100 * r['rebalance_turnover']:10.0f}% | "
+            f"{100 * r['annual_rebalance_cost']:14.2f}% | {100 * r['annual_on_capital']:+18.2f}%"
         )
     print(
         f"  próg likwidacji = M − {100 * MAINTENANCE_MARGIN:.1f}% (wzrost ceny od ostatniego uzupełnienia)\n"
