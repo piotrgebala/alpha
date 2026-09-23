@@ -200,6 +200,7 @@ podsumowanie pod tabelą.
    6 losowaniach czystego szumu**. To jest dowod, ktorego projekt nie mial przez 15 rund
    i ktory uwiarygodnia wszystkie dotychczasowe werdykty oparte na tym kryterium — w tym Z10.
 23. **PROG WYKRYWALNOSCI (~58%) LEZY POWYZEJ PROGU OPLACALNOSCI (~52,7%)** — luka 5,5 pp (K1).
+   **⚠ LICZBA I WYMOG SPROSTOWANE W K2 — notka na koncu tego punktu.**
    Hipoteza dajaca trafnosc 53-58% bylaby OPLACALNA i jednoczesnie NIEWIDZIALNA dla tego
    pipeline'u. Przyczyna: przy slabym sygnale model odmawia kierunku w 99,3-99,7% swiec, wiec
    proba nie pozwala niczego dowiesc (przy q=0,20 trafnosc punktowa 56,19% > prog 51,90%,
@@ -208,6 +209,14 @@ podsumowanie pod tabelą.
    Skutek dla wynikow wstecz: Z10/Z17+Z21 (n=7 687 / 7 043) NIETKNIETE; S1b (345) i H2.1 (98)
    byly ponizej progu wykrywalnosci, wiec ich werdykty "nierozstrzygniety" byly SLUSZNE
    z powodu, ktorego wtedy nie znalismy.
+   **⚠ SPROSTOWANE W K2 (2026-09-22; notka dopisana 2026-09-23):** ~58% (dokladnie 58,20%) to
+   trafnosc w PIERWSZYM punkcie siatki `q` (q=0,40), w ktorym zapalilo sie kryterium —
+   artefakt rozdzielczosci siatki, nie wlasciwosc przyrzadu; przy siatce z q=0,30 ta sama
+   konfiguracja podalaby inna liczbe. **WYMOG „powyzej ~58%" UCHYLONY.** Obowiazuje
+   `measurability_report(...)`, a szerokosc pasma „oplacalne, ale niewidzialne" to
+   `wald_half_width(n)`, zalezna WYLACZNIE od `n` (CLAUDE.md zasada 18; K2 README §1). Aktualne
+   pozostaje sedno: takie pasmo istnieje i przy malym `n` jest szerokie (n=98: 9,90 pp;
+   n=7 687: 1,12 pp).
 24. **`classify_checkpoint` WYSTAWIL GO CZYSTEMU SZUMOWI** (K1) — i WARUNKOWY przy q=0.
    Podejrzenie z H2.1 potwierdzone na danych, w ktorych Z KONSTRUKCJI nie ma czego znalezc.
    **Ta miara nie jest i nigdy nie byla kryterium werdyktu**; projekt slusznie przeszedl na

@@ -2240,10 +2240,23 @@ Trzy niezależne usterki, wszystkie mechaniczne:
    w `.claude/skills/clas5-runda/` była bajt w bajt identyczna z chmurową (sprawdzone `diff`
    z `~/.claude/skills/synced/`), więc usunięta bez utraty treści. Zmiana skilla = nowa
    wersja wgrana do chmury (procedura w `CLAUDE.md`).
+   **Zmiany treści skilli w chmurze (2026-09-23):**
+   - Partia 1 — wgrana i zweryfikowana (synchronizacja 08:34, treść bajt w bajt = paczki):
+     `clas5-quant` — usunięty zamrożony próg „~58 %” (sprzeczny z zasadą 18) w SKILL.md
+     i `methodology.md`, odwołanie do kopii w repo, stan projektu uzupełniony o P2 i T4;
+     `quant-strategy-catalog` — carry przekrojowy „NIETKNIĘTE, priorytet 1” → „NIEMIERZALNY
+     w P2, żyje tylko wersja z hedgem spot”, odwołanie do repo.
+   - Partia 2 — przygotowana, czeka na wgranie: `clas5-runda` — „operacje git po stronie
+     użytkownika” sprzeczne z „Podziałem ról” w `CLAUDE.md`; `quant-strategy-catalog` —
+     historia danych 4h to 6,8 roku (od 2019-09), nie 3 lata.
 3. **Konfiguracja maszyny nie została ruszona.** Wtyczki `data` świadomie nie włączam: to plik
    poza repo, wyłączony celowo razem z sześcioma innymi, a działający na wszystkie projekty
    użytkownika. Rozwiązanie z punktu 1 jest odporniejsze — działa też w sesji chmurowej.
    Gdybyś chciał ją mimo wszystko włączyć, to jedna linia w `~/.claude/settings.json`.
+   **Aktualizacja 2026-09-23 (decyzja użytkownika):** `data` włączona **dla tego projektu**
+   (`.claude/settings.json`: `"data@synced": true`), nie globalnie — `~/.claude/settings.json`
+   nadal nietknięty. Bramki jakości zostają w `docs/skills/bramki-jakosci.md`; skille `data:*`
+   są wsparciem (działają od następnej sesji po włączeniu).
 
 ---
 
