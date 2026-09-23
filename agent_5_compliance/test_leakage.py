@@ -37,6 +37,7 @@ import yaml
 from agents.feature_miner import FEATURE_FUNCTIONS, compute_atr_pctrank_20d
 from agents.ta_rules import TA_FEATURE_FUNCTIONS
 from agents.positioning_features import POSITIONING_FEATURE_FUNCTIONS, RAW_COLUMN
+from agents.external_features import EXTERNAL_FEATURE_FUNCTIONS
 from agents.funding_features import attach_funding_rate
 from agents.labeling import compute_triple_barrier_labels
 
@@ -384,6 +385,41 @@ def test_positioning_feature_no_leakage(synthetic_ohlcv: pd.DataFrame, feature_n
     """
     fn = POSITIONING_FEATURE_FUNCTIONS[feature_name]
     df_full = _with_synthetic_oi(synthetic_ohlcv)
+    df_past = df_full.iloc[:CUTOFF].reset_index(drop=True)
+    pd.testing.assert_series_equal(
+        fn(df_past).reset_index(drop=True),
+        fn(df_full).iloc[:CUTOFF].reset_index(drop=True),
+        check_names=False,
+        check_exact=True,
+    )
+
+
+def test_external_feature_functions_match_registry() -> None:
+    """L1/V1/G1: cechy zewnętrzne (agents/external_features.py) 1:1 z sekcją `external:` registry."""
+    with open(FEATURE_REGISTRY_PATH, encoding="utf-8") as f:
+        registry = set(yaml.safe_load(f)["external"].keys())
+    code = set(EXTERNAL_FEATURE_FUNCTIONS.keys())
+    assert (
+        code == registry
+    ), f"registry-only: {sorted(registry - code)}, code-only: {sorted(code - registry)}"
+
+
+def _with_synthetic_external(df: pd.DataFrame, seed: int = 11) -> pd.DataFrame:
+    """Syntetyczne kolumny dopięte (jak po attach_daily): dzienne wartości powtarzane na 6 świec."""
+    rng = np.random.default_rng(seed)
+    out = df.copy()
+    n_days = len(df) // 6 + 1
+    out["ex_supply_change_7d_d"] = np.repeat(rng.normal(0.0, 0.01, n_days), 6)[: len(df)]
+    out["dvol_d"] = np.repeat(rng.uniform(30.0, 120.0, n_days), 6)[: len(df)]
+    out["fng_d"] = np.repeat(rng.integers(5, 96, n_days).astype(float), 6)[: len(df)]
+    return out
+
+
+@pytest.mark.parametrize("feature_name", sorted(EXTERNAL_FEATURE_FUNCTIONS.keys()))
+def test_external_feature_no_leakage(synthetic_ohlcv: pd.DataFrame, feature_name: str) -> None:
+    """L1/V1/G1 (CLAUDE.md zasada 2): shift-forward bit w bit do CUTOFF (jak cechy AT i pozycjonowania)."""
+    fn = EXTERNAL_FEATURE_FUNCTIONS[feature_name]
+    df_full = _with_synthetic_external(synthetic_ohlcv)
     df_past = df_full.iloc[:CUTOFF].reset_index(drop=True)
     pd.testing.assert_series_equal(
         fn(df_past).reset_index(drop=True),
