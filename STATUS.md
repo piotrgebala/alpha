@@ -2311,6 +2311,15 @@ Oba źródła zadeklarowane w `extraKnownMarketplaces` — wtyczki docierają pr
 `git commit`/`push` — zużywa limit konta; warstwy wyłącza się zmiennymi
 (`ENABLE_STOP_REVIEW=0`, `ENABLE_COMMIT_REVIEW=0`, `SECURITY_GUIDANCE_DISABLE=1`).
 
+**Dopisek 4 — `security-guidance` tylko wzorce (decyzja użytkownika 2026-09-23).** W `env`
+projektu: `ENABLE_CODE_SECURITY_REVIEW=0` (wyłącznik główny wszystkich przeglądów modelem,
+sprawdzony w kodzie wtyczki 2.0.8) + `ENABLE_STOP_REVIEW=0` i `ENABLE_COMMIT_REVIEW=0` jako
+podwójna blokada. Sprawdzone na skrypcie wtyczki: przegląd po turze pominięty (kod 3, 0,5 s,
+bez wywołania modelu), przegląd commita pominięty (kod 32), wzorzec `yaml.load` nadal daje
+ostrzeżenie. Wtyczka nie zdążyła działać w tej sesji przed zmianą (brak `~/.claude/security`),
+więc limit nie został zużyty. Zostaje jednorazowa instalacja SDK przy pierwszym starcie sesji
+(~30–60 s), niewyłączalna bez wyłączenia całej wtyczki.
+
 ---
 
 ### ETAP 4 — hipotezy otwarte, WYMAGAJĄCE DECYZJI UŻYTKOWNIKA
