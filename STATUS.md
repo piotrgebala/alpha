@@ -2258,7 +2258,8 @@ Trzy niezależne usterki, wszystkie mechaniczne:
      poprawki partii 1 zachowane): `clas5-runda` — „operacje git po stronie użytkownika”
      sprzeczne z „Podziałem ról” w `CLAUDE.md`; `quant-strategy-catalog` — historia danych 4h
      to 6,8 roku (od 2019-09), nie 3 lata (dwa miejsca).
-   - Partia 4 — **PRZYGOTOWANA 2026-09-23 (po A1), czeka na wgranie przez użytkownika**; paczki:
+   - Partia 4 — **wgrana i zweryfikowana** (po A1; synchronizacja 17:14, treść bajt w bajt = paczki,
+     `diff -r` scratchpad ↔ `synced/` dla wszystkich trzech skilli); paczki:
      `Downloads/clas5-skille-2026-09-23-po-a1/{ta-toolkit,quant-strategy-catalog,clas5-quant}.skill`
      (walidacja frontmatteru `skill-creator` OK; test przecieku nowej funkcji OK). Powód: po A1
      skille twierdziły, że formacje świecowe są „nietknięte", a kryterium werdyktu ma jeden
@@ -2271,8 +2272,7 @@ Trzy niezależne usterki, wszystkie mechaniczne:
      „Stan projektu" o zasadę 20, serie W/N/A, kryterium dwóch warunków (`t_neff` + `ci_low > p*`),
      cap N_eff ≤ n (Poprawka 2), wzorce błędów 11–14 w `lessons-learned.md`, §3/§4/§6/§7
      `methodology.md`, wykonanie i wyjścia wielonogowe w `risk-and-sizing.md` §4. `clas5-runda`
-     bez zmian (procedura aktualna). Do czasu wgrania obowiązują wersje z chmury (`CLAUDE.md`).
-     Weryfikacja po wgraniu: `diff -r` scratchpadu z `~/.claude/skills/synced/`.
+     bez zmian (procedura aktualna). Od 17:14 obowiązują nowe wersje (źródło: chmura, `CLAUDE.md`).
 3. **Konfiguracja maszyny nie została ruszona.** Wtyczki `data` świadomie nie włączam: to plik
    poza repo, wyłączony celowo razem z sześcioma innymi, a działający na wszystkie projekty
    użytkownika. Rozwiązanie z punktu 1 jest odporniejsze — działa też w sesji chmurowej.
