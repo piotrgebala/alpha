@@ -16,14 +16,12 @@
     "ENABLE_STOP_REVIEW": "0",
     "ENABLE_COMMIT_REVIEW": "0"
   },
+  "disableClaudeAiConnectors": true,
   "enabledPlugins": {
-    "code-review@claude-plugins-official": true,
     "data@synced": true,
     "engineering@synced": true,
     "security-guidance@claude-plugins-official": true,
-    "claude-code-setup@claude-plugins-official": true,
-    "document-skills@anthropic-agent-skills": true,
-    "example-skills@anthropic-agent-skills": true
+    "claude-code-setup@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
@@ -39,7 +37,26 @@
       }
     }
   },
+  "skillOverrides": {
+    "anthropic-skills:docs": "user-invocable-only",
+    "anthropic-skills:import-memory": "user-invocable-only",
+    "anthropic-skills:morning": "user-invocable-only",
+    "anthropic-skills:pine-script-v6-bybit": "user-invocable-only"
+  },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py \"${CLAUDE_PROJECT_DIR:-.}/tools/frozen_guard.py\" hook 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/frozen_guard.py\" hook 2>/dev/null || true",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Skill",

@@ -9,13 +9,38 @@ chmurowa). Decyzja użytkownika 2026-09-23: wtyczki mają działać w projekcie 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SETTINGS = json.loads((REPO / ".claude" / "settings.json").read_text(encoding="utf-8"))
+CLAUDE_MD = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
 
 # Wtyczki z chmury konta claude.ai nie potrzebują źródła w repo — przychodzą synchronizacją.
 CLOUD_MARKETPLACE = "synced"
+# Wartości `skillOverrides`, które Claude Code rozumie (sprawdzone w kodzie 2.1.280).
+SKILL_OVERRIDE_VALUES = {"on", "name-only", "user-invocable-only", "off"}
+
+
+def hooks_for(event: str) -> list[tuple[str, str]]:
+    """(matcher, komenda) każdego hooka zdarzenia."""
+    out = []
+    for group in SETTINGS.get("hooks", {}).get(event, []):
+        for hook in group.get("hooks", []):
+            out.append((group.get("matcher", ""), hook.get("command", "")))
+    return out
+
+
+def rule_19_skills() -> set[str]:
+    """Nazwy skilli z tabeli „moment pracy → skill” w CLAUDE.md (zasada 19)."""
+    table = re.search(r"\| moment pracy \| skill \|\n(.*?)\n\n", CLAUDE_MD, re.S)
+    assert table, "tabela zasady 19 nie znaleziona w CLAUDE.md"
+    names = set()
+    for row in table.group(1).splitlines():
+        cells = [c.strip() for c in row.strip().strip("|").split("|")]
+        if len(cells) == 2:
+            names.update(re.findall(r"`([^`]+)`", cells[1]))
+    return names
 
 
 def test_every_non_cloud_plugin_declares_its_marketplace_in_the_repo():
@@ -55,3 +80,41 @@ def test_security_guidance_runs_only_pattern_layer():
         assert env.get(switch) == "0", switch
     assert env.get("ENABLE_PATTERN_RULES", "1") != "0"  # warstwa wzorców zostaje
     assert env.get("SECURITY_GUIDANCE_DISABLE", "") != "1"  # wtyczka nie jest wyłączona
+
+
+def test_frozen_guard_hook_guards_every_file_editing_tool():
+    """Zasada 13 pilnowana programem (T10): hook PreToolUse `tools/frozen_guard.py` na
+    KAŻDYM narzędziu edycji plików — luka w matcherze to cicha dziura w zasadzie."""
+    matches = [
+        (matcher, command)
+        for matcher, command in hooks_for("PreToolUse")
+        if "tools/frozen_guard.py" in command
+    ]
+    assert matches, "brak hooka tools/frozen_guard.py w PreToolUse"
+    for tool in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+        assert any(re.fullmatch(matcher, tool) for matcher, _ in matches), tool
+
+
+def test_skill_overrides_are_valid_and_never_hide_a_rule_19_skill():
+    """Ukrywać przed modelem wolno tylko skille spoza tabeli zasady 19 — inaczej skill
+    obowiązkowy zniknąłby z listy wyboru po cichu. Wartości: te, które Claude Code rozumie."""
+    mandatory = rule_19_skills()
+    assert mandatory, "tabela zasady 19 w CLAUDE.md jest pusta?"
+    for name, value in SETTINGS.get("skillOverrides", {}).items():
+        assert value in SKILL_OVERRIDE_VALUES, (name, value)
+        bare = name.split(":", 1)[-1]
+        assert name not in mandatory and bare not in mandatory, name
+
+
+def test_project_sessions_carry_no_account_connectors():
+    """Decyzja użytkownika 2026-09-23 (T10): łączniki konta claude.ai (Gmail, Kalendarz,
+    Drive, Docs, Strava) nie mają zastosowania w CLAS-5 — w sesjach projektu wyłączone."""
+    assert SETTINGS.get("disableClaudeAiConnectors") is True
+
+
+def test_every_enabled_plugin_is_documented_in_claude_md():
+    """Lista wtyczek w CLAUDE.md ma odzwierciedlać konfigurację (jedna informacja, jedno
+    miejsce) — wtyczka włączona, o której CLAUDE.md milczy, to nieaktualny dokument."""
+    for plugin, enabled in SETTINGS.get("enabledPlugins", {}).items():
+        if enabled:
+            assert f"`{plugin.split('@', 1)[0]}`" in CLAUDE_MD, plugin

@@ -2320,6 +2320,47 @@ ostrzeżenie. Wtyczka nie zdążyła działać w tej sesji przed zmianą (brak `
 więc limit nie został zużyty. Zostaje jednorazowa instalacja SDK przy pierwszym starcie sesji
 (~30–60 s), niewyłączalna bez wyłączenia całej wtyczki.
 
+#### ✅ T10 — przegląd optymalizacyjny skilli, wtyczek i łączników (2026-09-23, 0 wariantów)
+
+Prośba użytkownika: „przejrzyj jeszcze raz wszystkie skille oraz wtyczki oraz katalogi wtyczek
+pod względem projektu i zaproponuj usprawnienia”, potem „wykonaj wszystko”. **Stan przed:**
+68 skilli w sesji (32 bez zastosowania w CLAS-5), 7 wtyczek, 18 łączników MCP z wtyczek
+`engineering`/`data` (13 próbuje się łączyć przy każdym starcie: 5 nie łączy się, 8 czeka na
+logowanie, 0 używanych), 5 łączników konta, ~4,4 tys. tokenów kosztu stałego na sesję.
+Liczniki użycia Claude Code (13 uruchomień): `engineering:code-review` 6×, `clas5-runda` 4×,
+`clas5-quant` 3×, `update-config` 3×; wtyczka `data` 0× (brak rund badawczych od zasady 19),
+`document-skills` / `example-skills` / `code-review` z GitHuba 0×.
+**Zrobione w repo:** (B) `document-skills`, `example-skills` i `code-review` z GitHuba wyłączone
+w `.claude/settings.json` (duplikaty chmury / 11 z 12 bez zastosowania / tylko pull requesty;
+źródła zostają, powrót = jedna komenda); (C) 4 osobiste skille konta ukryte przed modelem przez
+`skillOverrides` — sprawdzone w kodzie Claude Code 2.1.280, że działa TYLKO na skille spoza
+wtyczek, więc wcześniejsza propozycja ukrycia duplikatów z wtyczek była błędna i odpadła;
+(D) `disableClaudeAiConnectors` — łączniki konta zniknęły z sesji natychmiast po zapisie;
+(E) **zasada 13 pilnowana programem:** `runs/ZAMROZONE.txt` (23 skrypty) + hook
+`tools/frozen_guard.py` (PreToolUse; odmowa sprawdzona na żywo na pliku próbnym) + 59 testów,
+w tym spójność listy z komendami w README rund i z wykluczeniami `pyproject.toml`;
+(H) audyt `CLAUDE.md` listą kontrolną `claude-md-management` (z kopii katalogu, bez
+instalowania wtyczki): dołożona sekcja „Komendy”, tabela zasady 19 +5 wierszy, nakładki skilli
+rozstrzygnięte, lista skilli chmury 2→5, rozróżnienie `anthropic-skills:` / `anthropic-agent-skills`;
+(J) test, że każda włączona wtyczka jest opisana w `CLAUDE.md`.
+**Zostawione świadomie:** `security-guidance` (koszt mały; 302 MB środowiska SDK zostaje, bo
+instalator nie patrzy na wyłączniki), wtyczki `engineering`/`data` w całości (7 z 20 skilli
+używanych; wrócić po 3–4 rundach z danymi z rejestru), `pyright-lsp` (później, wymaga
+`pip install pyright`), `discernment-nudge` (bez decyzji użytkownika).
+**Po stronie użytkownika** (klasyfikator trybu auto zablokował edycję plików Claude Code poza
+repo jako „samomodyfikację”): (A) `/mcp disable` dla 18 łączników wtyczek — zapis
+w `~/.claude.json`; (I) usunięcie martwych wpisów `finance@synced` i `small-business@synced`
+z `~/.claude/settings.json`. Do potwierdzenia po restarcie sesji: skille ukryte przez
+`skillOverrides` nie są na liście modelu.
+**Przegląd diffu (16c, `engineering:code-review`): Approve** — jedna poprawka po przeglądzie
+(komunikat odmowy z polskimi znakami; JSON ucieka je do ASCII, więc kodowanie konsoli nie ma
+znaczenia); 507 → 570 testów zielonych.
+**Użyte skille** (rejestr gałęzi `wtyczki-w-claude-md`):
+`claude-code-setup:claude-automation-recommender` (analiza zastosowania wtyczek),
+`engineering:testing-strategy` (plan testów hooka), `engineering:code-review` (bramka 16c);
+`update-config` nie wczytany ponownie — jego treść była w kontekście z dwóch wcześniejszych
+gałęzi tej samej sesji.
+
 ---
 
 ### ETAP 4 — hipotezy otwarte, WYMAGAJĄCE DECYZJI UŻYTKOWNIKA
