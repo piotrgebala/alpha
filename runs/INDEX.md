@@ -57,6 +57,7 @@ podsumowanie pod tabelą.
 | **A2** | 2026-09-23 | [a2-rodziny-at](2026-09-23_a2-rodziny-at/README.md) | **Pozostałe rodziny AT ze skilla `ta-toolkit` jako reguły** (decyzja użytkownika „wykonaj"): 10 cech deterministycznych (`agents/ta_rules.py`, parametry domyślne skilla, test przecieku), populacja kontroli N1 (2021+, 69 okien). Rachunek mocy z częstości sygnału: 3 reguły stanowe osobno (**A2.1** struktura trendu HH/HL, **A2.2** Fibonacci 38–62 %, **A2.3** wsparcie/opór ≤ 0,5·ATR), 5 zdarzeniowych osobno NIEMIERZALNE (86–988 sygnałów) → jedna grupa **A2.4** (sign sumy), **A2.5** model + 10 cech AT. Pozytyw przy z_5 = 2,576 (Bonferroni). Pre-rejestracja `f9805fa`, skrypt `d80b621` | **5 — LICZNIK A = 7/7, WSZYSTKIE RODZINY AT ZAMKNIĘTE (STOP)** | **3 NEGATYWNE, 2 NIEROZSTRZYGNIĘTE, 0 POZYTYWNYCH.** A2.1 p **48,20 %** [46,98; 49,42], −0,127 % [−0,170; −0,084] (t_neff −3,90; N_eff 2 875/6 423); A2.3 49,87 %, −0,080 % [−0,114; −0,045]; A2.5 −0,099 % [−0,141; −0,056], parowane z kontrolą +0,005 % [−0,055; +0,066] przy 35 % zmienionych decyzji i abstynencji 40,4 → 42,7 %; A2.2 51,5 % [49,4; 53,6], −0,041 % [−0,110; +0,028] — rozdzielczość; A2.4 48,3 %, −0,103 % [−0,182; −0,024] — guard n 2 133 < 2 366. Reguły „z ruchem" znów pod monetą. Kill-switch tłumi 3,8–4,8 % wypełnień reguł stanowych. Walidacja (16a): **READY** |
 | **C1** | 2026-09-23 | [c1-cash-and-carry](2026-09-23_c1-cash-and-carry/README.md) | **NOWA SERIA C — cash-and-carry z hedgem spot na BTC** (punkt 2 zlecenia użytkownika; kierunek otwarty po P2): long spot + short perp, P&L per okres 8h = funding otrzymany + (r_spot − r_perp) − koszty przełączeń (0,19 % na wejście/wyjście: spot 0,10 % + perp 0,05 % + poślizg). **Nowe źródło: świece 8h spot Binance** (6 021, 0 dziur, znaczniki = perp = funding). Target: **carry (przepływ), nie kierunek**; próg 0; N_eff z autokorelacji; z_2 = 2,241. Ramiona: C1a zawsze w pozycji, C1b po dodatnim ostatnim fundingu. Pre-rejestracja `a8ce150`, kod `ae169f4` | **2 — LICZNIK C WYCZERPANY (2/2)** | **C1a POZYTYWNY — pierwszy w projekcie, ale to przepływ kontraktowy, nie prognoza:** +0,0099 %/8h [+0,0063; +0,0135], t_neff **+5,40** przy **N_eff 286** (funding lag-1 0,84); rocznie **+10,9 % nominału [6,9; 14,8] = +5,4 % kapitału [3,5; 7,4]**; Σ funding 60,2 %, Σ hedge −0,13 %, koszty 0,38 %, obsunięcie 0,64 %. **Połowa z 2021** (15 %/rok kapitału); 2022–2026: 0,4–6 %/rok; ostatnie 3 lata 3,6 % brutto. **C1b NEGATYWNY:** 875 przełączeń = 166 % kosztów, −9,3 %/rok kapitału. Nie mierzone: likwidacja shorta (+90 %/30 dni w 2021), ryzyko giełdy, koszt kapitału. Walidacja (16a): **READY** |
 | **R1** | 2026-09-23 | [r1-premia-rebalansowa](2026-09-23_r1-premia-rebalansowa/README.md) | **NOWA SERIA R — premia rebalansowa (B2), „inny cel niż kierunek"**: koszyk top-20 po 30-dniowym obrocie, skład point-in-time miesięcznie (uniwersum P2 z wycofanymi, 281 symboli), od 2021-02 (zasada 20), 65 koszyków, 1 976 dni; A = równe wagi codziennie vs B = równe wagi na starcie miesiąca; premia = r_A − r_B − 0,10 % × obrót. Próg 0, jedno ramię. Pre-rejestracja `fb18d98`, kod `f4569bd` + naprawa testu `db16af7` | **1 — LICZNIK R WYCZERPANY (1/1)** | **NIEROZSTRZYGNIĘTY, punktowo UJEMNY:** netto **−3,55 %/rok [−9,50; +2,40]**, brutto −2,68 %, koszt 0,87 %; wartość A względem B **−12,1 %** przez 5,4 roku; 36/65 miesięcy dodatnich. Scenariusz „ruchy niezależne" (6–11 %/rok brutto, zapisany przed wynikiem) POZA CI (górny kraniec +3,3 %) → momentum względne wewnątrz miesiąca zjada premię. Rozdzielczość 8,5 %/rok (3× gorsza niż proxy ex ante — ogony dyspersji). Walidacja (16a): **READY** |
+| **P3** | 2026-09-23 | [p3-sonda-zrodel-ii](2026-09-23_p3-sonda-zrodel-ii/README.md) | **Sonda źródeł danych II + podłączenie** (decyzja użytkownika: „podpięcie dodatkowych danych"): brama G1–G4 zapisana PRZED pobraniem; kolektor `data/fetch_external.py` (8 źródeł, bez kluczy, idempotentny) + profil `data/profile_external.py`; przegląd bezpieczeństwa (1 znalezisko poprawione) | **0 — POZA licznikami** (0 korelacji ze zwrotem) | **Archiwum `data.binance.vision` ma pozycjonowanie (OI, L/S top traderów i wszystkich kont, taker ratio) co 5 min od 2020-09-01: 2 213 dni, zero brakujących, pokrycie bazy 99,90 % — P1 sprawdziło tylko REST (30 dni).** Przechodzą też: funding COIN-M od 2020-08 (masa 42,7 % na 0,0001), 24 kontrakty kwartalne 8h (330 pustych świec po wygaśnięciu), DVOL od 2021-03-24 (95,9 %), CoinMetrics 14 metryk on-chain (0 braków), F&G, Coinbase; FRED jako tło. Dziura: top-trader L/S 2021-12→2022-12 (16 % bazy). Odpadły: likwidacje (archiwum puste), OKX, bookDepth (od 2023). Walidacja (16a): **READY** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -77,6 +78,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
+- **Sonda źródeł II + podłączenie (P3, 2026-09-23) — POZA licznikami: 0 wariantów.** Pobranie i profil 13 zbiorów, zero korelacji ze zwrotem. Każda hipoteza na nowych danych (O1 pozycjonowanie, VRP z DVOL, on-chain, F&G, premia Coinbase, basis/COIN-M) = NOWA SERIA z własnym licznikiem.
 - **Sonda wykonalnosci carry przekrojowego (P2) — POZA licznikami: 0 wariantow.** Liczy tylko mechanizm (funding − koszt) i rozrzut do rachunku mocy; srednia zwrotu z cen i P&L NIE policzone. Werdykt NIEMIERZALNA ⇒ hipoteza C (carry przekrojowy na perpetualach) NIE dostaje licznika.
 - **Kalibracja przyrzadu (Z9, Z19, K1, K2, K3, T4) — POZA licznikami hipotez: 0 wariantow.** Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
 - **Model kosztow / wykonanie — POZA licznikami hipotez: 0 wariantow.** C2.12 policzono jako **1 wariant**, bo raportowal werdykt klasyfikacyjny na tych samych danych. H3 **nie** — pre-rejestracja (regula D5) zakazala raportowania trafnosci, CI, z_stat, marginesu i klasyfikacji jako wyniku; liczby te sa w `raw_output.txt` z jawna adnotacja, ze nie uczestnicza w decyzji. Uzasadnienie mechaniczne: koszt moze ruszyc trafnosc WYLACZNIE przez selekcje (inny moment kill-switcha), czyli bylby to szum selekcyjny.
@@ -360,6 +362,10 @@ podsumowanie pod tabelą.
    WYLACZNIE kierunki wymagajace zmiany zalozen: inny target niz kierunek (nowa ekonomia
    wyplaty), carry przekrojowy (silnik portfelowy), ETH/SOL/BNB (brak czego generalizowac),
    zbieranie danych pozycjonowania od dzis (~3,4 roku do uzytecznosci).
+   **AKTUALIZACJA P3 (2026-09-23): zdanie o pozycjonowaniu jest NIEAKTUALNE** — P1 sprawdziło
+   REST API, a archiwum plików Binance ma te same wielkości co 5 min od 2020-09-01 (wniosek 59).
+   Pozycjonowanie jest MIERZALNE na nowej bazie (n ≈ 6 950 transakcji, 1,55× wymaganych);
+   reszta wniosku (OHLCV, funding jako cecha) bez zmian.
 40. **CARRY PRZEKROJOWY NA PERPETUALACH JEST NIEMIERZALNY — a przekroj NIE mnozy proby (P2).**
    Na 20 najwiekszych monetach (2020–2026, 1 161 okien 48h) sam funding pokrywa koszt handlu
    limitami: F − C = 0,097% na okno, CI [0,051%; 0,143%] — **pierwszy w projekcie dodatni
@@ -512,6 +518,25 @@ podsumowanie pod tabelą.
     szeregu różnic na danych (bez patrzenia na średnią), nie z wzoru. Procesowo: `pytest | tail`
     maskuje kod wyjścia — kod R1 trafił do commita z padającym testem; `set -o pipefail`
     w każdym łańcuchu z testami (naprawa `db16af7` przed przebiegiem końcowym).
+59. **SONDA ŹRÓDŁA SPRAWDZA WSZYSTKIE KANAŁY DYSTRYBUCJI, NIE JEDEN (P3 koryguje P1):** P1
+    (2026-09-22) skreśliło całą klasę danych o pozycjonowaniu po sprawdzeniu REST API
+    (`fapi.binance.com/futures/data/*`, 30,8 dnia, HTTP 400 dalej) i uruchomiło kolektor
+    „na 3,4 roku". Publiczne ARCHIWUM PLIKÓW (`data.binance.vision`, `futures/um/daily/metrics`)
+    ma te same wielkości co 5 minut od **2020-09-01**: 2 213 dni bez luki, 636 710 odczytów,
+    pokrycie bazy z zasady 20 **99,90 %**, wartości zgodne z kolektorem REST za wspólne 505 godzin
+    (mediana różnicy 0,02–0,1 %). Koszt pomyłki: jeden dzień, kolektor i błędny wniosek 39
+    (zaktualizowany). Reguła: zanim źródło dostanie status „niemierzalne danymi", sprawdź REST
+    **i** archiwum plików **i** dumpy; zapisz, co sprawdzono, a czego nie.
+60. **OSIEM ŹRÓDEŁ SPOZA OHLCV JEST DOSTĘPNYCH ZA DARMO Z HISTORIĄ ≥ 96 % BAZY (P3):**
+    pozycjonowanie 5 min (99,9 %; top-trader L/S z dziurą 2022 = 84 %), funding COIN-M 8h od
+    2020-08 (99,98 %; masa punktowa 42,7 % na 0,0001 — progi absolutne, wniosek 15), 24 kontrakty
+    kwartalne 8h (98,3 %; 330 pustych świec po wygaśnięciu do odfiltrowania), DVOL BTC/ETH 1d
+    od 2021-03-24 (95,9 %), CoinMetrics 14 metryk on-chain 1d (100 %, 0 braków; `shift(1)`
+    przez opóźnienie publikacji), Fear & Greed 1d (99,95 %), Coinbase 1d (100 %), FRED 5 serii
+    (dni robocze; tło do carry, nie cecha). Odpadły: likwidacje (archiwum puste), OKX (bez
+    historii), księga zleceń (od 2023). Każde źródło = nowa seria z własną pre-rejestracją
+    i rachunkiem mocy; cecha 4h na tej bazie ma n ≈ 6 950 transakcji, half-width ≈ 1,2 pp.
+    Kolektor REST `CLAS5-positioning` zbędny dla historii (archiwum, opóźnienie ~1 dnia).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

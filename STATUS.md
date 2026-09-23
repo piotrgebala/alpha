@@ -40,7 +40,12 @@
 > [3,5; 7,4], połowa z 2021, ostatnie 3 lata 3,6 %; przełączanie po znaku fundingu NEGATYWNE;
 > decyzja o produkcie należy do użytkownika. R1 (2026-09-23): premia rebalansowa koszyka top-20
 > −3,6 %/rok [−9,5; +2,4] — ruchy względne w krypto trwają, rebalans nie zarabia; seria R 1/1.
-> Kolektor pozycjonowania aktywny (codziennie 09:00). Punkt 2 zlecenia zamknięty.**
+> Kolektor pozycjonowania aktywny (codziennie 09:00). Punkt 2 zlecenia zamknięty.
+> P3 (2026-09-23): podłączono 8 darmowych źródeł spoza OHLCV — **archiwum Binance ma
+> pozycjonowanie co 5 min od 2020-09 (6 lat; P1 sprawdziło tylko REST z 30 dniami), więc
+> pozycjonowanie jest MIERZALNE** (wniosek 59); do tego funding COIN-M, 24 kontrakty
+> kwartalne, DVOL, on-chain, F&G, FRED, Coinbase. Zero pomiaru sygnału; następne rundy
+> D1 (produkt carry) → O1 (pozycjonowanie jako cecha) → X1 (momentum przekrojowe).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2541,10 +2546,28 @@ końcowym; odtąd `set -o pipefail`.
 
 **Punkt 2 zlecenia użytkownika 2026-09-23 ZAMKNIĘTY:** carry z hedgem (C1: POZYTYWNY jako
 przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), pozycjonowanie
-(kolektor AKTYWNY — niżej). Otwarte pozostają wyłącznie kierunki wymagające nowych danych
-(pozycjonowanie za ~3 lata, on-chain — brama danych) i decyzja o produkcie cash-and-carry.
+(kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
+(pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
+od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
 
-#### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
+#### P3 — sonda źródeł danych II + podłączenie ⚪ ZAMKNIĘTA 2026-09-23 (0 wariantów)
+
+Decyzja użytkownika 2026-09-23: „sprawdź wszystkie warianty, myślę też o podpięciu dodatkowych
+danych". Brama danych G1–G4 zapisana PRZED pobraniem; kolektor `data/fetch_external.py` (8 źródeł,
+bez kluczy, idempotentny, 4,5 min) + profil `data/profile_external.py`; przegląd bezpieczeństwa
+nowego kodu sieciowego (1 znalezisko Medium — adres kolejnej strony z odpowiedzi serwera —
+poprawione przed scaleniem, `http_get` tylko `https`). **Wynik: archiwum plików Binance ma
+pozycjonowanie (OI, proporcje L/S, taker ratio) co 5 min od 2020-09-01 — 2 213 dni bez luki,
+pokrycie bazy 99,9 %, wartości zgodne z kolektorem REST; P1 sprawdziło tylko REST API**
+(wniosek 59, wniosek 39 zaktualizowany). Przechodzą też: funding COIN-M (od 2020-08), 24 kontrakty
+kwartalne 8h, DVOL BTC/ETH (od 2021-03-24, 95,9 %), CoinMetrics 14 metryk on-chain (0 braków),
+Fear & Greed, Coinbase; FRED jako tło. Odpadły: likwidacje, OKX, księga zleceń. Zastrzeżenia:
+top-trader L/S z dziurą 2021-12→2022-12 (16 % bazy), 473 zerowe odczyty OI, 330 pustych świec
+kontraktów po wygaśnięciu, masa punktowa fundingu COIN-M 42,7 % (wniosek 60). Cache
+`data/raw/external/` (34 MB, poza gitem). Zero pomiaru sygnału.
+→ [runs/p3](runs/2026-09-23_p3-sonda-zrodel-ii/README.md)
+
+#### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22 (po P3: zbędne dla historii)
 
 `data/collect_positioning.py`: OI + 4 proporcje long/short, 1h, BTC/ETH/SOL/BNB, dopisywane do
 `data/raw/positioning/`. Pierwszy przebieg 2026-09-22 (od 2026-09-01). **AKTYWNE (sprawdzone
@@ -2553,7 +2576,11 @@ codziennie 09:00, ostatni przebieg 2026-09-23 09:00:01 z wynikiem 0, następny 2
 `collect.log`: +221 wierszy 2026-09-23, 0 błędów; BTC OI 512 punktów 1h od 2026-09-01 23:00.
 Ograniczenia zadania: „Logon Mode: Interactive only" (działa tylko przy zalogowanym
 użytkowniku) i „No Start On Batteries" — dni bez logowania zostawią dziurę, którą kolejny
-przebieg częściowo nadrobi (500 punktów = ~20,8 dnia). Użyteczne za ~3,4 roku.
+przebieg częściowo nadrobi (500 punktów = ~20,8 dnia). ~~Użyteczne za ~3,4 roku.~~
+**Aktualizacja P3 (2026-09-23):** archiwum `data.binance.vision` daje te same wielkości od
+2020-09 z opóźnieniem ~1 dnia, więc kolektor jest zbędny dla historii; zostaje jako tania
+kontrola świeżości do czasu, aż O1 potwierdzi codzienne uzupełnianie archiwum. Wyłączenie
+(`schtasks /Delete /TN "CLAS5-positioning" /F`) = decyzja użytkownika (zadanie na jego maszynie).
 
 #### P1 — sonda wykonalności źródeł danych (2026-09-22)
 

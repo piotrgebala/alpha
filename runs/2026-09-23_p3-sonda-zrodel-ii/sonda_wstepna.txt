@@ -1,0 +1,111 @@
+===== probe1 =====
+== 1. Binance archive: metrics (OI, L/S ratios) earliest daily file for BTCUSDT ==
+earliest keys: ['data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2020-09-01.zip', 'data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2020-09-01.zip.CHECKSUM', 'data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2020-09-02.zip']
+around latest: ['data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-09-10.zip', 'data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-09-10.zip.CHECKSUM', 'data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-09-11.zip']
+== 2. Binance archive: metrics sample content (first file) ==
+BTCUSDT-metrics-2020-09-01.csv rows: 577
+create_time,symbol,sum_open_interest,sum_open_interest_value,count_toptrader_long_short_ratio,sum_toptrader_long_short_ratio,count_long_short_ratio,sum_taker_long_short_vol_ratio
+2020-09-01 00:00:00,BTCUSDT,39080.23100000,456144339.23360443,1.17547937,1.23012681,1.35731217,0.78373373
+2020-09-01 00:00:00,BTCUSDT,39080.23100000,456144339.23360443,1.17547937,1.23012681,1.35731217,0.78373373
+== 3. COIN-M funding (cm) BTCUSD_PERP earliest monthly ==
+['data/futures/cm/monthly/fundingRate/BTCUSD_PERP/BTCUSD_PERP-fundingRate-2022-07.zip', 'data/futures/cm/monthly/fundingRate/BTCUSD_PERP/BTCUSD_PERP-fundingRate-2022-07.zip.CHECKSUM', 'data/futures/cm/monthly/fundingRate/BTCUSD_PERP/BTCUSD_PERP-fundingRate-2022-08.zip']
+== 4. Dated (quarterly) contracts um: symbols BTCUSDT_* ==
+['data/futures/um/monthly/klines/BTCUSDT_', 'data/futures/um/monthly/klines/BTCUSDT_210326/', 'data/futures/um/monthly/klines/BTCUSDT_210625/', 'data/futures/um/monthly/klines/BTCUSDT_210924/', 'data/futures/um/monthly/klines/BTCUSDT_211231/', 'data/futures/um/monthly/klines/BTCUSDT_220325/', 'data/futures/um/monthly/klines/BTCUSDT_220624/', 'data/futures/um/monthly/klines/BTCUSDT_220930/', 'data/futures/um/monthly/klines/BTCUSDT_221230/', 'data/futures/um/monthly/klines/BTCUSDT_230331/', 'data/futures/um/monthly/klines/BTCUSDT_230630/', 'data/futures/um/monthly/klines/BTCUSDT_230929/', 'data/futures/um/monthly/klines/BTCUSDT_231229/', 'data/futures/um/monthly/klines/BTCUSDT_240329/', 'data/futures/um/monthly/klines/BTCUSDT_240628/', 'data/futures/um/monthly/klines/BTCUSDT_240927/', 'data/futures/um/monthly/klines/BTCUSDT_241227/', 'data/futures/um/monthly/klines/BTCUSDT_250328/', 'data/futures/um/monthly/klines/BTCUSDT_250627/', 'data/futures/um/monthly/klines/BTCUSDT_250926/', 'data/futures/um/monthly/klines/BTCUSDT_251226/', 'data/futures/um/monthly/klines/BTCUSDT_260327/', 'data/futures/um/monthly/klines/BTCUSDT_260626/', 'data/futures/um/monthly/klines/BTCUSDT_260925/', 'data/futures/um/monthly/klines/BTCUSDT_261225/'] trunc False
+cm: ['data/futures/cm/monthly/klines/BTCUSD_', 'data/futures/cm/monthly/klines/BTCUSD_200925/', 'data/futures/cm/monthly/klines/BTCUSD_201225/', 'data/futures/cm/monthly/klines/BTCUSD_210326/', 'data/futures/cm/monthly/klines/BTCUSD_210625/', 'data/futures/cm/monthly/klines/BTCUSD_210924/', 'data/futures/cm/monthly/klines/BTCUSD_211231/', 'data/futures/cm/monthly/klines/BTCUSD_220325/', 'data/futures/cm/monthly/klines/BTCUSD_220624/', 'data/futures/cm/monthly/klines/BTCUSD_220930/', 'data/futures/cm/monthly/klines/BTCUSD_221230/', 'data/futures/cm/monthly/klines/BTCUSD_230331/', 'data/futures/cm/monthly/klines/BTCUSD_230630/', 'data/futures/cm/monthly/klines/BTCUSD_230929/', 'data/futures/cm/monthly/klines/BTCUSD_231229/', 'data/futures/cm/monthly/klines/BTCUSD_240329/', 'data/futures/cm/monthly/klines/BTCUSD_240628/', 'data/futures/cm/monthly/klines/BTCUSD_240927/', 'data/futures/cm/monthly/klines/BTCUSD_241227/', 'data/futures/cm/monthly/klines/BTCUSD_250328/', 'data/futures/cm/monthly/klines/BTCUSD_250627/', 'data/futures/cm/monthly/klines/BTCUSD_250926/', 'data/futures/cm/monthly/klines/BTCUSD_251226/', 'data/futures/cm/monthly/klines/BTCUSD_260327/', 'data/futures/cm/monthly/klines/BTCUSD_260626/', 'data/futures/cm/monthly/klines/BTCUSD_260925/', 'data/futures/cm/monthly/klines/BTCUSD_261225/', 'data/futures/cm/monthly/klines/BTCUSD_PERP/']
+== 5. Deribit DVOL history earliest ==
+n 41 first [1616544000000, 84.8, 95.94, 80.52, 95.04] last [1620000000000, 79.09, 82.3, 75.18, 81.79]
+== 6. CoinMetrics community: btc metrics catalog (subset) ==
+n metrics for btc: 31
+AdrActCnt 2009-01-03 2026-09-22
+AdrBalCnt 2009-01-03 2026-09-22
+CapMVRVCur 2010-07-18 2026-09-22
+FlowInExUSD 2011-04-24 2026-09-22
+HashRate 2009-01-09 2026-09-22
+SplyCur 2009-01-03 2026-09-22
+TxCnt 2009-01-03 2026-09-22
+== 7. Fear & Greed earliest ==
+n 3153 oldest 2018-02-01 newest 2026-09-23
+== 8. FRED DTB3 (3M T-bill) ==
+rows 1516 observation_date,DTB3 2020-12-01,0.09 2026-09-21,4.02
+== 9. Coinbase spot candles BTC-USD earliest (2021-01-01, 1d) ==
+n 5 [1609459200, 28700, 29688.88, 28990.08, 29412.84, 22211.25251806]
+== 10. Binance archive: premiumIndexKlines / indexPriceKlines / markPriceKlines earliest BTCUSDT ==
+premiumIndexKlines ['data/futures/um/monthly/premiumIndexKlines/BTCUSDT/', 'data/futures/um/monthly/premiumIndexKlines/BTCUSDT/12h/', 'data/futures/um/monthly/premiumIndexKlines/BTCUSDT/15m/'] ['data/futures/um/monthly/premiumIndexKlines/BTCUSDT/1d/BTCUSDT-1d-2020-01.zip', 'data/futures/um/monthly/premiumIndexKlines/BTCUSDT/1d/BTCUSDT-1d-2020-01.zip.CHECKSUM']
+indexPriceKlines ['data/futures/um/monthly/indexPriceKlines/BTCUSDT/', 'data/futures/um/monthly/indexPriceKlines/BTCUSDT/12h/', 'data/futures/um/monthly/indexPriceKlines/BTCUSDT/15m/'] ['data/futures/um/monthly/indexPriceKlines/BTCUSDT/1d/BTCUSDT-1d-2020-01.zip', 'data/futures/um/monthly/indexPriceKlines/BTCUSDT/1d/BTCUSDT-1d-2020-01.zip.CHECKSUM']
+markPriceKlines ['data/futures/um/monthly/markPriceKlines/BTCUSDT/', 'data/futures/um/monthly/markPriceKlines/BTCUSDT/12h/', 'data/futures/um/monthly/markPriceKlines/BTCUSDT/15m/'] ['data/futures/um/monthly/markPriceKlines/BTCUSDT/1d/BTCUSDT-1d-2020-01.zip', 'data/futures/um/monthly/markPriceKlines/BTCUSDT/1d/BTCUSDT-1d-2020-01.zip.CHECKSUM']
+== 11. Binance spot archive BTCUSDT 1d earliest ==
+['data/spot/monthly/klines/BTCUSDT/1d/BTCUSDT-1d-2017-08.zip', 'data/spot/monthly/klines/BTCUSDT/1d/BTCUSDT-1d-2017-08.zip.CHECKSUM']
+== 12. Bybit funding history public (BTCUSDT linear) earliest? ==
+OK 5 {'symbol': 'BTCUSDT', 'fundingRate': '0.00060075', 'fundingRateTimestamp': '1609862400000'}
+== 13. OKX funding history public ==
+ 3 {'formulaType': 'withRate', 'fundingRate': '0.0000414573501689', 'fundingTime': '1782144000000', 'instId': 'BTC-USDT-SWAP', 'instType': 'SWAP', 'method': 'current_period', 'realizedRate': '0.0000414573501689'}
+== 14. blockchain.com charts (hash-rate, n-unique-addresses) ==
+n 6436 first 2009-01-03 last 2026-09-22
+== 15. Binance archive: liquidationSnapshot? bookDepth earliest ==
+liquidationSnapshot [] ['data/futures/um/daily/liquidationSnapshot/BTCUSDT/']
+bookDepth ['data/futures/um/daily/bookDepth/BTCUSDT/BTCUSDT-bookDepth-2023-01-01.zip', 'data/futures/um/daily/bookDepth/BTCUSDT/BTCUSDT-bookDepth-2023-01-01.zip.CHECKSUM'] ['data/futures/um/daily/bookDepth/BTCUSDT/']
+bookTicker ['data/futures/um/daily/bookTicker/BTCUSDT/BTCUSDT-bookTicker-2023-05-16.zip', 'data/futures/um/daily/bookTicker/BTCUSDT/BTCUSDT-bookTicker-2023-05-16.zip.CHECKSUM'] ['data/futures/um/daily/bookTicker/BTCUSDT/']
+
+===== probe2 =====
+C:\Users\pitge\AppData\Local\Temp\claude\C--Users-pitge-GIT-alpha\7ee5f53c-ce47-4102-8d02-500d380e6198\scratchpad\p3\probe2.py:49: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  d = j["result"]["data"]; print("ETH n", len(d), "first", dt.datetime.utcfromtimestamp(d[0][0]/1000).date(), "last", dt.datetime.utcfromtimestamp(d[-1][0]/1000).date(), "continuation", j["result"].get("continuation"))
+== A. metrics BTCUSDT: all daily files, gaps ==
+files 2213 first 2020-09-01 last 2026-09-22 expected days 2213
+missing days 0 [] 
+== B. metrics earliest for ETH/SOL/BNB ==
+ETHUSDT ['data/futures/um/daily/metrics/ETHUSDT/ETHUSDT-metrics-2021-12-01.zip']
+SOLUSDT ['data/futures/um/daily/metrics/SOLUSDT/SOLUSDT-metrics-2021-12-01.zip']
+BNBUSDT ['data/futures/um/daily/metrics/BNBUSDT/BNBUSDT-metrics-2021-12-01.zip']
+== C. metrics sample: duplicates and cadence in one file (2023-06-15) ==
+rows 288 unique ts 288 first 2023-06-15 00:00:00 last 2023-06-15 23:55:00
+2023-06-15 00:00:00,BTCUSDT,103669.64700000,2603875911.10265600,2.714475847490801,1.2045682831,3.0374152105654226,1.0618711512
+2023-06-15 23:55:00,BTCUSDT,104064.09800000,2661558584.96253900,1.9226603591547105,1.1892843031,2.330672944418925,1.1993651518
+== D. liquidationSnapshot BTCUSDT listing ==
+[]
+== E. COIN-M REST funding BTCUSD_PERP from 2020-08 ==
+5 {'symbol': 'BTCUSD_PERP', 'fundingTime': 1597075200000, 'fundingRate': '0.00010000', 'markPrice': '', 'rateType': 'Regular'}
+== F. OKX funding history depth (after=2021-01-10) ==
+ 0 []
+== G. Deribit DVOL ETH earliest; pagination size ==
+ETH n 966 first 2021-03-24 last 2023-11-14 continuation None
+== H. CoinMetrics community: all btc daily metrics ==
+  AdrActCnt 2009-01-03 2026-09-22
+  AdrBalCnt 2009-01-03 2026-09-22
+  AssetCompletionTime 2009-01-03 2026-09-22
+  AssetEODCompletionTime 2009-01-03 2026-09-22
+  BlkCnt 2009-01-03 2026-09-22
+  CapMVRVCur 2010-07-18 2026-09-22
+  CapMrktCurUSD 2010-07-18 2026-09-22
+  CapMrktEstUSD 2019-06-22 2026-09-22
+  FeeTotNtv 2009-01-03 2026-09-22
+  FlowInExNtv 2011-04-24 2026-09-22
+  FlowInExUSD 2011-04-24 2026-09-22
+  FlowOutExNtv 2011-04-24 2026-09-22
+  FlowOutExUSD 2011-04-24 2026-09-22
+  HashRate 2009-01-09 2026-09-22
+  IssTotNtv 2009-01-09 2026-09-22
+  IssTotUSD 2010-07-18 2026-09-22
+  PriceBTC 2009-01-03 2026-09-22
+  PriceUSD 2010-07-18 2026-09-22
+  ROI1yr 2011-07-18 2026-09-22
+  ROI30d 2010-08-17 2026-09-22
+  ReferenceRate 2026-09-16 2026-09-23
+  ReferenceRateETH 2026-09-16 2026-09-23
+  ReferenceRateEUR 2026-09-16 2026-09-23
+  ReferenceRateUSD 2026-09-16 2026-09-23
+  SplyCur 2009-01-03 2026-09-22
+  SplyExNtv 2011-04-24 2026-09-22
+  SplyExUSD 2011-04-24 2026-09-22
+  SplyExpFut10yr 2009-01-03 2026-09-22
+  TxCnt 2009-01-03 2026-09-22
+  TxTfrCnt 2009-01-03 2026-09-22
+  volume_reported_spot_usd_1d 2010-07-18 2026-09-22
+== I. dated contracts um list (all) ==
+24 ['BTCUSDT_210326', 'BTCUSDT_210625', 'BTCUSDT_210924', 'BTCUSDT_211231', 'BTCUSDT_220325', 'BTCUSDT_220624', 'BTCUSDT_220930', 'BTCUSDT_221230', 'BTCUSDT_230331', 'BTCUSDT_230630', 'BTCUSDT_230929', 'BTCUSDT_231229', 'BTCUSDT_240329', 'BTCUSDT_240628', 'BTCUSDT_240927', 'BTCUSDT_241227', 'BTCUSDT_250328', 'BTCUSDT_250627', 'BTCUSDT_250926', 'BTCUSDT_251226', 'BTCUSDT_260327', 'BTCUSDT_260626', 'BTCUSDT_260925', 'BTCUSDT_261225']
+intervals: ['12h', '15m', '1d', '1h', '1m', '1mo', '1w', '2h', '30m', '3d', '3m', '4h', '5m', '6h', '8h']
+8h files: ['data/futures/um/monthly/klines/BTCUSDT_220325/8h/BTCUSDT_220325-8h-2021-12.zip', 'data/futures/um/monthly/klines/BTCUSDT_220325/8h/BTCUSDT_220325-8h-2022-01.zip', 'data/futures/um/monthly/klines/BTCUSDT_220325/8h/BTCUSDT_220325-8h-2022-02.zip', 'data/futures/um/monthly/klines/BTCUSDT_220325/8h/BTCUSDT_220325-8h-2022-03.zip']
+== J. FRED other series quick ==
+DGS3MO 1516 2020-12-01,0.09 2026-09-21,4.17
+DTWEXBGS 1515 2020-12-01,112.8063 2026-09-18,119.5133
+SP500 1517 2020-12-01,3662.45 2026-09-22,7764.64
+SOFR 1517 2020-12-01,0.08 2026-09-22,3.87

@@ -52,7 +52,7 @@ na próbie ok. 8 000 transakcji (wystarczająco dużej, żeby rozstrzygnąć):
 |---|---|---|---|
 | momentum — „co rośnie, rośnie dalej” ([M1](runs/2026-09-22_m1-momentum-bez-bramki/README.md)) | 49,74% | 52,94% | brak przewagi |
 | funding — opłata za trzymanie pozycji, jedyna informacja spoza wykresu ceny ([F1](runs/2026-09-22_f1-funding-zmierzony/README.md)) | 50,34% | 52,94% | brak przewagi |
-| dane o pozycjach graczy ([P1](runs/2026-09-22_p1-sonda-zrodel-danych/README.md)) | — | — | nie da się zmierzyć: giełda daje tylko 30 dni historii |
+| dane o pozycjach graczy ([P1](runs/2026-09-22_p1-sonda-zrodel-danych/README.md)) | — | — | ~~nie da się zmierzyć: giełda daje tylko 30 dni historii~~ **sprostowane w [P3](runs/2026-09-23_p3-sonda-zrodel-ii/README.md): archiwum plików giełdy ma 6 lat historii — da się zmierzyć, pomiar w przygotowaniu** |
 
 **Co to znaczy:** przewidywanie KIERUNKU ceny BTC na tych danych nie daje przewagi — w każdym
 wariancie model trafia jak rzut monetą. Otwarte zostały tylko kierunki, które zmieniają samo
@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **708/708** (2026-09-23).
+Stan testów: **730/730** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -168,6 +168,18 @@ do +2,4 %; przez 5,4 roku wersja wyrównywana skończyła o 12 % niżej. Premia 
 podręcznik (6–11 % rocznie) leży poza przedziałem. **Co to znaczy:** w krypto ruchy względne
 trwają — zwycięzcy dalej wygrywają — więc wyrównywanie sprzedaje ich za wcześnie. Zamknięte (1/1).
 
+### 🟢 Nowe dane podłączone — P3 (2026-09-23): pozycjonowanie ma 6 lat historii, nie 30 dni
+
+Na prośbę o „podpięcie dodatkowych danych" sprawdziliśmy, co jeszcze da się pobrać za darmo
+i z długą historią. [P3](runs/2026-09-23_p3-sonda-zrodel-ii/README.md): **osiem źródeł**, w tym
+dane o tym, ilu graczy stoi po której stronie i ile mają otwartych pozycji — giełda publikuje
+je w archiwum plików **co 5 minut od września 2020**, choć jej API oddaje tylko 30 dni
+(sonda P1 sprawdziła tylko API). Do tego: funding kontraktu rozliczanego w bitcoinie, ceny 24
+kontraktów kwartalnych, zmienność z opcji (DVOL), 14 wskaźników z łańcucha bitcoina, indeks
+strachu i chciwości, stopy amerykańskie, ceny z Coinbase. **Co to znaczy:** wraca do gry
+kierunek, który był skreślony jako „nie da się zmierzyć". Sonda niczego nie mierzy — każde
+źródło dostanie własną rundę z rachunkiem mocy.
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -230,6 +242,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **A2 — reszta analizy technicznej: nic nie zarabia** | 2026-09-23 | Struktura trendu, wsparcie/opór, Fibonacci, zdarzenia AT (wybicie, podwójny szczyt/dno, głowa z ramionami, przecięcie średnich, linia trendu) jako reguły z parametrami ze skilla oraz wszystkie 10 cech AT w modelu — na tych samych świecach co model. Trzy ramiona NEGATYWNE (struktura trendu **48,2 %**, wsparcie/opór 49,9 %, model + AT bez zmian), dwa nierozstrzygnięte przez za małą liczbę sygnałów (Fibonacci 51,5 %, zdarzenia 48,3 %), żadne pozytywne. „Graj z trendem" konsekwentnie gorsze od monety. **Analiza techniczna na BTC 4h zamknięta (7/7)** | [runs/a2](runs/2026-09-23_a2-rodziny-at/README.md) |
 | **C1 — cash-and-carry: pierwszy dodatni wynik, ale to odsetki za dźwignię, nie prognoza** | 2026-09-23 | Long spot + short kontrakt na BTC zbiera opłatę funding bez ryzyka kierunku: **+5,4 % rocznie na kapitale** w przedziale [3,5; 7,4] za 5,5 roku, z czego połowa z 2021; ostatnie 3 lata 3,6 %. Hedge działa (rozjazdy ≈ 0, obsunięcie 0,64 %). Przełączanie po znaku opłaty przegrywa z kosztami (−9,3 %). Nie wyceniono: depozyt i likwidacja krótkiej nogi (BTC +90 % w 30 dni), ryzyko giełdy. **Decyzja o produkcie należy do użytkownika.** Seria zamknięta (2/2) | [runs/c1](runs/2026-09-23_c1-cash-and-carry/README.md) |
 | **R1 — premia rebalansowa: codzienne wyrównywanie koszyka nie zarabia** | 2026-09-23 | Koszyk 20 największych kryptowalut wyrównywany codziennie vs trzymany w miesiącu: **−3,6 % rocznie** w przedziale [−9,5; +2,4], o 12 % niżej po 5,4 roku; obiecywana premia 6–11 % poza przedziałem. Ruchy względne w krypto trwają, wyrównywanie sprzedaje zwycięzców za wcześnie. Z dwóch celów „nie-kierunkowych" tylko carry z hedgem (C1) daje przepływ. Seria zamknięta (1/1) | [runs/r1](runs/2026-09-23_r1-premia-rebalansowa/README.md) |
+| **P3 — nowe dane: pozycjonowanie ma 6 lat historii, nie 30 dni** | 2026-09-23 | Podłączono 8 darmowych źródeł spoza wykresu ceny. Archiwum plików Binance ma dane o pozycjach graczy co 5 minut od 2020-09 (P1 sprawdziło tylko API z 30 dniami) — kierunek „nie da się zmierzyć" wraca do gry. Do tego funding COIN-M, kontrakty kwartalne, DVOL, on-chain, Fear & Greed, FRED, Coinbase. Zero pomiaru sygnału; następne rundy: produkt carry (D1), pozycjonowanie jako cecha (O1), momentum przekrojowe (X1) | [runs/p3](runs/2026-09-23_p3-sonda-zrodel-ii/README.md) |
 
 ## Hipoteza w skrócie
 
