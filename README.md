@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **701/701** (2026-09-23).
+Stan testów: **708/708** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -158,6 +158,16 @@ z bezpieczną lokatą w dolarze, a dochodzą ryzyka, których pomiar nie obejmuj
 wymaga depozytu, a BTC potrafi urosnąć o 90 % w miesiąc; pieniądze leżą na giełdzie. **Czy z tego
 budować produkt — to decyzja użytkownika**, nie kolejna runda.
 
+### ⚪ Premia rebalansowa koszyka — R1 (2026-09-23): codzienne wyrównywanie nie zarabia
+
+Drugi „inny cel niż kierunek": koszyk 20 największych (po obrocie) kryptowalut w równych
+częściach, wyrównywany codziennie, porównany z tym samym koszykiem trzymanym przez miesiąc.
+Podręcznik obiecuje premię z „handlu zmiennością" (sprzedaj to, co urosło, dokup to, co spadło).
+[R1](runs/2026-09-23_r1-premia-rebalansowa/README.md): **−3,6 % rocznie**, przedział od −9,5 %
+do +2,4 %; przez 5,4 roku wersja wyrównywana skończyła o 12 % niżej. Premia obiecywana przez
+podręcznik (6–11 % rocznie) leży poza przedziałem. **Co to znaczy:** w krypto ruchy względne
+trwają — zwycięzcy dalej wygrywają — więc wyrównywanie sprzedaje ich za wcześnie. Zamknięte (1/1).
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -219,6 +229,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **A1 — formacje świecowe: podręcznik wskazuje kierunek odwrotny** | 2026-09-23 | Sześć formacji z podręcznika (bez parametrów do dobrania) jako reguła: trafność **46,4 %** w przedziale [44,4; 48,3] — **cały przedział poniżej rzutu monetą**, strata 0,18 % na transakcji. Jako dodatkowa cecha modelu: zero zmiany (−0,001 % [−0,012; +0,010]). Winne objęcie (84 % sygnałów): duża świeca jest częściej końcem ruchu. Odwracanie reguły = pomysł po wyniku, wart ok. +0,01 %, nie testujemy. Rodzina zamknięta (2/2) | [runs/a1](runs/2026-09-23_a1-formacje-swiecowe/README.md) |
 | **A2 — reszta analizy technicznej: nic nie zarabia** | 2026-09-23 | Struktura trendu, wsparcie/opór, Fibonacci, zdarzenia AT (wybicie, podwójny szczyt/dno, głowa z ramionami, przecięcie średnich, linia trendu) jako reguły z parametrami ze skilla oraz wszystkie 10 cech AT w modelu — na tych samych świecach co model. Trzy ramiona NEGATYWNE (struktura trendu **48,2 %**, wsparcie/opór 49,9 %, model + AT bez zmian), dwa nierozstrzygnięte przez za małą liczbę sygnałów (Fibonacci 51,5 %, zdarzenia 48,3 %), żadne pozytywne. „Graj z trendem" konsekwentnie gorsze od monety. **Analiza techniczna na BTC 4h zamknięta (7/7)** | [runs/a2](runs/2026-09-23_a2-rodziny-at/README.md) |
 | **C1 — cash-and-carry: pierwszy dodatni wynik, ale to odsetki za dźwignię, nie prognoza** | 2026-09-23 | Long spot + short kontrakt na BTC zbiera opłatę funding bez ryzyka kierunku: **+5,4 % rocznie na kapitale** w przedziale [3,5; 7,4] za 5,5 roku, z czego połowa z 2021; ostatnie 3 lata 3,6 %. Hedge działa (rozjazdy ≈ 0, obsunięcie 0,64 %). Przełączanie po znaku opłaty przegrywa z kosztami (−9,3 %). Nie wyceniono: depozyt i likwidacja krótkiej nogi (BTC +90 % w 30 dni), ryzyko giełdy. **Decyzja o produkcie należy do użytkownika.** Seria zamknięta (2/2) | [runs/c1](runs/2026-09-23_c1-cash-and-carry/README.md) |
+| **R1 — premia rebalansowa: codzienne wyrównywanie koszyka nie zarabia** | 2026-09-23 | Koszyk 20 największych kryptowalut wyrównywany codziennie vs trzymany w miesiącu: **−3,6 % rocznie** w przedziale [−9,5; +2,4], o 12 % niżej po 5,4 roku; obiecywana premia 6–11 % poza przedziałem. Ruchy względne w krypto trwają, wyrównywanie sprzedaje zwycięzców za wcześnie. Z dwóch celów „nie-kierunkowych" tylko carry z hedgem (C1) daje przepływ. Seria zamknięta (1/1) | [runs/r1](runs/2026-09-23_r1-premia-rebalansowa/README.md) |
 
 ## Hipoteza w skrócie
 
