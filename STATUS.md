@@ -25,8 +25,11 @@
 > BTC: momentum (M1, 49,74%), funding jako cechę (F1, 50,34%); dane o pozycjonowaniu są
 > niemierzalne (P1, 30 dni historii) — wniosek skumulowany 39 w `runs/INDEX.md`. Otwarte
 > kierunki wymagają zmiany założeń (§17, ETAP 4). P2 (carry przekrojowy) wyszło NIEMIERZALNE; T4 (kalibracja
-> early stoppingu, 2026-09-23) zamknięte bez zmian w kodzie. Dalsze kierunki czekają na
-> decyzję użytkownika (§17, ETAP 4) — patrz `runs/INDEX.md`.**
+> early stoppingu, 2026-09-23) zamknięte bez zmian w kodzie. **W1 (2026-09-23): backtest mierzy
+> wykonanie „po konkretnej cenie" (symulacja wypełnień); limit po close wypełnia się w 99,4 % i nic
+> nie zmienia; cofnięcie podnosi trafność do 53,15 %, ale traci pieniądze (t = −3,9) — seria W
+> zamknięta 3/3. Następna runda: nowy cel modelu (częściowe TP), czeka na pre-rejestrację.**
+> Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
 > krok: decyzja o Commit 2b" — była nieaktualna od serii C2.5; poprawiona w porządkach
@@ -2412,6 +2415,29 @@ funding pokrywa koszt (F − C = 0,097% na 48h, CI [0,051%; 0,143%]), ale rozrzu
 („20 instrumentów = 160 660”) jest OBALONY:** 18 monet ≈ k_eff = 2,0 niezależnych. Hipoteza C
 nie startuje (zasada 18). Otwarte: cash-and-carry ze spotem — inny produkt, decyzja bramkowa.
 → [runs/p2](runs/2026-09-22_p2-sonda-carry-przekrojowy/README.md)
+
+#### Seria W — wykonanie po konkretnej cenie ⚪ ZAMKNIĘTA 2026-09-23 (W1), 3/3, reguła STOP
+
+Decyzja użytkownika 2026-09-23 (obowiązuje też na żywo): pozycji nie otwiera się ani nie zamyka
+po cenie otwarcia/zamknięcia świecy, tylko po konkretnej cenie. Backtest liczył wejście po `close`
+z założeniem 100 % wypełnienia (ograniczenie zapisane w C2.12, nigdy niezmierzone). W1 dodało
+symulację wypełnień na ścieżce cen (`backtest/execution.py`, tryb `fill_model="path"`; ADR
+w `docs/rag/04`) i zmierzyło trzy reguły wejścia kazane sprawdzić przez użytkownika.
+
+**Wynik:** limit po close wypełnia się w **99,4 %** — trafność 50,11 % vs próg 52,96 %, NEGATYWNY
+(założenie C2.12 było prawie prawdziwe). Limit na cofnięciu 0,5·ATR: trafność **53,15 %** —
+pierwszy raz punktowo nad progiem (52,81 %) — **ale średni zwrot netto istotnie ujemny**
+(t = −3,90): małe wygrane na timeoutach, pełne straty na stopach; werdykt NIEROZSTRZYGNIĘTY wg
+kryterium trafności, ekonomicznie strata. Stop na wybiciu: 46,13 % vs 54,83 %, NEGATYWNY.
+**Lekcja (wniosek skumulowany 43): kryterium `ci_low > break_even` jest niekompletne przy
+wypłatach asymetrycznych — każda przyszła pre-rejestracja dopisuje `t_stat > 0`.**
+→ [runs/w1](runs/2026-09-23_w1-wykonanie-po-cenie/README.md)
+
+**Następna runda (decyzja użytkownika 2026-09-23, czeka na pre-rejestrację): nowy cel modelu** —
+częściowe wyjście 50 % pozycji przy +5 % depozytu (przy dźwigni 3× ≈ 1,67 % ceny), stop
+przesunięty na cenę wejścia, reszta do drugiego TP / trailing stopu (poziom do ustalenia);
+sizing bez zmian (0,5 % ryzyka, dźwignia ≤ 3×). Wymaga nowych etykiet i retreningu, własnego
+licznika i rachunku mocy; werdykt na zwrocie netto z CI, nie na trafności (lekcja W1b).
 
 #### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
 

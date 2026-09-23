@@ -47,9 +47,7 @@ from backtest.metrics import (
 )
 from data.fetch_ohlcv import find_gaps, get_ohlcv_cached
 
-PRIMARY_SEED = (
-    42  # = agents.ml_optimizer.DEFAULT_SEED / config/settings.yaml model.seed
-)
+PRIMARY_SEED = 42  # = agents.ml_optimizer.DEFAULT_SEED / config/settings.yaml model.seed
 
 # Offsety startu okien walk-forward do sweepu stabilności fold-jitter (dni).
 # 0 = kanoniczny przebieg (identyczny z historycznymi wynikami); 1..9 = perturbacje.
@@ -84,16 +82,30 @@ def fetch_data(cfg: dict, timeframe_minutes: int = 5) -> pd.DataFrame:
     return df
 
 
-def run_and_summarize(
-    raw_ohlcv: pd.DataFrame, seed: int = PRIMARY_SEED, **run_backtest_kwargs
-) -> dict:
+def fetch_native(data_cfg: dict, timeframe: str) -> pd.DataFrame:
     """
-    Jeden pełny przebieg pipeline'u + wszystkie miary raportowe:
-    per-fold metrics (z t_stat, Commit 2.9/Z2), klasyfikacja GO/WARUNKOWY/NO-GO
-    (kryteria docs/rag/03 — NIEZMIENIONE), rozbicie per reżim oraz NOWA diagnostyka
-    pooled per regime (Sharpe per trade, t-stat, N_eff — Commit 2.9/Z2+Z3).
+    W1: natywne świece zadanego interwału z trwałego cache (bez sieci, gdy plik już jest).
+    Respektuje `timeframe_start_overrides` (Z5b: 4h ma dłuższą historię niż 5m/1h). Ta sama
+    logika, którą zamrożone skrypty rund (Z9 → F1) miały jako prywatny `_load` — od W1 mieszka
+    tu, żeby nowe skrypty nie importowały z plików zamrożonych.
     """
-    result = run_backtest(raw_ohlcv, seed=seed, **run_backtest_kwargs)
+    start = (data_cfg.get("timeframe_start_overrides") or {}).get(timeframe, data_cfg["start"])
+    return get_ohlcv_cached(
+        symbol=data_cfg["primary_symbol"],
+        timeframe=timeframe,
+        start=start,
+        end=data_cfg["end"],
+        cache_dir=data_cfg["cache_dir"],
+        exchange_id=data_cfg["exchange_id"],
+    )
+
+
+def summarize_result(result: dict, seed: int = PRIMARY_SEED) -> dict:
+    """
+    W1: miary raportowe dla GOTOWEGO wyniku `run_backtest`/`simulate_equity` — wydzielone
+    z `run_and_summarize`, żeby jeden trening (`engine.collect_signals`) mógł obsłużyć wiele
+    wariantów wykonania (`engine.simulate_equity`) bez powtarzania kosztownej części.
+    """
     fold_metrics = compute_fold_metrics(result["trades"], result["folds_summary"])
     return {
         "seed": seed,
@@ -104,6 +116,18 @@ def run_and_summarize(
         "pooled_per_regime": summarize_pooled_by_regime(result["trades"]),
         "edge_per_regime": summarize_edge_by_regime(result["trades"]),
     }
+
+
+def run_and_summarize(
+    raw_ohlcv: pd.DataFrame, seed: int = PRIMARY_SEED, **run_backtest_kwargs
+) -> dict:
+    """
+    Jeden pełny przebieg pipeline'u + wszystkie miary raportowe:
+    per-fold metrics (z t_stat, Commit 2.9/Z2), klasyfikacja GO/WARUNKOWY/NO-GO
+    (kryteria docs/rag/03 — NIEZMIENIONE), rozbicie per reżim oraz NOWA diagnostyka
+    pooled per regime (Sharpe per trade, t-stat, N_eff — Commit 2.9/Z2+Z3).
+    """
+    return summarize_result(run_backtest(raw_ohlcv, seed=seed, **run_backtest_kwargs), seed)
 
 
 def sweep_fold_offsets(
@@ -169,9 +193,7 @@ def sweep_fold_offsets(
 
 def print_stability_report(sweep: dict) -> None:
     """Czytelny raport sweepu fold-jitter — bez werdyktu pass/fail (patrz docstring modułu)."""
-    print(
-        "\n=== Stabilność fold-jitter (Commit 2.9/Z1 — zamiast pustego sweepu seedów) ==="
-    )
+    print("\n=== Stabilność fold-jitter (Commit 2.9/Z1 — zamiast pustego sweepu seedów) ===")
     print(sweep["per_offset"].to_string(index=False))
     lo, hi = sweep["range"]
     print(
