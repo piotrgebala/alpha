@@ -133,17 +133,30 @@ jako źródło stałych zasad.
   zadań/zasady pracy/backlog — wiersz zadania to status + jednozdaniowa uwaga + link;
   `README.md` = widok dla człowieka + kamienie milowe (zasada 15). Nie kopiuj pełnych syntez
   do PLAN/TASKS (historyczna duplikacja do odchudzenia: Backlog Z25).
-- **Mapowanie na momenty pracy — najpierw pliki w repo, wtyczki dopiero jako wsparcie.**
-  Procedura rundy → skill `clas5-runda` (**jedyna kopia: `.claude/skills/clas5-runda/SKILL.md`**
-  — to plik, który Claude Code faktycznie ładuje; nie rób drugiej kopii w `docs/`, bo rozjazd
-  jest wtedy kwestią czasu, a ładowana zostaje wersja starsza). Bramki jakości →
+- **SKILLE PROJEKTU MIESZKAJĄ W CHMURZE KONTA, NIE W REPO (decyzja użytkownika 2026-09-23).**
+  `clas5-runda` i `clas5-quant` to skille konta claude.ai. Obie sesje (Cowork i lokalny Claude
+  Code) ładują je stamtąd; lokalnie widać je jako `anthropic-skills:<nazwa>`. **Repo nie trzyma
+  kopii skilli** — katalog `.claude/skills/` ma zostać pusty, a `docs/` nie zawiera kopii
+  `SKILL.md`. Powód: dwa środowiska z osobnymi kopiami rozjeżdżały się już trzy razy (STATUS
+  §17, zadanie T8, 2026-09-22), a wykonywana była zawsze wersja starsza.
+  **Modyfikacja skilla = aktualizacja w chmurze.** Lokalny katalog `~/.claude/skills/synced/`
+  to tylko pamięć podręczna synchronizacji (chmura → maszyna, w jedną stronę). Jego edycja
+  niczego nie zmienia w chmurze i zostanie nadpisana. Procedura: Claude przygotowuje nową
+  wersję (w scratchpadzie, na bazie aktualnej kopii z `synced/`) i paczkę do wgrania,
+  a użytkownik wgrywa ją na claude.ai. Dopóki zmiana nie trafi do chmury, nie jest
+  obowiązująca. Zmianę treści skilla odnotuj jednym zdaniem w `STATUS.md` (co i dlaczego).
+- **Mapowanie na momenty pracy.** Procedura rundy → skill `clas5-runda` (chmura). Metodologia
+  quant → skill `clas5-quant` (chmura). Bramki jakości →
   `docs/skills/bramki-jakosci.md` (zasada 16). Decyzja architektoniczna → ADR do `docs/rag/`,
   wsparcie: `engineering:architecture`. Wykresy → `dataviz`.
   **Zanim oprzesz procedurę na skillu z wtyczki, sprawdź, czy on w tej sesji istnieje** —
   wtyczki włącza się per maszyna i per projekt, a nie da się tego wyczytać z repo. Zasady
   16a/16b wskazywały kiedyś `data:validate-data` i `data:statistical-analysis`; w praktyce
   wtyczka `data` bywa wyłączona i obie bramki po cichu nie miały jak zadziałać. Dlatego
-  procedura mieszka w repo, a skill jest udogodnieniem, nie warunkiem.
+  procedura bramek jakości mieszka w repo jako **dokument** (`docs/skills/bramki-jakosci.md`,
+  nie skill), a skill z wtyczki jest udogodnieniem, nie warunkiem. Jeśli skill `clas5-runda`
+  w danej sesji nie jest dostępny (np. chmura niezsynchronizowana), procedura rundy jest
+  i tak wyprowadzalna z zasad 11–18 i `runs/INDEX.md` („Jak dodać nowy wpis”).
 - Lint/format: `ruff` + `black` na plikach dotykanych w rundzie; plików zamrożonych (zasada 13)
   nie reformatuj. Różnice CRLF/LF między repo (Windows) a środowiskiem pracy są normalne.
 - **Dwa środowiska pracują na tym repo** (sesja chmurowa Cowork + lokalna sesja Claude Code na
