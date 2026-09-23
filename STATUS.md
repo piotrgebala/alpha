@@ -2300,6 +2300,17 @@ dopisana do `CLAUDE.md` (wytyczna o skillach w chmurze). Przegląd diffu (16c): 
 przegląd wyłapał nieaktualny punkt „Otwarte” (paczki opisane jako niewgrane) i sklejone
 akapity tej sekcji; poprawione.
 
+**Dopisek 3 — wtyczki w projekcie i w chmurze (decyzja użytkownika 2026-09-23, zastępuje
+dopisek 2).** Zakres projektu: `security-guidance`, `claude-code-setup` (`claude-plugins-official`),
+`document-skills`, `example-skills` (`anthropic-agent-skills`) + dotychczasowy `code-review`.
+Oba źródła zadeklarowane w `extraKnownMarketplaces` — wtyczki docierają przez repo do każdego
+środowiska (także wyjątek `code-review` z dopisku 2 jest tym rozwiązany). Test niezmiennika:
+`tests/test_project_settings.py`. Przy duplikatach z chmurą pierwszeństwo ma wersja
+`anthropic-skills:`. **Uwaga kosztowa:** `security-guidance` robi przegląd diffu modelem
+(domyślnie Opus 4.7) po każdej turze ze zmianami i agentowy przegląd przy każdym
+`git commit`/`push` — zużywa limit konta; warstwy wyłącza się zmiennymi
+(`ENABLE_STOP_REVIEW=0`, `ENABLE_COMMIT_REVIEW=0`, `SECURITY_GUIDANCE_DISABLE=1`).
+
 ---
 
 ### ETAP 4 — hipotezy otwarte, WYMAGAJĄCE DECYZJI UŻYTKOWNIKA
