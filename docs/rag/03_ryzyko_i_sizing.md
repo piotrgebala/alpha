@@ -213,6 +213,13 @@ swiec**, wiec proba spada do kilkudziesieciu transakcji. Przy q=0,20 trafnosc pu
 > zakladana trafnosc hipotezy przekracza ~58%. Ponizej tego progu hipoteza jest **niemierzalna
 > z gory**, niezaleznie od ilosci danych — i uruchamianie jej jest marnowaniem wariantu.
 
+> **⚠ SPROSTOWANE W K2 (2026-09-22; notka dopisana 2026-09-23).** ~58,2% to trafnosc
+> w pierwszym punkcie siatki `q`, w ktorym zapalilo sie kryterium — artefakt rozdzielczosci
+> siatki, nie wlasciwosc przyrzadu. **Wymog „powyzej ~58%" UCHYLONY.** Obowiazuje
+> `measurability_report(...)` z `backtest/metrics.py`; szerokosc pasma „oplacalne, ale
+> niewidzialne" = `wald_half_width(n)`, zalezna wylacznie od `n` (CLAUDE.md zasada 18,
+> `runs/2026-09-22_k2-naprawa-abstynencji/` §1). Tabela wyzej zostaje jako zapis pomiaru K1.
+
 ### `classify_checkpoint` — DIAGNOSTYKA, nie werdykt
 
 K1 wykazal, ze `classify_checkpoint` zwraca **GO na czystym szumie** (q=0,10, zgodnosc cechy
@@ -232,6 +239,11 @@ K1 (n~37 na losowanie). **Przyrzad nie potrafi porzadnie zwalidowac sam siebie z
 tego samego powodu, dla ktorego nie widzi slabych sygnalow.** Kandydaci na osobna runde: wagi
 klas w XGBoost, kalibracja `MIN_VALIDATION_ROWS`/`validation_fraction`, wymuszenie kierunku
 zamiast trzeciej klasy "timeout".
+
+**Stan kandydatow (2026-09-23):** wagi klas — PRZYJETE (ADR nizej, K2/A1); wymuszenie
+kierunku — ODRZUCONE (K2: n rosnie, informacja nie); kalibracja `MIN_VALIDATION_ROWS`/
+`validation_fraction` — ZBADANA w T4: early stopping dziala, prog 30 wierszy bezczynny przy
+oknie 60 dni 4h, bez zmian w kodzie (`runs/2026-09-23_t4-kalibracja-early-stopping/`).
 
 ## Retraining modeli (temat dodany po przeglądzie szerszej wizji projektu)
 
