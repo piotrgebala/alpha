@@ -11,6 +11,11 @@
       "Bash(git push *)"
     ]
   },
+  "env": {
+    "ENABLE_CODE_SECURITY_REVIEW": "0",
+    "ENABLE_STOP_REVIEW": "0",
+    "ENABLE_COMMIT_REVIEW": "0"
+  },
   "enabledPlugins": {
     "code-review@claude-plugins-official": true,
     "data@synced": true,

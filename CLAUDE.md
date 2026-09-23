@@ -205,6 +205,10 @@ jako źródło stałych zasad.
   **Duplikaty:** `docx`, `pdf`, `pptx`, `xlsx` i `skill-creator` istnieją w dwóch różnych
   wersjach (chmura konta vs `anthropics/skills`: inny opis wyzwalania, inne skrypty) —
   pierwszeństwo ma wersja z chmury (`anthropic-skills:`), wersja z wtyczki jest zapasowa.
+  **`security-guidance` — tylko warstwa wzorców** (decyzja użytkownika 2026-09-23): przeglądy
+  modelem (diff po każdej turze, agent przy `git commit`/`push`) są wyłączone zmiennymi `env`
+  w `.claude/settings.json`, bo zużywają limit konta przy wielu commitach dziennie, a celują
+  w błędy aplikacji webowych. Pilnuje tego `tests/test_project_settings.py`.
 - **Mapowanie „moment pracy → skill” jest zasadą 19** (obowiązkową), nie wytyczną. Procedura
   bramek jakości mieszka w repo jako **dokument** (`docs/skills/bramki-jakosci.md`), nie
   skill — powód: zasady 16a/16b wskazywały kiedyś wyłącznie skille wtyczki `data`, a ta
