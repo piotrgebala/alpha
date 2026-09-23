@@ -32,8 +32,11 @@
 > na wejściu nie zmienia pieniędzy (różnica parowana +0,007 % [−0,009; +0,024]), trafność 53,3 %
 > to iluzja geometrii (p\* 57,2 %) — seria N zamknięta 1/1. A1 (2026-09-23): formacje świecowe
 > z podręcznika trafiają 46,4 % [44,4; 48,3] — poniżej monety — i jako cecha modelu nic nie
-> zmieniają (−0,001 % [−0,012; +0,010]); rodzina formacji zamknięta 2/2. Następny krok: decyzja
-> użytkownika (inne rodziny AT albo kierunki spoza OHLCV).**
+> zmieniają (−0,001 % [−0,012; +0,010]); rodzina formacji zamknięta 2/2. A2 (2026-09-23): reszta
+> analizy technicznej jako reguły — struktura trendu 48,2 %, wsparcie/opór 49,9 %, Fibonacci 51,5 %
+> (nierozstrzygnięte), zdarzenia AT 48,3 %, model + 10 cech AT bez zmian; seria A zamknięta 7/7,
+> analiza techniczna na BTC 4h zamknięta jako kierunek. W toku: punkt 2 zlecenia użytkownika
+> (kierunki spoza ceny i wolumenu).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2486,11 +2489,20 @@ post hoc o ekonomii ≈ +0,01 % (wniosek 49) — nie uruchamiać bez osobnej dec
 (raportowa): N_eff ≤ n w statystykach per transakcja (wniosek 50).
 → [runs/a1](runs/2026-09-23_a1-formacje-swiecowe/README.md)
 
-**Co dalej — decyzja użytkownika.** Z A1 nie wynika żadna rekomendacja „za". Pozostałe rodziny
-AT ze skilla (wsparcie/opór `sr_distance` — jedyna z wiarygodnym mechanizmem, wybicie z zakresu,
-struktura trendu, podwójny szczyt, średnie, linia trendu, Fibonacci) mają ten sam prior
-(transformacja OHLCV) i każda wymagałaby osobnej pre-rejestracji z rachunkiem mocy. Otwarte
-kierunki spoza OHLCV bez zmian: §17 / ETAP 4 / `runs/INDEX.md`.
+**A2 (2026-09-23, decyzja użytkownika „wykonaj" pozostałe rodziny AT) — ZAMKNIĘTA, seria A 7/7,
+WSZYSTKIE RODZINY AT ZE SKILLA ZAMKNIĘTE.** 10 cech deterministycznych ze skilla w `agents/ta_rules.py`
+(parametry domyślne, test przecieku), rachunek mocy z częstości sygnału: 3 reguły stanowe osobno,
+5 zdarzeniowych jako grupa (osobno niemierzalne: 86–988 sygnałów), model + 10 cech. **Wynik:**
+struktura trendu **48,20 %** [46,98; 49,42], −0,127 % [−0,170; −0,084] NEGATYWNY; wsparcie/opór
+49,87 %, −0,080 % NEGATYWNY; model + AT −0,099 %, parowane +0,005 % [−0,055; +0,066] NEGATYWNY;
+Fibonacci 51,5 % [49,4; 53,6], −0,041 % NIEROZSTRZYGNIĘTY (rozdzielczość); grupa zdarzeń 48,3 %,
+−0,103 % [−0,182; −0,024] NIEROZSTRZYGNIĘTY wg litery (guard n 2 133 < 2 366). Reguły „z ruchem"
+konsekwentnie pod monetą (wniosek 51); reguły stanowe pogłębiają obsunięcia (52); rzadkie
+zdarzenia → test rodziny (53). Analiza techniczna na BTC 4h zamknięta jako kierunek.
+→ [runs/a2](runs/2026-09-23_a2-rodziny-at/README.md)
+
+**Następny krok (punkt 2 zlecenia użytkownika 2026-09-23):** kierunki spoza ceny i wolumenu —
+inny cel niż kierunek, cash-and-carry z hedgem spot, pozycjonowanie (kolektor już działa).
 
 #### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
 

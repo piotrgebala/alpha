@@ -164,3 +164,61 @@ external_features:
       normalizacji bylby wolnym parametrem bez mozliwosci kalibracji (pulapka unikniecia
       w H3). Masa punktowa 35,85% na stawce bazowej (H2.0) przestaje byc problemem, bo
       drzewo dzieli po wartosci, nie po percentylu."
+
+# Cechy ANALIZY TECHNICZNEJ ze skilla `ta-toolkit` (runda A2, 2026-09-23) — agents/ta_rules.py.
+# NIE wchodzą do `features:` (produkcyjny zestaw modelu zostaje nietknięty); kontrakt ten sam
+# (compute_*(df: OHLCV) -> Series, trailing), test przecieku parametryzowany po
+# TA_FEATURE_FUNCTIONS w agent_5_compliance/test_leakage.py, zgodność kluczy z tym plikiem
+# pilnowana testem. Parametry = domyślne skilla (jeden zestaw; inny zestaw = osobny wariant).
+# Reguły kierunkowe z tych cech (rule_*) i ich pre-rejestracja: runs/2026-09-23_a2-rodziny-at/.
+ta_rules:
+  trend_structure:
+    formula: "+1 gdy dwa ostatnie POTWIERDZONE szczyty rosną i dołki rosną (HH+HL), -1 przy LH+LL, 0 inaczej; swing potwierdzony po confirm=5 barach"
+    dof: "confirm"
+    leakage_risk: "wysokie w wersji 'z wykresu' (ostatni szczyt widoczny z przyszłości); tu opóźnienie o confirm barów z konstrukcji"
+    added: "2026-09-23"
+  double_top_bottom:
+    formula: "-1: dwa ostatnie potwierdzone szczyty w tolerancji 0,5*ATR z odbiciem >= 2*ATR między nimi; +1 symetrycznie na dołkach; STAN do następnego swingu"
+    dof: "confirm, tol_atr=0.5, bounce_atr=2.0 (w ATR, nie w %)"
+    leakage_risk: "jw. — potwierdzenie drugiego swingu"
+    added: "2026-09-23"
+  head_shoulders:
+    formula: "-1: trzy ostatnie potwierdzone szczyty [S1,H,S2] z H >= S +/- 1*ATR i |S1-S2| <= 1*ATR; +1 odwrócona na dołkach; STAN"
+    dof: "confirm, shoulder_tol_atr=1.0, head_min_atr=1.0"
+    leakage_risk: "jw. — prawe ramię potwierdzone confirm barów po szczycie"
+    added: "2026-09-23"
+  ma_state:
+    formula: "(EMA10 - EMA30) / close — ciągły stan"
+    dof: "fast=10, slow=30 (bliski krewny ema_diff_9_21 z registry — inne okna, tu użyty tylko jako znak przy przecięciu)"
+    leakage_risk: low
+    added: "2026-09-23"
+  ma_cross_age:
+    formula: "liczba barów od ostatniej zmiany znaku (EMA10 - EMA30); 0 = świeże przecięcie"
+    dof: "fast, slow"
+    leakage_risk: low
+    added: "2026-09-23"
+  trendline_distance:
+    formula: "regresja liniowa (czas, poziom) przez k=3 ostatnie potwierdzone dołki; (close - linia(t)) / close"
+    dof: "confirm, k"
+    leakage_risk: "jw. — dołki potwierdzone"
+    added: "2026-09-23"
+  fib_position:
+    formula: "(close - start) / (end - start) ostatniego potwierdzonego impulsu (dołek->szczyt lub odwrotnie, co nowsze); 0,382/0,5/0,618 = zniesienia"
+    dof: "confirm"
+    leakage_risk: "jw. — oba końce impulsu potwierdzone"
+    added: "2026-09-23"
+  fib_impulse:
+    formula: "kierunek ostatniego potwierdzonego impulsu: +1 wzrostowy, -1 spadkowy"
+    dof: "confirm"
+    leakage_risk: "jw."
+    added: "2026-09-23"
+  sr_distance:
+    formula: "(close - najbliższy potwierdzony poziom z ostatnich 500 barów) / ATR ze znakiem (+ nad poziomem, - pod)"
+    dof: "confirm, lookback=500"
+    leakage_risk: "jw. — poziomy z potwierdzonych swingów"
+    added: "2026-09-23"
+  breakout:
+    formula: "+1: close > max(high[t-20..t-1]); -1: close < min(low[t-20..t-1]); 0 inaczej"
+    dof: "n=20"
+    leakage_risk: "low (zakres liczony BEZ bieżącego bara)"
+    added: "2026-09-23"

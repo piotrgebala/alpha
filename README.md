@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **665/665** (2026-09-23).
+Stan testów: **691/691** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -119,6 +119,26 @@ zły kierunek. Winne jest objęcie (84 % sygnałów): duża świeca w górę jes
 końcem ruchu niż jego początkiem. **Odwrócenie reguły nie jest wnioskiem** — to pomysł
 wymyślony po wyniku, a rachunek daje mu ok. +0,01 % na transakcję, czyli nic. Rodzina formacji
 świecowych zamknięta (2/2). Co dalej z analizą techniczną — decyzja użytkownika.
+
+### ⚪ Reszta analizy technicznej — A2 (2026-09-23): nic nie zarabia, kierunek zamknięty
+
+Na zlecenie użytkownika sprawdziliśmy pozostałe narzędzia z podręcznika, każde jako
+deterministyczną regułę z parametrami ze skilla (bez dobierania): strukturę trendu, wybicie
+z zakresu, podwójny szczyt/dno, głowę z ramionami, przecięcie średnich, przełamanie linii trendu,
+zniesienia Fibonacciego, strefy wsparcia i oporu. [A2](runs/2026-09-23_a2-rodziny-at/README.md):
+
+| reguła | trafność | pieniądze na transakcji | werdykt |
+|---|---|---|---|
+| struktura trendu („graj z trendem") | **48,2 %** [47,0; 49,4] | −0,127 % | NEGATYWNY |
+| wsparcie/opór | 49,9 % [48,9; 50,9] | −0,080 % | NEGATYWNY |
+| zniesienie Fibonacciego | 51,5 % [49,4; 53,6] | −0,041 % [−0,110; +0,028] | nierozstrzygnięty (za mało sygnałów) |
+| zdarzenia AT razem (wybicie, formacje, średnie, linia trendu) | 48,3 % [46,2; 50,5] | −0,103 % [−0,182; −0,024] | nierozstrzygnięty (próba o 10 % za mała na „dowód braku") |
+| model + wszystkie 10 cech AT | 49,6 % | −0,099 % | NEGATYWNY; różnica wobec modelu bez AT +0,005 % [−0,055; +0,066] |
+
+**Co to znaczy:** żadne z tych narzędzi nie wskazuje pozycji, które zarabiają. Rzadkie formacje
+(np. głowa z ramionami: 86 przypadków w 5,5 roku) były za rzadkie, żeby je mierzyć osobno, więc
+policzyliśmy je jako grupę. „Graj z trendem" jest na BTC 4h konsekwentnie gorsze od rzutu monetą.
+Analiza techniczna na BTC 4h jest zamknięta jako kierunek (7 wariantów w trzech rundach).
 
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
@@ -179,6 +199,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **W1 — wykonanie po konkretnej cenie: backtest dopasowany do handlu na żywo** | 2026-09-23 | **Backtest symuluje teraz wypełnienia zleceń tak, jak będą działać na żywo** (zlecenie oczekujące po konkretnej cenie, TP/SL od ceny wypełnienia, kolejność zdarzeń wewnątrz świecy 4h rozstrzygana świecami 5-minutowymi). Trzy sposoby wejścia: **limit po cenie zamknięcia wypełnia się w 99,4 %** i nic nie zmienia (50,11 % wobec progu 52,96 %) — dotychczasowe wyniki nie były zawyżone; **limit na cofnięciu** daje 53,15 % trafności, pierwszy raz ponad progiem, **ale traci pieniądze** (wygrane małe, przegrane pełne — t = −3,9); **zlecenie na wybiciu** jest droższe i trafia gorzej (46,13 %). Lekcja na stałe: więcej wygranych ≠ więcej pieniędzy — werdykt wymaga dodatniego zwrotu netto, nie tylko trafności. Seria zamknięta (3/3) | [runs/w1](runs/2026-09-23_w1-wykonanie-po-cenie/README.md) |
 | **N1 — połowa zysku wcześniej i stop na wejście: pieniądze bez zmian** | 2026-09-23 | **Pierwsza runda na danych tylko od 2021 roku** (nowa zasada). Schemat prowadzenia pozycji użytkownika (50 % przy +1,67 %, stop na wejście, reszta do bariery) sprawdzony na tych samych sygnałach co zwykłe wyjście: różnica **+0,007 % na transakcji w przedziale od −0,009 do +0,024** — zero. Trafność skoczyła z 49,6 % na **53,3 %**, ale to iluzja: wygrane zmalały, straty nie, a próg opłacalności dla takich wypłat to 57 %. **Prowadzenie pozycji nie tworzy informacji.** Przy okazji: testy wykryły wadę w mojej własnej regule zanim cokolwiek uruchomiono (poprawka przed wynikiem). Seria zamknięta (1/1) | [runs/n1](runs/2026-09-23_n1-nowy-cel-czesciowe-tp/README.md) |
 | **A1 — formacje świecowe: podręcznik wskazuje kierunek odwrotny** | 2026-09-23 | Sześć formacji z podręcznika (bez parametrów do dobrania) jako reguła: trafność **46,4 %** w przedziale [44,4; 48,3] — **cały przedział poniżej rzutu monetą**, strata 0,18 % na transakcji. Jako dodatkowa cecha modelu: zero zmiany (−0,001 % [−0,012; +0,010]). Winne objęcie (84 % sygnałów): duża świeca jest częściej końcem ruchu. Odwracanie reguły = pomysł po wyniku, wart ok. +0,01 %, nie testujemy. Rodzina zamknięta (2/2) | [runs/a1](runs/2026-09-23_a1-formacje-swiecowe/README.md) |
+| **A2 — reszta analizy technicznej: nic nie zarabia** | 2026-09-23 | Struktura trendu, wsparcie/opór, Fibonacci, zdarzenia AT (wybicie, podwójny szczyt/dno, głowa z ramionami, przecięcie średnich, linia trendu) jako reguły z parametrami ze skilla oraz wszystkie 10 cech AT w modelu — na tych samych świecach co model. Trzy ramiona NEGATYWNE (struktura trendu **48,2 %**, wsparcie/opór 49,9 %, model + AT bez zmian), dwa nierozstrzygnięte przez za małą liczbę sygnałów (Fibonacci 51,5 %, zdarzenia 48,3 %), żadne pozytywne. „Graj z trendem" konsekwentnie gorsze od monety. **Analiza techniczna na BTC 4h zamknięta (7/7)** | [runs/a2](runs/2026-09-23_a2-rodziny-at/README.md) |
 
 ## Hipoteza w skrócie
 
