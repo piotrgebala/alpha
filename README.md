@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **730/730** (2026-09-23).
+Stan testów: **742/742** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -180,6 +180,17 @@ strachu i chciwości, stopy amerykańskie, ceny z Coinbase. **Co to znaczy:** wr
 kierunek, który był skreślony jako „nie da się zmierzyć". Sonda niczego nie mierzy — każde
 źródło dostanie własną rundę z rachunkiem mocy.
 
+### 🟢 Produkt carry policzony do końca — D1 (2026-09-23): sens ma tylko wersja w bitcoinie
+
+Cztery pytania, które zostawiło C1. [D1](runs/2026-09-23_d1-produkt-carry/README.md):
+**depozyt** — przy depozycie równym pozycji i dopłacie raz w miesiącu przez 5,5 roku nie
+byłoby ani jednej likwidacji, ale ta wersja od 2022 nie wychodzi ponad lokatę w dolarze.
+**Wersja rozliczana w bitcoinie (COIN-M)** nie ma czego likwidować (wartość pozycji w dolarach
+jest stała) i potrzebuje kapitału 1× zamiast 2×: **+9,1 % rocznie** [5,9; 12,3], a od 2022
+średnio o ok. 2 punkty procentowe ponad bony skarbowe (w jednym roku +7, w dwóch poniżej).
+**Kontrakt kwartalny** zamyka stopę z góry, ale nie daje jej więcej. **Co to znaczy:** jeśli
+produkt, to COIN-M; czy w ogóle — to decyzja użytkownika (realny kapitał, ryzyko giełdy).
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -243,6 +254,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **C1 — cash-and-carry: pierwszy dodatni wynik, ale to odsetki za dźwignię, nie prognoza** | 2026-09-23 | Long spot + short kontrakt na BTC zbiera opłatę funding bez ryzyka kierunku: **+5,4 % rocznie na kapitale** w przedziale [3,5; 7,4] za 5,5 roku, z czego połowa z 2021; ostatnie 3 lata 3,6 %. Hedge działa (rozjazdy ≈ 0, obsunięcie 0,64 %). Przełączanie po znaku opłaty przegrywa z kosztami (−9,3 %). Nie wyceniono: depozyt i likwidacja krótkiej nogi (BTC +90 % w 30 dni), ryzyko giełdy. **Decyzja o produkcie należy do użytkownika.** Seria zamknięta (2/2) | [runs/c1](runs/2026-09-23_c1-cash-and-carry/README.md) |
 | **R1 — premia rebalansowa: codzienne wyrównywanie koszyka nie zarabia** | 2026-09-23 | Koszyk 20 największych kryptowalut wyrównywany codziennie vs trzymany w miesiącu: **−3,6 % rocznie** w przedziale [−9,5; +2,4], o 12 % niżej po 5,4 roku; obiecywana premia 6–11 % poza przedziałem. Ruchy względne w krypto trwają, wyrównywanie sprzedaje zwycięzców za wcześnie. Z dwóch celów „nie-kierunkowych" tylko carry z hedgem (C1) daje przepływ. Seria zamknięta (1/1) | [runs/r1](runs/2026-09-23_r1-premia-rebalansowa/README.md) |
 | **P3 — nowe dane: pozycjonowanie ma 6 lat historii, nie 30 dni** | 2026-09-23 | Podłączono 8 darmowych źródeł spoza wykresu ceny. Archiwum plików Binance ma dane o pozycjach graczy co 5 minut od 2020-09 (P1 sprawdziło tylko API z 30 dniami) — kierunek „nie da się zmierzyć" wraca do gry. Do tego funding COIN-M, kontrakty kwartalne, DVOL, on-chain, Fear & Greed, FRED, Coinbase. Zero pomiaru sygnału; następne rundy: produkt carry (D1), pozycjonowanie jako cecha (O1), momentum przekrojowe (X1) | [runs/p3](runs/2026-09-23_p3-sonda-zrodel-ii/README.md) |
+| **D1 — produkt carry: tylko wersja COIN-M ma sens** | 2026-09-23 | Depozyt 1× z miesięczną dopłatą: 0 likwidacji w 5,5 roku, ale od 2022 poniżej bonów skarbowych. Wersja rozliczana w bitcoinie: bez likwidacji z konstrukcji, kapitał 1×, **+9,1 % rocznie [5,9; 12,3]**, od 2022 ok. +2 pp ponad bony (od −1,5 do +7,2). Kontrakt kwartalny ≈ funding. **Decyzja o produkcie należy do użytkownika** | [runs/d1](runs/2026-09-23_d1-produkt-carry/README.md) |
 
 ## Hipoteza w skrócie
 

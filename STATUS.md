@@ -45,7 +45,11 @@
 > pozycjonowanie co 5 min od 2020-09 (6 lat; P1 sprawdziło tylko REST z 30 dniami), więc
 > pozycjonowanie jest MIERZALNE** (wniosek 59); do tego funding COIN-M, 24 kontrakty
 > kwartalne, DVOL, on-chain, F&G, FRED, Coinbase. Zero pomiaru sygnału; następne rundy
-> D1 (produkt carry) → O1 (pozycjonowanie jako cecha) → X1 (momentum przekrojowe).**
+> D1 (produkt carry) → O1 (pozycjonowanie jako cecha) → X1 (momentum przekrojowe).
+> D1 (2026-09-23): produkt carry ma sens tylko w konstrukcji COIN-M (zabezpieczenie w BTC,
+> bez likwidacji, kapitał 1×): +9,1 %/rok [5,9; 12,3], od 2022 ~+1,8 pp ponad T-bill
+> (od −1,5 do +7,2); USDT-M z depozytem 1× i miesięcznym uzupełnianiem bezpieczne, ale od 2022
+> poniżej T-bill; basis kwartalny ≈ funding. Decyzja o produkcie = użytkownik.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2549,6 +2553,22 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### D1 — produkt cash-and-carry: depozyt, COIN-M, basis, T-bill ⚪ ZAMKNIĘTA 2026-09-23 (0 wariantów reguł)
+
+Cztery pytania otwarte po C1a, pre-rejestrowane z siatkami i kosztami (`93b3c6e`), na cache
+C1 + danych P3; `backtest/carry_product.py` (czyste funkcje, 12 testów) + skrypt zamrożony.
+**Wynik:** (Q1) run-up 30 dni max +89,6 %; depozyt 1× z miesięcznym uzupełnianiem → 0 likwidacji
+w 5,5 roku (zapas 29 pp), +5,29 % na kapitale 2×; tańsze depozyty mają zapas kilku pp po `high`
+i koszt uzupełnień do 1,43 %/rok (Poprawka 1 — koszt przycinania nóg, pominięty w
+pre-rejestracji); (Q2) **COIN-M: wartość USD stała (tożsamość), brak likwidacji, kapitał 1× →
++9,07 %/rok [5,88; 12,26]** mimo stawki niższej o 1,8 pp; (Q3) basis 24 kontraktów kwartalnych
+≈ funding zrealizowany (mediana frontu 5,9 %/rok; różnice median +1,8 / −0,9 pp; rozstęp ±17);
+(Q4) ponad T-bill od 2022: COIN-M +1,8 pp/rok (−1,5…+7,2), USDT-M 2× −1,0 pp. N_eff z lag-1
+zawyżony 8× (wniosek 63). Wnioski 61–63. **Decyzja o produkcie (realny kapitał, ryzyko giełdy)
+należy do użytkownika.** Opcja tania: kontrakty COIN-M datowane (archiwum od 2020-09) —
+stopa zamknięta bez likwidacji; nie mierzone.
+→ [runs/d1](runs/2026-09-23_d1-produkt-carry/README.md)
 
 #### P3 — sonda źródeł danych II + podłączenie ⚪ ZAMKNIĘTA 2026-09-23 (0 wariantów)
 

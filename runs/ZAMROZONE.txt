@@ -38,4 +38,5 @@ backtest/run_ta_a1.py                        # A1
 backtest/run_ta_rules_a2.py                  # A2
 backtest/run_cash_and_carry_c1.py            # C1
 backtest/run_rebalance_premium_r1.py         # R1
+backtest/run_carry_product_d1.py             # D1
 backtest/screen_feature_candidates.py        # C2.7
