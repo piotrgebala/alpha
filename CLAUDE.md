@@ -158,11 +158,13 @@ jako źródło stałych zasad.
     co wniósł + każdy skill z tabeli, którego moment runda obejmowała, a którego NIE ma
     w rejestrze — z powodem pominięcia. Rozstrzyga rejestr, nie tekst README. Brak sekcji =
     runda niezrobiona (jak brak testów w zasadzie 10).
-    **Wtyczki:** potrzebne wtyczki włącza się w `.claude/settings.json` PROJEKTU (dziś
-    `engineering`, `data`), nie globalnie. Skill niedostępny w sesji (wtyczka wyłączona,
-    chmura niezsynchronizowana) → w README „niedostępny w sesji” i procedura z repo: bramki
-    z `docs/skills/bramki-jakosci.md`, runda z zasad 11–19 i `runs/INDEX.md` („Jak dodać nowy
-    wpis”). Dokument w repo pozostaje źródłem procedury; skill jest drugą parą oczu.
+    **Wtyczki:** potrzebne wtyczki włącza się w `.claude/settings.json` PROJEKTU, nie globalnie
+    (dziś z chmury konta: `engineering`, `data`; z GitHuba: `code-review`, `security-guidance`,
+    `claude-code-setup`, `document-skills`, `example-skills` — ze źródłem w
+    `extraKnownMarketplaces`, wytyczna o skillach niżej). Skill niedostępny w sesji (wtyczka
+    wyłączona, chmura niezsynchronizowana) → w README „niedostępny w sesji” i procedura z repo:
+    bramki z `docs/skills/bramki-jakosci.md`, runda z zasad 11–19 i `runs/INDEX.md` („Jak dodać
+    nowy wpis”). Dokument w repo pozostaje źródłem procedury; skill jest drugą parą oczu.
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 
@@ -194,15 +196,15 @@ jako źródło stałych zasad.
   wersję (w scratchpadzie, na bazie aktualnej kopii z `synced/`) i paczkę do wgrania,
   a użytkownik wgrywa ją na claude.ai. Dopóki zmiana nie trafi do chmury, nie jest
   obowiązująca. Zmianę treści skilla odnotuj jednym zdaniem w `STATUS.md` (co i dlaczego).
-  **Wtyczki instalowane z GitHuba (`/plugin install`) NIE synchronizują się z chmurą**
-  (decyzja użytkownika 2026-09-23) — działają tylko na maszynie, na której je zainstalowano,
-  a sesja Cowork ich nie ma. Skille ogólne włącza się więc na claude.ai, żeby trafiły do obu
-  środowisk. Duplikatów skilli, które już przychodzą z chmury, nie instaluje się wcale:
-  próba z `anthropics/skills` dała drugie, INNE wersje `docx`/`pdf`/`pptx`/`xlsx`/
-  `skill-creator` (inny opis wyzwalania, inne skrypty) — usunięte. Lokalnej wtyczki nie
-  wpisuje się do `.claude/settings.json` projektu; wyjątek do rozstrzygnięcia:
-  `code-review@claude-plugins-official` (od 2026-09-22, funkcja pokrywa się z
-  `engineering:code-review`).
+  **Wtyczki z marketplace'ów GitHub są częścią PROJEKTU** (decyzja użytkownika 2026-09-23,
+  zastępuje wcześniejszą z tego samego dnia): włącza się je w `.claude/settings.json`
+  projektu (`claude plugin install <wtyczka> --scope project`) RAZEM ze źródłem
+  w `extraKnownMarketplaces` — dzięki temu każde środowisko otwierające repo (inna maszyna,
+  sesja chmurowa) wie, skąd je pobrać; pilnuje tego `tests/test_project_settings.py`. Z chmurą
+  konta claude.ai się NIE synchronizują — do innych środowisk docierają przez repo.
+  **Duplikaty:** `docx`, `pdf`, `pptx`, `xlsx` i `skill-creator` istnieją w dwóch różnych
+  wersjach (chmura konta vs `anthropics/skills`: inny opis wyzwalania, inne skrypty) —
+  pierwszeństwo ma wersja z chmury (`anthropic-skills:`), wersja z wtyczki jest zapasowa.
 - **Mapowanie „moment pracy → skill” jest zasadą 19** (obowiązkową), nie wytyczną. Procedura
   bramek jakości mieszka w repo jako **dokument** (`docs/skills/bramki-jakosci.md`), nie
   skill — powód: zasady 16a/16b wskazywały kiedyś wyłącznie skille wtyczki `data`, a ta
