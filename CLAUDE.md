@@ -7,9 +7,8 @@ niezależnie trenowane modele XGBoost, nie jeden połączony.
 
 **Cel Fazy 0:** udowodnić edge statystyczny minimalnym, audytowalnym systemem, zanim dobuduje się
 cokolwiek z oryginalnego PRD (5 agentów, dashboard, Docker). Status commitów, checkpointy,
-otwarte ryzyka → `STATUS.md`; zadania i backlogi → `STATUS.md`; surowe
-wyniki rund → `runs/INDEX.md`. Te pliki zmieniają się często — traktuj jako aktualny stan, nie
-jako źródło stałych zasad.
+otwarte ryzyka, zadania i backlogi → `STATUS.md`; surowe wyniki rund → `runs/INDEX.md`.
+Te pliki zmieniają się często — traktuj jako aktualny stan, nie jako źródło stałych zasad.
 
 ## Nienaruszalne zasady
 
@@ -54,7 +53,12 @@ jako źródło stałych zasad.
     deterministyczny, więc ten sweep nie mierzy niczego (`docs/rag/03`, aktualizacja 2026-09-21).
 13. **Historyczne skrypty analityczne są ZAMROŻONE** — to odtwarzalne zapisy zakończonych
     eksperymentów (komenda w sekcji "Metadane" ich plików `runs/`), nie kod do refaktoryzacji
-    wstecz. Nowe skrypty budują na `backtest/checkpoint_lib.py`.
+    wstecz. Nowe skrypty budują na `backtest/checkpoint_lib.py`. **Listę prowadzi
+    `runs/ZAMROZONE.txt`, a pilnuje jej program:** hook `tools/frozen_guard.py` odmawia
+    edycji narzędziem Claude Code (polecenie powłoki go omija — tam zasada obowiązuje jako
+    zasada, nie automat). Skrypt rundy trafia na listę razem z README rundy;
+    `tests/test_frozen_guard.py` sprawdza, że każdy skrypt uruchamiany komendą w README
+    jest na liście. Zdjęcie z listy = świadoma decyzja z powodem w `STATUS.md`.
 14. **PRZED każdą nową rundą/eksperymentem przeczytaj `runs/INDEX.md`** (tabela + "Wnioski
     skumulowane") **i README runów powiązanych z planowaną zmianą** — projekt rundy musi
     jawnie budować na przebytych wynikach: sekcja "Poprzedzające wyniki" w README nowej rundy
@@ -137,7 +141,17 @@ jako źródło stałych zasad.
     | błąd, którego przyczyny nie widać od razu | `engineering:debug` |
     | testy nowego modułu | `engineering:testing-strategy` |
     | konfiguracja Claude Code (hooki, uprawnienia, `settings.json`) | `update-config` |
+    | nowa wersja skilla projektu + paczka do wgrania na claude.ai | `anthropic-skills:skill-creator` |
+    | plik Word / Excel / PowerPoint / PDF | `anthropic-skills:docx` / `anthropic-skills:xlsx` / `anthropic-skills:pptx` / `anthropic-skills:pdf` |
+    | nowy zbiór danych: dziury, duplikaty, dziwne wartości (obok `clas5-quant`) | `data:explore-data` |
+    | kod z kluczami API, zleceniami albo nowym połączeniem sieciowym | `security-review` (wbudowany; jednorazowo w tym momencie, nie przy każdym commicie) |
+    | pytanie, jakie automatyzacje Claude Code dodać | `claude-code-setup:claude-automation-recommender` (tylko czyta; nowe skille i tak trafiają do chmury, nie do repo) |
 
+    **Gdy kilka skilli robi to samo:** przegląd kodu = `engineering:code-review` (obowiązkowy,
+    bramka 16c); wbudowany `/code-review` to głębszy przegląd na żądanie, droższy — dodatek,
+    nie zamiennik. Wykres = `dataviz`, nie `data:create-viz`. Nazwy: `anthropic-skills:` to
+    prefiks skilli z konta claude.ai, a `anthropic-agent-skills` to katalog wtyczek na GitHubie
+    (`anthropics/skills`) — dwie różne rzeczy.
     **Rejestr audytowy:** hook w `.claude/settings.json` uruchamia `tools/skill_audit.py`,
     który po każdym wczytaniu skilla dopisuje wiersz do pliku BIEŻĄCEJ GAŁĘZI
     `runs/skille/<gałąź>.jsonl` (czas, skill, kto: Claude/użytkownik, gałąź, sesja) — jeden
@@ -159,9 +173,9 @@ jako źródło stałych zasad.
     w rejestrze — z powodem pominięcia. Rozstrzyga rejestr, nie tekst README. Brak sekcji =
     runda niezrobiona (jak brak testów w zasadzie 10).
     **Wtyczki:** potrzebne wtyczki włącza się w `.claude/settings.json` PROJEKTU, nie globalnie
-    (dziś z chmury konta: `engineering`, `data`; z GitHuba: `code-review`, `security-guidance`,
-    `claude-code-setup`, `document-skills`, `example-skills` — ze źródłem w
-    `extraKnownMarketplaces`, wytyczna o skillach niżej). Skill niedostępny w sesji (wtyczka
+    (dziś z chmury konta: `engineering`, `data`; z GitHuba: `security-guidance`,
+    `claude-code-setup` — ze źródłem w `extraKnownMarketplaces`; powody i to, czego świadomie
+    NIE włączamy, w wytycznej o skillach niżej). Skill niedostępny w sesji (wtyczka
     wyłączona, chmura niezsynchronizowana) → w README „niedostępny w sesji” i procedura z repo:
     bramki z `docs/skills/bramki-jakosci.md`, runda z zasad 11–19 i `runs/INDEX.md` („Jak dodać
     nowy wpis”). Dokument w repo pozostaje źródłem procedury; skill jest drugą parą oczu.
@@ -185,8 +199,13 @@ jako źródło stałych zasad.
   `README.md` = widok dla człowieka + kamienie milowe (zasada 15). Nie kopiuj pełnych syntez
   do PLAN/TASKS (historyczna duplikacja do odchudzenia: Backlog Z25).
 - **SKILLE PROJEKTU MIESZKAJĄ W CHMURZE KONTA, NIE W REPO (decyzja użytkownika 2026-09-23).**
-  `clas5-runda` i `clas5-quant` to skille konta claude.ai. Obie sesje (Cowork i lokalny Claude
-  Code) ładują je stamtąd; lokalnie widać je jako `anthropic-skills:<nazwa>`. **Repo nie trzyma
+  `clas5-runda`, `clas5-quant`, `quant-strategy-catalog`, `ta-toolkit` i `lean-research` to
+  skille konta claude.ai. Obie sesje (Cowork i lokalny Claude Code) ładują je stamtąd; lokalnie
+  widać je jako `anthropic-skills:<nazwa>`. Skille konta bez związku z CLAS-5 (`docs`, `morning`,
+  `import-memory`, `pine-script-v6-bybit` — TradingView) są w tym projekcie ukryte przed
+  modelem przez `skillOverrides` w `.claude/settings.json` (nadal działają jako `/nazwa`);
+  `tests/test_project_settings.py` pilnuje, żeby nigdy nie ukryć skilla z tabeli zasady 19.
+  **Repo nie trzyma
   kopii skilli** — katalog `.claude/skills/` ma zostać pusty, a `docs/` nie zawiera kopii
   `SKILL.md`. Powód: dwa środowiska z osobnymi kopiami rozjeżdżały się już trzy razy (STATUS
   §17, zadanie T8, 2026-09-22), a wykonywana była zawsze wersja starsza.
@@ -202,13 +221,30 @@ jako źródło stałych zasad.
   w `extraKnownMarketplaces` — dzięki temu każde środowisko otwierające repo (inna maszyna,
   sesja chmurowa) wie, skąd je pobrać; pilnuje tego `tests/test_project_settings.py`. Z chmurą
   konta claude.ai się NIE synchronizują — do innych środowisk docierają przez repo.
-  **Duplikaty:** `docx`, `pdf`, `pptx`, `xlsx` i `skill-creator` istnieją w dwóch różnych
-  wersjach (chmura konta vs `anthropics/skills`: inny opis wyzwalania, inne skrypty) —
-  pierwszeństwo ma wersja z chmury (`anthropic-skills:`), wersja z wtyczki jest zapasowa.
-  **`security-guidance` — tylko warstwa wzorców** (decyzja użytkownika 2026-09-23): przeglądy
-  modelem (diff po każdej turze, agent przy `git commit`/`push`) są wyłączone zmiennymi `env`
-  w `.claude/settings.json`, bo zużywają limit konta przy wielu commitach dziennie, a celują
-  w błędy aplikacji webowych. Pilnuje tego `tests/test_project_settings.py`.
+  **Czego świadomie NIE włączamy (przegląd T10, 2026-09-23):** `document-skills` (4 skille,
+  wszystkie są duplikatami chmury konta), `example-skills` (12 skilli, 11 bez zastosowania,
+  `skill-creator` to duplikat), `code-review` z GitHuba (przegląda tylko pull requesty, a my
+  scalamy lokalnie), `claude-api` (wbudowany w Claude Code), `academy-guide` (nauka Claude —
+  sprawa konta, nie projektu). Źródła zostają w `extraKnownMarketplaces`, więc powrót to jedna
+  komenda. Gdyby duplikaty (`docx`, `pdf`, `pptx`, `xlsx`, `skill-creator`) kiedyś wróciły
+  z wtyczki — pierwszeństwo ma wersja z chmury (`anthropic-skills:`); rejestr zapisuje pełną
+  nazwę skilla, więc użycie innej wersji widać w raporcie.
+  **Łączniki (MCP) w tym projekcie:** wtyczki `engineering` i `data` niosą 18 łączników
+  z zewnętrznymi usługami (Slack, Jira, BigQuery, Amplitude…), żaden nie jest używany — na
+  maszynie użytkownika są wyłączone per projekt (`/mcp disable <serwer>`, zapis w `~/.claude.json`
+  poza repo; w nowym środowisku trzeba to powtórzyć). Łączniki konta claude.ai (Gmail,
+  Kalendarz, Drive, Docs) są w sesjach projektu wyłączone (`disableClaudeAiConnectors`
+  w `.claude/settings.json`). Pojedynczego skilla z wtyczki wyłączyć się nie da — tylko całą
+  wtyczkę; `skillOverrides` działa wyłącznie na skille spoza wtyczek (sprawdzone w kodzie
+  Claude Code 2.1.280).
+  **`claude-code-setup`** radzi tworzyć skille w `.claude/skills/` — u nas ta rada nie
+  obowiązuje (skille tylko w chmurze). **`security-guidance` — tylko warstwa wzorców**
+  (decyzja użytkownika 2026-09-23): przeglądy modelem (diff po każdej turze, agent przy
+  `git commit`/`push`) są wyłączone zmiennymi `env` w `.claude/settings.json`, bo zużywają
+  limit konta przy wielu commitach dziennie, a celują w błędy aplikacji webowych. Pilnuje tego
+  `tests/test_project_settings.py`. Ostrzeżenie wzorca przy edycji (`pickle`, `os.system`,
+  `shell=True`…) traktuj jak uwagę z przeglądu kodu: popraw albo uzasadnij w werdykcie
+  bramki 16c.
 - **Mapowanie „moment pracy → skill” jest zasadą 19** (obowiązkową), nie wytyczną. Procedura
   bramek jakości mieszka w repo jako **dokument** (`docs/skills/bramki-jakosci.md`), nie
   skill — powód: zasady 16a/16b wskazywały kiedyś wyłącznie skille wtyczki `data`, a ta
@@ -261,6 +297,18 @@ config/settings.yaml, agents/feature_registry.yaml        — źródło prawdy d
 tools/skill_audit.py + runs/skille/<gałąź>.jsonl         — rejestr użycia skilli (zasada 19):
                                                             hook zapisuje, `raport` czyta;
                                                             lokalny monitor uzycie_skilli.csv
+tools/frozen_guard.py + runs/ZAMROZONE.txt              — zamrożone skrypty (zasada 13): hook
+                                                            odmawia edycji, `lista` sprawdza
+```
+
+## Komendy (Windows: `py`; sesja chmurowa Linux: `python3`)
+
+```
+py -m pytest -q                                   # cały zestaw testów (DoD, zasada 10)
+py -m ruff check . && py -m black --check .       # lint/format; zamrożone skrypty omijane w pyproject.toml
+py -m backtest.run_checkpoint_v2                  # kanoniczny checkpoint v2 (zasada 12)
+py tools/skill_audit.py raport --galaz <gałąź>    # sekcja „Użyte skille” README rundy (zasada 19)
+py tools/frozen_guard.py lista                    # lista zamrożonych skryptów + czy pliki istnieją (zasada 13)
 ```
 
 ## Zanim zmienisz coś w `risk_controller.py`, `labeling.py`, `feature_miner.py` lub metodologii pomiaru

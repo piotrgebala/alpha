@@ -1,0 +1,35 @@
+# runs/ZAMROZONE.txt — skrypty zamrożone (CLAUDE.md zasada 13)
+#
+# Jedna ścieżka na linię, względem katalogu głównego repo; `#` zaczyna komentarz.
+# Pilnuje: tools/frozen_guard.py (hook PreToolUse w .claude/settings.json) — narzędzia
+# edycji Claude Code dostają odmowę. Spójność z komendami w README rund i z wykluczeniami
+# w pyproject.toml sprawdza tests/test_frozen_guard.py.
+#
+# Co tu trafia: skrypt rundy w chwili, gdy jej README podaje komendę uruchomienia.
+# Co tu NIE trafia: wspólne biblioteki (backtest/engine.py, metrics.py, costs.py,
+# checkpoint_lib.py) i kanoniczny backtest/run_checkpoint_v2.py — one się rozwijają.
+# Zdjęcie z listy = świadoma decyzja z powodem w STATUS.md, nie cicha edycja.
+
+backtest/calibrate_regime_thresholds.py      # C2.5
+backtest/carry_probe.py                      # P2 (czyste funkcje sondy, testy w tests/)
+backtest/checkpoint_timeframe_robustness.py  # C2.6
+backtest/diagnose_cost_feasibility.py        # C2d
+backtest/diagnose_early_stopping_t4.py       # T4
+backtest/diagnose_kill_switch_trigger.py     # C2c
+backtest/diagnose_range_signal.py            # C2b
+backtest/diagnose_regime_coherence.py        # Z16
+backtest/diagnose_statistical_power.py       # Z19
+backtest/diagnose_timeframe_geometry.py      # Z9
+backtest/evaluate_confidence_threshold.py    # C2.13
+backtest/evaluate_feature_candidate.py       # C2.8
+backtest/run_abstention_fix_k2.py            # K2
+backtest/run_carry_probe_p2.py               # P2
+backtest/run_checkpoint.py                   # C6 (checkpoint v1)
+backtest/run_funding_feature_h21.py          # H2.1
+backtest/run_funding_measured_f1.py          # F1
+backtest/run_measurability_k3.py             # K3
+backtest/run_momentum_m1.py                  # M1
+backtest/run_positive_control_k1.py          # K1
+backtest/run_single_regime_4h.py             # S1 / S1b
+backtest/run_timeout_leg_band.py             # H3
+backtest/screen_feature_candidates.py        # C2.7
