@@ -189,8 +189,9 @@ Te pliki zmieniają się często — traktuj jako aktualny stan, nie jako źród
     z nowymi; (b) próba maleje z ~14 400 do ~11 600 ocenianych świec 4h (5,5 roku, ~69 okien
     walk-forward 60/28/28), więc rachunek mocy (zasada 18) liczy się od nowa dla każdej
     hipotezy; (c) filtr daty mieszka w JEDNYM miejscu — `config/settings.yaml`
-    (`data.min_start`) czytany przez `backtest/checkpoint_lib.py::fetch_native` — nie w każdym
-    skrypcie z osobna; skrypty zamrożone (zasada 13) go nie znają i nie muszą.
+    (`data.min_start`) nakładany przez `backtest/checkpoint_lib.py::fetch_window` (nowe skrypty
+    wołają `fetch_window`, nie `fetch_native`) — nie w każdym skrypcie z osobna; skrypty
+    zamrożone (zasada 13) wołają `fetch_native` bez filtra i pozostają odtwarzalne.
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 

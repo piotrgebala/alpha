@@ -103,10 +103,20 @@ Po wypełnieniu po cenie `E` (kierunek `d`, `ATR` = `atr_14` świecy sygnału):
 4. **Na `T_far`:** wychodzi pozostałe 50 % (maker).
 5. **Timeout:** zamknięcie świecy `t + 3` (od sygnału) po rynku (taker) dla tego, co zostało.
 6. **Kolejność w świecy (tryb 4h, jak W1):** w świecy wypełnienia liczy się tylko stop, chyba że
-   wypełnienie na otwarciu; w świecy zdarzenia `T_near` (gdy nie na otwarciu) po częściowym
+   wypełnienie na otwarciu. ~~W świecy zdarzenia `T_near` (gdy nie na otwarciu) po częściowym
    wyjściu liczy się w tej samej świecy **tylko stop na `E`**, `T_far` dopiero od następnej
-   świecy — konserwatywnie, tak jak dla wypełnienia. Obie bariery w jednej świecy → reguła
-   etykiety (bliższa otwarciu pierwsza).
+   świecy.~~ **POPRAWKA 1 (2026-09-23, PRZED uruchomieniem, wykryta testami przykładowymi reguły
+   6, zero spojrzeń na dane):** przy wejściu limitem minimum świecy wypełnienia leży PONIŻEJ ceny
+   wejścia z samej konstrukcji wypełnienia (przebicie `low < E`), więc reguła „liczy się stop na
+   `E`" zamykałaby drugą połowę mechanicznie w każdej transakcji, w której bliższy cel pada
+   w świecy wypełnienia — to artefakt, nie ostrożność. Reguła zastępcza, ŚCIŚLEJSZA logicznie:
+   bliższy cel pada w nieznanej chwili τ wewnątrz świecy; zdarzenie po τ jest dowiedzione
+   wyłącznie przez **zamknięcie tej świecy** — `close` za `T_far` ⇒ dalszy cel padł po τ (ścieżka
+   od `T_near` do `close` musiała przeciąć `T_far`); `close` za `E` ⇒ stop na wejściu padł po τ
+   (ścieżka od `T_near` > `E` do `close` ≤ `E` przecięła `E`). Ekstrema świecy nie są dowodem.
+   Nic niedowiedzionego = nic się nie stało w tej świecy; od następnej świecy normalnie.
+   Gdy bliższy cel był spełniony już na otwarciu świecy (luka), liczy się cała jej ścieżka.
+   Obie bariery w jednej świecy → reguła etykiety (bliższa otwarciu pierwsza).
 7. **Koszty per noga:** wejście maker na 100 % nominału; `T_near`/`T_far` maker na 50 % każde;
    stop `S` taker na 100 %; stop `E` taker na 50 %; timeout taker na to, co zostało; funding za
    świece trzymania każdej połowy osobno. Zwrot netto transakcji = suma nóg / nominał wejścia.

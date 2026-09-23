@@ -36,7 +36,15 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from backtest.costs import EXIT_REASON_SL, EXIT_REASON_TIMEOUT, EXIT_REASON_TP, MAKER, TAKER
+from backtest.costs import (
+    EXIT_REASON_BE_STOP,
+    EXIT_REASON_SL,
+    EXIT_REASON_TIMEOUT,
+    EXIT_REASON_TP,
+    EXIT_REASON_TP_PARTIAL,
+    MAKER,
+    TAKER,
+)
 
 ENTRY_LIMIT_CLOSE = "limit_close"
 ENTRY_LIMIT_PULLBACK = "limit_pullback"
@@ -102,6 +110,37 @@ class ExitEvent:
 
 
 @dataclass(frozen=True)
+class ExitLeg:
+    """Jedna noga wyjścia: ułamek pozycji, świeca DECYZYJNA wyjścia, cena, powód."""
+
+    fraction: float
+    idx: int
+    price: float
+    reason: str
+
+
+@dataclass(frozen=True)
+class ManagedExitRule:
+    """
+    N1: prowadzenie pozycji dwoma celami. Bliższy z (`E·(1 ± near_pct)`, `E ± M·ATR`) zamyka
+    `partial_fraction` pozycji i przesuwa stop na cenę wejścia; dalszy zamyka resztę. `M` to
+    ten sam `atr_multiplier`, który dostaje `simulate_trade` (zasada 3 — jedno źródło mnożnika).
+    Reguły 1–7 zapisane PRZED kodem: runs/2026-09-23_n1-nowy-cel-czesciowe-tp/README.md.
+    """
+
+    partial_fraction: float = 0.5
+    near_pct: float = 0.0167  # +5 % depozytu przy dźwigni 3× → 1,67 % ceny
+
+    def __post_init__(self) -> None:
+        if not 0.0 < self.partial_fraction < 1.0:
+            raise ValueError(
+                f"partial_fraction musi być w (0, 1), dostałem: {self.partial_fraction!r}"
+            )
+        if not np.isfinite(self.near_pct) or self.near_pct <= 0:
+            raise ValueError(f"near_pct musi być > 0, dostałem: {self.near_pct!r}")
+
+
+@dataclass(frozen=True)
 class TradeOutcome:
     filled: bool
     entry_level: float
@@ -109,11 +148,14 @@ class TradeOutcome:
     fill_idx: int | None = None  # indeks ŚWIECY DECYZYJNEJ wypełnienia
     fill_price: float = float("nan")
     fill_at_open: bool = False
-    exit_idx: int | None = None  # indeks ŚWIECY DECYZYJNEJ wyjścia
+    exit_idx: int | None = None  # indeks ŚWIECY DECYZYJNEJ wyjścia (ostatniej nogi)
     exit_price: float = float("nan")
     exit_reason: str | None = None
     tp_level: float = float("nan")
     sl_level: float = float("nan")
+    # N1: wszystkie nogi wyjścia w porządku czasowym (indeksy świec DECYZYJNYCH); pojedyncze
+    # wyjście = jedna noga o ułamku 1,0. Ułamki sumują się do 1 (test własnościowy).
+    legs: tuple[ExitLeg, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -292,7 +334,124 @@ def simulate_exit(
     return ExitEvent(idx=last_idx, price=float(close[last_idx]), reason=EXIT_REASON_TIMEOUT)
 
 
+# --- wyjście wielonogowe (N1) ----------------------------------------------------------------
+
+
+def managed_targets(
+    direction: float, entry: float, atr_t: float, atr_multiplier: float, rule: ManagedExitRule
+) -> tuple[float, float]:
+    """(bliższy, dalszy) cel — reguła 1 pre-rejestracji N1: dwa zlecenia limit w księdze,
+    bliższe wypełnia się pierwsze (także gdy `M·ATR < near_pct·E`, czyli cele „odwrócone")."""
+    target_pct = float(entry * (1.0 + direction * rule.near_pct))
+    target_atr = float(entry + direction * atr_multiplier * atr_t)
+    if abs(target_pct - entry) <= abs(target_atr - entry):
+        return target_pct, target_atr
+    return target_atr, target_pct
+
+
+def simulate_managed_exit(
+    direction: float,
+    fill: Fill,
+    atr_t: float,
+    atr_multiplier: float,
+    rule: ManagedExitRule,
+    open_: np.ndarray,
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
+    last_idx: int,
+    tie_rule: str,
+) -> tuple[ExitLeg, ...]:
+    """
+    Reguły 2–6 pre-rejestracji N1 na ścieżce od świecy wypełnienia do `last_idx`:
+      faza 1 — stop `E ∓ M·ATR` (cała pozycja) vs bliższy cel; w świecy wypełnienia liczy się
+               tylko stop, chyba że wypełnienie na otwarciu (jak `simulate_exit`);
+      faza 2 — po bliższym celu: `partial_fraction` wychodzi po cenie celu (maker), stop = `E`
+               (break-even, taker) dla reszty, dalszy cel dla reszty; w świecy bliższego celu
+               (gdy nie na otwarciu) zdarzenie po celu liczy się TYLKO, gdy dowodzi go zamknięcie
+               świecy (Poprawka 1 pre-rejestracji: close za dalszym celem → dalszy cel, close za
+               wejściem → stop na wejściu; inaczej nic), od następnej świecy normalnie;
+      timeout — zamknięcie `last_idx` po rynku dla tego, co zostało.
+    Zwraca nogi w porządku czasowym; ułamki sumują się do 1.
+    """
+    entry = fill.price
+    stop = float(entry - direction * atr_multiplier * atr_t)
+    near, far = managed_targets(direction, entry, atr_t, atr_multiplier, rule)
+
+    near_idx: int | None = None
+    for j in range(fill.idx, last_idx + 1):
+        allow_target = j > fill.idx or fill.at_open
+        hit = _first_barrier(
+            direction, near, stop, open_[j], high[j], low[j], tie_rule, allow_target
+        )
+        if hit == EXIT_REASON_SL:
+            return (ExitLeg(1.0, j, stop, EXIT_REASON_SL),)
+        if hit == EXIT_REASON_TP:
+            near_idx = j
+            break
+    if near_idx is None:
+        return (ExitLeg(1.0, last_idx, float(close[last_idx]), EXIT_REASON_TIMEOUT),)
+
+    first = ExitLeg(rule.partial_fraction, near_idx, near, EXIT_REASON_TP_PARTIAL)
+    rest = 1.0 - rule.partial_fraction
+    near_at_open = bool(open_[near_idx] >= near) if direction > 0 else bool(open_[near_idx] <= near)
+    if not near_at_open:
+        # Poprawka 1 pre-rejestracji N1 (PRZED uruchomieniem): bliższy cel padł w ŚRODKU świecy,
+        # w nieznanej chwili τ. Zdarzenie po τ jest dowiedzione tylko przez ZAMKNIĘCIE świecy:
+        # close za dalszym celem ⇒ ścieżka od celu bliższego (< far) do close (>= far) przecięła
+        # far po τ; close za wejściem ⇒ ścieżka od celu (> E) do close (<= E) przecięła E po τ.
+        # Ekstremum świecy NIE jest dowodem — minimum świecy wypełnienia leży poniżej wejścia
+        # z samej konstrukcji wypełnienia limitem, więc reguła „liczy się stop" zamykałaby
+        # drugą połowę mechanicznie. Nic niedowiedzionego = nic się nie stało (neutralnie).
+        c_near = close[near_idx]
+        if (direction > 0 and c_near >= far) or (direction < 0 and c_near <= far):
+            return (first, ExitLeg(rest, near_idx, far, EXIT_REASON_TP))
+        if (direction > 0 and c_near <= entry) or (direction < 0 and c_near >= entry):
+            return (first, ExitLeg(rest, near_idx, float(entry), EXIT_REASON_BE_STOP))
+    for j in range(near_idx, last_idx + 1):
+        if j == near_idx and not near_at_open:
+            continue  # rozstrzygnięte wyżej przez zamknięcie świecy
+        hit = _first_barrier(direction, far, entry, open_[j], high[j], low[j], tie_rule, True)
+        if hit == EXIT_REASON_SL:
+            return (first, ExitLeg(rest, j, float(entry), EXIT_REASON_BE_STOP))
+        if hit == EXIT_REASON_TP:
+            return (first, ExitLeg(rest, j, far, EXIT_REASON_TP))
+    return (first, ExitLeg(rest, last_idx, float(close[last_idx]), EXIT_REASON_TIMEOUT))
+
+
 # --- cała transakcja -------------------------------------------------------------------------
+
+
+def _exit_legs(
+    direction: float,
+    fill: Fill,
+    atr_t: float,
+    atr_multiplier: float,
+    exit_rule: ManagedExitRule | None,
+    open_: np.ndarray,
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
+    last_idx: int,
+    tie_rule: str,
+) -> tuple[ExitLeg, ...]:
+    if exit_rule is None:
+        tp, sl = barrier_levels(direction, fill.price, atr_t, atr_multiplier)
+        exit_ = simulate_exit(direction, fill, tp, sl, open_, high, low, close, last_idx, tie_rule)
+        return (ExitLeg(1.0, exit_.idx, exit_.price, exit_.reason),)
+    return simulate_managed_exit(
+        direction,
+        fill,
+        atr_t,
+        atr_multiplier,
+        exit_rule,
+        open_,
+        high,
+        low,
+        close,
+        last_idx,
+        tie_rule,
+    )
 
 
 def simulate_trade(
@@ -308,6 +467,7 @@ def simulate_trade(
     atr_t: float,
     atr_multiplier: float,
     intrabar: IntrabarPath | None = None,
+    exit_rule: ManagedExitRule | None = None,
 ) -> TradeOutcome:
     """
     Jedna transakcja od sygnału `t`: zlecenie ważne `validity` świec decyzyjnych (nie dłużej niż
@@ -315,6 +475,8 @@ def simulate_trade(
 
     `intrabar` = None → RESOLUTION_BAR; inaczej ścieżka drobna musi pokrywać świece
     `t+1..timeout_idx` w całości (ValueError, gdy nie — fail loud).
+    `exit_rule` = None → pojedyncze wyjście TP/SL/timeout (W1); inaczej wyjście wielonogowe (N1).
+    Pola `exit_*` opisują OSTATNIĄ nogę; komplet nóg w `legs`.
     """
     if validity < 1:
         raise ValueError(f"validity musi być >= 1, dostałem: {validity}")
@@ -328,9 +490,20 @@ def simulate_trade(
         if fill is None:
             return TradeOutcome(filled=False, entry_level=level, resolution=RESOLUTION_BAR)
         tp, sl = barrier_levels(direction, fill.price, atr_t, atr_multiplier)
-        exit_ = simulate_exit(
-            direction, fill, tp, sl, open_, high, low, close, timeout_idx, TIE_CLOSER_TO_OPEN
+        legs = _exit_legs(
+            direction,
+            fill,
+            atr_t,
+            atr_multiplier,
+            exit_rule,
+            open_,
+            high,
+            low,
+            close,
+            timeout_idx,
+            TIE_CLOSER_TO_OPEN,
         )
+        last = legs[-1]
         return TradeOutcome(
             filled=True,
             entry_level=level,
@@ -338,11 +511,12 @@ def simulate_trade(
             fill_idx=fill.idx,
             fill_price=fill.price,
             fill_at_open=fill.at_open,
-            exit_idx=exit_.idx,
-            exit_price=exit_.price,
-            exit_reason=exit_.reason,
+            exit_idx=last.idx,
+            exit_price=last.price,
+            exit_reason=last.reason,
             tp_level=tp,
             sl_level=sl,
+            legs=legs,
         )
 
     if not intrabar.covers(t + 1, timeout_idx):
@@ -360,11 +534,12 @@ def simulate_trade(
     if fill is None:
         return TradeOutcome(filled=False, entry_level=level, resolution=RESOLUTION_INTRABAR)
     tp, sl = barrier_levels(direction, fill.price, atr_t, atr_multiplier)
-    exit_ = simulate_exit(
+    sub_legs = _exit_legs(
         direction,
         fill,
-        tp,
-        sl,
+        atr_t,
+        atr_multiplier,
+        exit_rule,
         intrabar.open,
         intrabar.high,
         intrabar.low,
@@ -372,6 +547,10 @@ def simulate_trade(
         intrabar.last_sub_idx(timeout_idx),
         TIE_SL_FIRST,
     )
+    legs = tuple(
+        ExitLeg(leg.fraction, intrabar.bar_of(leg.idx), leg.price, leg.reason) for leg in sub_legs
+    )
+    last = legs[-1]
     return TradeOutcome(
         filled=True,
         entry_level=level,
@@ -379,9 +558,10 @@ def simulate_trade(
         fill_idx=intrabar.bar_of(fill.idx),
         fill_price=fill.price,
         fill_at_open=fill.at_open,
-        exit_idx=intrabar.bar_of(exit_.idx),
-        exit_price=exit_.price,
-        exit_reason=exit_.reason,
+        exit_idx=last.idx,
+        exit_price=last.price,
+        exit_reason=last.reason,
         tp_level=tp,
         sl_level=sl,
+        legs=legs,
     )

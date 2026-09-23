@@ -378,3 +378,56 @@ właściwością:
 próba jest mniej wyselekcjonowana niż przed adopcją, a poprzeczka opłacalności odpowiednio
 wyższa. To nie jest powód, żeby A1 wycofać — to powód, żeby nie porównywać liczb sprzed
 i po adopcji bez tej poprawki.
+
+## ADR — cel modelu vs zarządzanie pozycją; próg opłacalności przy wypłatach asymetrycznych (N1, 2026-09-23)
+
+**Status:** Accepted (decyzje użytkownika 2026-09-23: częściowe wyjście 50 % przy +5 % depozytu
+przy dźwigni 3×, stop na cenę wejścia, reszta do 1,5·ATR, limit czasu 12 h).
+**Pre-rejestracja i wynik:** `runs/2026-09-23_n1-nowy-cel-czesciowe-tp/README.md`.
+
+### Kontekst
+
+Użytkownik prowadzi pozycję na żywo dwoma celami. Etykieta triple-barrier (±`ATR_MULTIPLIER`·ATR,
+V świec) definiuje, czego model się uczy; zasada 3 wiąże stop z barierą etykiety. Pytanie: czy
+nowy sposób prowadzenia pozycji to nowy TARGET (przebudowa etykiety, retrening), czy NAKŁADKA na
+ścieżce cen po wejściu. W1b pokazało ponadto, że próg `0,5·(1 + C/B)` przestaje być progiem, gdy
+wypłaty nie są ±B — a przy częściowym wyjściu asymetria jest wbudowana z definicji.
+
+### Decyzja
+
+1. **Etykieta zostaje symetryczna** (±1,5·ATR, V = 3). Stop początkowy = bariera etykiety (zasada 3
+   spełniona), dalszy cel = bariera etykiety, a pierwsze, częściowe wyjście na bliższym celu jest
+   **nakładką zarządzania** (`backtest/execution.py::ManagedExitRule`, `simulate_managed_exit`),
+   liczoną na tej samej ścieżce cen co wypełnienia z W1. Model i sygnały są identyczne z kontrolą,
+   więc porównanie jest parowane transakcja po transakcji i runda ma DOKŁADNIE jedną zmienną.
+2. **Cele uporządkowane:** bliższy z (`E·(1 ± 1,67 %)`, `E ± 1,5·ATR`) zamyka 50 % i przesuwa stop
+   na `E`; dalszy zamyka resztę. Tak działają dwa zlecenia limit w księdze; w ~21 % świec
+   (`1,5·ATR < 1,67 %`) kolejność jest „odwrócona" i reguła to obsługuje bez wyboru po wyniku.
+3. **Journal per noga:** `TradeOutcome.legs` (ułamek, świeca, cena, powód), nowe powody wyjścia
+   `tp_partial` (maker) i `be_stop` (taker) w `costs.py`; koszt `multi_leg_cost` = noga wejścia na
+   całym nominale + nogi wyjścia na ich ułamkach + funding per część; jedna noga deleguje do
+   `total_round_trip_cost` (bit w bit — wszystkie wcześniejsze rundy odtwarzalne).
+4. **Próg opłacalności uogólniony:** `p* = (L̄ + C) / (W̄ + L̄)` — trafność, przy której oczekiwana
+   wypłata jest zerem dla ZMIERZONYCH średnich wygranej `W̄` i straty `L̄` (brutto, % nominału)
+   i kosztu `C`. Dla ±B redukuje się do `0,5·(1 + C/B)`. **Kryterium POZYTYWNE = `t_neff(zwrot
+   netto) > 1,96` ORAZ `ci_low(p) > p*`** — zwrot jest członem nośnym (wytyczna CLAUDE.md po W1b),
+   trafność wchodzi wyłącznie przez próg dopasowany do rzeczywistych wypłat.
+
+### Odrzucone alternatywy
+
+| opcja | dlaczego nie |
+|---|---|
+| etykieta asymetryczna pod bliższy cel (+1,67 % / −1,5·ATR) | inny model i inne sygnały niż kontrola — dwie zmiany naraz; łamie zasadę 3 tylko pozornie (stop zostaje), ale zmienia proporcje klas i abstynencję, więc efekt zarządzania byłby nieodróżnialny od efektu retreningu |
+| osobny model dla drugiej połowy (kiedy trzymać, kiedy wyjść) | nowa hipoteza z własnym licznikiem; nie ma czego uczyć, dopóki pierwsza nie pokaże sygnału |
+| trailing stop zamiast stałego dalszego celu | użytkownik wybrał stały cel (1,5·ATR); trailing to inny wariant (nie w tej rundzie) |
+| próg `0,5·(1 + C/B)` z `B` = średnia |wyjście − wejście| | W1b: przy wypłatach asymetrycznych daje „trafność nad progiem" przy stracie; nie jest progiem, tylko diagnostyką |
+
+### Konsekwencje
+
+- Łatwiejsze: każda przyszła reguła prowadzenia pozycji (trailing, kilka celów) to nowa
+  `ManagedExitRule`, nie nowy silnik; koszty per noga są jawne w journalu.
+- Trudniejsze: journal ma trzy nowe kolumny (`n_legs`, `partial_exit_price`,
+  `partial_exit_bar_offset`); `summarize_edge_by_regime` liczy `barrier_pct` z OSTATNIEJ nogi,
+  więc przy nogach wielu jest miarą diagnostyczną (adnotacja w raporcie rundy).
+- Do rewizji: gdy pojawi się hipoteza z sygnałem, wrócić do pytania, czy etykieta ma kodować
+  pierwszy cel (wtedy osobna runda z własnym licznikiem).
