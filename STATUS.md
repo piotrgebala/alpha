@@ -67,7 +67,11 @@
 > giełdach, DVOL − zrealizowana, Fear & Greed jako 5. cecha modelu 4h — **trzy razy NEGATYWNY**
 > (p 49,8 / 50,5 / 49,9 % vs próg ~53,5 %; parowo +0,003 / +0,018 / +0,002 pp, wszystkie z zerem
 > w CI). Wniosek 67: dokładanie pojedynczych cech spoza wykresu nie wyprowadzi modelu 4h ponad
-> próg; serie L/V/G 1/1 STOP.**
+> próg; serie L/V/G 1/1 STOP.
+> X2 (2026-09-23, decyzja użytkownika „wykonaj oba"): momentum na top-50 **+15,9 %/rok
+> [−12,3; +44,2], NIEROZSTRZYGNIĘTY i słabszy niż X1** (IC 0, połowa sumy w 33 dniach, 2022
+> −20 %); reguła X1 na innej siatce tygodniowej daje +9 % zamiast +22 %/rok — **X1 wrażliwe na
+> fazę rebalansu** (wniosek 68). Rodzina B1: słabe poparcie, bez dowodu; X2 1/1 STOP.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2571,6 +2575,20 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Seria X2 — momentum przekrojowe na top-50 ⚪ ZAMKNIĘTA 2026-09-23 (X2), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY (słabszy niż X1)
+
+Decyzja użytkownika 2026-09-23 („wykonaj oba"): większa próba przez szerokość — top-50 point-in-time,
+nogi po 10, od 2021-05-01 (wcześniej < 50 kandydatów), reszta reguły jak X1; moc z symulacji
+100 losowych rankingów PRZED wynikiem (17,5 %/rok; ×1,3 = 22,8 %). **Wynik:** +0,044 %/dzień
+[−0,034; +0,121], t 1,10, +15,9 %/rok, Σ +82 % w 5,2 roku; **IC −0,006 [−0,033; +0,022]**;
+33 skrajne dni = 52 % sumy; 2022 −20 %; noga short robi wynik; korelacja z BTC −0,11.
+**Walidacja krzyżowa:** reguła X1 (top-20/5) tym samym kodem na siatce formowań X2 daje
++0,024 %/dzień (Σ +46 %) zamiast +0,060 (Σ +119 %) — **X1 zależało od fazy tygodniowego
+kalendarza rebalansów** (wniosek 68). Rodzina B1 po dwóch odczytach: hipoteza ze SŁABYM
+poparciem, bez dowodu; kolejne warianty zakazane; jedyna droga = pomiar prospektywny (7 faz
+naraz, ≥ 2 lata) — decyzja użytkownika.
+→ [runs/x2](runs/2026-09-23_x2-momentum-top50/README.md)
 
 #### Serie L / V / G — cechy dzienne spoza wykresu jako 5. cecha modelu 4h 🔴 ZAMKNIĘTE 2026-09-23 (L1, V1, G1), każda 1/1, reguła STOP, trzy razy NEGATYWNY
 
