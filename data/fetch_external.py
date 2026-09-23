@@ -115,7 +115,15 @@ def http_get(
     max_retries: int = HTTP_MAX_RETRIES,
     backoff_s: float = HTTP_BACKOFF_S,
 ) -> bytes:
-    """GET z ponawianiem na błędach sieci / 5xx / 429 (backoff wykładniczy). 4xx inne → od razu."""
+    """
+    GET z ponawianiem na błędach sieci / 5xx / 429 (backoff wykładniczy). 4xx inne → od razu.
+
+    Tylko `https` — `urlopen` obsługuje też `file://`, `ftp://`, `data:`, a adresu nigdy nie
+    wolno wziąć z odpowiedzi serwera (przegląd bezpieczeństwa P3: stronicowanie CoinMetrics
+    buduje URL z tokenu, nie z `next_page_url`).
+    """
+    if urllib.parse.urlsplit(url).scheme != "https":
+        raise ValueError(f"http_get: dozwolone tylko https, dostałem {url[:80]!r}")
     last: Exception | None = None
     for attempt in range(max_retries):
         try:
@@ -512,31 +520,42 @@ def fetch_dvol(currency: str, start: str, out_dir: str | Path, force: bool = Fal
     return save_parquet(df, path)
 
 
+def coinmetrics_page_url(params: dict) -> str:
+    """Adres strony CoinMetrics ze STAŁEJ bazy + zakodowanych parametrów (czysta funkcja)."""
+    return f"{COINMETRICS_URL}?{urllib.parse.urlencode(params)}"
+
+
 def fetch_coinmetrics(
     asset: str, metrics: list[str], start: str, out_dir: str | Path, force: bool = False
 ) -> Path | None:
-    """On-chain 1d (CoinMetrics community) od `start`; paginacja `next_page_url`."""
+    """
+    On-chain 1d (CoinMetrics community) od `start`; paginacja tokenem `next_page_token`
+    dopisywanym do STAŁEGO adresu (nigdy `next_page_url` z odpowiedzi — host i schemat
+    zostają pod kontrolą modułu).
+    """
     path = target_path(out_dir, f"coinmetrics_{asset}_1d")
     if _skip_existing(path, force):
         return None
-    q = urllib.parse.urlencode(
-        {
-            "assets": asset,
-            "metrics": ",".join(metrics),
-            "frequency": "1d",
-            "start_time": start,
-            "page_size": 10000,
-        }
-    )
-    url: str | None = f"{COINMETRICS_URL}?{q}"
+    params: dict = {
+        "assets": asset,
+        "metrics": ",".join(metrics),
+        "frequency": "1d",
+        "start_time": start,
+        "page_size": 10000,
+    }
     rows: list[dict] = []
-    while url:
-        res = json.loads(http_get(url))
+    for _page in range(1000):  # twardy limit stron zamiast `while True`
+        res = json.loads(http_get(coinmetrics_page_url(params)))
         if "data" not in res:
             raise ValueError(f"coinmetrics: nieoczekiwana odpowiedź {str(res)[:200]}")
         rows.extend(res["data"])
-        url = res.get("next_page_url")
+        token = res.get("next_page_token")
+        if not token:
+            break
+        params["next_page_token"] = str(token)
         time.sleep(REST_PACING_S)
+    else:
+        raise ValueError("coinmetrics: przekroczono limit 1000 stron")
     df = parse_coinmetrics(rows, metrics)
     print(f"[external] coinmetrics {asset}: {len(df)} dni, {len(metrics)} metryk")
     return save_parquet(df, path)

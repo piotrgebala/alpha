@@ -1,0 +1,50 @@
+== A. rząd wielkości: 2213 plików × 288 = 637344 ; wiersze 636710 ; różnica 634 (luki z profilu: 634)
+== B. NaN w top-trader ratio: kiedy? ==
+                                                        od                        do      n
+count_toptrader_long_short_ratio                                                           
+16                               2022-09-03 08:50:00+00:00 2022-12-14 15:30:00+00:00  29457
+8                                2022-01-31 00:00:00+00:00 2022-05-01 22:30:00+00:00  26191
+14                               2022-06-27 08:00:00+00:00 2022-09-03 07:05:00+00:00  19574
+6                                2021-12-30 14:35:00+00:00 2022-01-29 23:55:00+00:00   8752
+10                               2022-05-01 23:00:00+00:00 2022-05-27 15:55:00+00:00   7404
+12                               2022-06-24 16:05:00+00:00 2022-06-27 06:55:00+00:00    755
+58                               2025-07-22 13:40:00+00:00 2025-07-22 16:05:00+00:00     30
+56                               2025-07-21 16:15:00+00:00 2025-07-21 17:05:00+00:00     11
+NaN w bazie 2021-01-01→2026-07-01: 92226
+== C. zera w OI: kiedy? ==
+n zer 473 od 2021-05-22 04:25:00+00:00 do 2025-07-21 17:05:00+00:00
+timestamp
+2022-03-07    102
+2024-07-14     85
+2024-07-13     52
+2024-07-11     46
+2024-07-12     43
+== D. zgodność archiwum vs kolektor REST (1h) za wspólne dni ==
+openInterestHist                 wspólnych  505 (2026-09-01→2026-09-22), max |rel| 7.76e-03, mediana 2.26e-04, dokładnie równych 0.000
+topLongShortAccountRatio         wspólnych  505 (2026-09-01→2026-09-22), max |rel| 8.04e-02, mediana 8.30e-04, dokładnie równych 0.000
+topLongShortPositionRatio        wspólnych  505 (2026-09-01→2026-09-22), max |rel| 2.35e-02, mediana 7.20e-04, dokładnie równych 0.000
+globalLongShortAccountRatio      wspólnych  505 (2026-09-01→2026-09-22), max |rel| 6.73e-02, mediana 1.05e-03, dokładnie równych 0.000
+== E. OI value vs OI × cena (spójność): mediana |OI_value/(OI×close) − 1| ==
+n 12766 mediana 0.0048 p99 0.0461
+== F. kontrakty: świece PO wygaśnięciu i z zerowym wolumenem ==
+świec po expiry: 356 z tego wolumen 0: 330 ; wszystkich z wolumenem 0: 330
+== G. COIN-M funding: rozrzut ms wokół siatki 8h ==
+offset s: max 0.094 udział > 1 s: 0.0 ; masa 0.0001: 0.42654735272184935
+== H. DVOL: BTC pokrycie bazy od 2021-03-24 ==
+dni w bazie: 1925 / 2007 dni bazy; od 2021-03-24 oczekiwane: 1925
+== I. CoinMetrics: braki per metryka w bazie ==
+date                           0
+AdrActCnt                      0
+TxCnt                          0
+TxTfrCnt                       0
+CapMVRVCur                     0
+CapMrktCurUSD                  0
+FlowInExUSD                    0
+FlowOutExUSD                   0
+SplyExNtv                      0
+HashRate                       0
+FeeTotNtv                      0
+IssTotNtv                      0
+PriceUSD                       0
+volume_reported_spot_usd_1d    0
+SplyCur                        0

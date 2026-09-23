@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 
 import pandas as pd
 import pytest
@@ -193,3 +194,39 @@ def test_save_is_idempotent_unless_force(tmp_path):
 def test_run_rejects_unknown_source(tmp_path):
     with pytest.raises(ValueError, match="nieznane"):
         fe.run(tmp_path, only=["nie-ma"])
+
+
+def test_http_get_rejects_non_https_before_any_network():
+    for bad in (
+        "http://example.com/x",
+        "file:///C:/Windows/win.ini",
+        "ftp://h/x",
+        "data:text/plain,x",
+    ):
+        with pytest.raises(ValueError, match="tylko https"):
+            fe.http_get(bad)
+
+
+def test_coinmetrics_pagination_uses_token_on_fixed_host(monkeypatch, tmp_path):
+    """Adres kolejnej strony budowany z tokenu; `next_page_url` z odpowiedzi jest ignorowany."""
+    calls: list[str] = []
+    pages = [
+        {
+            "data": [{"time": "2021-01-01T00:00:00Z", "AdrActCnt": "1"}],
+            "next_page_token": "abc",
+            "next_page_url": "http://127.0.0.1:9000/evil",
+        },
+        {"data": [{"time": "2021-01-02T00:00:00Z", "AdrActCnt": "2"}]},
+    ]
+
+    def fake_get(url, *a, **k):
+        calls.append(url)
+        return json.dumps(pages[len(calls) - 1]).encode()
+
+    monkeypatch.setattr(fe, "http_get", fake_get)
+    monkeypatch.setattr(fe.time, "sleep", lambda s: None)
+    path = fe.fetch_coinmetrics("btc", ["AdrActCnt"], "2021-01-01", tmp_path)
+    assert len(calls) == 2
+    assert all(u.startswith(fe.COINMETRICS_URL + "?") for u in calls)
+    assert "next_page_token=abc" in calls[1] and "evil" not in calls[1]
+    assert len(pd.read_parquet(path)) == 2
