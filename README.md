@@ -225,6 +225,17 @@ po pięciu źródłach spoza wykresu (funding, pozycjonowanie, on-chain, opcje, 
 że dokładanie pojedynczych cech do modelu 4h nie wyprowadzi go ponad koszty. Jedyny obiecujący
 ślad tego dnia to momentum przekrojowe (X1), które jest inną konstrukcją.
 
+### 🟡 Momentum na szerszym koszyku — X2 (2026-09-23): słabiej, i X1 zależało od kalendarza
+
+Ta sama reguła co w X1, ale na 50 monetach zamiast 20 (większa próba).
+[X2](runs/2026-09-23_x2-momentum-top50/README.md): **+16 % rocznie**, przedział od −12 do +44 %;
+sygnał w ogóle nie porządkuje 50 monet (IC równe zeru), połowa zysku pochodzi z 33 dni,
+rok 2022 stracił 20 %. Odkrycie uboczne: reguła z X1 policzona na kalendarzu z rebalansami
+w inne dni tygodnia daje +9 % zamiast +22 % rocznie. **Co to znaczy:** wynik X1 był w dużej
+części dziełem przypadku (kalendarza), momentum przekrojowe w krypto zostaje hipotezą ze
+słabym poparciem. Kolejne warianty na tych samych danych nic nie rozstrzygną; jedyna droga
+to pomiar na żywo przez co najmniej dwa lata.
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -292,6 +303,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **X1 — momentum przekrojowe: +22 %/rok, ale nierozstrzygnięte** | 2026-09-23 | Long zwycięzcy / short przegrani ostatnich 4 tygodni w koszyku top-20, trzymanie tydzień: **+22 %/rok netto [−5; +49]**, dodatni w 6/6 lat (2025 = połowa), neutralny do BTC, koszty 3 %/rok. Pierwszy obiecujący zakład o kierunek — hipoteza z poparciem, nie dowód (potrzeba ~4× próby). Seria zamknięta (1/1); dalsze kroki = decyzja użytkownika | [runs/x1](runs/2026-09-23_x1-momentum-przekrojowe/README.md) |
 | **O1 — pozycjonowanie jako cecha: informacja jest, ale za słaba** | 2026-09-23 | Zmiana open interest 24 h jako 5. cecha modelu 4h: trafność 50,25 % (kontrola 49,58 %), strata −0,074 % na transakcję (kontrola −0,107 %), próg 53,07 % — **negatywny**, ale pierwsza cecha spoza wykresu, która zmienia decyzje modelu (21 % transakcji). Seria zamknięta (1/1); kolejne kolumny danych = decyzja użytkownika | [runs/o1](runs/2026-09-23_o1-pozycjonowanie/README.md) |
 | **L1 / V1 / G1 — on-chain, opcje, sentyment: trzy razy negatywnie** | 2026-09-23 | Podaż na giełdach (7 dni), premia za zmienność z opcji i Fear & Greed jako 5. cecha modelu 4h: trafność 49,8 / 50,5 / 49,9 % przy progu ~53,5 %, różnice wobec kontroli zero w granicach błędu. Po pięciu źródłach spoza wykresu: dokładanie cech do modelu 4h nie wyprowadzi go ponad koszty (wniosek 67). Serie zamknięte (1/1 każda) | [l1](runs/2026-09-23_l1-onchain-podaz/README.md) · [v1](runs/2026-09-23_v1-premia-zmiennosci/README.md) · [g1](runs/2026-09-23_g1-strach-chciwosc/README.md) |
+| **X2 — momentum na top-50: słabiej, a X1 zależało od kalendarza** | 2026-09-23 | Ta sama reguła na 50 monetach: **+16 %/rok [−12; +44]**, nierozstrzygnięte; IC zero, połowa zysku w 33 dniach, 2022 −20 %. Reguła X1 na innym kalendarzu rebalansów: +9 % zamiast +22 %/rok. Momentum przekrojowe = hipoteza ze słabym poparciem; kolejne warianty zakazane, zostaje pomiar na żywo | [runs/x2](runs/2026-09-23_x2-momentum-top50/README.md) |
 
 ## Hipoteza w skrócie
 

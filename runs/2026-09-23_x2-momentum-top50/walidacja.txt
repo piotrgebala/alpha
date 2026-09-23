@@ -1,0 +1,12 @@
+== A. tożsamość sum ==
+  +88.788 + +10.013 − 16.613 = +82.187 vs Σ netto +82.187
+  dni 1886; dni bazy od pierwszego formowania+1: 1886; formowań 270, obrót łączny 237.3, średni 0.879
+== B. NIEZALEŻNY rachunek tygodniowy (bez dryfu wag): średni zwrot 7 dni top-10 minus bottom-10 ==
+  tygodni 270; średni tygodniowy zwrot brutto LS +0.376% (se 0.264%) → ×52 = +19.6%/rok; z szeregu dziennego Σ brutto / tygodnie = +0.329%/tydzień
+== C. X1 vs X2 na WSPÓLNYM oknie (od 2021-05-01): top-20/5 tym samym kodem ==
+   X1-okno-X2 (top-20/5): dni 1886, średnia +0.0243%/dzień [-0.0505; +0.0991], Σ +45.8%, sd 1.658%
+          X2 (top-50/10): dni 1886, średnia +0.0436%/dzień [-0.0338; +0.1210], Σ +82.2%, sd 1.715%
+  korelacja dziennych zwrotów X1-okno vs X2: +0.599
+== D. kogo nie ma / ogony ==
+  członków z sygnałem na formowanie: min 48, mediana 50; dni z nogą < 10: 268
+  korelacja netto vs BTC -0.112; |r_net| > 5 %: 33 dni, suma +43.11%; bez 20 skrajnych dni średnia +0.0238% vs +0.0436%

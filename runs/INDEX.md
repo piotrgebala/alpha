@@ -64,6 +64,7 @@ podsumowanie pod tabelą.
 | **L1** | 2026-09-23 | [l1-onchain-podaz](2026-09-23_l1-onchain-podaz/README.md) | **NOWA SERIA L — on-chain:** `ex_supply_change_7d` (log-zmiana podaży BTC na giełdach 7 dni, CoinMetrics, dostępność +2 dni) jako 5. cecha modelu 4h; jedna z trzech serii pre-rejestrowanych w jednym commicie `3278442` (wzorzec O1) | **1 — LICZNIK L WYCZERPANY (1/1)** | **NEGATYWNY:** −0,097 % [−0,140; −0,054], t_neff −4,23, p 49,79 % [48,56; 51,02] vs p* 53,51 %; parowo +0,003 pp [−0,047; +0,052]; abstynencja 40,4 → 44,3 %; korelacje z kontrolą ≤ 0,08. Walidacja: **READY** |
 | **V1** | 2026-09-23 | [v1-premia-zmiennosci](2026-09-23_v1-premia-zmiennosci/README.md) | **NOWA SERIA V — opcje/vol:** `vrp_30d` = DVOL/100 − zrealizowana 30 dni (Deribit, +1 dzień; od 2021-03-24) jako 5. cecha modelu 4h | **1 — LICZNIK V WYCZERPANY (1/1)** | **NEGATYWNY:** −0,076 % [−0,120; −0,031], t_neff −2,60, p 50,49 % [49,21; 51,77] vs p* 53,42 %; parowo +0,018 pp [−0,037; +0,074]; abstynencja 47,7 %; punktowo najlepsza z trzech (jak O1), za mało o rząd wielkości. Walidacja: **READY** |
 | **G1** | 2026-09-23 | [g1-strach-chciwosc](2026-09-23_g1-strach-chciwosc/README.md) | **NOWA SERIA G — sentyment:** `fng_level` = Fear & Greed / 100 (alternative.me, +4h) jako 5. cecha modelu 4h | **1 — LICZNIK G WYCZERPANY (1/1)** | **NEGATYWNY:** −0,102 % [−0,144; −0,059], t_neff −3,48, p 49,90 % [48,66; 51,13] vs p* 53,86 %; parowo +0,002 pp [−0,045; +0,049]; korelacja z `rsi_14` 0,29 (częściowo przebranie kontroli). Walidacja: **READY** |
+| **X2** | 2026-09-23 | [x2-momentum-top50](2026-09-23_x2-momentum-top50/README.md) | **NOWA SERIA X2 — momentum przekrojowe (B1) na szerszym koszyku** (decyzja użytkownika „wykonaj oba"): top-50 point-in-time, nogi po 10, od 2021-05-01 (wcześniej < 50 kandydatów), reszta jak X1; moc z symulacji: half-width 17,5 %/rok (×1,3 = 22,8) → MIERZALNA; pre-rejestracja `5293346` | **1 — LICZNIK X2 WYCZERPANY (1/1)** | **NIEROZSTRZYGNIĘTY, słabszy niż X1:** +0,044 %/dzień [−0,034; +0,121], t 1,10, **+15,9 %/rok [−12,3; +44,2]**; IC **−0,006 [−0,033; +0,022]**; 33 skrajne dni = 52 % sumy; 2022 −20 %; korelacja z BTC −0,11. **Walidacja krzyżowa: reguła X1 na siatce X2 daje +0,024 %/dzień (Σ +46 %) zamiast +0,060 — X1 wrażliwe na fazę tygodniowego rebalansu.** Walidacja: **READY** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -84,6 +85,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
+- **NOWA SERIA X2 — momentum przekrojowe na top-50 (od X2, 2026-09-23, decyzja użytkownika): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Rodzina B1 ma teraz DWA odczyty (X1 top-20, X2 top-50) — raportowane obok siebie, bez sumowania i wyboru; trzeci odczyt na tych danych zakazany; pozostaje wyłącznie pomiar prospektywny z regułą zamrożoną.
 - **NOWE SERIE L / V / G — cechy dzienne spoza OHLCV jako 5. cecha modelu 4h (L1 on-chain, V1 DVOL/VRP, G1 Fear & Greed; 2026-09-23): każda 1/1 ZUŻYTE — ZAMKNIĘTE REGUŁĄ STOP.** Pre-rejestrowane razem (jeden commit, bez dobierania po wyniku poprzedniej). Zakazane bez decyzji użytkownika: inne metryki CoinMetrics, inne okna, poziom/zmiana DVOL, skew, VRP jako target, zmiany F&G, progi skrajności, inne horyzonty.
 - **NOWA SERIA O — pozycjonowanie jako cecha modelu 4h (od O1, 2026-09-23): 1/1 ZUŻYTE — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Zakazane bez decyzji użytkownika: pozostałe kolumny archiwum (top-trader L/S konta/pozycje, global L/S, taker ratio, OI w USD), inne okna (8h/72h), reguły z progiem na OI, inne bazy (1h/5m). Kolejna kolumna = kolejny wariant tej samej rodziny.
 - **NOWA SERIA X — momentum przekrojowe, rodzina B1 (od X1, 2026-09-23): 1/1 ZUŻYTE — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Zakazane bez decyzji użytkownika: inne okna sygnału, trzymanie, kwantyle, N, wagi, long-only, inne uniwersum (families.md B1: warianty tej samej rodziny). Rozstrzygnięcie tylko przez WIĘKSZĄ PRÓBĘ (szerokość top-50 = nowa pre-rejestracja; czas = pomiar prospektywny), nie przez wariant.
@@ -617,6 +619,19 @@ podsumowanie pod tabelą.
     (O1, V1: |r| z kontrolą ≤ 0,05) jest o rząd wielkości za słaba. Kolejne cechy z tych źródeł
     = decyzje użytkownika; obiecujący sygnał tego dnia (X1 momentum przekrojowe, +22 %/rok
     nierozstrzygnięte) mieszka w INNEJ formule (przekrój, tygodnie), nie w tym modelu.
+68. **MOMENTUM PRZEKROJOWE NA TOP-50 SŁABSZE NIŻ NA TOP-20, A X1 BYŁO WRAŻLIWE NA FAZĘ REBALANSU
+    (X2):** top-50 / nogi po 10, 2021-05 → 2026-06: **+0,044 %/dzień [−0,034; +0,121]**, t 1,10,
+    +15,9 %/rok, Σ +82 %; rank IC **−0,006 [−0,033; +0,022]** (sygnał nie porządkuje 50 monet);
+    33 dni z |r| > 5 % = 52 % sumy; 2022 −20 %; noga short robi wynik. **Druga droga: reguła X1
+    (top-20/5) tym samym kodem na siatce formowań X2 (start 2021-05-01) daje +0,024 %/dzień
+    (Σ +46 %) zamiast +0,060 (Σ +119 %)** — różnica ≈ 13 %/rok pochodzi z trzech miesięcy
+    luty–kwiecień 2021 i z INNEJ FAZY tygodniowego kalendarza rebalansów; CI z jednej fazy
+    zaniża niepewność (analog fold-jitter, C2.12). Rodzina B1 po dwóch odczytach: hipoteza ze
+    SŁABYM poparciem, bez dowodu; zysk w ogonach i w nodze short, nie w monotonicznym rankingu.
+    Metodologicznie: (a) strategie z rebalansem kalendarzowym raportować z rozrzutem po fazach;
+    (b) szum nóg z sygnału vs losowych: ×1,55 na top-50 (×1,3 na top-20) — korekta z wniosku 65
+    rośnie z szerokością koszyka. Trzeci odczyt na tych danych zakazany; tylko pomiar
+    prospektywny (7 faz naraz, ≥ 2 lata) mógłby rozstrzygnąć.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
