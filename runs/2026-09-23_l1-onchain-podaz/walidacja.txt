@@ -1,0 +1,12 @@
+===== L1 — ex_supply_change_7d =====
+  opóźnienie 2 days 00:00:00: dopięcie z opóźnieniem vs bez → różne w 12042 z 12042 świec (wersja użyta czeka); podmiana dni po 2026-06-30 → zmienia 0 świec (oczekiwane 0)
+  journal: n 6343; p = 49.79% (skrypt 49.79%); r̄ netto -0.0973% (skrypt -0.0973%); mediana -0.0975%; p* = (1.3155 + 0.0822)/(1.2965 + 1.3155) = 53.51% (skrypt 53.51%)
+  świec OOS 11682; NaN cechy w OOS 0; korelacje z kontrolą: return_lag_1 -0.028, volume_zscore_20 -0.003, rsi_14 -0.075, price_zscore_20 -0.055
+===== V1 — vrp_30d =====
+  opóźnienie 1 days 00:00:00: dopięcie z opóźnieniem vs bez → różne w 11526 z 12042 świec (wersja użyta czeka); podmiana dni po 2026-06-30 → zmienia 0 świec (oczekiwane 0)
+  journal: n 5868; p = 50.49% (skrypt 50.49%); r̄ netto -0.0756% (skrypt -0.0756%); mediana -0.0772%; p* = (1.3015 + 0.0804)/(1.2856 + 1.3015) = 53.42% (skrypt 53.42%)
+  świec OOS 11514; NaN cechy w OOS 0; korelacje z kontrolą: return_lag_1 +0.017, volume_zscore_20 +0.006, rsi_14 -0.003, price_zscore_20 +0.009
+===== G1 — fng_level =====
+  opóźnienie 0 days 04:00:00: dopięcie z opóźnieniem vs bez → różne w 1766 z 12042 świec (wersja użyta czeka); podmiana dni po 2026-06-30 → zmienia 0 świec (oczekiwane 0)
+  journal: n 6277; p = 49.90% (skrypt 49.90%); r̄ netto -0.1017% (skrypt -0.1017%); mediana -0.0967%; p* = (1.2991 + 0.0823)/(1.2656 + 1.2991) = 53.86% (skrypt 53.86%)
+  świec OOS 11682; NaN cechy w OOS 0; korelacje z kontrolą: return_lag_1 +0.012, volume_zscore_20 +0.005, rsi_14 +0.289, price_zscore_20 +0.142

@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **761/761** (2026-09-23).
+Stan testów: **770/770** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -212,6 +212,19 @@ znaczy:** to pierwsza dodatkowa cecha w historii projektu, która w ogóle porus
 próg opłacalności to 53,1 %, a górny kraniec przedziału to 51,4 %. Wynik negatywny; pozostałe
 kolumny tych danych (proporcje long/short, przepływ taker) czekają na decyzję użytkownika.
 
+### 🔴 Trzy kolejne źródła spoza wykresu — L1, V1, G1 (2026-09-23): trzy razy negatywnie
+
+Na prośbę „wykonaj po kolei 3 warianty" model 4h dostał kolejno: ile bitcoinów przypłynęło
+na giełdy w tygodniu (dane z łańcucha), „cenę strachu" z rynku opcji minus faktyczną
+zmienność, i indeks strachu i chciwości. Wszystkie trzy pre-rejestrowane naraz, każde jako
+osobna seria. [L1](runs/2026-09-23_l1-onchain-podaz/README.md),
+[V1](runs/2026-09-23_v1-premia-zmiennosci/README.md),
+[G1](runs/2026-09-23_g1-strach-chciwosc/README.md): trafność 49,8 %, 50,5 % i 49,9 % przy
+progu ~53,5 %; różnice wobec modelu bez cechy to zero w granicach błędu. **Co to znaczy:**
+po pięciu źródłach spoza wykresu (funding, pozycjonowanie, on-chain, opcje, sentyment) wiemy,
+że dokładanie pojedynczych cech do modelu 4h nie wyprowadzi go ponad koszty. Jedyny obiecujący
+ślad tego dnia to momentum przekrojowe (X1), które jest inną konstrukcją.
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -278,6 +291,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **D1 — produkt carry: tylko wersja COIN-M ma sens** | 2026-09-23 | Depozyt 1× z miesięczną dopłatą: 0 likwidacji w 5,5 roku, ale od 2022 poniżej bonów skarbowych. Wersja rozliczana w bitcoinie: bez likwidacji z konstrukcji, kapitał 1×, **+9,1 % rocznie [5,9; 12,3]**, od 2022 ok. +2 pp ponad bony (od −1,5 do +7,2). Kontrakt kwartalny ≈ funding. **Decyzja użytkownika: carry odpuszczone — nie o takie zwroty chodzi; kierunek zamknięty** | [runs/d1](runs/2026-09-23_d1-produkt-carry/README.md) |
 | **X1 — momentum przekrojowe: +22 %/rok, ale nierozstrzygnięte** | 2026-09-23 | Long zwycięzcy / short przegrani ostatnich 4 tygodni w koszyku top-20, trzymanie tydzień: **+22 %/rok netto [−5; +49]**, dodatni w 6/6 lat (2025 = połowa), neutralny do BTC, koszty 3 %/rok. Pierwszy obiecujący zakład o kierunek — hipoteza z poparciem, nie dowód (potrzeba ~4× próby). Seria zamknięta (1/1); dalsze kroki = decyzja użytkownika | [runs/x1](runs/2026-09-23_x1-momentum-przekrojowe/README.md) |
 | **O1 — pozycjonowanie jako cecha: informacja jest, ale za słaba** | 2026-09-23 | Zmiana open interest 24 h jako 5. cecha modelu 4h: trafność 50,25 % (kontrola 49,58 %), strata −0,074 % na transakcję (kontrola −0,107 %), próg 53,07 % — **negatywny**, ale pierwsza cecha spoza wykresu, która zmienia decyzje modelu (21 % transakcji). Seria zamknięta (1/1); kolejne kolumny danych = decyzja użytkownika | [runs/o1](runs/2026-09-23_o1-pozycjonowanie/README.md) |
+| **L1 / V1 / G1 — on-chain, opcje, sentyment: trzy razy negatywnie** | 2026-09-23 | Podaż na giełdach (7 dni), premia za zmienność z opcji i Fear & Greed jako 5. cecha modelu 4h: trafność 49,8 / 50,5 / 49,9 % przy progu ~53,5 %, różnice wobec kontroli zero w granicach błędu. Po pięciu źródłach spoza wykresu: dokładanie cech do modelu 4h nie wyprowadzi go ponad koszty (wniosek 67). Serie zamknięte (1/1 każda) | [l1](runs/2026-09-23_l1-onchain-podaz/README.md) · [v1](runs/2026-09-23_v1-premia-zmiennosci/README.md) · [g1](runs/2026-09-23_g1-strach-chciwosc/README.md) |
 
 ## Hipoteza w skrócie
 

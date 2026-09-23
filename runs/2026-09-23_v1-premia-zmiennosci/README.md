@@ -1,9 +1,26 @@
 # V1 — premia za ryzyko zmienności (DVOL − zrealizowana) jako cecha modelu 4h (2026-09-23)
 
-> **STATUS: PRE-REJESTRACJA (przed pomiarem).** Jedna z trzech serii (L1 / V1 / G1)
-> pre-rejestrowanych W JEDNYM COMMICIE przed jakimkolwiek przebiegiem. Decyzja użytkownika
-> 2026-09-23: „wykonaj po kolei 3 warianty celem zebrania informacji na przyszłość".
-> **NOWA SERIA V, licznik 1/1.** Wzorzec O1. Dane: P3 (Deribit DVOL).
+> **STATUS: ZAMKNIĘTA — NEGATYWNY** (zwrot netto −0,076 % [−0,120; −0,031] na transakcję,
+> t_neff −2,60; trafność 50,49 % [49,21; 51,77] wobec progu 53,42 %). Wobec kontroli na tych
+> samych świecach **+0,018 pp [−0,037; +0,074]** — nieodróżnialne od zera; cecha zmienia
+> kierunek w 25,7 % wspólnych transakcji i podnosi abstynencję z 40,4 % do 47,7 %. Punktowo
+> najlepsza z trzech serii dnia (i porównywalna z O1), ale nadal 1,7 pp poniżej progu górnym
+> krańcem CI. Jedna z trzech serii pre-rejestrowanych w jednym commicie (`3278442`).
+> **Seria V: 1/1, STOP.** Walidacja (16a): **READY**; przegląd diffu (16c): **Approve**
+> (wspólny, w README L1). Decyzja użytkownika 2026-09-23: „wykonaj po kolei 3 warianty".
+
+## Wynik w skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+**„Cena strachu" z rynku opcji (DVOL) porównana ze zmiennością faktycznie zrealizowaną daje
+modelowi 4h trochę lepsze wyniki — trafność 50,5 % zamiast 49,6 %, strata −0,076 % zamiast
+−0,107 % na transakcję — ale to wciąż strata, a poprawa parami (+0,018 punktu) mieści się
+w przedziale z zerem.** Model z tą cechą częściej odmawia decyzji (48 % świec zamiast 40 %),
+co samo w sobie poprawia średnią, bo odpadają najsłabsze decyzje. Próg opłacalności 53,4 %
+jest poza przedziałem. **Wynik negatywny**, choć spośród pięciu źródeł spoza wykresu
+sprawdzonych dziś (OI, on-chain, DVOL, F&G, wcześniej funding) DVOL i OI są jedynymi, które
+w ogóle coś poruszają.
+
+---
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
 
@@ -62,32 +79,66 @@ tej samej rodziny — po STOP decyzja użytkownika.
 
 ---
 
-_(sekcje poniżej po przebiegu)_
-
 ## Wynik
 
-_(po przebiegu)_
+Komenda: `py -m backtest.run_external_features_lvg V1` (`PYTHONUTF8=1`; 6 s; `raw_output.txt`).
+Cecha: NaN 498 / 12 042 świec (do 2021-03-24; pierwszy fold OOS pominięty → 68 aktywnych);
+rozkład p05 −0,080, p50 +0,072, p95 +0,271 (premia zwykle dodatnia: DVOL wyżej niż zrealizowana);
+masa punktowa 0,03 %; acf1 0,99. Korelacja z kontrolą: wszystkie |r| ≤ 0,02 — informacja
+niezależna od cech ceny/wolumenu.
 
-## Co na plus (+) / Co na minus (−)
+| ramię | n | r̄ netto | CI 95 % | mediana | t_neff | N_eff | p | CI 95 % (p) | p* | abstynencja |
+|---|---|---|---|---|---|---|---|---|---|---|
+| kontrola | 6 789 | −0,1069 % | [−0,1487; −0,0650] | −0,1036 % | −4,26 | 4 919 | 49,58 % | [48,39; 50,77] | 53,64 % | 40,38 % |
+| **V1** | 5 868 | **−0,0756 %** | [−0,1199; −0,0313] | −0,0772 % | **−2,60** | 3 556 | **50,49 %** | [49,21; 51,77] | 53,42 % | 47,71 % |
 
-_(po przebiegu)_
+**Odczyt kryterium: NEGATYWNY** (t_neff −2,60 przy n 5 868 ≥ 2 025). Regresja kontroli: ZGODNA.
+**Parowo:** wspólnych 4 430 transakcji (tylko w kontroli 2 359, tylko w V1 1 438); ten sam
+kierunek 74,3 %; różnica netto **+0,0182 % [−0,0372; +0,0735]**, mediana 0. Populacja świec
+V1 11 424 vs kontrola 11 592 (−168, warm-up DVOL). Geometria: W̄ 1,286 %, L̄ 1,302 %, C 0,080 %.
+Mierzalność: ex ante 6 870 (pre-rejestracja szacowała 6 580), ex post 5 938, journal 5 868;
+half-width 1,28 pp — MIERZALNA; NEGATYWNY z zapasem 2,9×.
 
-## Walidacja (zasada 16a)
+## Co na plus (+)
 
-_(po przebiegu)_
+- Pierwsza cecha z rynku opcji w projekcie; niezależna od cech ceny (|r| ≤ 0,02); dopięcie
+  z opóźnieniem 1 dnia i trzema testami lookaheadu; punktowo najlepsza z trzech serii.
+- Kierunek efektu zgodny z mechanizmem (premia jako stan rynku), ale za słaby.
 
-## Przegląd diffu (zasada 16c)
+## Co na minus (−)
 
-_(po przebiegu)_
+- Poprawa parowana +0,018 pp [−0,037; +0,074] — nie do odróżnienia od zera; większa część
+  poprawy średniej wynika z WYŻSZEJ abstynencji (47,7 %), czyli mniejszej liczby transakcji,
+  nie z lepszych decyzji na tych samych świecach.
+- Horyzont DVOL (30 dni) wobec horyzontu modelu (12 h) — cecha to stan, nie prognoza ruchu.
+- Jedna definicja; poziom DVOL, zmiana, skew, VRP jako TARGET — warianty po STOP.
+
+## Walidacja (zasada 16a) — werdykt: **READY** (`../2026-09-23_l1-onchain-podaz/walidacja.txt`)
+
+- Drugą drogą: p 50,49 % ✔, r̄ −0,0756 % ✔, p* = (1,3015 + 0,0804)/(1,2856 + 1,3015) = 53,42 % ✔;
+  regresja kontroli ✔.
+- Lookahead: opóźnienie 1 dnia vs 0 różni się w 11 526 z 12 042 świec (reszta = NaN/NaN);
+  podmiana dni po 2026-06-30 → 0 zmian ✔.
+- Kogo NIE ma: 498 świec przed 2021-03-25 (DVOL) — pierwszy fold OOS; 68 stłumionych,
+  38 niewypełnionych; ETH DVOL; skew/term structure.
+- Red flag „dodatni → przeciek": różnica parowana z zerem w CI; dopięcie sprawdzone.
+
+## Przegląd diffu (zasada 16c) — werdykt: **Approve** (wspólny dla trzech serii — README L1)
 
 ## Wniosek
 
-_(po przebiegu)_
+Premia za ryzyko zmienności z opcji **nie wystarcza modelowi 4h**: NEGATYWNY (−0,076 %
+[−0,120; −0,031], 50,49 % [49,21; 51,77] vs 53,42 %), poprawa parowana +0,018 pp [−0,037; +0,074].
+Razem z O1 to dwie cechy spoza wykresu, które przesuwają model punktowo w dobrą stronę — obie
+o rząd wielkości za mało (wniosek 67). Seria V zamknięta 1/1.
 
 ## Rekomendacja
 
-_(po przebiegu)_
+1. Nie mierzyć wariantów DVOL bez decyzji użytkownika (STOP).
+2. Jeśli zmienność implikowana miałaby wrócić, to jako TARGET (sprzedaż/kupno zmienności —
+   inny produkt, rynek opcji), nie jako cecha kierunkowa 4h — nowa pre-rejestracja z własnym
+   rachunkiem mocy i danymi opcyjnymi (Deribit), poza obecnym zakresem.
 
 ## Użyte skille
 
-_(po przebiegu — z `py tools/skill_audit.py raport --galaz lvg-cechy-zewnetrzne`)_
+Rejestr gałęzi wspólny dla L1/V1/G1 — tabela i pominięcia w README L1.
