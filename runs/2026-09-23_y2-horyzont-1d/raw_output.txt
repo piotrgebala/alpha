@@ -1,0 +1,49 @@
+========================================================================================================
+Y2 — MODEL KONTROLNY NA INTERWALE 1d jako NOWA BAZA (4 cechy REVERSION, V = 3 świece, walk-forward 365/91/91); konfiguracja ZAMROŻONA
+========================================================================================================
+dane      : 2007 świec 1d od 2021-01-01 00:00:00+00:00 do 2026-06-30 00:00:00+00:00 (zasada 20: min_start = 2021-01-01T00:00:00Z)
+ex ante   : bariera ≈ 6.157% ceny, próg ±B 50.66%, oczekiwane n 973, half-width 3.14 pp → MIERZALNA
+pipeline  : BEZ bramki reżimu, V=3 świece, wagi klas `balanced`, seed 42, wejście limit_close k=1, pojedyncze wyjście, candles_per_day 1
+cechy     : ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20']
+odniesienie 4h: n 6789, p 49.58%, r̄ -0.1069%, p* 53.64%
+kryterium : jedno ramię (m = 1): POZYTYWNY t_neff > 1,96 i ci_low(p) > p*; NEGATYWNY t_neff < −1,96 przy n >= required
+
+0. LEJEK
+  trening zakończony po 1 s
+  [Y2] foldy: 18 aktywne / 18 łącznie
+               świece ocenione:     1638
+    bez kierunku (abstynencja):      660
+               bramka pewności:        0
+               bramka kosztowa:        0
+           sygnały kandydujące:      978
+                   abstynencja:   40.29%
+
+1. KRYTERIUM — zwrot netto per trade (t_neff) i trafność wobec p* (jedno ramię, z = 1,96)
+  Y2: n 978 | r̄ netto -0.0940% [-0.3436; +0.1555] | mediana -0.0538% | t -0.74 | N_eff 643 | t_neff -0.60 | p 50.20% [47.07; 53.34] | p* 51.70% | BE ±B 51.41%
+  >>> ODCZYT KRYTERIUM Y2: NIEROZSTRZYGNIĘTY — |t_neff| poniżej progu, ci_low(p) <= p* albo n poniżej wymaganego
+
+2. OPIS — powód wyjścia, kierunek, geometria wypłaty
+  Y2 — powód wyjścia
+         grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ----------------------------------------------------------------------------------------------
+      cel (tp) |   155 |   15.8% | 100.00% | [100.00; 100.00] |  +5.6847% |  +5.7318% | +5.4990%
+     stop (sl) |   181 |   18.5% |   0.00% | [  0.00;   0.00] |  -5.7023% |  -5.6017% | -5.4479%
+       timeout |   642 |   65.6% |  52.34% | [ 48.47;  56.20] |  +0.0920% |  +0.1876% | +0.0317%
+  Y2 — kierunek
+         grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ----------------------------------------------------------------------------------------------
+          long |   535 |   54.7% |  50.65% | [ 46.42;  54.89] |  -0.2330% |  -0.0711% | -0.1533%
+         short |   443 |   45.3% |  49.66% | [ 45.01;  54.32] |  +0.0738% |  +0.0745% | -0.0274%
+  Y2: W̄ = 3.1354%, L̄ = 3.1716%, C = 0.0889%, std zwrotu 3.982%, p5/p95 [-6.666%; +6.558%], niewypełnione 0, stłumione 0
+     rok |     n |       p |  r̄ netto |   Σ netto
+  ------------------------------------------------
+    2022 |   233 |  48.50% |  +0.3952% |   +92.09%
+    2023 |   233 |  52.79% |  -0.1696% |   -39.52%
+    2024 |   212 |  47.64% |  -0.6604% |  -140.01%
+    2025 |   195 |  52.31% |  +0.0388% |    +7.56%
+    2026 |   105 |  49.52% |  -0.1151% |   -12.09%
+
+3. MIERZALNOŚĆ — ex ante vs ex post
+  ex ante: bariera 6.157%, próg 50.66%, n 973, half-width 3.14 pp; ex post: BE ±B 51.41%, p* 51.70%, świece ocenione 1638, abstynencja 40.29%, expected_trades 972, journal 978, half-width 3.13 pp
+========================================================================================================
+czas: 1s

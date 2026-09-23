@@ -65,6 +65,8 @@ podsumowanie pod tabelą.
 | **V1** | 2026-09-23 | [v1-premia-zmiennosci](2026-09-23_v1-premia-zmiennosci/README.md) | **NOWA SERIA V — opcje/vol:** `vrp_30d` = DVOL/100 − zrealizowana 30 dni (Deribit, +1 dzień; od 2021-03-24) jako 5. cecha modelu 4h | **1 — LICZNIK V WYCZERPANY (1/1)** | **NEGATYWNY:** −0,076 % [−0,120; −0,031], t_neff −2,60, p 50,49 % [49,21; 51,77] vs p* 53,42 %; parowo +0,018 pp [−0,037; +0,074]; abstynencja 47,7 %; punktowo najlepsza z trzech (jak O1), za mało o rząd wielkości. Walidacja: **READY** |
 | **G1** | 2026-09-23 | [g1-strach-chciwosc](2026-09-23_g1-strach-chciwosc/README.md) | **NOWA SERIA G — sentyment:** `fng_level` = Fear & Greed / 100 (alternative.me, +4h) jako 5. cecha modelu 4h | **1 — LICZNIK G WYCZERPANY (1/1)** | **NEGATYWNY:** −0,102 % [−0,144; −0,059], t_neff −3,48, p 49,90 % [48,66; 51,13] vs p* 53,86 %; parowo +0,002 pp [−0,045; +0,049]; korelacja z `rsi_14` 0,29 (częściowo przebranie kontroli). Walidacja: **READY** |
 | **X2** | 2026-09-23 | [x2-momentum-top50](2026-09-23_x2-momentum-top50/README.md) | **NOWA SERIA X2 — momentum przekrojowe (B1) na szerszym koszyku** (decyzja użytkownika „wykonaj oba"): top-50 point-in-time, nogi po 10, od 2021-05-01 (wcześniej < 50 kandydatów), reszta jak X1; moc z symulacji: half-width 17,5 %/rok (×1,3 = 22,8) → MIERZALNA; pre-rejestracja `5293346` | **1 — LICZNIK X2 WYCZERPANY (1/1)** | **NIEROZSTRZYGNIĘTY, słabszy niż X1:** +0,044 %/dzień [−0,034; +0,121], t 1,10, **+15,9 %/rok [−12,3; +44,2]**; IC **−0,006 [−0,033; +0,022]**; 33 skrajne dni = 52 % sumy; 2022 −20 %; korelacja z BTC −0,11. **Walidacja krzyżowa: reguła X1 na siatce X2 daje +0,024 %/dzień (Σ +46 %) zamiast +0,060 — X1 wrażliwe na fazę tygodniowego rebalansu.** Walidacja: **READY** |
+| **Y1** | 2026-09-23 | [y1-horyzont-1h](2026-09-23_y1-horyzont-1h/README.md) | **NOWA BAZA 1h (decyzja użytkownika „dla 2 sprawdź horyzont 1h oraz 1d"): model kontrolny (4 cechy REVERSION, V = 3 świece, 60/28/28) na natywnych 1h od 2021-01-01 (1/1)** | **NEGATYWNY z ogromnym zapasem:** p **48,34 % [47,70; 48,98]** (CI w całości < 50 %) vs p* 54,01 %; r̄ netto −0,078 % [−0,090; −0,066], t_neff −11,74, n 23 334 (41× wymaganego); 6/6 lat ujemnych; timeout 63 % z p 45,6 %. Ex ante/ex post zgodne (hw 0,59 → 0,64 pp). Walidacja: **READY** |
+| **Y2** | 2026-09-23 | [y2-horyzont-1d](2026-09-23_y2-horyzont-1d/README.md) | **NOWA BAZA 1d: ten sam model, okna 365/91/91 (parametr bazy), natywne 1d od 2021-01-01 (1/1)** | **NIEROZSTRZYGNIĘTY (jak zapowiedziano przy n ≈ 1 000):** p 50,20 % [47,07; 53,34] vs p* 51,70 %; r̄ netto −0,094 % [−0,344; +0,156], t_neff −0,60, n 978, half-width 3,1 pp; lata 2022 +92 % / 2024 −140 % = rozrzut bariery 6 %, nie sygnał. Walidacja: **READY** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -85,6 +87,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
+- **NOWE BAZY Y1 (1h) / Y2 (1d) — model kontrolny na innych interwałach (od Y1/Y2, 2026-09-23, decyzja użytkownika): każda 1/1 ZUŻYTE — OBIE ZAMKNIĘTE REGUŁĄ STOP.** Osobne liczniki per baza (wytyczna o bazach); wyników nie porównuje się 1:1 z 4h. Y1 NEGATYWNY (48,3 %, n 23 334), Y2 NIEROZSTRZYGNIĘTY (50,2 %, n 978). Zakazane bez decyzji użytkownika: inne V/bariery/okna na 1h i 1d, filtry godzin/dni, odwrócenie znaku na 1h (hipoteza post hoc, wniosek 49).
 - **NOWA SERIA X2 — momentum przekrojowe na top-50 (od X2, 2026-09-23, decyzja użytkownika): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Rodzina B1 ma teraz DWA odczyty (X1 top-20, X2 top-50) — raportowane obok siebie, bez sumowania i wyboru; trzeci odczyt na tych danych zakazany; pozostaje wyłącznie pomiar prospektywny z regułą zamrożoną.
 - **NOWE SERIE L / V / G — cechy dzienne spoza OHLCV jako 5. cecha modelu 4h (L1 on-chain, V1 DVOL/VRP, G1 Fear & Greed; 2026-09-23): każda 1/1 ZUŻYTE — ZAMKNIĘTE REGUŁĄ STOP.** Pre-rejestrowane razem (jeden commit, bez dobierania po wyniku poprzedniej). Zakazane bez decyzji użytkownika: inne metryki CoinMetrics, inne okna, poziom/zmiana DVOL, skew, VRP jako target, zmiany F&G, progi skrajności, inne horyzonty.
 - **NOWA SERIA O — pozycjonowanie jako cecha modelu 4h (od O1, 2026-09-23): 1/1 ZUŻYTE — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Zakazane bez decyzji użytkownika: pozostałe kolumny archiwum (top-trader L/S konta/pozycje, global L/S, taker ratio, OI w USD), inne okna (8h/72h), reguły z progiem na OI, inne bazy (1h/5m). Kolejna kolumna = kolejny wariant tej samej rodziny.
@@ -632,6 +635,24 @@ podsumowanie pod tabelą.
     (b) szum nóg z sygnału vs losowych: ×1,55 na top-50 (×1,3 na top-20) — korekta z wniosku 65
     rośnie z szerokością koszyka. Trzeci odczyt na tych danych zakazany; tylko pomiar
     prospektywny (7 faz naraz, ≥ 2 lata) mógłby rozstrzygnąć.
+69. **ZMIANA HORYZONTU NIE JEST DROGĄ: MODEL KONTROLNY NA TRZECH BAZACH (1h / 4h / 1d) TRAFIA
+    48–50 % NA KAŻDEJ (Y1/Y2, 2026-09-23).** Ten sam model (4 cechy REVERSION w oknach
+    natywnych, V = 3 świece, 1,5·ATR, limit po close), zmieniony WYŁĄCZNIE interwał:
+    1h → p 48,34 % [47,70; 48,98] vs p* 54,01 %, n 23 334, t_neff −11,74 — NEGATYWNY
+    z ogromnym zapasem (41× wymaganego n; 6/6 lat ujemnych; CI w całości PONIŻEJ 50 %);
+    4h → 49,58 % vs 53,64 % (wniosek 46); 1d → 50,20 % [47,07; 53,34] vs 51,70 %, n 978 —
+    NIEROZSTRZYGNIĘTY przez n, dokładnie jak policzono PRZED przebiegiem (half-width 3,1 pp).
+    Trzy obserwacje: (a) krótszy horyzont podnosi próg (koszt/bariera) i NIE wzmacnia sygnału
+    — na 1h 63 % timeoutów z p 45,6 %, cechy wskazują kierunek odwrotny (trzeci raz po A1
+    i wymuszonym kierunku z Fazy 0); (b) dłuższy horyzont obniża próg do 51,7 % (koszty
+    prawie nie ważą), ale próba maleje do ~1 000 i przyrząd traci rozdzielczość — efekt
+    52–53 % byłby tam niewidzialny (wniosek 23), a przy barierze 6 % sumy roczne (+92 %/
+    −140 %) to szum, nie reżimy; (c) rachunek ex ante zgadzał się z ex post na obu bazach
+    (1h: n −16 % przez wyższą abstynencję, hw 0,59 → 0,64 pp; 1d: co do 1 %). Konsekwencja:
+    rodzina „kierunek jednoaktywowy z OHLCV" jest zmierzona na trzech interwałach i zamknięta
+    na każdym; dalsze badanie horyzontu dziennego wymaga INNEGO zbioru informacyjnego lub
+    INNEJ formuły (przekrojowej), nie tego modelu. Odwrócenie znaku na 1h (~51,7 % ex ante,
+    pod progiem 54 %) zapisane jako hipoteza post hoc — nie wariant.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

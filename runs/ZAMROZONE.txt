@@ -43,4 +43,5 @@ backtest/run_xs_momentum_x1.py               # X1
 backtest/run_positioning_o1.py               # O1
 backtest/run_external_features_lvg.py        # L1 / V1 / G1
 backtest/run_xs_momentum_x2.py               # X2
+backtest/run_horizon_y.py                    # Y1 / Y2
 backtest/screen_feature_candidates.py        # C2.7

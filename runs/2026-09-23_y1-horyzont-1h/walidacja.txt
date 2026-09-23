@@ -1,0 +1,10 @@
+===== Y1 — 1h =====
+  dane: 48168 świec, duplikaty 0, luki (> 0 days 01:00:00) 0, OHLC spójne: True
+  journal: n 23334; p = 48.34% (skrypt 48.34%); r̄ netto -0.0776% (skrypt -0.0776%); mediana -0.1152%; p* = (0.659 + 0.0801)/(0.710 + 0.659) = 54.01% (skrypt 54.01%)
+  bariera ex post: średni zysk przy tp 1.188%, strata przy sl 1.182% vs ex ante 1,5·ATR = 1.112%; foldy aktywne 69/69; świece OOS 46368 (ex ante ≈ 46728); abstynencja 44.09% (założona 40,38%); koszt C ex post 0.0801% (założony 0,0808%)
+  per rok (n, p, Σ netto): 2021: 4526, 48.1%, -312.7%; 2022: 4555, 49.1%, -232.3%; 2023: 4074, 47.2%, -318.2%; 2024: 4393, 48.6%, -411.9%; 2025: 3942, 48.0%, -398.9%; 2026: 1844, 49.8%, -136.5%
+===== Y2 — 1d =====
+  dane: 2007 świec, duplikaty 0, luki (> 1 days 00:00:00) 0, OHLC spójne: True
+  journal: n 978; p = 50.20% (skrypt 50.20%); r̄ netto -0.0940% (skrypt -0.0940%); mediana -0.0538%; p* = (3.172 + 0.0889)/(3.135 + 3.172) = 51.70% (skrypt 51.70%)
+  bariera ex post: średni zysk przy tp 5.732%, strata przy sl 5.602% vs ex ante 1,5·ATR = 6.157%; foldy aktywne 18/18; świece OOS 1638 (ex ante ≈ 1642); abstynencja 40.29% (założona 40,38%); koszt C ex post 0.0889% (założony 0,0808%)
+  per rok (n, p, Σ netto): 2022: 233, 48.5%, +92.1%; 2023: 233, 52.8%, -39.5%; 2024: 212, 47.6%, -140.0%; 2025: 195, 52.3%, +7.6%; 2026: 105, 49.5%, -12.1%
