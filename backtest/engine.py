@@ -135,6 +135,26 @@ from backtest.costs import (
     gate_cost_fraction,
     total_round_trip_cost,
 )
+from backtest.execution import (
+    DEFAULT_ENTRY_VALIDITY_CANDLES,
+    EntryRule,
+    IntrabarPath,
+    build_intrabar_path,
+    simulate_trade,
+)
+
+# W1 (2026-09-23): skąd bierze się cena wyjścia (i wejścia) transakcji.
+#   "label" — jak dotąd: wejście po `close` świecy sygnału z założeniem wypełnienia, wyjście
+#             odczytane z etykiety triple-barrier (`_resolve_exit_price`). Domyślne, odtwarza
+#             wszystkie historyczne wyniki bit w bit (regresja w test_engine.py).
+#   "path"  — symulacja na ścieżce cen (`backtest/execution.py`): zlecenie wejścia wg
+#             `entry_rule` ważne `entry_validity_candles` świec, brak przebicia = brak
+#             transakcji (dziennik `unfilled`), TP/SL od ceny wypełnienia, timeout po `close`
+#             świecy t+V. Reguły: runs/2026-09-23_w1-wykonanie-po-cenie/README.md.
+# Nazwane warianty, NIE pokrętło — ta sama konwencja co `execution_model` (C2.12).
+FILL_MODEL_LABEL = "label"
+FILL_MODEL_PATH = "path"
+VALID_FILL_MODELS = (FILL_MODEL_LABEL, FILL_MODEL_PATH)
 
 # Commit 2.12 (Backlog Z6): modele wykonania. "taker_only" = market po obu stronach
 # (model Commitów 5-2.11, zachowany do regresji baseline'u); "maker_limit" = wejście
@@ -207,6 +227,24 @@ TRADE_COLUMNS = [
     "equity_before",
     "equity_after",
     "kill_switch_active",
+    # W1: ile świec po sygnale nastąpiło wypełnienie (0 = wejście po close świecy sygnału,
+    # jak w trybie "label"; NaN dla wierszy stłumionych kill-switchem).
+    "fill_bar_offset",
+]
+
+# W1: sygnały, których zlecenie wejścia NIE zostało wypełnione w oknie ważności (tylko tryb
+# "path"). Osobny dziennik, nie wiersze w `trades`: to nie są zdarzenia w torze equity, a ich
+# etykiety służą diagnostyce selekcji (czy wypełniają się gorsze sygnały).
+UNFILLED_COLUMNS = [
+    "timestamp",
+    "regime",
+    "fold_idx",
+    "signal_direction",
+    "signal_confidence",
+    "label",
+    "entry_level",
+    "entry_close",
+    "atr_14",
 ]
 
 REGIME_FEATURE_SETS = [("trend", MOMENTUM_FEATURES), ("range", REVERSION_FEATURES)]
@@ -602,11 +640,20 @@ def run_backtest(
     validation_fraction: float | None = DEFAULT_VALIDATION_FRACTION,
     embargo_candles: int | None = None,
     vertical_barrier_candles: int = VERTICAL_BARRIER_CANDLES,
+    fill_model: str = FILL_MODEL_LABEL,
+    entry_rule: EntryRule | None = None,
+    entry_validity_candles: int = DEFAULT_ENTRY_VALIDITY_CANDLES,
+    intrabar_ohlcv: pd.DataFrame | None = None,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
     reżim -> trening+predykcja (agents.ml_optimizer) -> sizing (risk_controller_fn)
     -> koszty (backtest.costs) -> equity curve + trade journal.
+
+    W1: to cienka złożenie `collect_signals` (trening + sygnały, część kosztowna) i
+    `simulate_equity` (wykonanie + koszty + equity). Skrypt rundy woła je osobno, żeby JEDEN
+    trening obsłużył wiele wariantów wykonania — lejek sygnałów jest wtedy identyczny co do
+    sztuki między wariantami z konstrukcji, nie z deklaracji.
 
     Uproszczenie Fazy 0 (jawne): każdy sygnał sizowany NIEZALEŻNIE względem equity
     W MOMENCIE sygnału, PnL akumulowany sekwencyjnie w porządku chronologicznym —
@@ -679,6 +726,14 @@ def run_backtest(
             `execution_model="taker_only"`. Uzasadnienie: `backtest.costs.exit_leg_for_reason`
             i `docs/rag/04`. Wartość pośrednia (ciągła stopa wypełnienia) wymaga źródła
             danych o fillach — bez niego nie wchodzi do repo.
+        fill_model: W1 — `"label"` (domyślne, wyjście z etykiety, wejście po `close`) albo
+            `"path"` (symulacja wypełnienia i wyjścia na ścieżce cen, `backtest/execution.py`).
+        entry_rule: W1 — reguła zlecenia wejścia (`EntryRule`), wymagana przy `"path"`.
+        entry_validity_candles: W1 — ważność zlecenia wejścia w świecach decyzyjnych
+            (1..`vertical_barrier_candles`); domyślnie 1 z horyzontu modelu.
+        intrabar_ohlcv: W1 — opcjonalne świece drobne (np. 5m) do rozstrzygania kolejności
+            zdarzeń wewnątrz świec decyzyjnych; muszą pokrywać każdą świecę, której dotyka
+            jakakolwiek transakcja (inaczej ValueError). Tylko przy `"path"`.
 
     Returns:
         {
@@ -687,7 +742,90 @@ def run_backtest(
           "folds_summary": list[dict] (per regime/fold: zakres dat, n_signals,
               n_signals_cost_gated, best_iteration, czy pominięty i dlaczego),
           "final_equity": float,
+          "unfilled": pd.DataFrame z kolumnami UNFILLED_COLUMNS (W1; pusty w trybie "label"),
+          "fill_model": str,
         }
+    """
+    collected = collect_signals(
+        raw_ohlcv,
+        train_days=train_days,
+        test_days=test_days,
+        step_days=step_days,
+        xgb_params=xgb_params,
+        num_boost_round=num_boost_round,
+        early_stopping_rounds=early_stopping_rounds,
+        seed=seed,
+        min_train_rows=min_train_rows,
+        min_barrier_to_cost_ratio=min_barrier_to_cost_ratio,
+        trend_threshold=trend_threshold,
+        range_threshold=range_threshold,
+        candles_per_day=candles_per_day,
+        regime_feature_sets=regime_feature_sets,
+        fold_start_offset_days=fold_start_offset_days,
+        execution_model=execution_model,
+        timeout_leg=timeout_leg,
+        class_weight_mode=class_weight_mode,
+        direction_policy=direction_policy,
+        confidence_mode=confidence_mode,
+        confidence_quantile=confidence_quantile,
+        validation_fraction=validation_fraction,
+        embargo_candles=embargo_candles,
+        vertical_barrier_candles=vertical_barrier_candles,
+    )
+    return simulate_equity(
+        collected["df"],
+        collected["candidate_signals"],
+        collected["folds_summary"],
+        initial_equity=initial_equity,
+        risk_controller_fn=risk_controller_fn,
+        kill_switch_drawdown_pct=kill_switch_drawdown_pct,
+        kill_switch_cooldown_days=kill_switch_cooldown_days,
+        candle_minutes=candle_minutes,
+        execution_model=execution_model,
+        timeout_leg=timeout_leg,
+        kill_switch_enabled=kill_switch_enabled,
+        vertical_barrier_candles=vertical_barrier_candles,
+        fill_model=fill_model,
+        entry_rule=entry_rule,
+        entry_validity_candles=entry_validity_candles,
+        intrabar_ohlcv=intrabar_ohlcv,
+    )
+
+
+def collect_signals(
+    raw_ohlcv: pd.DataFrame,
+    train_days: int = TRAIN_WINDOW_DAYS,
+    test_days: int = TEST_WINDOW_DAYS,
+    step_days: int = STEP_DAYS,
+    xgb_params: dict | None = None,
+    num_boost_round: int = NUM_BOOST_ROUND,
+    early_stopping_rounds: int = EARLY_STOPPING_ROUNDS,
+    seed: int = DEFAULT_SEED,
+    min_train_rows: int = MIN_TRAIN_ROWS,
+    min_barrier_to_cost_ratio: float = MIN_BARRIER_TO_COST_RATIO,
+    trend_threshold: float = DEFAULT_TREND_THRESHOLD,
+    range_threshold: float = DEFAULT_RANGE_THRESHOLD,
+    candles_per_day: int = DEFAULT_CANDLES_PER_DAY,
+    regime_feature_sets: list[tuple[str, list[str]]] | None = None,
+    fold_start_offset_days: float = 0.0,
+    execution_model: str = DEFAULT_EXECUTION_MODEL,
+    timeout_leg: str = DEFAULT_TIMEOUT_LEG,
+    class_weight_mode: str = DEFAULT_CLASS_WEIGHT_MODE,
+    direction_policy: str = DIRECTION_POLICY_ARGMAX3,
+    confidence_mode: str = CONFIDENCE_MODE_CLASS,
+    confidence_quantile: float | None = None,
+    validation_fraction: float | None = DEFAULT_VALIDATION_FRACTION,
+    embargo_candles: int | None = None,
+    vertical_barrier_candles: int = VERTICAL_BARRIER_CANDLES,
+) -> dict:
+    """
+    W1: część KOSZTOWNA backtestu — cechy, etykiety, walk-forward, trening, sygnały kandydujące
+    (posortowane chronologicznie). Bez sizingu, kosztów i equity: to robi `simulate_equity`.
+    Argumenty jak w `run_backtest` (tam opisane).
+
+    Returns:
+        {"df": DataFrame z cechami/etykietami (RangeIndex 0..N-1 — patrz docstring modułu),
+         "candidate_signals": list[dict] posortowana po timestamp, "folds_summary": list[dict]}
     """
     df = raw_ohlcv.reset_index(drop=True).copy()
     df = compute_all_features(
@@ -737,8 +875,93 @@ def run_backtest(
     # Chronologia ponad reżimy — patrz docstring modułu.
     candidate_signals.sort(key=lambda s: s["timestamp"])
 
+    return {"df": df, "candidate_signals": candidate_signals, "folds_summary": folds_summary}
+
+
+def _entry_leg_for(
+    fill_model: str, execution_model: str, entry_rule: EntryRule | None, default_leg: str
+) -> str:
+    """
+    W1: noga WEJŚCIA. W trybie "label" i przy `taker_only` — jak dotąd (`execution_legs`).
+    W trybie "path" przy `maker_limit` decyduje rodzaj zlecenia: limit spoczywa w księdze
+    (maker), stop na wybiciu po aktywacji krzyżuje księgę (taker) — `EntryRule.entry_leg`.
+    """
+    if fill_model == FILL_MODEL_PATH and execution_model == EXECUTION_MAKER_LIMIT:
+        return entry_rule.entry_leg
+    return default_leg
+
+
+def _validate_fill_setup(
+    fill_model: str,
+    entry_rule: EntryRule | None,
+    entry_validity_candles: int,
+    vertical_barrier_candles: int,
+    intrabar_ohlcv: pd.DataFrame | None,
+) -> None:
+    """Fail fast (przed pętlą, a w `run_backtest` — po treningu, więc tu bez kosztu)."""
+    if fill_model not in VALID_FILL_MODELS:
+        raise ValueError(
+            f"fill_model musi być jednym z {VALID_FILL_MODELS}, dostałem: {fill_model!r}"
+        )
+    if fill_model == FILL_MODEL_LABEL:
+        if intrabar_ohlcv is not None:
+            raise ValueError("intrabar_ohlcv ma sens tylko przy fill_model='path'")
+        return
+    if entry_rule is None:
+        raise ValueError("fill_model='path' wymaga entry_rule (backtest.execution.EntryRule)")
+    if not 1 <= entry_validity_candles <= vertical_barrier_candles:
+        raise ValueError(
+            "entry_validity_candles musi być w [1, vertical_barrier_candles] — zlecenie nie może "
+            f"żyć dłużej niż horyzont prognozy; dostałem {entry_validity_candles} przy V="
+            f"{vertical_barrier_candles}"
+        )
+
+
+def simulate_equity(
+    df: pd.DataFrame,
+    candidate_signals: list[dict],
+    folds_summary: list[dict],
+    *,
+    initial_equity: float = DEFAULT_INITIAL_EQUITY,
+    risk_controller_fn: Callable[..., dict] = compute_sizing,
+    kill_switch_drawdown_pct: float = KILL_SWITCH_DRAWDOWN_PCT,
+    kill_switch_cooldown_days: float = KILL_SWITCH_COOLDOWN_DAYS,
+    candle_minutes: int = CANDLE_MINUTES,
+    execution_model: str = DEFAULT_EXECUTION_MODEL,
+    timeout_leg: str = DEFAULT_TIMEOUT_LEG,
+    kill_switch_enabled: bool = True,
+    vertical_barrier_candles: int = VERTICAL_BARRIER_CANDLES,
+    fill_model: str = FILL_MODEL_LABEL,
+    entry_rule: EntryRule | None = None,
+    entry_validity_candles: int = DEFAULT_ENTRY_VALIDITY_CANDLES,
+    intrabar_ohlcv: pd.DataFrame | None = None,
+) -> dict:
+    """
+    W1: część TANIA backtestu — dla posortowanych sygnałów kandydujących: kill-switch, wykonanie
+    (z etykiety albo z symulacji na ścieżce), sizing, koszty, equity curve, trade journal.
+    `df` i `candidate_signals` pochodzą z `collect_signals`. Argumenty opisane w `run_backtest`.
+
+    Tryb "label" wykonuje DOKŁADNIE te same operacje co `run_backtest` sprzed W1 (kolejność
+    działań na floatach zachowana) — pilnuje tego regresja bit-identyczności w test_engine.py.
+    """
+    _validate_fill_setup(
+        fill_model, entry_rule, entry_validity_candles, vertical_barrier_candles, intrabar_ohlcv
+    )
+    path_mode = fill_model == FILL_MODEL_PATH
+    if path_mode:
+        open_ = df["open"].to_numpy(dtype=float)
+        high = df["high"].to_numpy(dtype=float)
+        low = df["low"].to_numpy(dtype=float)
+        close = df["close"].to_numpy(dtype=float)
+        intrabar: IntrabarPath | None = (
+            None
+            if intrabar_ohlcv is None
+            else build_intrabar_path(df["timestamp"], intrabar_ohlcv, candle_minutes)
+        )
+
     equity = initial_equity
     trades: list[dict] = []
+    unfilled: list[dict] = []
     equity_curve: list[dict] = [{"timestamp": df["timestamp"].iloc[0], "equity": equity}]
     peak_equity = equity
     # Commit 2c: moment pierwszego nieprzerwanego zadziałania kill-switcha (None, gdy
@@ -787,12 +1010,60 @@ def run_backtest(
                     "equity_before": equity,
                     "equity_after": equity,
                     "kill_switch_active": True,
+                    "fill_bar_offset": float("nan"),
                 }
             )
             equity_curve.append({"timestamp": signal["timestamp"], "equity": equity})
             continue
 
         kill_switch_tripped_at = None
+
+        if path_mode:
+            # W1: wykonanie na ścieżce cen. Zlecenie na zamknięciu świecy sygnału `t`,
+            # timeout na zamknięciu `t+V` (od sygnału — horyzont prognozy, nie od wypełnienia).
+            t = int(signal["original_index"])
+            outcome = simulate_trade(
+                entry_rule,
+                direction,
+                t,
+                entry_validity_candles,
+                t + vertical_barrier_candles,
+                open_,
+                high,
+                low,
+                close,
+                atr_14,
+                ATR_MULTIPLIER,
+                intrabar=intrabar,
+            )
+            if not outcome.filled:
+                unfilled.append(
+                    {
+                        "timestamp": signal["timestamp"],
+                        "regime": signal["regime"],
+                        "fold_idx": signal["fold_idx"],
+                        "signal_direction": direction,
+                        "signal_confidence": confidence,
+                        "label": signal["label"],
+                        "entry_level": outcome.entry_level,
+                        "entry_close": entry_price,
+                        "atr_14": atr_14,
+                    }
+                )
+                continue
+            entry_price = outcome.fill_price
+            exit_price = outcome.exit_price
+            exit_reason = outcome.exit_reason
+            exit_bar_offset = float(outcome.exit_idx - t)
+            fill_bar_offset = float(outcome.fill_idx - t)
+            # funding za świece od wypełnienia do wyjścia włącznie
+            holding_candles = float(outcome.exit_idx - outcome.fill_idx + 1)
+        else:
+            exit_price = _resolve_exit_price(df, signal)
+            exit_reason = _resolve_exit_reason(direction, signal["label"])
+            exit_bar_offset = signal["exit_bar_offset"]
+            fill_bar_offset = 0.0
+            holding_candles = signal["exit_bar_offset"]
 
         sizing = risk_controller_fn(
             signal_direction=direction,
@@ -804,16 +1075,15 @@ def run_backtest(
         )
         position_size = sizing["position_size"]
 
-        exit_price = _resolve_exit_price(df, signal)
         gross_pnl = direction * (exit_price - entry_price) * position_size
 
-        exit_reason = _resolve_exit_reason(direction, signal["label"])
         entry_leg, exit_leg = _execution_legs(execution_model, exit_reason, timeout_leg)
+        entry_leg = _entry_leg_for(fill_model, execution_model, entry_rule, entry_leg)
 
         notional = position_size * entry_price
         cost = total_round_trip_cost(
             notional=notional,
-            holding_candles=signal["exit_bar_offset"],
+            holding_candles=holding_candles,
             direction=direction,
             candle_minutes=candle_minutes,
             entry_leg=entry_leg,
@@ -834,7 +1104,7 @@ def run_backtest(
                 "entry_price": entry_price,
                 "exit_price": exit_price,
                 "position_size": position_size,
-                "exit_bar_offset": signal["exit_bar_offset"],
+                "exit_bar_offset": exit_bar_offset,
                 "exit_reason": exit_reason,
                 "gross_pnl": gross_pnl,
                 "cost": cost,
@@ -842,6 +1112,7 @@ def run_backtest(
                 "equity_before": equity_before,
                 "equity_after": equity,
                 "kill_switch_active": False,
+                "fill_bar_offset": fill_bar_offset,
             }
         )
         equity_curve.append({"timestamp": signal["timestamp"], "equity": equity})
@@ -854,4 +1125,6 @@ def run_backtest(
         "trades": trades_df,
         "folds_summary": folds_summary,
         "final_equity": equity,
+        "unfilled": pd.DataFrame(unfilled, columns=UNFILLED_COLUMNS),
+        "fill_model": fill_model,
     }

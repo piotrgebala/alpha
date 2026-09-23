@@ -190,7 +190,16 @@ Przy dużej próbie nawet 0,3 pp różnicy wyjdzie „istotne". Zawsze podaj:
 - **Znaczenie dla decyzji** — czy to zmienia werdykt GO/WARUNKOWY/NO-GO; czy margines jest
   dodatni z zapasem, czy tylko formalnie.
 
-W tym projekcie „istotne" znaczy: **dolny kraniec CI trafności > break-even**. Nic innego.
+W tym projekcie „istotne" znaczy: **dolny kraniec CI trafności > break-even ORAZ średni zwrot
+netto per trade dodatni (pooled `t_stat > 0`)**. Nic innego.
+
+**Dlaczego dwa warunki, nie jeden (W1b, 2026-09-23):** próg `break_even = 0,5·(1 + C/B)` zakłada,
+że wygrana i przegrana są tej samej wielkości (±B). Gdy wejście jest oddalone od kotwicy etykiety
+(limit na cofnięciu), wygrane rozjeżdżają się na małe (timeout tuż nad wejściem, +0,17 % ceny)
+i pełne (TP), a straty zostają pełne (SL −2,45 %). Trafność wyszła 53,15 % przy progu 52,81 %,
+a średni zwrot netto był istotnie UJEMNY (t = −3,90). **Więcej wygranych ≠ więcej pieniędzy.**
+Każda pre-rejestracja wpisuje oba warunki do kryterium POZYTYWNEGO; przy wypłatach
+asymetrycznych z definicji (częściowe TP, trailing) werdykt opiera się na zwrocie netto z CI.
 
 ### B4. Wielkość próby i moc — PRZED eksperymentem
 

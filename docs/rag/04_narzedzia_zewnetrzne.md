@@ -128,6 +128,66 @@ Bramka, pomijając funding, jest więc **lekko konserwatywna**. Kandydat na osob
 
 Pełny write-up: `runs/2026-09-22_h3-noga-timeout-pasmo/README.md`.
 
+## ADR — symulacja wypełnień na ścieżce cen zamiast odczytu z etykiety (W1, 2026-09-23)
+
+**Status:** Accepted (decyzja użytkownika 2026-09-23: „pozycji nie otwieramy ani nie zamykamy
+po cenie otwarcia/zamknięcia świecy, tylko po konkretnej cenie” — obowiązuje też na żywo).
+**Pre-rejestracja i wynik:** `runs/2026-09-23_w1-wykonanie-po-cenie/README.md`.
+
+### Kontekst
+
+Do W1 silnik liczył wejście po `close` świecy sygnału i ZAKŁADAŁ, że zlecenie się wypełni, a cenę
+wyjścia odczytywał z etykiety triple-barrier (`engine._resolve_exit_price`). C2.12 zapisało to
+jako jawne ograniczenie („noga maker zakłada, że limit się wypełnia; pomija adverse selection”),
+H3 dodało, że powrót do tematu wymaga DANYCH, nie kolejnego założenia. Zasada użytkownika czyni
+z tego ograniczenia rozjazd między backtestem a handlem: backtest mierzył coś, czego na żywo nie
+będzie.
+
+### Decyzja
+
+1. **Nowy moduł `backtest/execution.py`** — czyste funkcje na tablicach OHLC: wypełnienie zlecenia
+   wejścia (limit / stop, ważność `k` świec, cena `min|max(open, P)`, brak przebicia = brak
+   transakcji) i wyjście (TP/SL ±`ATR_MULTIPLIER`·ATR od CENY WYPEŁNIENIA, timeout po `close`
+   świecy `t+V`). Dane to ścieżki cen; założeniem pozostaje „ścisłe przebicie poziomu = wypełnienie”
+   (brak księgi zleceń) — nazwane tak w kodzie i w pre-rejestracji.
+2. **Tryb `fill_model` w `engine.py`:** `"label"` (domyślny, dotychczasowe zachowanie bit w bit —
+   regresja literałami w `test_engine.py`) i `"path"` (symulacja). Nazwany wariant, nie pokrętło —
+   konwencja `execution_model`/`timeout_leg`.
+3. **Rozdzielenie `run_backtest` na `collect_signals` (trening) i `simulate_equity` (wykonanie):**
+   jeden trening obsługuje wszystkie warianty wykonania, więc lejek sygnałów jest identyczny
+   między wariantami Z KONSTRUKCJI (lekcja H3: „jabłka do jabłek” wymuszone kodem, nie deklaracją).
+4. **Trzy nazwane reguły wejścia** (`EntryRule`): `limit_close`, `limit_pullback` (0,5·ATR — jedna
+   wartość, zero sweepu), `stop_breakout` (noga taker). **Ważność `k = 1` świeca** — z horyzontu
+   prognozy modelu (etykieta mówi o 3 świecach od sygnału; wypełnienie w 3. zostawia jedną), nie
+   z wyniku; `k ≤ V` wymuszone walidacją.
+5. **Kolejność zdarzeń wewnątrz świecy:** tam, gdzie są świece 5m (2023-07 → 2026-07), rozstrzyga
+   ścieżka 5m (obie bariery w jednej świecy 5m → SL pierwszy); na samych świecach 4h — w świecy
+   wypełnienia liczy się tylko SL (TP mógł paść przed wypełnieniem), w kolejnych reguła etykiety.
+   Kierunek obciążenia trybu 4h: NA NIEKORZYŚĆ strategii (test przykładowy w `test_execution.py`).
+6. **Timeout zostaje po rynku** (taker, `close[t+V]`) — kryterium H3 („maker wymaga znanej CENY”)
+   nie zmieniło się: przy wyjściu po czasie znamy moment, nie cenę.
+7. **Sygnały niewypełnione** trafiają do osobnego dziennika `unfilled` z etykietą — do pomiaru
+   selekcji przez wypełnienie (czy wypełniają się gorsze sygnały), nie do journalu equity.
+
+### Odrzucone alternatywy
+
+| opcja | dlaczego nie |
+|---|---|
+| zostać przy etykiecie | backtest mierzyłby wykonanie, którego na żywo nie będzie; ograniczenie z C2.12 nigdy nie zostałoby zmierzone |
+| ciągła stopa wypełnień φ | odrzucona w H3: stopień swobody bez danych do kalibracji; jedyne źródło kalibracji = wynik backtestu = strojenie po wyniku |
+| pełna symulacja księgi zleceń | brak danych o księdze/fillach w Fazie 0; nie da się zamodelować kolejki bez założeń gorszych niż „ścisłe przebicie” |
+| ważność dobrana ze stopy wypełnień | dobór parametru po obejrzeniu danych; horyzont modelu daje kryterium niezależne od wyniku |
+
+### Konsekwencje
+
+- Łatwiejsze: każda przyszła hipoteza mierzona jest tak, jak będzie handlowana; dziennik `unfilled`
+  daje pierwszy w projekcie pomiar adverse selection; kalibracja 4h≈5m mówi, ile ufać latom bez 5m.
+- Trudniejsze: journal ma nową kolumnę `fill_bar_offset`; skrypty zamrożone (zasada 13) nadal
+  wołają tryb `"label"` i pozostają odtwarzalne; koszt obliczeń symulacji jest pomijalny wobec
+  treningu.
+- Do rewizji: gdyby pojawiło się ŹRÓDŁO DANYCH o wypełnieniach (fille własnych zleceń z paper
+  tradingu w Fazie 3), założenie „przebicie = wypełnienie” należy skalibrować, nie zakładać.
+
 ## freqtrade
 
 Otwarty framework do tradingu krypto z wbudowanym FreqAI (feature engineering + ML). Powody, dla

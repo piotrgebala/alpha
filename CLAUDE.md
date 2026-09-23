@@ -187,7 +187,11 @@ Te pliki zmieniają się często — traktuj jako aktualny stan, nie jako źród
   transakcji/fold produkuje artefakty). Warianty rozstrzygaj na **pooled t-stat / t_neff i
   marginesie `(2p−1)·B − C`** (z z_margin); kryteria klasyfikacji z docs/rag/03 pozostają
   formalnie niezmienione jako werdykt bramkowy. Szum nośnych statystyk zmierz ponownie po
-  każdej istotnej zmianie datasetu/modelu kosztów.
+  każdej istotnej zmianie datasetu/modelu kosztów. **Kryterium POZYTYWNE w pre-rejestracji ma
+  DWA warunki: `ci_low > break_even` ORAZ `t_stat > 0` zwrotu netto** — W1b (2026-09-23)
+  pokazało trafność 53,15 % nad progiem przy istotnie ujemnym zwrocie (t = −3,9), bo wzór
+  progu zakłada wypłaty ±B, a wejście oddalone od kotwicy etykiety je rozjeżdża (wniosek
+  skumulowany 43; `docs/skills/bramki-jakosci.md` B3).
 - **Liczniki wariantów rozwidlają się per baza danych i per hipoteza** — stara baza
   (2025-07→2026-07), nowa baza (2023-07→2026-07, od C2.10) i nowa hipoteza jednoreżimowa 4h
   (od Z5b) mają OSOBNE liczniki w `runs/INDEX.md`; wyników między bazami nie porównuje się 1:1.

@@ -63,7 +63,26 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **570/570** (2026-09-23).
+Stan testów: **610/610** (2026-09-23).
+
+### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
+
+Użytkownik ustalił zasadę, która obowiązuje też na żywo: pozycje otwiera się i zamyka **po
+konkretnej cenie** (zlecenie oczekujące na poziomie), nie „po cenie zamknięcia świecy". Backtest
+zakładał dotąd, że zlecenie po cenie zamknięcia zawsze się wypełni. [W1](runs/2026-09-23_w1-wykonanie-po-cenie/README.md)
+dołożyło symulację wypełnień na ścieżce cen i sprawdziło trzy sposoby wejścia:
+
+| sposób wejścia | ile sygnałów wchodzi | trafność | próg opłacalności | pieniądze na transakcji |
+|---|---|---|---|---|
+| limit po cenie zamknięcia | 99,4 % | 50,11 % | 52,96 % | strata (jak dotąd) |
+| limit na cofnięciu o pół ATR | 35,5 % | **53,15 %** | 52,81 % | **strata** (t = −3,9) |
+| zlecenie na wybiciu | 47,5 % | 46,13 % | 54,83 % | strata, największa |
+
+**Co to znaczy:** dotychczasowe wyniki nie były zawyżone przez założenie wypełnienia (99,4 % to
+prawie „zawsze"). Wejście na cofnięciu **wygląda** lepiej — pierwszy raz trafność ponad progiem —
+ale gdy zsumować pieniądze, jest stratą: wygrane są małe (pozycja zamykana po czasie tuż nad
+wejściem), a przegrane pełne. **Więcej wygranych ≠ więcej pieniędzy** — od teraz każdy werdykt
+wymaga i trafności ponad progiem, i dodatniego zwrotu netto.
 
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
@@ -121,6 +140,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **P1 + F1 — ostatnie mierzalne źródło informacji sprawdzone** | 2026-09-22 | **Najpierw sprawdziliśmy, co jeszcze da się zmierzyć.** Dane o pozycjonowaniu (ilu graczy stoi po której stronie) to najbardziej oczywisty kandydat na informację spoza wykresu ceny — ale giełda udostępnia je **tylko za 30 dni**, czyli ~112 transakcji wobec potrzebnych 4 500. **Cała klasa źródeł odpada, bo nie ma czego mierzyć.** Został funding — opłata za utrzymanie pozycji, jedyna informacja spoza ceny, którą mamy z siedmioletnią historią. **Trafia w 50,34%, a musiałby w 52,94%**; różnica wobec modelu bez niej to **trzy setne punktu**. **Przy okazji wycofaliśmy własne wcześniejsze ustalenie:** „funding potroił liczbę decyzji modelu” okazało się artefaktem małej próby — na poprawionym pomiarze zmienia ją o procent | [runs/f1](runs/2026-09-22_f1-funding-zmierzony/README.md) |
 | **P2 — carry przekrojowy: niemierzalny** | 2026-09-22 | **Sprawdziliśmy ostatni kierunek z mapy, który nie wymaga zgadywania ceny:** zarabianie na opłacie funding — pozycja krótka tam, gdzie opłata najwyższa, długa tam, gdzie najniższa. Na 20 największych monetach z 6,5 roku **sama opłata pokrywa koszty** (~0,1% na dwa dni, pewnie powyżej zera — pierwszy taki wynik w projekcie), ale **ruchy cen są 57 razy większe od tego zarobku**. Żeby odróżnić zysk od szczęścia, trzeba by ~140 lat danych; mamy 6,5. Przy okazji obaliliśmy własne założenie z planu: 18 monet chodzi razem jak **dwie** niezależne, więc dokładanie monet nie pomaga. Pobieranie pełnego uniwersum przerwane na polecenie użytkownika — wynik dotyczy 20 dzisiejszych największych monet (jawny błąd przeżywalności) | [runs/p2](runs/2026-09-22_p2-sonda-carry-przekrojowy/README.md) |
 | **T4 — kalibracja early stoppingu** | 2026-09-23 | **Sprawdziliśmy, czy zabezpieczenie przed „uczeniem się na pamięć” (early stopping) działa na naszych małych oknach danych.** Działa: bez niego model myli się w prognozach o 58% bardziej, we wszystkich 86 oknach. Próg „co najmniej 30 wierszy”, który kiedyś po cichu wyłączał to zabezpieczenie, dziś w ogóle nie bierze udziału. Niczego w kodzie nie zmieniamy. Przy okazji wyszło to samo co w M1/F1, tylko inną drogą: nawet najlepiej ustawiony model prognozuje zaledwie o 0,7% lepiej niż zgadywanie | [runs/t4](runs/2026-09-23_t4-kalibracja-early-stopping/README.md) |
+| **W1 — wykonanie po konkretnej cenie: backtest dopasowany do handlu na żywo** | 2026-09-23 | **Backtest symuluje teraz wypełnienia zleceń tak, jak będą działać na żywo** (zlecenie oczekujące po konkretnej cenie, TP/SL od ceny wypełnienia, kolejność zdarzeń wewnątrz świecy 4h rozstrzygana świecami 5-minutowymi). Trzy sposoby wejścia: **limit po cenie zamknięcia wypełnia się w 99,4 %** i nic nie zmienia (50,11 % wobec progu 52,96 %) — dotychczasowe wyniki nie były zawyżone; **limit na cofnięciu** daje 53,15 % trafności, pierwszy raz ponad progiem, **ale traci pieniądze** (wygrane małe, przegrane pełne — t = −3,9); **zlecenie na wybiciu** jest droższe i trafia gorzej (46,13 %). Lekcja na stałe: więcej wygranych ≠ więcej pieniędzy — werdykt wymaga dodatniego zwrotu netto, nie tylko trafności. Seria zamknięta (3/3) | [runs/w1](runs/2026-09-23_w1-wykonanie-po-cenie/README.md) |
 
 ## Hipoteza w skrócie
 

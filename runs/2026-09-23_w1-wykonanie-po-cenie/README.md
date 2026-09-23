@@ -1,8 +1,39 @@
 # W1 — wykonanie po konkretnej cenie: uczciwy model wypełnień w backteście (2026-09-23)
 
-> **STATUS: PRE-REJESTRACJA (przed kodem).** Wszystko do sekcji „Czego ta runda NIE raportuje"
-> włącznie zapisano **przed napisaniem linijki kodu produkcyjnego** i trafia do repo w osobnym
-> commicie, który poprzedza commit z kodem. Sekcje od „Wynik" w dół dopisuje się po przebiegu.
+> **STATUS: ZAMKNIĘTA.** Wszystko do sekcji „Czego ta runda NIE raportuje" włącznie zapisano
+> **przed napisaniem linijki kodu produkcyjnego** — commit `9b09177` zawiera wyłącznie
+> pre-rejestrację i poprzedza commit z kodem. Sekcje od „Wynik" w dół dopisano po przebiegu.
+> **Licznik W: 3/3 — WYCZERPANY, reguła STOP.** Werdykty: W1a **NEGATYWNY**, W1b
+> **NIEROZSTRZYGNIĘTY** (wg pre-rejestrowanego kryterium trafności) przy **istotnie ujemnym
+> zwrocie netto**, W1c **NEGATYWNY**. Walidacja (16a): **CAVEATS** (sekcja niżej).
+
+## Wynik w skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+**Backtest liczył wykonanie prawie tak, jak będzie na żywo.** Zlecenie po cenie zamknięcia świecy
+wypełnia się w 99,4 % przypadków (52 z 8 114 sygnałów przepada), a trafność zmienia się
+z 50,37 % na 50,11 % — czyli o tyle, ile daje utrata tych 52 transakcji. Założenie z rundy C2.12
+(„limit zawsze się wypełnia") było na świecach 4h prawie prawdziwe.
+
+**Tańsze wejście na cofnięciu wygląda lepiej, ale nie jest lepsze.** Limit pół ATR poniżej rynku
+wypełnia się tylko w 35 % przypadków, a trafność wychodzi 53,15 % — po raz pierwszy w projekcie
+punktowo powyżej progu opłacalności (52,81 %). Ale gdy zsumować pieniądze, a nie liczbę
+wygranych, **średni wynik na transakcji jest stratą** (−0,096 % nominału; pewność, że to nie
+przypadek: t = −3,9). Wygrane są małe (59 % timeoutów kończy się +0,17 % powyżej wejścia),
+przegrane pełne (stop −2,45 %), a stopów jest więcej niż zysków (21 % wobec 16 %). Próg
+opłacalności zakłada wygrane i przegrane tej samej wielkości — tu tak nie jest, więc trafność
+przestaje być właściwą miarą. To pułapka, którą warto zapamiętać: **więcej wygranych ≠ więcej
+pieniędzy.**
+
+**Wejście na wybiciu jest gorsze na obu frontach:** droższe (zlecenie po rynku podnosi próg do
+54,83 %) i trafia rzadziej (46,13 %) — kupujemy na lokalnym szczycie, po którym cena częściej
+zawraca.
+
+**Żaden sposób wejścia nie tworzy przewagi tam, gdzie model jej nie ma** — dokładnie tak, jak
+zapisano z góry. Zysk z rundy jest inny: backtest ma teraz model wypełnień zgodny z zasadą „po
+konkretnej cenie", zmierzyliśmy po raz pierwszy, jak wypełnienie wybiera gorsze sygnały, i wiemy,
+że przybliżenie świecami 4h myli się rzadko (0,3–2,7 % transakcji) i na niekorzyść strategii.
+
+---
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
 
@@ -52,9 +83,10 @@ na tych samych danych — precedens C2.12: raportowany werdykt = wariant). Czę�
      (częściowe wyjście 50 % przy +5 % depozytu przy dźwigni 3×, stop na break-even, reszta
      dalej) to **osobna, późniejsza runda** — tu go nie ma;
   4. sizing **bez zmian** (ryzyko 0,5 % kapitału, dźwignia najwyżej 3× — zasada 5).
-- **Skrypt rundy:** `backtest/run_execution_w1.py` (powstaje PO tej pre-rejestracji, buduje na
-  `backtest/checkpoint_lib.py`; komenda w formie uruchamialnej trafi tu przy zamknięciu rundy,
-  razem z wpisem skryptu na listę `runs/ZAMROZONE.txt`).
+- **Komenda:** `py -m backtest.run_execution_w1` (pełny output: `raw_output.txt`; skrypt na liście
+  `runs/ZAMROZONE.txt`; buduje na `backtest/checkpoint_lib.py` i nowym `backtest/execution.py`).
+  Pre-rejestracja: commit `9b09177`, kod i wynik: commit scalający tę gałąź. Czas przebiegu: 11 s
+  (dane 4h są małe — 86 okien treningowych).
 - **Dane:** natywne świece 4h BTC/USDT perpetual 2019-09-10 → 2026-07-01 (14 916 świec, 6,8 roku,
   zero dziur — Z5b); do części kalibracyjnej natywne 5m 2023-07-01 → 2026-07-01 (315 648 świec).
 - **Testy przed rundą:** 570/570.
@@ -256,28 +288,231 @@ niezgodna z agregatem 5m.
 
 ## Wynik
 
-_(po przebiegu)_
+### 0. Kontrola — baseline nienaruszony
 
-## Co na plus (+) / Co na minus (−)
+Tryb `label` na tych samych danych i konfiguracji: **n = 8 033, trafień 4 046, p = 50,3672 %** —
+identycznie z ramieniem A z M1/F1 (co do sztuki). Lejek: 14 448 ocenionych świec, abstynencja
+43,84 % (6 334), bramki 0, **8 114 sygnałów kandydujących** — wspólny dla wszystkich wariantów
+(jeden trening, `collect_signals`).
 
-_(po przebiegu)_
+### 1. Warianty z werdyktem (k = 1)
 
-## Walidacja (zasada 16a)
+| wariant | n | niewypełnione | trafność `p` | CI 95 % | próg BE | margines (pkt trafności) | werdykt (pre-rejestracja) |
+|---|---|---|---|---|---|---|---|
+| kontrola (label) | 8 033 | — | 50,37 % | [49,27; 51,46] | 52,93 % | −2,57 pp | odniesienie, 0 wariantów |
+| **W1a** limit po close | 7 978 | 52 (0,6 %) | **50,11 %** | [49,02; 51,21] | 52,96 % | −2,84 pp | **NEGATYWNY** (ci_high < próg, n ≥ 2 922) |
+| **W1b** limit na cofnięciu 0,5·ATR | 2 858 | 5 233 (64,5 %) | **53,15 %** | [51,32; 54,98] | 52,81 % | **+0,34 pp** | **NIEROZSTRZYGNIĘTY** (CI przecina próg; n < 3 276) |
+| **W1c** stop na wybiciu | 3 800 | 4 260 (52,5 %) | **46,13 %** | [44,55; 47,72] | 54,83 % | −8,70 pp | **NEGATYWNY** (ci_high < próg, n ≥ 980) |
 
-_(po przebiegu)_
+Stłumione kill-switchem: 84 / 23 / 54 (bilans lejka domyka się: n + niewypełnione + stłumione
+= 8 114 w każdym wariancie).
+
+### 2. Zwrot netto per trade — statystyka nośna (zasada 12, wytyczna o pooled t)
+
+| wariant | średnia (% equity) | mediana (% equity) | t_stat | N_eff | t_neff | średnia (% nominału) | mediana (% nominału) |
+|---|---|---|---|---|---|---|---|
+| kontrola | −0,0056 % | −0,0067 % | −4,09 | 3 859 | −2,83 | −0,081 % | −0,083 % |
+| W1a | −0,0066 % | −0,0073 % | −4,84 | 4 092 | −3,46 | −0,082 % | −0,090 % |
+| **W1b** | **−0,0092 %** | +0,0016 % | **−3,90** | 2 450 | **−3,61** | **−0,096 %** | **+0,017 %** |
+| W1c | −0,0150 % | −0,0219 % | −7,55 | 2 439 | −6,05 | −0,204 % | −0,270 % |
+
+**W1b: trafność powyżej progu przy stracie na transakcji.** Rozbicie wypłaty brutto per typ wyjścia
+(% ceny wejścia):
+
+| typ wyjścia | udział | średnia | wygrane |
+|---|---|---|---|
+| take-profit | 16,2 % | +2,44 % | 100 % |
+| stop-loss | **21,2 %** | **−2,45 %** | 0 % |
+| timeout | 62,6 % | **+0,17 %** | **59,1 %** |
+
+Wygrane to w 79 % małe timeouty; straty to pełne stopy, częstsze niż zyski (SL:TP = 21:16).
+Wzór progu `0,5·(1 + C/B)` zakłada wypłaty ±B — po wejściu oddalonym od kotwicy etykiety
+przestaje być progiem opłacalności. Średnia brutto −0,015 %, netto −0,096 % nominału; mediana
+dodatnia (+0,017 %) — klasyczny rozjazd średniej i mediany przy skośnych wypłatach (16b).
+
+### 3. Wypełnienia i selekcja — kogo NIE ma w zbiorze
+
+| wariant | wypełnienia (long / short) | poprawność kierunku wg ETYKIETY: wypełnione | niewypełnione | różnica, CI 95 % |
+|---|---|---|---|---|
+| W1a | 99,4 % (99,2 / 99,6) | 50,83 % (n 2 784) | 92,0 % (n 25) | −41 pp — n = 25, bez znaczenia |
+| **W1b** | 35,5 % (34,5 / 36,5) | **21,29 %** (n 1 254) | **75,10 %** (n 1 570) | **−53,8 pp [−56,9; −50,7]**, z = −33,8 |
+| **W1c** | 47,5 % (48,9 / 46,2) | **72,57 %** (n 1 469) | 28,19 % (n 1 341) | **+44,4 pp [+41,1; +47,7]**, z = +26,2 |
+
+Pierwszy w projekcie pomiar selekcji przez wypełnienie. To w większości MECHANIKA, nie
+informacja: limit poniżej rynku wypełnia się wtedy, gdy cena idzie przeciw pozycji, więc etykieta
+liczona od `close` częściej mówi „zły kierunek"; stop na wybiciu — odwrotnie. Dlatego wynik
+transakcji liczy się od ceny wypełnienia, a etykieta służy tylko jako diagnostyka selekcji.
+
+### 4. Geometria, koszt, wrażliwość na czas ważności
+
+| wariant | k | n | wypełnienia | tp / sl / timeout | B | C | próg BE | świec w pozycji |
+|---|---|---|---|---|---|---|---|---|
+| kontrola | — | 8 033 | 100 % | 17,9 / 17,0 / 65,1 | 1,382 % | 0,0811 % | 52,93 % | 3,66¹ |
+| W1a | 1 | 7 978 | 99,4 % | 17,5 / 17,2 / 65,3 | 1,375 % | 0,0812 % | 52,96 % | 2,68 |
+| W1b | 1 | 2 858 | 35,5 % | 16,2 / 21,2 / 62,6 | 1,446 % | 0,0813 % | 52,81 % | 2,68 |
+| W1c | 1 | 3 800 | 47,5 % | 18,1 / 17,1 / 64,8 | 1,359 % | **0,1312 %** | **54,83 %** | 2,72 |
+| W1b | 2 | 4 129 | 51,5 % | 13,6 / 18,8 / 67,6 | 1,330 % | 0,0828 % | 53,11 % | 2,46 |
+| W1b | 3 | 4 840 | 60,3 % | 11,6 / 16,9 / 71,4 | 1,250 % | 0,0838 % | 53,35 % | 2,24 |
+| W1c | 2 | 4 713 | 59,6 % | 16,2 / 16,7 / 67,1 | 1,326 % | 0,1322 % | 54,98 % | 2,56 |
+| W1c | 3 | 5 218 | 66,1 % | 14,6 / 16,0 / 69,4 | 1,284 % | 0,1330 % | 55,18 % | 2,40 |
+
+¹ w trybie `label` liczone od świecy sygnału (`exit_bar_offset`), w trybie `path` od wypełnienia.
+Wiersze k = 2, 3 — wyłącznie opisowo (bez trafności i werdyktu, reguła H3/D5); dłuższa ważność
+kupuje wypełnienia kosztem późniejszego wejścia (więcej timeoutów, węższa bariera, wyższy próg).
+W1c: 0 z 3 800 transakcji nie przeszłoby bramki kosztowej liczonej nogą taker (0,0014) — wspólna
+bramka maker nie zniekształciła lejka.
+
+### 5. Kalibracja: tryb 4h ≈ tryb 5m (okno 2023-07 → 2026-07, 36 okien, 3 272 sygnały)
+
+| wariant | tryb | n | niewyp. | tp / sl / timeout | próg BE | zgodność z trybem 4h (na wspólnych transakcjach) |
+|---|---|---|---|---|---|---|
+| W1a | 4h | 3 230 | 20 | 18,1 / 18,2 / 63,7 | 53,43 % | — |
+| W1a | 5m | 3 234 | 19 | 18,4 / 18,2 / 63,4 | 53,41 % | powód wyjścia **99,7 %**, cena wyjścia 99,6 %, cena wejścia 100 %; tylko-4h 18, tylko-5m 22 |
+| W1b | 4h | 1 266 | 2 006 | 18,9 / 20,6 / 60,5 | 53,33 % | — |
+| W1b | 5m | 1 266 | 2 006 | 19,4 / 20,5 / 60,0 | 53,30 % | powód wyjścia **99,4 %**, cena wyjścia 99,4 %, wejścia 100 %; zbiory identyczne |
+| W1c | 4h | 1 397 | 1 857 | 18,8 / 18,5 / 62,7 | 55,65 % | — |
+| W1c | 5m | 1 404 | 1 868 | 20,3 / 16,7 / 63,0 | 55,66 % | powód wyjścia **97,3 %**, cena wyjścia 97,3 %, wejścia 100 %; tylko-5m 7 |
+
+Kierunek rozbieżności (macierze w `raw_output.txt`): tryb 4h zamienia **wyłącznie** w stronę
+gorszą — W1c: 16 × „SL" zamiast „timeout", 7 × „SL" zamiast „TP", 15 × „timeout" zamiast „TP";
+ani jednej zamiany na korzyść. Przybliżenie 4h dla lat 2019–2023 jest więc **konserwatywne**;
+różnice trafności między trybami (poza decyzją, sekcja 6 `raw_output.txt`): +0,24 / +0,32 /
++1,40 pp na korzyść trybu 5m. Świece 4h niezgodne z agregatem 5m: **2** (2023-11-10 12:00,
+2024-10-28 20:00) — pre-rejestracja mówiła o jednej (tolerancja 0,01 USDT w pomiarze wstępnym);
+w trybie 5m prawdą jest ścieżka 5m.
+
+### 6. Mierzalność ex post (zasada 18)
+
+`expected_trades(abstynencja, stopa wypełnień)` vs journal: 8 062 / 7 978, 2 881 / 2 858,
+3 854 / 3 800 (różnica = stłumione kill-switchem + zaokrąglenie). Pasmo: 1,10 / 1,83 / 1,59 pp.
+Próg wykrywalności edge'u 54,05 / 54,64 / 56,42 % → dla każdego wariantu pytanie „czy jest edge"
+było NIEMIERZALNE (jak zapisano z góry); pytanie odwrotne rozstrzygnięte dla W1a i W1c z zapasem
+(2,7× / 3,9× wymaganej próby), dla W1b bez zapasu (0,87×) — stąd NIEROZSTRZYGNIĘTY.
+
+## Co na plus (+)
+
+- **Pre-rejestracja dowodliwa z gita** (`9b09177` przed kodem), reguły 1–6 odtworzone w kodzie
+  co do litery, każda z testem przykładowym; 6 własności w `hypothesis` (brak lookaheadu, cena
+  w zakresie świecy, brak przebicia ⇒ brak transakcji, zgodność trybów na ścieżce monotonicznej).
+- **Kontrola bit w bit** — ramię A z M1/F1 odtworzone co do sztuki (n, trafienia); domyślny tryb
+  silnika nie zmienił się (regresje literałami w `test_engine.py`, 70/70).
+- **Runda wyszła dokładnie tak, jak przewidziano** w „Arytmetyce oczekiwań" dla W1a (p w ±0,3 pp
+  od kontroli) i W1c (próg +1 pp, n ~3,6 tys.) — i **inaczej niż przewidziano dla W1b**, gdzie
+  spodziewano się NIŻSZEJ trafności, a wyszła wyższa. Rozbieżność została wyjaśniona pomiarem
+  (asymetria wypłat), nie zignorowana.
+- **Ograniczenie z C2.12 zmierzone po raz pierwszy:** adverse selection istnieje (W1b: −53,8 pp
+  poprawności wg etykiety), ale na 4h jej koszt ekonomiczny przy limicie po close jest pomijalny
+  (0,6 % niewypełnionych, +0,0004 % ceny optymizmu na otwarciu).
+- **Jeden trening dla wszystkich wariantów** — lejek identyczny z konstrukcji; symulacje trwają
+  ułamki sekund, więc przyszłe warianty wykonania są tanie.
+- **Przybliżenie 4h skalibrowane:** myli się w 0,3–2,7 % transakcji i zawsze na niekorzyść.
+
+## Co na minus (−)
+
+- **Kryterium pre-rejestrowane dla W1b okazało się niewystarczające.** `ci_low > break_even`
+  zakłada wypłaty ±B; przy wejściu oddalonym od kotwicy etykiety trafność rośnie, a pieniądze
+  maleją. Werdykt „NIEROZSTRZYGNIĘTY" jest formalnie poprawny, ale to statystyka nośna z wytycznej
+  (pooled t = −3,90) rozstrzyga ekonomicznie — i została dodana do skryptu PO obejrzeniu wyniku
+  W1b (sekcja 3b). Zapisane uczciwie: to nie zmienia werdyktu żadnego wariantu, ale przyszłe
+  pre-rejestracje muszą mieć t-stat w kryterium od początku.
+- **„Przebicie = wypełnienie" to nadal założenie** (brak księgi zleceń): w rzeczywistości limit
+  na poziomie, przez który cena przeszła wąskim knotem, może zostać niewypełniony. Kierunek:
+  optymistyczny dla W1a/W1b. Kalibracja wymaga własnych filli z paper tradingu (Faza 3).
+- **Cena wypełnienia `min(open, P)` dla limitu jest lekko optymistyczna** — zlecenie złożone
+  przed otwarciem świecy realnie wypełnia się po P, nie po lepszym otwarciu. Zmierzone: W1a
+  +0,00043 % ceny średnio (28 % transakcji, maks. +0,063 %), W1b/W1c 0 — 0,5 % kosztu, bez
+  wpływu na werdykt; reguła zostaje, bo była pre-rejestrowana, a poprawka to zmiana po wyniku.
+- **Lata 2019-09 → 2023-06 tylko w trybie 4h** — obciążenie zmierzone (≤ 1,4 pp, konserwatywne),
+  ale nie zerowe.
+- **W1b/W1c wycinają 52–65 % sygnałów** — ich wynik dotyczy wąskiej, mechanicznie wybranej
+  próby; nie mówi nic o sygnałach niewypełnionych.
+- Jeden instrument, jeden seed (XGBoost deterministyczny), pozycje nakładające się sizowane
+  niezależnie (uproszczenie Fazy 0).
+
+## Walidacja (zasada 16a) — werdykt: **CAVEATS**
+
+- **Kluczowe liczby drugą drogą** (skrypt walidacyjny w scratchpadzie sesji, wprost z journalu,
+  poza `metrics.py`): trafność 50,1128 / 53,1491 / 46,1316 % — zgodne z tabelą co do 4. miejsca;
+  koszt policzony analitycznie z mieszanki nóg (fee + poślizg wg udziałów tp/sl/timeout) vs
+  z journalu: 0,08126 vs 0,08125 %, 0,08190 vs 0,08133 %, 0,13093 vs 0,13122 % — różnica to
+  funding (−0,00002 / −0,00057 / +0,00029 pp); bilans lejka 8 114 = n + niewypełnione +
+  stłumione w każdym wariancie; `expected_trades` odtwarza n z dokładnością 1–1,4 %.
+- **Kogo NIE ma w zbiorze:** (a) niewypełnione 0,6 / 64,5 / 52,5 % sygnałów — zmierzone wraz
+  z ich etykietami (sekcja 3); (b) abstynencja 43,84 %; (c) stłumione kill-switchem 84 / 23 / 54;
+  (d) 2019–2023 bez rozstrzygania świecami 5m (sekcja 5); (e) 2 świece niezgodne 5m/4h;
+  (f) sygnały z etykietą 0 w diagnostyce selekcji (z definicji).
+- **Red flag „wynik potwierdza hipotezę":** oczekiwanie brzmiało „żaden wariant nie zmieni
+  werdyktu" — W1b wyszedł punktowo POWYŻEJ progu, czyli w stronę przeciwną do oczekiwanej;
+  pierwszą reakcją było szukanie przecieku (świece po `t` używane wyłącznie do wypełnień/wyjść —
+  własność testowana w `hypothesis`), drugą — rozbicie wypłat, które wyjaśnia efekt bez przecieku.
+- **Rząd wielkości:** trafności 46–53 %, progi 52,8–55,2 %, koszt maker 0,081 %, taker 0,131 % —
+  w zakresach z listy kontrolnej; udziały tp + sl + timeout = 100 %; N_eff ≤ n.
+- **Zastrzeżenia (CAVEATS), które czytelnik MUSI znać:** (1) 53,15 % w W1b **nie jest edge'em**
+  — średni zwrot netto istotnie ujemny; nie wolno cytować tej liczby bez t-statu; (2) kryterium
+  trafności jest niekompletne dla wejść oddalonych od kotwicy etykiety; (3) „przebicie =
+  wypełnienie" i `min(open, P)` są optymistyczne (rząd 0,5 % kosztu); (4) lata bez 5m — obciążenie
+  konserwatywne ≤ 1,4 pp.
 
 ## Przegląd diffu (zasada 16c)
 
-_(po przebiegu)_
+**Przegląd diffu (16c): Approve** — sprawdzono: brak lookaheadu (symulacja czyta wyłącznie świece
+`> t` i nie dalej niż `t+V`; własność w `hypothesis`), off-by-one (ważność ≤ V wymuszona
+walidacją, timeout na `close[t+V]` jak w etykiecie, świeca wypełnienia liczona od jej indeksu
+włącznie), tie-break identyczny z `labeling.py` (test dla long i short), noga wejścia zależna od
+rodzaju zlecenia tylko w trybie `path` przy `maker_limit`, tryb `label` bit w bit (regresje
+literałami 1 280 / 95 126,0168 zielone), dziennik `unfilled` domyka lejek co do sztuki, skrypty
+zamrożone nietknięte (import `_load` zastąpiony `fetch_native` w `checkpoint_lib`), 610/610
+testów, ruff/black czyste. Uwagi niekrytyczne, zapisane do wiedzy: (a) kill-switch sprawdzany
+PRZED próbą wypełnienia — sygnał stłumiony liczy się jako stłumiony, nawet gdyby się nie
+wypełnił (bilans lejka pozostaje poprawny); (b) `build_intrabar_path` wyprowadza interwał świec
+drobnych z dwóch pierwszych znaczników — poprawne przy danych bez dziur (sprawdzone), przy dziurze
+na starcie rzuciłoby ValueError o liczbie świec, nie o interwale; (c) w trybie 4h dla stopu na
+wybiciu SL w świecy wypełnienia bywa liczony, choć mógł paść przed wypełnieniem — obciążenie
+konserwatywne, zmierzone w części kalibracyjnej (16 z 1 397).
 
 ## Wniosek
 
-_(po przebiegu)_
+Backtest mierzy teraz wykonanie „po konkretnej cenie" i **nic w werdykcie projektu się nie
+zmienia**: limit po zamknięciu świecy wypełnia się niemal zawsze (99,4 %), więc dotychczasowe
+wyniki nie były zawyżone przez założenie wypełnienia; wejście na wybiciu jest droższe i trafia
+gorzej; wejście na cofnięciu podnosi trafność do 53,15 %, ale **traci pieniądze** (−0,096 %
+nominału na transakcję, t = −3,9), bo wygrywa małymi timeoutami, a przegrywa pełnymi stopami.
+Trafność powyżej progu okazała się iluzją geometrii — w tym projekcie „istotne" znaczy dolny
+kraniec CI trafności ponad progiem **i** dodatni zwrot netto; drugiego warunku W1b nie spełnia.
+Seria W zamknięta: 3/3, reguła STOP.
 
 ## Rekomendacja
 
-_(po przebiegu)_
+1. **Tryb `path` z regułą `limit_close` i k = 1 staje się domyślnym modelem wykonania dla
+   PRZYSZŁYCH rund** (odzwierciedla zasadę użytkownika), a `label` zostaje nazwanym wariantem
+   odtwarzającym historię — ta sama konwencja co C2.12 (decyzja do potwierdzenia przez
+   użytkownika; do tej pory domyślnym w `engine.py` pozostaje `label`, więc skrypty zamrożone
+   są nietknięte).
+2. **Do kryterium każdej przyszłej pre-rejestracji dopisać `t_stat` zwrotu netto obok
+   `ci_low > break_even`** — wniosek skumulowany 43; `docs/skills/bramki-jakosci.md` B3 uzupełniony.
+3. **Nie testować kolejnych reguł wejścia ani czasów ważności** (STOP). Jedyna droga do lepszego
+   modelu wypełnień to dane o własnych fillach (Faza 3, paper trading).
+4. **Następna runda — nowy cel modelu** (decyzja użytkownika: częściowe wyjście 50 % przy +5 %
+   depozytu przy dźwigni 3×, stop na break-even, reszta dalej) — osobna pre-rejestracja z własnym
+   licznikiem; lekcja z W1b obowiązuje tam podwójnie: przy wypłatach asymetrycznych z definicji
+   werdykt musi opierać się na zwrocie netto z CI, nie na trafności.
 
 ## Użyte skille
 
-_(po przebiegu — z `py tools/skill_audit.py raport --galaz wykonanie-po-cenie`)_
+Rejestr gałęzi `wykonanie-po-cenie` (`py tools/skill_audit.py raport --galaz wykonanie-po-cenie`):
+
+| skill | co wniósł |
+|---|---|
+| `anthropic-skills:clas5-quant` | dyscyplina rundy: jedna zmienna, rachunek mocy z abstynencji i stopy wypełnień, ostrzeżenie o tautologii `hit_rate_barrier` |
+| `anthropic-skills:clas5-runda` | procedura: gałąź → pre-rejestracja w osobnym commicie → skrypt na `checkpoint_lib` → bramki → INDEX/STATUS/README |
+| `engineering:architecture` | ADR w `docs/rag/04` (symulacja wypełnień: dane vs założenia, odrzucone alternatywy) |
+| `engineering:testing-strategy` | plan testów `execution.py`/`engine.py`: własności (lookahead, zakres ceny, brak przebicia), przykłady reguł, regresja bit w bit |
+| `data:validate-data` | bramka 16a: przeliczenia drugą drogą, „kogo nie ma", red flag, werdykt CAVEATS |
+| `data:statistical-analysis` | bramka 16b: mediana obok średniej, CI dla różnicy proporcji, pytanie o właściwą miarę przy skośnych wypłatach |
+| `engineering:code-review` | bramka 16c (sekcja „Przegląd diffu") |
+
+Wczytane bezpośrednio (odczyt plików, nie przez narzędzie Skill — zapoznanie na prośbę
+użytkownika, poza momentami z tabeli zasady 19): `quant-strategy-catalog`, `ta-toolkit`,
+`lean-research`. Z tabeli zasady 19 pominięte: `dataviz` (runda bez wykresów), `update-config`
+(bez zmian w `.claude/settings.json`), `data:explore-data` (dane bez zmian — te same parquety co
+Z5b/Z9, spójność 5m↔4h sprawdzona wprost w skrypcie).
