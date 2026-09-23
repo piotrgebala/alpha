@@ -34,10 +34,14 @@ próg — decyzja użytkownika po obejrzeniu pierwszych realnych rozkładów.
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import yaml
 
-from backtest.engine import run_backtest
+from agents.labeling import ATR_MULTIPLIER, effective_sample_size
+from agents.risk_controller import MIN_BARRIER_TO_COST_RATIO, is_cost_feasible
+from backtest.costs import DEFAULT_TIMEOUT_LEG, gate_cost_fraction
+from backtest.engine import DEFAULT_EXECUTION_MODEL, REGIME_ALL, run_backtest
 from backtest.metrics import (
     classify_checkpoint,
     compute_fold_metrics,
@@ -131,6 +135,162 @@ def summarize_result(result: dict, seed: int = PRIMARY_SEED) -> dict:
         "per_regime": summarize_by_regime(fold_metrics),
         "pooled_per_regime": summarize_pooled_by_regime(result["trades"]),
         "edge_per_regime": summarize_edge_by_regime(result["trades"]),
+    }
+
+
+def build_rule_signals(
+    df: pd.DataFrame,
+    folds_summary: list[dict],
+    score_col: str,
+    *,
+    confidence: float = 1.0,
+    regime: str = REGIME_ALL,
+    execution_model: str = DEFAULT_EXECUTION_MODEL,
+    timeout_leg: str = DEFAULT_TIMEOUT_LEG,
+    min_barrier_to_cost_ratio: float = MIN_BARRIER_TO_COST_RATIO,
+) -> tuple[list[dict], dict]:
+    """
+    A1: sygnały kandydujące z REGUŁY (bez modelu) w formacie `engine.simulate_equity`:
+    kierunek = sign(df[score_col]), pewność stała (`confidence`; reguła nie ma posteriora).
+
+    Populacja świec = DOKŁADNIE okna testowe AKTYWNYCH foldów pipeline'u modelowego
+    (`[test_start, test_end)` jak w `generate_walk_forward_folds`), z etykietą i ATR nie-NaN,
+    po bramce kosztowej silnika (`is_cost_feasible`) — te same filtry co
+    `engine._collect_candidate_signals`, żeby reguła i model były porównywalne co do populacji
+    (pierwsze `train_days` to wyłącznie trening modelu; reguła też ich nie ocenia).
+
+    `df` musi być tym, co zwraca `collect_signals` (kolumny `timestamp`, `close`, `atr_14`,
+    `label`, `exit_bar_offset`, `score_col`; indeks 0..n−1 — `original_index` jest pozycyjny
+    w silniku). Zwraca (sygnały posortowane po `timestamp`, lejek: n_rows_window,
+    n_no_signal, n_label_nan, n_cost_gated, n_signals).
+    """
+    if score_col not in df.columns:
+        raise ValueError(f"df bez kolumny {score_col!r}")
+    if not df.index.equals(pd.RangeIndex(len(df))):
+        raise ValueError("df musi mieć indeks 0..n-1 (original_index jest pozycyjny w silniku)")
+    active = [f for f in folds_summary if not f["skipped"]]
+    if not active:
+        raise ValueError("brak aktywnych foldów — reguła nie ma okna OOS do oceny")
+
+    ts = df["timestamp"]
+    fold_of = pd.Series(np.nan, index=df.index, dtype=float)
+    for fold in sorted(active, key=lambda f: f["test_start"]):
+        mask = (ts >= fold["test_start"]) & (ts < fold["test_end"]) & fold_of.isna()
+        fold_of[mask] = fold["fold_idx"]
+    in_window = fold_of.notna()
+
+    cost_fraction = gate_cost_fraction(execution_model, timeout_leg)
+    funnel = {
+        "n_rows_window": int(in_window.sum()),
+        "n_no_signal": 0,
+        "n_label_nan": 0,
+        "n_cost_gated": 0,
+        "n_signals": 0,
+    }
+    signals: list[dict] = []
+    for idx, row in df.loc[in_window].iterrows():
+        score = row[score_col]
+        if pd.isna(score) or score == 0:
+            funnel["n_no_signal"] += 1
+            continue
+        if pd.isna(row["label"]) or pd.isna(row["atr_14"]):
+            funnel["n_label_nan"] += 1
+            continue
+        if not is_cost_feasible(
+            atr_14=row["atr_14"],
+            entry_price=row["close"],
+            cost_fraction=cost_fraction,
+            atr_multiplier=ATR_MULTIPLIER,
+            min_barrier_to_cost_ratio=min_barrier_to_cost_ratio,
+        ):
+            funnel["n_cost_gated"] += 1
+            continue
+        signals.append(
+            {
+                "original_index": idx,
+                "timestamp": row["timestamp"],
+                "regime": regime,
+                "fold_idx": int(fold_of[idx]),
+                "signal_direction": float(np.sign(score)),
+                "signal_confidence": float(confidence),
+                "entry_price": row["close"],
+                "atr_14": row["atr_14"],
+                "label": row["label"],
+                "exit_bar_offset": row["exit_bar_offset"],
+            }
+        )
+        funnel["n_signals"] += 1
+    signals.sort(key=lambda s: s["timestamp"])
+    return signals, funnel
+
+
+def summarize_trade_returns(summary: dict) -> dict:
+    """
+    N1/A1: statystyki zwrotu netto PER TRANSAKCJA (% nominału wejścia) z gotowego wyniku
+    `summarize_result` — kryterium z wytycznej CLAUDE.md (dwa warunki: t_neff zwrotu netto
+    i `ci_low(p)` wobec progu) potrzebuje r̄, se, t, t_neff obok trafności
+    z `summarize_edge_by_regime`. `p* = (L̄ + C)/(W̄ + L̄)` to próg uogólniony (ADR docs/rag/03,
+    N1) — przy wypłatach asymetrycznych `break_even_p = 0,5(1 + C/B)` jest tylko diagnostyką.
+
+    Wymaga jednej grupy reżimu w `edge_per_regime` (pipeline bez bramki, `REGIME_ALL`) —
+    przy dwóch reżimach liczby pooled nie mają jednego progu; fail loud.
+    """
+    edge = summary["edge_per_regime"]
+    if len(edge) != 1:
+        raise ValueError(
+            f"summarize_trade_returns oczekuje jednej grupy reżimu, dostałem {len(edge)}"
+        )
+    res = summary["backtest"]
+    trades = res["trades"]
+    real = trades.loc[~trades["kill_switch_active"]].copy()
+    notional = real["position_size"] * real["entry_price"]
+    real["gross_ret"] = real["gross_pnl"] / notional
+    real["net_ret"] = real["net_pnl"] / notional
+    real["cost_ret"] = real["cost"] / notional
+    e = edge.iloc[0]
+    pooled = summary["pooled_per_regime"].iloc[0]
+    n = len(real)
+    r = real["net_ret"]
+    se = float(r.std(ddof=1) / np.sqrt(n)) if n > 1 else float("nan")
+    t = float(r.mean() / se) if se and se > 0 else float("nan")
+    # Jak `metrics.summarize_pooled_by_regime`: N_eff ograniczone do n. Ujemna autokorelacja
+    # zwrotów (A1a: nakładające się pozycje z kolejnych świec z formacją) daje ze wzoru
+    # N / (1 + 2Σρ) wartość > n, a to zawyżałoby |t_neff| ponad |t| — korekta ma tylko
+    # ODEJMOWAĆ pewność, nigdy dodawać. Wykryte po przebiegu A1 (Poprawka 2, raportowa).
+    n_eff = min(float(effective_sample_size(r)["n_eff"]), float(n)) if n > 1 else float("nan")
+    t_neff = float(t * np.sqrt(n_eff / n)) if n > 1 else float("nan")
+    wins = real["gross_ret"] > 0
+    w_mean = float(real.loc[wins, "gross_ret"].mean()) if wins.any() else float("nan")
+    l_mean = float(-real.loc[~wins, "gross_ret"].mean()) if (~wins).any() else float("nan")
+    c_mean = float(real["cost_ret"].mean()) if n else float("nan")
+    p_star = (l_mean + c_mean) / (w_mean + l_mean) if n and (w_mean + l_mean) > 0 else float("nan")
+    return {
+        "n": n,
+        "n_unfilled": len(res["unfilled"]),
+        "n_suppressed": int(trades["kill_switch_active"].sum()),
+        "p": float(e["hit_rate"]),
+        "ci_low": float(e["ci_low"]),
+        "ci_high": float(e["ci_high"]),
+        "be_symmetric": float(e["break_even_p"]),
+        "p_star": p_star,
+        "w_mean": w_mean,
+        "l_mean": l_mean,
+        "cost": c_mean,
+        "r_mean": float(r.mean()) if n else float("nan"),
+        "r_median": float(r.median()) if n else float("nan"),
+        "r_std": float(r.std(ddof=1)) if n > 1 else float("nan"),
+        "r_p5": float(r.quantile(0.05)) if n else float("nan"),
+        "r_p95": float(r.quantile(0.95)) if n else float("nan"),
+        "se": se,
+        "t": t,
+        "n_eff": n_eff,
+        "t_neff": t_neff,
+        "t_equity": float(pooled["t_stat"]),
+        "t_neff_equity": float(pooled["t_stat_neff"]),
+        "edge": edge,
+        "pooled": summary["pooled_per_regime"],
+        "classification": summary["classification"],
+        "real": real,
     }
 
 

@@ -30,8 +30,10 @@
 > nie zmienia; cofnięcie podnosi trafność do 53,15 %, ale traci pieniądze (t = −3,9) — seria W
 > zamknięta 3/3. N1 (2026-09-23, NOWA BAZA od 2021 — zasada 20): częściowe wyjście 50 % + stop
 > na wejściu nie zmienia pieniędzy (różnica parowana +0,007 % [−0,009; +0,024]), trafność 53,3 %
-> to iluzja geometrii (p\* 57,2 %) — seria N zamknięta 1/1. Następna: seria A (analiza techniczna
-> i formacje świecowe, `ta-toolkit`), czeka na pre-rejestrację.**
+> to iluzja geometrii (p\* 57,2 %) — seria N zamknięta 1/1. A1 (2026-09-23): formacje świecowe
+> z podręcznika trafiają 46,4 % [44,4; 48,3] — poniżej monety — i jako cecha modelu nic nie
+> zmieniają (−0,001 % [−0,012; +0,010]); rodzina formacji zamknięta 2/2. Następny krok: decyzja
+> użytkownika (inne rodziny AT albo kierunki spoza OHLCV).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2452,12 +2454,28 @@ W1b. **Zarządzanie pozycją nie tworzy informacji** (wniosek skumulowany 45). K
 bazie: p 49,58 %, −0,107 % (wniosek 46) — baza 2021+ jest trudniejsza niż 6,8 roku.
 → [runs/n1](runs/2026-09-23_n1-nowy-cel-czesciowe-tp/README.md)
 
-**Następna runda (decyzja użytkownika 2026-09-23, czeka na pre-rejestrację): seria A — sygnały
-z analizy technicznej i formacji świecowych (`ta-toolkit`)** jako nowa hipoteza: deterministyczne
-cechy `compute_*` z testem przecieku PRZED wejściem do modelu (zasada 2), jedna cecha na raz
-(zasada 4), własny licznik i rachunek mocy; wykonanie jak w N1 (limit po close, pojedyncze
-wyjście); dane od 2021 (zasada 20). Prior niski (ten sam zbiór informacyjny OHLCV — wniosek 11,
-`ta-toolkit`: „to zostało zmierzone"), ale konkretne pomysły użytkownika dostają uczciwy test.
+#### Seria A — analiza techniczna: formacje świecowe ⚪ ZAMKNIĘTA 2026-09-23 (A1), 2/2, reguła STOP, OBA NEGATYWNE
+
+Decyzja użytkownika 2026-09-23: „szukamy pozycji na podstawie analizy technicznej i formacji
+świecowych" (skill `ta-toolkit`). Wskaźnik `cdl_score_6` = suma znaków 6 formacji z podręcznika
+(TA-Lib, 0 stopni swobody, doji wyłączone; nowa cecha w `feature_miner.py` z testem przecieku
+przed modelem). Dwa ramiona na populacji kontroli N1 (2021+, 69 okien): **A1a** reguła bez modelu
+(bycza → long, niedźwiedzia → short, limit po close, ±1,5·ATR, 12 h), **A1b** ta sama informacja
+jako 5. cecha modelu. Pomocniki `build_rule_signals` / `summarize_trade_returns` w `checkpoint_lib`.
+
+**Wynik:** A1a trafność **46,35 %** [44,38; 48,31] — cały przedział PONIŻEJ 50 %; zwrot netto
+**−0,177 %** [−0,245; −0,109] na transakcję (n 2 477). Objęcie (84 % sygnałów) czytane po
+podręcznikowemu jest na 4h BTC częściej końcem ruchu niż początkiem (wniosek 48). A1b: różnica
+parowana wobec kontroli **−0,001 % [−0,012; +0,010]** — zero. Odwrócenie reguły = nowa hipoteza
+post hoc o ekonomii ≈ +0,01 % (wniosek 49) — nie uruchamiać bez osobnej decyzji. Poprawka 2
+(raportowa): N_eff ≤ n w statystykach per transakcja (wniosek 50).
+→ [runs/a1](runs/2026-09-23_a1-formacje-swiecowe/README.md)
+
+**Co dalej — decyzja użytkownika.** Z A1 nie wynika żadna rekomendacja „za". Pozostałe rodziny
+AT ze skilla (wsparcie/opór `sr_distance` — jedyna z wiarygodnym mechanizmem, wybicie z zakresu,
+struktura trendu, podwójny szczyt, średnie, linia trendu, Fibonacci) mają ten sam prior
+(transformacja OHLCV) i każda wymagałaby osobnej pre-rejestracji z rachunkiem mocy. Otwarte
+kierunki spoza OHLCV bez zmian: §17 / ETAP 4 / `runs/INDEX.md`.
 
 #### Zbieranie danych pozycjonowania (opcja C po P1) — URUCHOMIONE 2026-09-22
 

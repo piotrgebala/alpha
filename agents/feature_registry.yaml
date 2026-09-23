@@ -113,6 +113,24 @@ features:
       Obliczana dla każdej świecy (FEATURE_FUNCTIONS) niezależnie od wyniku testu OOS —
       dodanie do MOMENTUM_FEATURES jest osobną decyzją, dopiero po przeczytaniu wyniku.
 
+  cdl_score_6:
+    formula: "sum_k sign(CDL_k(t)) dla k in (CDLENGULFING, CDLHAMMER, CDLSHOOTINGSTAR, CDLMORNINGSTAR, CDLEVENINGSTAR, CDLRISEFALL3METHODS); liczby całkowite w [-6, 6]"
+    library: "TA-Lib (CDL*, 0.7.1)"
+    window: "1-5 świec (lookback formacji), do 10 dla średniej długości korpusu wewnątrz TA-Lib"
+    role: signal
+    test_group: range
+    leakage_risk: low
+    added: "2026-09-23"
+    note: >
+      Runda A1 (runs/2026-09-23_a1-formacje-swiecowe/README.md): sześć formacji z podręcznika
+      (skill ta-toolkit, materiał XTB), zestaw zapisany w pre-rejestracji PRZED spojrzeniem na
+      dane; doji wyłączone (TA-Lib zwraca 100 = "formacja jest", bez kierunku). sign() zdejmuje
+      wariant +-80 objęcia z TA-Lib 0.7.1 — siła formacji nie jest parametrem. Używana dwojako:
+      A1a jako REGUŁA (kierunek = sign(score), bez modelu; backtest/checkpoint_lib.py::
+      build_rule_signals) i A1b jako jedna dodatkowa cecha obok REVERSION_FEATURES
+      (agents/ml_optimizer.py bez zmian — zestaw podawany przez regime_feature_sets, jak adx_14
+      w C2.8). Obliczana dla każdej świecy (FEATURE_FUNCTIONS) niezależnie od wyniku rundy.
+
 # Reguła regime gate — deterministyczna, nie model (decyzja: patrz rozmowa o HMM vs reguła)
 regime_rule:
   trend_threshold: 0.7

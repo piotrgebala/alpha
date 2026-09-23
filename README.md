@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **650/650** (2026-09-23).
+Stan testów: **665/665** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -100,6 +100,25 @@ sprawdziło ten schemat na tych samych sygnałach i wejściach co zwykłe wyjśc
 a straty zostają pełne — żeby wyjść na zero, trzeba by trafiać w 57 %, nie 53 %. **Prowadzenie
 pozycji nie tworzy informacji** — gdy model nie zna kierunku, żaden schemat wyjść tego nie
 naprawi. Uwaga przy okazji: na danych od 2021 model radzi sobie gorzej niż na pełnej historii.
+
+### ⚪ Formacje świecowe — A1 (2026-09-23): podręcznik wskazuje kierunek odwrotny
+
+Na życzenie użytkownika sprawdziliśmy klasyczną analizę techniczną: sześć formacji świecowych
+z podręcznika (objęcie, młot, spadająca gwiazda, gwiazdy poranna i wieczorna, trójka), liczonych
+gotową biblioteką bez żadnych parametrów do dobrania. [A1](runs/2026-09-23_a1-formacje-swiecowe/README.md)
+użyło ich na dwa sposoby, na tych samych świecach co dotychczasowy model:
+
+| | trafność | pieniądze na transakcji | uwaga |
+|---|---|---|---|
+| model bez formacji (kontrola) | 49,6 % | −0,107 % | jak w N1 |
+| **reguła z formacji** (bycza → kup, niedźwiedzia → sprzedaj) | **46,4 %** [44,4; 48,3] | **−0,177 %** [−0,245; −0,109] | cały przedział poniżej rzutu monetą |
+| model + formacje jako dodatkowa cecha | 49,4 % | −0,113 % | różnica wobec kontroli −0,001 % [−0,012; +0,010] — zero |
+
+**Co to znaczy:** formacje nie tylko nie pomagają — czytane po podręcznikowemu wskazują częściej
+zły kierunek. Winne jest objęcie (84 % sygnałów): duża świeca w górę jest na BTC 4h częściej
+końcem ruchu niż jego początkiem. **Odwrócenie reguły nie jest wnioskiem** — to pomysł
+wymyślony po wyniku, a rachunek daje mu ok. +0,01 % na transakcję, czyli nic. Rodzina formacji
+świecowych zamknięta (2/2). Co dalej z analizą techniczną — decyzja użytkownika.
 
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
@@ -159,6 +178,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **T4 — kalibracja early stoppingu** | 2026-09-23 | **Sprawdziliśmy, czy zabezpieczenie przed „uczeniem się na pamięć” (early stopping) działa na naszych małych oknach danych.** Działa: bez niego model myli się w prognozach o 58% bardziej, we wszystkich 86 oknach. Próg „co najmniej 30 wierszy”, który kiedyś po cichu wyłączał to zabezpieczenie, dziś w ogóle nie bierze udziału. Niczego w kodzie nie zmieniamy. Przy okazji wyszło to samo co w M1/F1, tylko inną drogą: nawet najlepiej ustawiony model prognozuje zaledwie o 0,7% lepiej niż zgadywanie | [runs/t4](runs/2026-09-23_t4-kalibracja-early-stopping/README.md) |
 | **W1 — wykonanie po konkretnej cenie: backtest dopasowany do handlu na żywo** | 2026-09-23 | **Backtest symuluje teraz wypełnienia zleceń tak, jak będą działać na żywo** (zlecenie oczekujące po konkretnej cenie, TP/SL od ceny wypełnienia, kolejność zdarzeń wewnątrz świecy 4h rozstrzygana świecami 5-minutowymi). Trzy sposoby wejścia: **limit po cenie zamknięcia wypełnia się w 99,4 %** i nic nie zmienia (50,11 % wobec progu 52,96 %) — dotychczasowe wyniki nie były zawyżone; **limit na cofnięciu** daje 53,15 % trafności, pierwszy raz ponad progiem, **ale traci pieniądze** (wygrane małe, przegrane pełne — t = −3,9); **zlecenie na wybiciu** jest droższe i trafia gorzej (46,13 %). Lekcja na stałe: więcej wygranych ≠ więcej pieniędzy — werdykt wymaga dodatniego zwrotu netto, nie tylko trafności. Seria zamknięta (3/3) | [runs/w1](runs/2026-09-23_w1-wykonanie-po-cenie/README.md) |
 | **N1 — połowa zysku wcześniej i stop na wejście: pieniądze bez zmian** | 2026-09-23 | **Pierwsza runda na danych tylko od 2021 roku** (nowa zasada). Schemat prowadzenia pozycji użytkownika (50 % przy +1,67 %, stop na wejście, reszta do bariery) sprawdzony na tych samych sygnałach co zwykłe wyjście: różnica **+0,007 % na transakcji w przedziale od −0,009 do +0,024** — zero. Trafność skoczyła z 49,6 % na **53,3 %**, ale to iluzja: wygrane zmalały, straty nie, a próg opłacalności dla takich wypłat to 57 %. **Prowadzenie pozycji nie tworzy informacji.** Przy okazji: testy wykryły wadę w mojej własnej regule zanim cokolwiek uruchomiono (poprawka przed wynikiem). Seria zamknięta (1/1) | [runs/n1](runs/2026-09-23_n1-nowy-cel-czesciowe-tp/README.md) |
+| **A1 — formacje świecowe: podręcznik wskazuje kierunek odwrotny** | 2026-09-23 | Sześć formacji z podręcznika (bez parametrów do dobrania) jako reguła: trafność **46,4 %** w przedziale [44,4; 48,3] — **cały przedział poniżej rzutu monetą**, strata 0,18 % na transakcji. Jako dodatkowa cecha modelu: zero zmiany (−0,001 % [−0,012; +0,010]). Winne objęcie (84 % sygnałów): duża świeca jest częściej końcem ruchu. Odwracanie reguły = pomysł po wyniku, wart ok. +0,01 %, nie testujemy. Rodzina zamknięta (2/2) | [runs/a1](runs/2026-09-23_a1-formacje-swiecowe/README.md) |
 
 ## Hipoteza w skrócie
 
