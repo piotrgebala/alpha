@@ -1,0 +1,2 @@
+# Rejestr uzycia skilli (CLAUDE.md, zasada 19): plik na galaz; union na wypadek dwoch sesji na jednej galezi.
+runs/skille/*.jsonl merge=union text eol=lf

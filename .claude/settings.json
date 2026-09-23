@@ -13,6 +13,34 @@
   },
   "enabledPlugins": {
     "code-review@claude-plugins-official": true,
-    "data@synced": true
+    "data@synced": true,
+    "engineering@synced": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py \"${CLAUDE_PROJECT_DIR:-.}/tools/skill_audit.py\" hook 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/skill_audit.py\" hook 2>/dev/null || true",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py \"${CLAUDE_PROJECT_DIR:-.}/tools/skill_audit.py\" hook 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/skill_audit.py\" hook 2>/dev/null || true",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
   }
 }

@@ -6,7 +6,7 @@
 > treść `TASKS.md` weszła jako §13–§16.
 >
 > **Podział odpowiedzialności między trzy pliki w korzeniu** (świadomie nie jeden):
-> - `CLAUDE.md` — zasady nienaruszalne 1–18. **Jedyne źródło.** Ładowany automatycznie
+> - `CLAUDE.md` — zasady nienaruszalne (lista numerowana). **Jedyne źródło.** Ładowany automatycznie
 >   do kontekstu Claude'a w każdej sesji, więc musi zostać krótki.
 > - `README.md` — wizytówka projektu dla człowieka wchodzącego z zewnątrz.
 > - `STATUS.md` (ten plik) — plan, historia rund, ryzyka, zadania, backlog.
@@ -1404,7 +1404,7 @@ STOP, rachunek mocy PRZED uruchomieniem. Nie dziedziczy budżetu ani progów po 
 > nienaruszalnych z `CLAUDE.md`, które od tamtej pory urosły do 16 i są jedynym źródłem.
 > Numer sekcji zachowany, żeby odniesienia „§8" nie wskazywały w pustkę.
 >
-> **Zasady 1–18: `CLAUDE.md`.** Zasady operacyjne (branch per zadanie, konwencja `runs/`,
+> **Zasady nienaruszalne: `CLAUDE.md`.** Zasady operacyjne (branch per zadanie, konwencja `runs/`,
 > zarządzanie zużyciem): §13 niżej.
 
 ---
@@ -1558,7 +1558,7 @@ W `clas5_core/`, gotowe do wklejenia w VS Code:
 
 ## 13. Zasady pracy operacyjne (z TASKS.md)
 
-> Zasady NIENARUSZALNE (1–18) są w `CLAUDE.md`. Poniżej wyłącznie zasady operacyjne:
+> Zasady NIENARUSZALNE są w `CLAUDE.md`. Poniżej wyłącznie zasady operacyjne:
 > jak prowadzić branche, jak dokumentować rundy, jak zarządzać zużyciem.
 
 ### Zasada pracy: osobny branch per zadanie
@@ -2257,7 +2257,29 @@ Trzy niezależne usterki, wszystkie mechaniczne:
    **Aktualizacja 2026-09-23 (decyzja użytkownika):** `data` włączona **dla tego projektu**
    (`.claude/settings.json`: `"data@synced": true`), nie globalnie — `~/.claude/settings.json`
    nadal nietknięty. Bramki jakości zostają w `docs/skills/bramki-jakosci.md`; skille `data:*`
-   są wsparciem (działają od następnej sesji po włączeniu).
+   są wsparciem (działają od następnej sesji po włączeniu) — od zasady 19 OBOWIĄZKOWYM (T9).
+
+#### ✅ T9 — zasada 19: skille obowiązkowe + automatyczny rejestr ich użycia (2026-09-23, 0 wariantów)
+
+Decyzja użytkownika po T4, w której Claude pominął dwa pasujące skille (`clas5-quant`,
+`engineering:code-review`). **`CLAUDE.md` zasada 19:** tabela „moment pracy → skill” jest
+obowiązkowa, README rundy ma sekcję „Użyte skille”, wtyczki `engineering` i `data` włączone
+w ustawieniach PROJEKTU. **Rejestr:** hooki `PostToolUse` (narzędzie Skill) i
+`UserPromptExpansion` (komendy `/skill` użytkownika) → `tools/skill_audit.py` →
+`runs/skille/<gałąź>.jsonl` (plik na przebieg); `.gitattributes` `merge=union`. Wpis robi
+program, nie Claude — sprawdzone na żywo (pierwszy wpis: `engineering:code-review` przy
+przeglądzie tej zmiany). Testy (55) obejmują prywatność — treść wiadomości użytkownika nigdy
+nie trafia do rejestru; test wykrył błąd, przez który wiadomość „/ Haslo123” zapisałaby
+„Haslo123”. **Przegląd przed scaleniem (16c) wykrył dwa kolejne:** jeden wspólny plik
+rejestru blokowałby `git merge` każdej rundy (→ plik na gałąź, test odtwarza scenariusz)
+i pomijałby skille z ukośnikiem w nazwie. Wszystkie trzy naprawione przed scaleniem.
+**Przegląd diffu (16c): Approve** — po dwóch przebiegach `engineering:code-review` (drugi
+dołożył odmianę liczebników w raporcie i limit długości nazwy pliku); 484 → 491 testów zielonych.
+`update-config` i `engineering:testing-strategy` wczytano PRZED uruchomieniem hooka, więc
+rejestr tej gałęzi ich nie zawiera — pierwszy wpis to przegląd kodu. **Otwarte:** format zdarzenia `UserPromptExpansion` jest nieudokumentowany —
+pierwsza komenda `/skill` pokaże w rejestrze, czy nazwa jest rozpoznawana (w przeciwnym razie
+wpis `nierozpoznana-komenda` z listą samych nazw pól). Paczki skilli `clas5-runda` (kroki
+z zasady 19) i `clas5-quant` (odwołania „zasady 1–18” bez numerów) czekają na wgranie.
 
 ---
 
