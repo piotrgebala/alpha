@@ -24,6 +24,11 @@ data:
   # zakresem, więc krótki i długi wariant 4h współistnieją.
   timeframe_start_overrides:
     "4h": "2019-09-10T00:00:00Z"
+    # Serie Y1/Y2 (2026-09-23): natywne 1h i 1d jako NOWE BAZY (zasada 20 nakłada min_start
+    # przez fetch_window); warm-up przed 2021-01-01 na cechy 20-okresowe i ATR. Cache pobrany
+    # 2026-09-23 (data.fetch_ohlcv.get_ohlcv_cached, binanceusdm).
+    "1h": "2020-12-01T00:00:00Z"
+    "1d": "2019-09-10T00:00:00Z"
   # Commit 2.10 (Backlog Z5): 3 lata historii. Poprzednie okno 2025-07-01→2026-07-01 to
   # zamrożone źródło wyników C6–C2.9 (runs/); jego parquet ZOSTAJE w data/raw nietknięty
   # (nazwa pliku koduje zakres, więc nowy zakres = nowy plik, bez nadpisywania).

@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **770/770** (2026-09-23).
+Stan testów: **773/773** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -236,6 +236,19 @@ części dziełem przypadku (kalendarza), momentum przekrojowe w krypto zostaje 
 słabym poparciem. Kolejne warianty na tych samych danych nic nie rozstrzygną; jedyna droga
 to pomiar na żywo przez co najmniej dwa lata.
 
+### ⚪ Inne horyzonty — Y1 (1h) i Y2 (1d), 2026-09-23: zmiana interwału nie pomaga
+
+Ten sam model co zawsze, tylko na świecach godzinowych i dziennych (decyzja użytkownika).
+[Y1](runs/2026-09-23_y1-horyzont-1h/README.md): na 1h trafność **48,3 %** przy progu 54 %,
+23 tysiące transakcji, przedział niepewności w całości poniżej rzutu monetą, straty w każdym
+z sześciu lat — najbardziej rozstrzygnięty wynik negatywny w projekcie.
+[Y2](runs/2026-09-23_y2-horyzont-1d/README.md): na 1d trafność **50,2 %** przy progu 51,7 %,
+ale tylko 978 transakcji, więc niepewność (±3 punkty) nie pozwala powiedzieć „na pewno nie" —
+nierozstrzygnięte, dokładnie jak policzono przed uruchomieniem. **Co to znaczy:** model
+kontrolny zmierzono na trzech interwałach (1h / 4h / 1d) i na każdym trafia 48–50 %.
+Krótszy horyzont podnosi koszty i nie wzmacnia sygnału; dłuższy obniża koszty, ale zostawia
+za mało danych. Zmiana horyzontu tego modelu jest zamknięta.
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -304,6 +317,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **O1 — pozycjonowanie jako cecha: informacja jest, ale za słaba** | 2026-09-23 | Zmiana open interest 24 h jako 5. cecha modelu 4h: trafność 50,25 % (kontrola 49,58 %), strata −0,074 % na transakcję (kontrola −0,107 %), próg 53,07 % — **negatywny**, ale pierwsza cecha spoza wykresu, która zmienia decyzje modelu (21 % transakcji). Seria zamknięta (1/1); kolejne kolumny danych = decyzja użytkownika | [runs/o1](runs/2026-09-23_o1-pozycjonowanie/README.md) |
 | **L1 / V1 / G1 — on-chain, opcje, sentyment: trzy razy negatywnie** | 2026-09-23 | Podaż na giełdach (7 dni), premia za zmienność z opcji i Fear & Greed jako 5. cecha modelu 4h: trafność 49,8 / 50,5 / 49,9 % przy progu ~53,5 %, różnice wobec kontroli zero w granicach błędu. Po pięciu źródłach spoza wykresu: dokładanie cech do modelu 4h nie wyprowadzi go ponad koszty (wniosek 67). Serie zamknięte (1/1 każda) | [l1](runs/2026-09-23_l1-onchain-podaz/README.md) · [v1](runs/2026-09-23_v1-premia-zmiennosci/README.md) · [g1](runs/2026-09-23_g1-strach-chciwosc/README.md) |
 | **X2 — momentum na top-50: słabiej, a X1 zależało od kalendarza** | 2026-09-23 | Ta sama reguła na 50 monetach: **+16 %/rok [−12; +44]**, nierozstrzygnięte; IC zero, połowa zysku w 33 dniach, 2022 −20 %. Reguła X1 na innym kalendarzu rebalansów: +9 % zamiast +22 %/rok. Momentum przekrojowe = hipoteza ze słabym poparciem; kolejne warianty zakazane, zostaje pomiar na żywo | [runs/x2](runs/2026-09-23_x2-momentum-top50/README.md) |
+| **Y1 / Y2 — ten sam model na 1h i 1d: horyzont nie pomaga** | 2026-09-23 | Na 1h trafność **48,3 %** przy progu 54 % (23 334 transakcje, przedział w całości poniżej 50 %, 6/6 lat ujemnych) — negatywnie z ogromnym zapasem; na 1d **50,2 %** przy progu 51,7 %, ale 978 transakcji — nierozstrzygnięte, jak policzono przed przebiegiem. Model kontrolny zmierzony na trzech interwałach, na każdym 48–50 %. | [y1-horyzont-1h](runs/2026-09-23_y1-horyzont-1h/README.md), [y2-horyzont-1d](runs/2026-09-23_y2-horyzont-1d/README.md) |
 
 ## Hipoteza w skrócie
 

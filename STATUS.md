@@ -72,6 +72,12 @@
 > [−12,3; +44,2], NIEROZSTRZYGNIĘTY i słabszy niż X1** (IC 0, połowa sumy w 33 dniach, 2022
 > −20 %); reguła X1 na innej siatce tygodniowej daje +9 % zamiast +22 %/rok — **X1 wrażliwe na
 > fazę rebalansu** (wniosek 68). Rodzina B1: słabe poparcie, bez dowodu; X2 1/1 STOP.**
+> Y1/Y2 (2026-09-23, decyzja użytkownika „dla 2 sprawdź horyzont 1h oraz 1d"): ten sam model
+> kontrolny na NOWYCH BAZACH 1h i 1d — **1h NEGATYWNY z ogromnym zapasem** (p 48,34 %
+> [47,70; 48,98] vs próg 54,0 %, n 23 334, t_neff −11,74, 6/6 lat ujemnych), **1d
+> NIEROZSTRZYGNIĘTY** (50,20 % [47,07; 53,34] vs 51,7 %, n 978 — jak policzono przed
+> przebiegiem). Wniosek 69: zmiana horyzontu nie jest drogą; rodzina „kierunek z OHLCV"
+> zmierzona na trzech interwałach. Serie Y1/Y2 1/1 STOP.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2575,6 +2581,21 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Serie Y1 / Y2 — model kontrolny na 1h i 1d ⚪ ZAMKNIĘTE 2026-09-23, każda 1/1, reguła STOP, Y1 NEGATYWNY / Y2 NIEROZSTRZYGNIĘTY
+
+Decyzja użytkownika 2026-09-23 („dla 2 sprawdź horyzont 1h oraz 1d"): DOKŁADNIE JEDNA zmienna —
+interwał; natywne świece 1h/1d od 2021-01-01 (cache pobrany 2026-09-23, `timeframe_start_overrides`
+w `config/settings.yaml`), okna walk-forward 60/28/28 (1h) i 365/91/91 (1d) jako parametr bazy
+zapisany przed danymi; rachunek mierzalności z własności danych PRZED treningiem (obie MIERZALNE);
+obie pre-rejestrowane w jednym commicie `e04ec02`. **Y1 (1h): NEGATYWNY z ogromnym zapasem** —
+p 48,34 % [47,70; 48,98] (CI w całości poniżej 50 %) vs p* 54,01 %, r̄ −0,078 % na transakcję,
+t_neff −11,74, n 23 334 (41× wymaganego), 6/6 lat ujemnych, 63 % timeoutów z p 45,6 %.
+**Y2 (1d): NIEROZSTRZYGNIĘTY** — p 50,20 % [47,07; 53,34] vs 51,70 %, r̄ −0,094 % [−0,344;
++0,156], n 978, half-width 3,1 pp — dokładnie jak zapowiedziano; sumy roczne ±100 % nominału to
+rozrzut bariery 6 %. Wniosek 69: zmiana horyzontu nie jest drogą. Ścieżka odwrotu: revert
+commitu scalającego + usunięcie dwóch wpisów `timeframe_start_overrides` (cache 1h/1d mogą
+zostać). Pełne wyniki: `runs/2026-09-23_y1-horyzont-1h/`, `runs/2026-09-23_y2-horyzont-1d/`.
 
 #### Seria X2 — momentum przekrojowe na top-50 ⚪ ZAMKNIĘTA 2026-09-23 (X2), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY (słabszy niż X1)
 
