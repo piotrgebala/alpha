@@ -35,6 +35,7 @@ import pytest
 import yaml
 
 from agents.feature_miner import FEATURE_FUNCTIONS, compute_atr_pctrank_20d
+from agents.ta_rules import TA_FEATURE_FUNCTIONS
 from agents.funding_features import attach_funding_rate
 from agents.labeling import compute_triple_barrier_labels
 
@@ -118,6 +119,36 @@ def test_feature_no_leakage(synthetic_ohlcv: pd.DataFrame, feature_name: str) ->
     pd.testing.assert_series_equal(
         series_past.reset_index(drop=True),
         series_full.iloc[:CUTOFF].reset_index(drop=True),
+        check_names=False,
+        check_exact=True,
+    )
+
+
+def test_ta_rule_functions_match_registry() -> None:
+    """A2: cechy AT (agents/ta_rules.py) rejestrowane w sekcji `ta_rules:` registry, 1:1 z kodem."""
+    with open(FEATURE_REGISTRY_PATH, encoding="utf-8") as f:
+        registry = set(yaml.safe_load(f)["ta_rules"].keys())
+    code = set(TA_FEATURE_FUNCTIONS.keys())
+    assert (
+        code == registry
+    ), f"registry-only: {sorted(registry - code)}, code-only: {sorted(code - registry)}"
+
+
+@pytest.mark.parametrize("feature_name", sorted(TA_FEATURE_FUNCTIONS.keys()))
+def test_ta_rule_feature_no_leakage(synthetic_ohlcv: pd.DataFrame, feature_name: str) -> None:
+    """
+    A2 (CLAUDE.md zasada 2): to samo kryterium co `test_feature_no_leakage` dla cech AT ze skilla
+    `ta-toolkit` — swingi, linie trendu, poziomy S/O i impulsy Fibonacciego są miejscem, gdzie
+    AT leakuje najczęściej („ostatni szczyt" widoczny z przyszłości); tutaj każda cecha musi być
+    bit w bit identyczna do CUTOFF niezależnie od tego, czy szereg kończy się na CUTOFF, czy
+    ciągnie dalej.
+    """
+    fn = TA_FEATURE_FUNCTIONS[feature_name]
+    df_full = synthetic_ohlcv
+    df_past = df_full.iloc[:CUTOFF].reset_index(drop=True)
+    pd.testing.assert_series_equal(
+        fn(df_past).reset_index(drop=True),
+        fn(df_full).iloc[:CUTOFF].reset_index(drop=True),
         check_names=False,
         check_exact=True,
     )
