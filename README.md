@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **754/754** (2026-09-23).
+Stan testów: **761/761** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -202,6 +202,16 @@ bitcoina, nie z kilku dni — ale rok 2025 daje połowę całości, a przedział
 5,4 roku danych nie da się go odróżnić od szczęścia. Rozstrzygnięcie wymaga większej próby
 (szerszy koszyk albo pomiar na żywo), nie kolejnego wariantu — to decyzja użytkownika.
 
+### 🔴 Pozycjonowanie jako cecha modelu — O1 (2026-09-23): informacja jest, ale za słaba
+
+Pierwsze użycie nowych danych z P3: model 4h dostał jedną liczbę spoza wykresu — o ile zmienił
+się open interest (liczba otwartych pozycji z dźwignią) przez 24 h.
+[O1](runs/2026-09-23_o1-pozycjonowanie/README.md): trafność 50,25 % zamiast 49,58 %, strata na
+transakcję −0,074 % zamiast −0,107 %; model zmienia decyzję w co piątej transakcji. **Co to
+znaczy:** to pierwsza dodatkowa cecha w historii projektu, która w ogóle porusza model — ale
+próg opłacalności to 53,1 %, a górny kraniec przedziału to 51,4 %. Wynik negatywny; pozostałe
+kolumny tych danych (proporcje long/short, przepływ taker) czekają na decyzję użytkownika.
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -267,6 +277,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **P3 — nowe dane: pozycjonowanie ma 6 lat historii, nie 30 dni** | 2026-09-23 | Podłączono 8 darmowych źródeł spoza wykresu ceny. Archiwum plików Binance ma dane o pozycjach graczy co 5 minut od 2020-09 (P1 sprawdziło tylko API z 30 dniami) — kierunek „nie da się zmierzyć" wraca do gry. Do tego funding COIN-M, kontrakty kwartalne, DVOL, on-chain, Fear & Greed, FRED, Coinbase. Zero pomiaru sygnału; następne rundy: produkt carry (D1), pozycjonowanie jako cecha (O1), momentum przekrojowe (X1) | [runs/p3](runs/2026-09-23_p3-sonda-zrodel-ii/README.md) |
 | **D1 — produkt carry: tylko wersja COIN-M ma sens** | 2026-09-23 | Depozyt 1× z miesięczną dopłatą: 0 likwidacji w 5,5 roku, ale od 2022 poniżej bonów skarbowych. Wersja rozliczana w bitcoinie: bez likwidacji z konstrukcji, kapitał 1×, **+9,1 % rocznie [5,9; 12,3]**, od 2022 ok. +2 pp ponad bony (od −1,5 do +7,2). Kontrakt kwartalny ≈ funding. **Decyzja użytkownika: carry odpuszczone — nie o takie zwroty chodzi; kierunek zamknięty** | [runs/d1](runs/2026-09-23_d1-produkt-carry/README.md) |
 | **X1 — momentum przekrojowe: +22 %/rok, ale nierozstrzygnięte** | 2026-09-23 | Long zwycięzcy / short przegrani ostatnich 4 tygodni w koszyku top-20, trzymanie tydzień: **+22 %/rok netto [−5; +49]**, dodatni w 6/6 lat (2025 = połowa), neutralny do BTC, koszty 3 %/rok. Pierwszy obiecujący zakład o kierunek — hipoteza z poparciem, nie dowód (potrzeba ~4× próby). Seria zamknięta (1/1); dalsze kroki = decyzja użytkownika | [runs/x1](runs/2026-09-23_x1-momentum-przekrojowe/README.md) |
+| **O1 — pozycjonowanie jako cecha: informacja jest, ale za słaba** | 2026-09-23 | Zmiana open interest 24 h jako 5. cecha modelu 4h: trafność 50,25 % (kontrola 49,58 %), strata −0,074 % na transakcję (kontrola −0,107 %), próg 53,07 % — **negatywny**, ale pierwsza cecha spoza wykresu, która zmienia decyzje modelu (21 % transakcji). Seria zamknięta (1/1); kolejne kolumny danych = decyzja użytkownika | [runs/o1](runs/2026-09-23_o1-pozycjonowanie/README.md) |
 
 ## Hipoteza w skrócie
 

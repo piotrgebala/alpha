@@ -1,0 +1,11 @@
+== A. dopięcie bez lookaheadu na realnych danych ==
+  snapshoty przesunięte o +4h zmieniają oi_close w 12029 z 12042 świec (mediana |Δ| 639.6 BTC) — użyta wersja bierze odczyty z wnętrza świecy
+  podmiana odczytów o open+4h (×10) zmienia oi_close w 0 świec (oczekiwane 0: odczyt graniczny należy do następnej świecy i nie jest jej ostatnim odczytem wewnętrznym)
+  offset użyty: 0 days 03:55:00; świec bez odczytu wewnętrznego: 5
+== B. O1 wprost z journalu (numpy) ==
+  n 6748; p = 50.25% (skrypt: 50.25%); r̄ netto -0.0738% (skrypt -0.0738%), t (bez N_eff) -3.46; mediana -0.0860%
+  p* = (L̄ + C)/(W̄ + L̄) = (1.3075 + 0.0802)/(1.3073 + 1.3075) = 53.07% (skrypt 53.07%)
+== C. kogo nie ma ==
+  świec OOS 11682; z NaN cechy oi_change_24h 8; z NaN etykiety 3; korelacja oi_change_24h z volume_zscore_20 +0.045, z return_lag_1 +0.033, z rsi_14 +0.141
+== D. rozkład cechy w OOS (kwantyle %) ==
+  p01 -11.30, p05 -6.16, p25 -1.86, p50 +0.12, p75 +2.22, p95 +6.42, p99 +10.41
