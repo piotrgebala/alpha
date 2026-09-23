@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **742/742** (2026-09-23).
+Stan testów: **754/754** (2026-09-23).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -191,6 +191,17 @@ jest stała) i potrzebuje kapitału 1× zamiast 2×: **+9,1 % rocznie** [5,9; 12
 **Kontrakt kwartalny** zamyka stopę z góry, ale nie daje jej więcej. **Co to znaczy:** jeśli
 produkt, to COIN-M; czy w ogóle — to decyzja użytkownika (realny kapitał, ryzyko giełdy).
 
+### 🟡 Momentum przekrojowe — X1 (2026-09-23): +22 % rocznie, ale jeszcze nie dowód
+
+Hipoteza odwrotna do R1: co tydzień kupujemy pięć monet z najlepszym zwrotem z ostatnich
+4 tygodni i gramy na spadek pięciu z najgorszym (koszyk 20 największych, koszty i funding
+wliczone). [X1](runs/2026-09-23_x1-momentum-przekrojowe/README.md): **+22 % rocznie po
+kosztach**, przedział od −5 % do +49 %; zysk w każdym z sześciu lat, niezależny od kierunku
+bitcoina, nie z kilku dni — ale rok 2025 daje połowę całości, a przedział obejmuje zero.
+**Co to znaczy:** pierwszy zakład o kierunek w tym projekcie, który wygląda obiecująco, ale przy
+5,4 roku danych nie da się go odróżnić od szczęścia. Rozstrzygnięcie wymaga większej próby
+(szerszy koszyk albo pomiar na żywo), nie kolejnego wariantu — to decyzja użytkownika.
+
 ### ⚪ Hipoteza H2 (funding) — ZAMKNIĘTA bez rozstrzygnięcia (2026-09-22)
 
 Pierwsze w projekcie źródło informacji **spoza OHLCV**. Licznik wyczerpany (**1/1**), reguła STOP
@@ -255,6 +266,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **R1 — premia rebalansowa: codzienne wyrównywanie koszyka nie zarabia** | 2026-09-23 | Koszyk 20 największych kryptowalut wyrównywany codziennie vs trzymany w miesiącu: **−3,6 % rocznie** w przedziale [−9,5; +2,4], o 12 % niżej po 5,4 roku; obiecywana premia 6–11 % poza przedziałem. Ruchy względne w krypto trwają, wyrównywanie sprzedaje zwycięzców za wcześnie. Z dwóch celów „nie-kierunkowych" tylko carry z hedgem (C1) daje przepływ. Seria zamknięta (1/1) | [runs/r1](runs/2026-09-23_r1-premia-rebalansowa/README.md) |
 | **P3 — nowe dane: pozycjonowanie ma 6 lat historii, nie 30 dni** | 2026-09-23 | Podłączono 8 darmowych źródeł spoza wykresu ceny. Archiwum plików Binance ma dane o pozycjach graczy co 5 minut od 2020-09 (P1 sprawdziło tylko API z 30 dniami) — kierunek „nie da się zmierzyć" wraca do gry. Do tego funding COIN-M, kontrakty kwartalne, DVOL, on-chain, Fear & Greed, FRED, Coinbase. Zero pomiaru sygnału; następne rundy: produkt carry (D1), pozycjonowanie jako cecha (O1), momentum przekrojowe (X1) | [runs/p3](runs/2026-09-23_p3-sonda-zrodel-ii/README.md) |
 | **D1 — produkt carry: tylko wersja COIN-M ma sens** | 2026-09-23 | Depozyt 1× z miesięczną dopłatą: 0 likwidacji w 5,5 roku, ale od 2022 poniżej bonów skarbowych. Wersja rozliczana w bitcoinie: bez likwidacji z konstrukcji, kapitał 1×, **+9,1 % rocznie [5,9; 12,3]**, od 2022 ok. +2 pp ponad bony (od −1,5 do +7,2). Kontrakt kwartalny ≈ funding. **Decyzja o produkcie należy do użytkownika** | [runs/d1](runs/2026-09-23_d1-produkt-carry/README.md) |
+| **X1 — momentum przekrojowe: +22 %/rok, ale nierozstrzygnięte** | 2026-09-23 | Long zwycięzcy / short przegrani ostatnich 4 tygodni w koszyku top-20, trzymanie tydzień: **+22 %/rok netto [−5; +49]**, dodatni w 6/6 lat (2025 = połowa), neutralny do BTC, koszty 3 %/rok. Pierwszy obiecujący zakład o kierunek — hipoteza z poparciem, nie dowód (potrzeba ~4× próby). Seria zamknięta (1/1); dalsze kroki = decyzja użytkownika | [runs/x1](runs/2026-09-23_x1-momentum-przekrojowe/README.md) |
 
 ## Hipoteza w skrócie
 

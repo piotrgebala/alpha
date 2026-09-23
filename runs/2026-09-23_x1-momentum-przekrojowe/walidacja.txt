@@ -1,0 +1,14 @@
+== A. tożsamość sum: Σ netto = Σ brutto + Σ funding − Σ koszty ==
+  +131.112 + +5.094 − 17.221 = +118.985 vs Σ netto +118.985
+  dni 1975; dni bazy od pierwszego formowania+1: 1975
+  formowań 283, z obrotem > 0: 283, obrót łączny 246.0, średni na formowanie 0.869 (max 2,0)
+== B. NIEZALEŻNY rachunek tygodniowy (bez dryfu wag): średni zwrot 7-dniowy top-5 minus bottom-5, po formowaniach ==
+  tygodni 283; średni tygodniowy zwrot brutto LS +0.464% (se 0.254%) → ×52 = +24.1%/rok
+  z szeregu dziennego: Σ brutto / liczba tygodni = +0.463%/tydzień (różnica = dryf wag i zwroty proste vs złożone)
+== C. kogo nie ma ==
+  członków z sygnałem na formowanie: min 19, mediana 20, tygodni z < 10: 0
+  dni, w których któraś noga miała < 5 aktywnych (wycofanie/brak ceny → gotówka): 106
+  symboli w uniwersum 281, w koszykach 119
+== D. neutralność i ogony ==
+  korelacja netto vs BTC -0.130; |r_net| > 5 %: 34 dni, suma tych dni +6.98% z Σ netto +118.99%
+  bez 20 najbardziej skrajnych dni: średnia +0.0636%/dzień vs pełna +0.0602%
