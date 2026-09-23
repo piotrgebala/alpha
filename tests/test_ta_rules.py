@@ -93,6 +93,52 @@ def test_ta_features_contract_same_index_all_columns_float() -> None:
     assert set(out["breakout"].dropna().unique()) <= {-1.0, 0.0, 1.0}
 
 
+def _rising_with_spikes(n: int = 80) -> pd.DataFrame:
+    """Monotonicznie rosnący szereg (bez remisów → bez swingów) z jawnie wstawionymi ekstremami:
+    dołek 80,0 w barze 30, szczyt 200 w barze 50, dołek 80,2 w barze 60."""
+    close = 100.0 + 0.1 * np.arange(n)
+    high, low = close + 0.5, close - 0.5
+    low[30], high[50], low[60] = 80.0, 200.0, 80.2
+    return _df(close, high, low)
+
+
+def test_sr_distance_uses_the_confirmed_level_and_forgets_it_after_lookback() -> None:
+    df = _rising_with_spikes()
+    atr = ta._atr(df).to_numpy()
+    d = ta.compute_sr_distance(df, lookback=3)
+    # dołek z bara 30 potwierdzony w 35; przez `lookback` barów jest jedynym poziomem
+    for t in range(35, 39):
+        assert d.iloc[t] == (df["close"].iloc[t] - 80.0) / atr[t] > 0
+    assert d.iloc[:35].isna().all()  # przed potwierdzeniem nie ma żadnego poziomu
+    assert np.isnan(d.iloc[39])  # potwierdzenie w 35 < 39 − 3 → poziom wygasł
+
+
+def test_fib_position_is_zero_at_impulse_start_and_one_at_its_end() -> None:
+    df = _rising_with_spikes()
+    pos = ta.compute_fib_position(df)
+    imp = ta.compute_fib_impulse(df)
+    assert pos.iloc[35:55].isna().all()  # jest dołek (80), nie ma jeszcze szczytu → brak impulsu
+    for t in range(55, 60):  # szczyt 200 z bara 50 potwierdzony w 55 → impuls 80 → 200
+        assert pos.iloc[t] == (df["close"].iloc[t] - 80.0) / 120.0
+        assert imp.iloc[t] == 1.0
+    probe = df.copy()
+    probe.loc[57, "close"] = 80.0
+    assert ta.compute_fib_position(probe).iloc[57] == 0.0
+    probe.loc[57, "close"] = 200.0
+    assert ta.compute_fib_position(probe).iloc[57] == 1.0
+
+
+def test_double_bottom_is_confirmed_once_at_the_second_low_and_rule_fires_once() -> None:
+    df = _rising_with_spikes()
+    state = ta.compute_double_top_bottom(df)
+    # drugi dołek (80,2 w barze 60) potwierdzony w 65: |80,0 − 80,2| ≤ 0,5·ATR, odbicie do 200 ≥ 2·ATR
+    assert state.iloc[65] == 1.0
+    assert (state.iloc[36:65].fillna(0.0) == 0.0).all()
+    rule = ta.rule_double_top_bottom(pd.DataFrame({"double_top_bottom": state}))
+    fired = rule.iloc[55:80]
+    assert fired.iloc[10] == 1.0 and (fired.drop(index=fired.index[10]) == 0.0).all()
+
+
 # --- reguły ------------------------------------------------------------------------------------
 
 

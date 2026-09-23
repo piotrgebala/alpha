@@ -35,4 +35,5 @@ backtest/run_timeout_leg_band.py             # H3
 backtest/run_execution_w1.py                 # W1
 backtest/run_partial_tp_n1.py                # N1
 backtest/run_ta_a1.py                        # A1
+backtest/run_ta_rules_a2.py                  # A2
 backtest/screen_feature_candidates.py        # C2.7

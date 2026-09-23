@@ -1,11 +1,48 @@
 # A2 — pozostałe rodziny analizy technicznej jako reguły szukania pozycji (2026-09-23)
 
-> **STATUS: PRE-REJESTRACJA (przed pomiarem).** Kod cech i reguł (`agents/ta_rules.py`, testy,
-> rejestr) powstał PRZED tą pre-rejestracją, bo był potrzebny do ZLICZENIA częstości sygnałów
-> (rachunek mocy) — **żaden wynik transakcji nie był oglądany**. Skrypt pomiaru i przebieg
-> następują PO commicie tego pliku (kolejność dowodliwa z gita). Sekcje od „Wynik" w dół
-> dopisuje się po przebiegu. Decyzja użytkownika 2026-09-23: „wykonaj" — pozostałe rodziny AT
-> ze skilla `ta-toolkit`, każda z osobną pre-rejestracją i rachunkiem mocy.
+> **STATUS: ZAMKNIĘTA — TRZY RAMIONA NEGATYWNE, DWA NIEROZSTRZYGNIĘTE, ŻADNE POZYTYWNE.**
+> Kolejność w gicie: kod cech i reguł `adfe13e` (potrzebny do zliczenia częstości; żaden wynik
+> transakcji nie był liczony) → pre-rejestracja `f9805fa` → skrypt pomiaru `d80b621` → przebieg
+> → wynik w commicie scalającym. **Seria A po A2: licznik 7/7 — wszystkie rodziny AT ze skilla
+> `ta-toolkit` zamknięte regułą STOP.** Walidacja (16a): **READY**; przegląd diffu (16c):
+> **Approve**. Decyzja użytkownika 2026-09-23: „wykonaj" — pozostałe rodziny AT.
+
+## Wynik w skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+**Żadne narzędzie klasycznej analizy technicznej z podręcznika nie znajduje na BTC 4h pozycji,
+które po kosztach zarabiają.** Pięć ramion, jedna populacja świec (od 2021), ten sam sposób
+wejścia i wyjścia co model:
+
+| ramię | trafność | pieniądze na transakcji | werdykt |
+|---|---|---|---|
+| model bez AT (kontrola) | 49,6 % | −0,107 % | odniesienie |
+| struktura trendu HH/HL („graj z trendem") | **48,2 %** [47,0; 49,4] | **−0,127 %** [−0,170; −0,084] | NEGATYWNY |
+| zniesienie Fibonacciego 38–62 % | 51,5 % [49,4; 53,6] | −0,041 % [−0,110; +0,028] | nierozstrzygnięty |
+| wsparcie/opór (przy poziomie, w stronę poziomu) | 49,9 % [48,9; 50,9] | **−0,080 %** [−0,114; −0,045] | NEGATYWNY |
+| zdarzenia AT razem (wybicie, podwójny szczyt/dno, RGR, przecięcie EMA, linia trendu) | 48,3 % [46,2; 50,5] | −0,103 % [−0,182; −0,024] | nierozstrzygnięty (próba o 10 % za mała na „dowód braku") |
+| model + wszystkie 10 cech AT | 49,6 % | −0,099 % [−0,141; −0,056] | NEGATYWNY; różnica wobec kontroli +0,005 % [−0,055; +0,066] |
+
+**Co to znaczy:**
+- **„Graj z trendem" traci najwięcej:** struktura wyższych szczytów i dołków trafia w 48,2 %,
+  cały przedział poniżej rzutu monetą — jak w A1 (objęcie) i W1c (wybicie): na 4h BTC ruch
+  częściej zawraca, niż trwa.
+- **Wsparcie/opór** — jedyne narzędzie z wiarygodnym mechanizmem — w deterministycznej wersji
+  z parametrami skilla daje sygnał w 83 % świec i trafia jak moneta. Pułapkę (gęsty zbiór
+  poziomów) zapisaliśmy przed wynikiem; zawężanie parametrów po wyniku byłoby nowym losem.
+- **Fibonacci** to jedyne ramię, którego nie da się nazwać: trafność 51,5 % z przedziałem
+  obejmującym i monetę, i próg opłacalności (53,2 %), strata 0,04 % nieodróżnialna od zera.
+  Przy 2 223 transakcjach to jest granica rozdzielczości, zapisana przed uruchomieniem.
+- **Zdarzenia AT** (formacje domykane w jednej świecy) razem tracą istotnie (przedział poniżej
+  zera), ale próba (2 133) nie sięga wymaganej do orzeczenia „dowodu braku" (2 366) — więc
+  według litery pre-rejestracji: nierozstrzygnięte. Osobno żadna z pięciu reguł nie była mierzalna.
+- **Model z dziesięcioma cechami AT** zmienia decyzje w 35 % świec i częściej milczy
+  (abstynencja 40,4 → 42,7 %), a wynik ma taki sam. Więcej cech = więcej szumu, nie informacji.
+
+**Bilans serii A (7 ramion, trzy rundy):** A1 formacje świecowe 46,4 %; A2 struktura trendu
+48,2 %, S/O 49,9 %, Fibonacci 51,5 %, zdarzenia 48,3 %; jako cechy modelu dwa razy zero. Analiza
+techniczna na 4h BTC jest zamknięta jako kierunek.
+
+---
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
 
@@ -62,8 +99,8 @@ STOP (niżej). Kontrola za 0.
   skilla), sekcja `ta_rules:` w `agents/feature_registry.yaml`, test przecieku parametryzowany
   po `TA_FEATURE_FUNCTIONS` (zasada 2 — zielony PRZED pomiarem), `tests/test_ta_rules.py`.
   Sygnały reguł: `checkpoint_lib.build_rule_signals` (populacja = okna OOS modelu, bramka
-  kosztowa silnika). Skrypt rundy `backtest/run_ta_rules_a2.py` powstaje PO tej pre-rejestracji;
-  komenda trafi tu przy zamknięciu razem z wpisem na `runs/ZAMROZONE.txt`.
+  kosztowa silnika). **Komenda:** `py -m backtest.run_ta_rules_a2` (Windows: `PYTHONUTF8=1`;
+  pełny output `raw_output.txt`; skrypt na `runs/ZAMROZONE.txt`). Czas przebiegu: 8 s.
 
 ## Poprzedzające wyniki (zasada 14)
 
@@ -246,28 +283,199 @@ w świecy 4h bez 5m (konserwatywnie).
 
 ## Wynik
 
-_(po przebiegu)_
+### 0. Dane i lejek
 
-## Co na plus (+) / Co na minus (−)
+12 042 świece 4h od 2021-01-01, 69 okien, **11 592 świece OOS** dla każdego ramienia (parytet
+populacji potwierdzony liczbą). Kontrola: abstynencja 40,38 %, 6 911 kandydatów (= N1/A1).
+A2.5: abstynencja **42,70 %**, 6 642 kandydatów. Reguły (sygnały OOS → journal; niewypełnione /
+stłumione kill-switchem): A2.1 6 778 → 6 423 (28 / **327**); A2.2 2 250 → 2 223 (15 / 12);
+A2.3 9 602 → 9 204 (36 / **362**); A2.4 2 167 → 2 133 (13 / 21). Pięć reguł zdarzeniowych osobno:
+zliczone (988 / 305 / 86 / 434 / 710), nie symulowane.
 
-_(po przebiegu)_
+### 1. Kryterium (dwa warunki; pozytyw przy z_5 = 2,576)
 
-## Walidacja (zasada 16a)
+| ramię | n | r̄ netto | CI 95 % | mediana | t | N_eff | t_neff | p | CI 95 % (p) | ci_low z_5 | p* | odczyt |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| kontrola | 6 789 | −0,107 % | [−0,149; −0,065] | −0,104 % | −5,01 | 4 919 | −4,26 | 49,58 % | [48,39; 50,77] | 48,02 % | 53,64 % | odniesienie (= N1/A1 co do cyfry) |
+| **A2.1** struktura trendu | 6 423 | **−0,127 %** | [−0,170; −0,084] | −0,142 % | −5,83 | 2 875 | **−3,90** | **48,20 %** | [46,98; 49,42] | 46,60 % | 53,07 % | **NEGATYWNY** (n ≥ 1 959) |
+| **A2.2** Fibonacci | 2 223 | −0,041 % | [−0,110; +0,028] | −0,052 % | −1,16 | 1 787 | −1,04 | 51,51 % | [49,43; 53,58] | 48,78 % | 53,18 % | **NIEROZSTRZYGNIĘTY** |
+| **A2.3** wsparcie/opór | 9 204 | **−0,080 %** | [−0,114; −0,045] | −0,097 % | −4,52 | 7 300 | **−4,03** | 49,87 % | [48,85; 50,89] | 48,53 % | 53,01 % | **NEGATYWNY** (n ≥ 1 895) |
+| **A2.4** grupa zdarzeń | 2 133 | −0,103 % | [−0,182; −0,024] | −0,142 % | −2,56 | 2 133 | −2,56 | 48,34 % | [46,21; 50,46] | 45,55 % | 52,00 % | **NIEROZSTRZYGNIĘTY** (guard n: 2 133 < 2 366) |
+| **A2.5** model + 10 cech AT | 6 525 | **−0,099 %** | [−0,141; −0,056] | −0,098 % | −4,57 | 3 839 | **−3,51** | 49,59 % | [48,38; 50,81] | 48,00 % | 53,42 % | **NEGATYWNY** (n ≥ 1 949) |
 
-_(po przebiegu)_
+Żadne ramię nie zbliża się do warunków pozytywu (`t_neff > 2,576` i `ci_low(p; z_5) > p*`):
+najwyższy `ci_low z_5` to 48,78 % wobec p* 53,18 %. **Regresja kontroli wobec N1/A1: ZGODNA.**
 
-## Przegląd diffu (zasada 16c)
+**A2.4 wg litery:** kryterium negatywne wymaga `n ≥ required_trades(0,50; BE ramienia)`; BE grupy
+wyszło niżej (52,88 %) niż ex ante (53,07 %), więc próg próby wzrósł do 2 366, a n = 2 133 jest
+o 10 % za małe. Odczyt: NIEROZSTRZYGNIĘTY. Nie zmieniamy tego po fakcie — ale zapisujemy, że
+zwrot netto grupy jest istotnie ujemny przy 1,96 (CI [−0,18; −0,02] poniżej zera): to nie jest
+„brak informacji", tylko „za mała próba na formalny dowód braku".
 
-_(po przebiegu)_
+### 2. Porównanie parowane A2.5 − kontrola (obserwacja)
+
+Tylko **4 374** wspólnych transakcji (kontrola 6 789, A2.5 6 525): 2 415 tylko w kontroli, 2 151
+tylko w A2.5, identycznych 2 867. Dziesięć dodatkowych cech zmienia decyzję modelu w ~35 % świec
+i podnosi abstynencję o 2,3 pp. Średnia różnica na wspólnych: **+0,005 % [−0,055; +0,066]**,
+t = 0,18 — zero; ramiona niezależnie: −0,107 % vs −0,099 %.
+
+### 3. Opisowo — skąd biorą się pieniądze (bez werdyktów na podzbiorach)
+
+| ramię / grupa | n | p | CI 95 % (p) | r̄ netto |
+|---|---|---|---|---|
+| A2.1 long / short | 3 425 / 2 998 | 48,23 % / 48,17 % | [46,6; 49,9] / [46,4; 50,0] | −0,171 % / −0,077 % |
+| A2.1 timeouty (66,5 %) | 4 271 | 47,20 % | [45,70; 48,70] | −0,150 % |
+| A2.2 long / short | 1 053 / 1 170 | 52,99 % / 50,17 % | [50,0; 56,0] / [47,3; 53,0] | −0,061 % / −0,023 % |
+| A2.2 timeouty (70,4 %) | 1 564 | 51,47 % | [48,99; 53,95] | −0,084 % |
+| A2.3 long / short | 4 568 / 4 636 | 50,53 % / 49,22 % | [49,1; 52,0] / [47,8; 50,7] | −0,089 % / −0,070 % |
+| A2.4 timeouty (62,8 %) | 1 340 | 44,40 % | [41,74; 47,06] | −0,227 % |
+| A2.4: wybicie z zakresu | 963 | 48,49 % | [45,34; 51,65] | −0,053 % |
+| A2.4: podwójny szczyt/dno | 289 | 44,98 % | [39,25; 50,72] | −0,317 % |
+| A2.4: głowa z ramionami | 82 | 47,56 % | [36,75; 58,37] | +0,013 % |
+| A2.4: przecięcie EMA 10/30 | 415 | 43,61 % | [38,84; 48,39] | −0,122 % |
+| A2.4: przełamanie linii trendu | 680 | 52,21 % | [48,45; 55,96] | −0,051 % |
+
+Wszystkie ramiona regułowe mają stopy ≈ cele (A2.1 1 072 : 1 080; A2.3 1 496 : 1 560) i strata
+siedzi w timeoutach (66–70 % transakcji, wygrane 44–51 %). W grupie zdarzeń pięć podgrup ma CI
+szerokie na 6–22 pp; przecięcie EMA (43,6 %, CI pod 50 %) i linia trendu (52,2 %) to skrajne
+z pięciu — oczekiwany rozrzut, bez werdyktów. W̄/L̄/C: A2.1 1,308/1,303/0,083 %; A2.2
+1,225/1,217/0,082 %; A2.3 1,271/1,261/0,081 %; A2.4 1,430/1,381/0,081 %; A2.5 1,279/1,292/0,082 %.
+
+### 4. Mierzalność — ex ante vs ex post
+
+| ramię | n ex ante | journal | pasmo ex ante / ex post | required_trades | se → wykrywalny |r̄| |
+|---|---|---|---|---|---|
+| A2.1 | 6 806 | 6 423 (−5,6 %: 327 stłumionych) | 1,19 / 1,22 pp | 1 959 ✔ | 0,0218 % → 0,061 % |
+| A2.2 | 2 267 | 2 223 | 2,06 / 2,08 pp | 1 759 ✔ | 0,0352 % → 0,099 % |
+| A2.3 | 9 606 | 9 204 (−4,2 %: 362 stłumionych) | 1,00 / 1,02 pp | 1 895 ✔ | 0,0176 % → 0,049 % |
+| A2.4 | 2 174 | 2 133 | 2,10 / 2,12 pp | 2 366 ✗ | 0,0402 % → 0,113 % |
+| A2.5 | 6 870 | 6 525 | 1,18 / 1,21 pp | 1 949 ✔ | 0,0215 % → 0,060 % |
+
+Rachunek z częstości zdarzenia trafił w journal do 2–6 %; odchylenia to stłumienia kill-switcha
+(reguły stanowe) i wyższa abstynencja (A2.5).
+
+## Co na plus (+)
+
+- **Cały skill AT rozstrzygnięty w dwóch rundach, za 7 wariantów**, z jednym parametrem na
+  narzędzie (domyślne skilla) i bez wyboru po wyniku; próg pozytywu skorygowany na pięć ramion.
+- **Rachunek mocy przed pomiarem zadziałał jako bezpiecznik:** pięć reguł zdarzeniowych nie dostało
+  fałszywych „wyników" na 86–988 sygnałach; test rodziny dał im mierzalny sprawdzian.
+- **Parytet populacji potwierdzony liczbą** (11 592 świece OOS w każdym ramieniu), regresja kontroli
+  co do cyfry, lejek domknięty per ramię.
+- **Przewidywanie z góry sprawdziło się co do znaku:** reguły „z ruchem" poniżej 50 % (struktura
+  trendu 48,2 %, wybicie 48,5 %), reszta przy 50 %.
+- **Reguły stanowe ujawniły efekt uboczny warty zapisania:** nakładające się pozycje z kolejnych
+  świec pogłębiają obsunięcia — kill-switch tłumi 3,8–4,8 % wypełnień wobec 1,1 % w kontroli.
+
+## Co na minus (−)
+
+- **Dwa ramiona nierozstrzygnięte** (Fibonacci, grupa zdarzeń) — z konstrukcji: pasmo 2,1 pp przy
+  n ≈ 2 200. Dłuższa historia jest wykluczona zasadą 20, inny interwał = nowa hipoteza.
+- **Wsparcie/opór zmierzone w wersji zdegenerowanej** (83 % pokrycia): mechanizm „skupienia zleceń"
+  wymagałby wyróżnienia poziomów (klastry, liczba dotknięć) — to nowe parametry, których świadomie
+  nie dobieraliśmy. Wynik dotyczy wersji ze skilla, nie idei.
+- **Stłumienia kill-switcha nie są losowe** (następują po seriach strat): wykluczone transakcje
+  reguł stanowych mogły być gorsze niż średnia — kierunek obciążenia raczej na korzyść reguł,
+  nie przeciw; werdykt się od tego nie zmienia.
+- **A2.5 z 14 cechami na oknach 60-dniowych** — więcej cech niż uzasadnia próba; wzrost
+  abstynencji to sygnał przeuczenia, nie informacji. Test grupowy odpowiada na pytanie
+  „czy model ma z czego skorzystać", nie „która cecha".
+- **Tryb 4h bez 5m** (W1: ≤ 1,4 pp na niekorzyść); jeden instrument, jeden seed; przebicie =
+  wypełnienie.
+- **Skill `engineering:testing-strategy` wczytany po napisaniu testów** (zasada 19: „przed") —
+  jego przegląd dołożył trzy testy (podwójne dno na ręcznej formacji, jawny poziom S/O z wygasaniem,
+  końce impulsu Fibonacciego), wszystkie zielone; kolejność odnotowana uczciwie.
+
+## Walidacja (zasada 16a) — werdykt: **READY**
+
+- **Drugą drogą (z liczb wydrukowanych):** p* A2.1 = (1,3027 + 0,0825)/(1,3077 + 1,3027) =
+  **53,07 %** ✔; r̄ A2.1 z mieszanki wyjść: 1 080/6 423 · 2,2840 + 1 072/6 423 · (−2,4656) +
+  4 271/6 423 · (−0,1496) = 0,3841 − 0,4115 − 0,0995 = **−0,1269 %** wobec −0,1270 % ✔; p A2.1
+  z kierunków: (3 425 · 0,4823 + 2 998 · 0,4817)/6 423 = **48,20 %** ✔; lejki: 11 592 = 4 814 +
+  6 778, 6 778 = 6 423 + 28 + 327 (A2.1); 9 602 = 9 204 + 36 + 362 (A2.3); 2 167 = 2 133 + 13 + 21
+  (A2.4) ✔; guard A2.4: (1,96 · 0,5 + 0,8416 · 0,5)²/(0,5288 − 0,5)² = 1,962/0,000829 = **2 366** ✔;
+  z_5: Φ⁻¹(0,995) = 2,576 ✔.
+- **Kogo NIE ma:** 60 dni treningu; świece bez sygnału (41 / 80 / 17 / 81 % OOS); pięć reguł
+  osobno (nie startowały); stłumione kill-switchem 327 / 12 / 362 / 21 / 78 — nielosowe (po
+  stratach), raportowane; niewypełnione 13–39; kolejność w świecy 4h.
+- **Red flag „wynik potwierdza hipotezę":** oczekiwanie „≈ 50 %, z ruchem niżej" spełnione —
+  sprawdzono, czy to nie artefakt jednej konstrukcji: A2.1 (sygnał stanowy, N_eff 2 875) i A2.4
+  (zdarzenia, N_eff = n) dają ten sam obraz różnymi drogami; kontrola niezmieniona; cechy AT
+  mają 0 NaN w OOS (populacja A2.5 = 11 592, nie zmalała).
+- **Rząd wielkości:** trafności 48–52 %, progi 52–53,6 %, koszt 0,081–0,083 %, std 1,66–1,86 %,
+  udziały wyjść sumują się do 100 % — w zakresach z listy kontrolnej.
+
+## Przegląd diffu (zasada 16c) — werdykt: **Approve**
+
+Zakres: `agents/ta_rules.py` (nowy, 10 cech + 8 reguł + grupa), sekcja `ta_rules:` rejestru,
+`agent_5_compliance/test_leakage.py` (+2 testy: rejestr, przeciek parametryzowany),
+`tests/test_ta_rules.py` (15 testów, w tym hypothesis), `backtest/run_ta_rules_a2.py`, README rundy.
+
+**Korektność:** (1) swingi: okno `rolling(2·confirm+1)` kończy się w t, kandydat `shift(confirm)` —
+ekstremum z bara t − confirm znane dopiero w t; test przykładowy sprawdza NaN w 20–24 i wartość
+w 25; test przecieku df[:T] vs df[:T+k] bit w bit dla 10 cech. (2) Pętle O(n): `low[p1+1:p0]`
+z p0 ≤ t − confirm (potwierdzone pozycje), `cpos < t + 1` w S/O — nic z przyszłości. (3)
+`_fib_impulse_frame` przy pustych `pos_h`/`pos_l`: `np.clip` na pustej tablicy chroniony
+warunkiem `if len(...)`, `valid` wymaga obu swingów. (4) `_event` przy NaN: `fillna(0)` przed
+porównaniem — pierwsza wartość niezerowa po NaN liczy się jako zdarzenie (świadomie; w OOS bez
+NaN). (5) Skrypt: cechy AT liczone na surowym df PRZED `collect_signals` (kopiowane do df
+kontroli), reguły na df kontroli, `build_rule_signals` z guardem RangeIndex, `merge(...,
+validate="one_to_one")` chroni tabelę 3 przed duplikacją. (6) Stare testy: 665 → 688 zielone,
+literały bit w bit; `FEATURE_FUNCTIONS` produkcyjne nietknięte.
+
+**Edge-case'y:** monotoniczny szereg → brak swingów → NaN w cechach swingowych (test); `ATR = 0`
+→ NaN w S/O i podwójnym szczycie; `lookback` wygasza poziomy (test); konflikt zdarzeń → 0 (test).
+
+**Czytelność / wydajność (bez blokady):** trzy pętle w Pythonie (podwójny szczyt, linia trendu,
+S/O) — 0,3 s na 12 k świec, wystarczające; przy 5m (100 k+) do wektoryzacji. `_atr` powiela
+`feature_miner.compute_atr_14` (ten sam TA-Lib ATR 14) — świadomie bez importu, żeby moduł nie
+zależał od produkcyjnego zestawu cech.
+
+**Werdykt jednym zdaniem:** diff poprawny, bez przecieku (test parametryzowany + przykłady na
+swingach), z regresją bit w bit i rozdzieleniem od produkcyjnych cech — **Approve**, do scalenia.
 
 ## Wniosek
 
-_(po przebiegu)_
+Klasyczna analiza techniczna z podręcznika — użyta dosłownie, deterministycznie, bez dobierania
+parametrów — **nie znajduje na BTC 4h pozycji, które po kosztach zarabiają**. Trzy ramiona mają
+istotnie ujemny zwrot netto z próbą wystarczającą na dowód braku (struktura trendu −0,127 %,
+S/O −0,080 %, model + cechy AT −0,099 %); dwa są nierozstrzygnięte przez rozdzielczość, przy
+czym ich estymaty też są ujemne (Fibonacci −0,041 %, zdarzenia −0,103 % z CI pod zerem).
+Kierunek „z ruchem" jest na tym rynku i horyzoncie konsekwentnie poniżej monety (A1 46,4 %,
+W1c 46,1 %, A2.1 48,2 %, wybicie 48,5 %). **Seria A zamknięta: 7/7, wszystkie rodziny AT ze
+skilla.** Wniosek 11 (wąskie gardło informacyjne) po raz kolejny potwierdzony: transformacje ceny
+nie tworzą informacji, a dziesięć naraz tylko zwiększa szum.
 
 ## Rekomendacja
 
-_(po przebiegu)_
+1. **Zamknąć analizę techniczną na BTC 4h jako kierunek** — bez wyjątków dla „innych parametrów"
+   (każdy zestaw = kolejny los; STW 1999) i bez odwracania znaków (wniosek 49).
+2. **Nie testować pięciu reguł zdarzeniowych osobno** na tych danych — niemierzalne z konstrukcji;
+   ich ewentualny test na 1h (więcej zdarzeń) to nowa hipoteza z własnym rachunkiem mocy i decyzją
+   użytkownika, o niskim priorze (te same transformacje).
+3. **Ideę wsparcia/oporu (skupienie zleceń) zostawić otwartą, ale nie jako AT:** wymagałaby
+   danych o księdze zleceń / likwidacjach (zbiór informacyjny E), nie kolejnej definicji poziomu
+   z samych świec.
+4. **Metodologicznie:** rachunek mocy z częstości zdarzenia + test rodziny dla rzadkich zdarzeń
+   (wniosek 53); reguły stanowe wymagają raportowania stłumień kill-switcha (wniosek 52).
+5. **Następny krok = punkt 2 zlecenia użytkownika** (kierunki spoza ceny i wolumenu): inny cel niż
+   kierunek, cash-and-carry z hedgem spot, pozycjonowanie (kolektor już działa).
 
 ## Użyte skille
 
-_(po przebiegu — z `py tools/skill_audit.py raport --galaz a2-rodziny-at`)_
+Rejestr gałęzi `a2-rodziny-at` (`py tools/skill_audit.py raport --galaz a2-rodziny-at`):
+
+| skill | co wniósł |
+|---|---|
+| `anthropic-skills:clas5-runda` | procedura: gałąź → skille → INDEX → kod cech → zliczenie → pre-rejestracja → skrypt → run → bramki → DoD |
+| `anthropic-skills:clas5-quant` | rachunek mocy z częstości zdarzenia per ramię, „NIEMIERZALNA = nie startuje" bez zamrożonej stałej (assumed p = konwencja podręcznika z A1), N_eff ≤ n, test rodziny, korekta na m ramion |
+| `anthropic-skills:ta-toolkit` | 10 funkcji deterministycznych z parametrami domyślnymi, DoF per narzędzie, gdzie AT leakuje (swingi), statusy i literatura (BLL/STW, LMW) |
+| `anthropic-skills:quant-strategy-catalog` | pięć pól, rodzina A5, „nowa nazwa ≠ nowa hipoteza" (wybicie vs W1c, EMA vs `ema_diff`), plan punktu 2 |
+| `data:validate-data` | bramka 16a: druga droga dla p*, r̄, p, lejków, guardu i z_5; „kogo nie ma" (stłumienia nielosowe) |
+| `data:statistical-analysis` | bramka 16b: CI zamiast p/z, mediana obok średniej, Bonferroni, jak raportować 5 podgrup i A2.4 bez łamania litery |
+| `engineering:code-review` | bramka 16c (sekcja „Przegląd diffu") |
+| `engineering:testing-strategy` | przegląd testów (PO ich napisaniu — odstępstwo zapisane w „minusach"): +3 testy luk |
+
+Z tabeli zasady 19 pominięte: `dataviz` (bez wykresów), `data:explore-data` (te same parquety),
+`engineering:architecture` (bez ADR — moduł reguł to rozszerzenie wzorca A1), `update-config`,
+`security-review` (bez kluczy, zleceń i sieci), `lean-research`.
