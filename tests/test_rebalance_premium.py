@@ -38,7 +38,7 @@ def test_two_assets_reverting_moves_give_premium_exactly_x_squared() -> None:
     assert out["r_rebal"].tolist() == pytest.approx([0.0, 0.0])
     assert out["r_bh"].tolist() == pytest.approx([0.0, -(x**2)])  # b&h: 0,55·0,9 + 0,45·1,1 = 0,99
     assert out["premium_gross"].sum() == pytest.approx(x**2)
-    assert out["turnover"].iloc[0] == pytest.approx(2 * x / 2 * 2)  # |0,55−0,5| + |0,45−0,5| = 0,10
+    assert out["turnover"].iloc[0] == pytest.approx(x)  # |0,55−0,5| + |0,45−0,5| = 0,10
 
 
 def test_trending_asset_makes_buy_and_hold_win() -> None:

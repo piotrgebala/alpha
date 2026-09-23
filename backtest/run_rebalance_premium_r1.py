@@ -92,7 +92,7 @@ def main() -> None:
         f"Σ premia netto {100 * out['premium_net'].sum():+.2f}% (sumy dziennych ułamków)\n"
         f"  obrót dzienny A: średnia {100 * out['turnover'].mean():.2f}%, mediana {100 * out['turnover'].median():.2f}%, p95 {100 * out['turnover'].quantile(0.95):.2f}%\n"
         f"  koszyk A skumulowany zwrot {100 * cumulative_growth(out['r_rebal']):+.1f}%, koszyk B {100 * cumulative_growth(out['r_bh']):+.1f}% "
-        f"(beta rynku — poza pytaniem; różnica wzrostu skumulowanego {100 * (cumulative_growth(out['r_rebal']) - cumulative_growth(out['r_bh'])):+.1f} pp)\n"
+        f"(beta rynku — poza pytaniem; wartość A względem B: {100 * ((1 + cumulative_growth(out['r_rebal'])) / (1 + cumulative_growth(out['r_bh'])) - 1):+.2f}%)\n"
         f"  dni z premią netto > 0: {100 * (out['premium_net'] > 0).mean():.1f}%; "
         f"miesiące z Σ premii netto > 0: {int((out.groupby('month')['premium_net'].sum() > 0).sum())}/{out['month'].nunique()}"
     )
