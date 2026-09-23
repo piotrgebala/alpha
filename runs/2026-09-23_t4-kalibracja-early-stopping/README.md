@@ -1,8 +1,8 @@
-# T4 — czy early stopping na tak małych oknach wybiera liczbę drzew z sygnału, czy z szumu (2026-09-23)
+# T4 — early stopping działa (chroni przed przeuczeniem), próg 30 wierszy jest tu bezczynny; model i tak nie ma czego się nauczyć (2026-09-23)
 
-> **STAN: PRE-REJESTRACJA.** Ten plik zapisano i zacommitowano PRZED napisaniem skryptu
-> i przed obejrzeniem jakiejkolwiek liczby. Sekcje Wynik / Wniosek / Rekomendacja dochodzą
-> w osobnym commicie po uruchomieniu.
+> **Pre-rejestracja** (sekcje od „ID testu” do „Ścieżka odwrotu”) zapisana i zacommitowana
+> PRZED kodem i przed obejrzeniem liczb (`9eb9345`). Nie była zmieniana po wyniku, poza
+> tytułem. Wyniki są od sekcji „Wynik” w dół.
 
 ## ID testu
 
@@ -137,3 +137,170 @@ abstynencji. Wniosek o S1b dotyczy konfiguracji `none`, a ta runda mierzy `balan
 Runda nie zmienia kodu produkcyjnego. Dodaje jeden skrypt analityczny
 (`backtest/diagnose_early_stopping_t4.py`) i ten katalog. Revert = `git revert` commitów
 rundy.
+
+---
+
+## Metadane
+
+- **Branch:** `worktree-t4-kalibracja-early-stopping` (od master `9b78238`)
+- **Komenda:** `py -m backtest.diagnose_early_stopping_t4` (czas: 54 s)
+- **Dane:** `data/raw/BTC-USDT-USDT_4h_20190910T000000Z_20260701T000000Z.parquet`,
+  14 916 świec 4h, 2019-09-10 → 2026-06-30. Seed 42.
+- **Konfiguracja:** ramię A z F1 / K3-C2 (4 cechy reversion, bez bramki, V=3, `balanced`,
+  60/28/28). Produkcyjnie: `validation_fraction=0,2`, `MIN_VALIDATION_ROWS=30`,
+  `EARLY_STOPPING_ROUNDS=20`, `num_boost_round=200`.
+- **Warianty:** 0 (kalibracja przyrządu, poza licznikami hipotez).
+- **Testy:** `tests/test_diagnose_early_stopping_t4.py`: 11 nowych testów, w tym zgodność
+  odtworzonej decyzji early stoppingu z `best_iteration` XGBoost na 5 losowaniach.
+  Wynik całego pakietu podaję w sekcji „Przegląd diffu”.
+
+## Wynik
+
+### D0 — jak jest dziś w konfiguracji kanonicznej
+
+| miara | wartość | co to znaczy |
+|---|---|---|
+| okna aktywne / pominięte | 86 / 0 | nikogo nie brakuje |
+| wiersze walidacji `n_val` | 68–71 (mediana 71) | 20% z ~357 wierszy |
+| okna, w których `max(30, ·)` zmienia `n_val` | **0 / 86** | **`MIN_VALIDATION_ROWS` jest tu bezczynny**, bo 20% zawsze daje ≥ 68 |
+| okna z działającym early stoppingiem | **86 / 86** | wada z S1 (martwy early stopping) tu nie występuje |
+| liczba drzew w produkcji | min 1, kwartyle **1 / 2 / 8**, max 37 | model zatrzymuje się niemal od razu |
+| okna z 1 drzewem / z < 5 drzewami | 38 / 86 · 58 / 86 | w dwóch trzecich okien model to prawie sam rozkład klas |
+| kontrola: moja rekonstrukcja decyzji == silnik | **86 / 86** | analiza odtwarza produkcję co do drzewa |
+
+### D1 — miara główna (f = 0,2, 86 okien): strata na danych, których wybór nie widział
+
+Miarą jest ważony `mlogloss` (błąd prognozy prawdopodobieństw; mniej = lepiej). Ujemna
+różnica oznacza, że early stopping jest lepszy.
+
+| porównanie | średnia | mediana | 95% CI średniej | ES lepszy w |
+|---|---|---|---|---|
+| ES − 200 drzew (brak zatrzymania) | **−0,617** | −0,552 | **[−0,683; −0,552]** | **86 / 86** |
+| ES − 50 drzew | −0,148 | −0,127 | [−0,175; −0,121] | 81 / 86 |
+| ES − 10 drzew | +0,008 | −0,003 | [−0,007; +0,022] | 50 / 86 |
+| ES − 1 drzewo | **+0,024** | 0,000 | **[+0,009; +0,039]** | 19 / 86 (34 remisy) |
+| ES − wyrocznia (≥ 0 z konstrukcji) | +0,031 | +0,003 | [+0,017; +0,045] | — |
+
+Średnie poziomy: 1 drzewo **1,0982**, wyrocznia **1,0912**, ES **1,1222**, 200 drzew
+**1,7397**. Wartość odniesienia „zgaduję każdą klasę po równo” = ln 3 = **1,0986**.
+
+### D2 — czy early stopping trafia w dobrą liczbę drzew
+
+Korelacja Spearmana między liczbą drzew wybraną przez ES a najlepszą: **+0,28**
+(p = 0,009, n = 86). To słaby, ale prawdziwy związek. Najlepsza liczba drzew na danych
+niewidzianych to w **41 / 86** oknach jedno drzewo (kwartyle 1 / 2 / 6). ES wybiera
+nieco więcej (kwartyle 1 / 4 / 17).
+
+### D3 — wrażliwość na `validation_fraction` (obserwacja, nie wybór)
+
+| f | wiersze walidacji (mediana) | drzewa ES (mediana) | ES − 200 (średnia, CI) | ES − wyrocznia |
+|---|---|---|---|---|
+| 0,1 | 30 | 6 | −0,539 [−0,601; −0,476] | +0,057 |
+| 0,2 | 57 | 4 | −0,617 [−0,683; −0,552] | +0,031 |
+| 0,3 | 85 | 1 | −0,721 [−0,793; −0,648] | +0,024 |
+
+Większa część walidacyjna daje mniej drzew i mniejszą stratę wobec wyroczni. **Nie wolno
+tego czytać jako „przestaw na 0,3”**, powód w sekcji Co na minus.
+
+### D4 — abstynencja (odmowa zajęcia pozycji) na wewnętrznym teście
+
+| | udział prognoz „timeout” |
+|---|---|
+| przy ES | **44,4%** [41,5%; 47,3%] |
+| przy 200 drzewach | 62,0% [59,6%; 64,3%] |
+| różnica ES − 200 | **−17,6 pp** [−20,1; −15,1] |
+| faktyczny udział etykiety „timeout” | 64,8% |
+
+Przy wagach `balanced` early stopping **obniża** abstynencję, nie podnosi. 44,4% zgadza się
+z abstynencją zmierzoną w K3 na danych testowych (43,84%).
+
+## Werdykt wobec kryteriów pre-rejestrowanych
+
+- **D1 (`Δ_200`): górny kraniec CI = −0,552 < 0 → early stopping POMAGA.** Zostaje.
+  Bez niego model przeucza się drastycznie: strata rośnie o 58% (1,74 wobec 1,10).
+- **`Δ_1`: dolny kraniec CI = +0,009 > 0 → early stopping jest istotnie GORSZY od jednego
+  drzewa.** Ma to prosty powód (Wniosek niżej). Nie jest to wada przyrządu do naprawy.
+- **`MIN_VALIDATION_ROWS`: bezczynny (0 / 86).** Wniosek zgodnie z pre-rejestracją:
+  „niegroźny w tej konfiguracji”, **nie** „skalibrowany”.
+
+## Walidacja (16a): **Ready**
+
+- **Niezależne przeliczenie kluczowej liczby:** średnia strata przy jednym drzewie (1,09822)
+  odpowiada wartości teoretycznej ln 3 = 1,09861 (różnica −0,0004). Przy wagach `balanced`
+  każda klasa ma tę samą wagę łączną, więc model „nic nie wiem” musi dać dokładnie ln 3.
+  Ta droga nie przechodzi przez kod rundy, tylko przez rachunek. Dodatkowo średnie i CI D1
+  przeliczone osobnym skryptem z tabeli per okno w `raw_output.txt`: zgodne co do
+  5 miejsc. Test znaków rang dla `Δ_1` (bez 34 remisów): p = 0,0007.
+- **Zgodność z produkcją:** decyzja ES odtworzona 86 / 86. Abstynencja 44,4% zgadza się
+  z K3 (43,84%, inny zbiór: dane testowe).
+- **Kogo NIE ma w zbiorze:** 0 okien pominiętych. Wewnętrzny test to ogon ~71 wierszy
+  (~12 dni) każdego okna. Wynik dotyczy **tej** konfiguracji: 4h, okno 60 dni, cechy
+  reversion. Nie przenosi się automatycznie na 5m (tam okna są ~50× większe) ani na dane,
+  w których jest prawdziwy sygnał.
+- **Red flag „wynik idealnie potwierdza”:** wynik D1 był przewidywalny (200 drzew na ~230
+  wierszach musi się przeuczyć). Informacyjna jest część nieoczekiwana: ES przegrywa
+  z jednym drzewem, a wyrocznia prawie nie bije ln 3. To zapisuję w Wniosku ostrożnie,
+  jako potwierdzenie inną drogą, a nie jako nowy dowód.
+
+## Przegląd diffu (16c)
+
+**Approve.** Diff dodaje jeden skrypt analityczny, 11 testów i dokumentację. Nie dotyka kodu
+produkcyjnego ani skryptów zamrożonych. Podmiana `engine.train_regime_model` jest cofana
+w `finally`, a embargo i ważenie walidacji odtwarzają produkcję (86/86 zgodnych decyzji).
+Jedna asercja-tautologia (sprawdzała stałą zamiast funkcji) została zastąpiona sprawdzeniem
+własności: pierwsza runda przy wagach `balanced` daje stratę ≈ ln 3. Pełny pakiet: **436/436**,
+`ruff` i `black` czyste na plikach rundy.
+
+## Co na plus (+)
+
+- **Wątpliwość z S1b rozstrzygnięta dla obecnej konfiguracji.** Pytanie brzmiało: czy wysoka
+  abstynencja to zdrowa ostrożność, czy artefakt early stoppingu na 30 wierszach. Przy
+  wagach `balanced` early stopping abstynencję **obniża** (−17,6 pp), a próg 30 wierszy nie
+  bierze udziału (walidacja ma ≥ 68 wierszy).
+- **Early stopping jest potrzebny, nie ozdobny:** bez niego strata rośnie o 58% w 86 z 86 okien.
+- **Przyrząd przetestowany drugą drogą:** rekonstrukcja decyzji jest zgodna z XGBoost
+  w teście jednostkowym i na 86 realnych oknach.
+- **Zero zużytego budżetu wariantów:** żadna etykieta z danych testowych nie została
+  przeczytana.
+
+## Co na minus (−)
+
+- **D3 NIE jest podstawą do zmiany `validation_fraction`.** Na danych bez sygnału najlepsza
+  liczba drzew jest zawsze „jak najmniej”. Każde ustawienie, które skraca trening, wygląda
+  wtedy lepiej. Przestawienie na 0,3 zoptymalizowałoby przyrząd pod brak sygnału, czyli
+  osłabiłoby go dokładnie tam, gdzie sygnał by był. Kalibracja `f` ma sens tylko na danych
+  ze znanym sygnałem (wyrocznia z K1/K2).
+- **Early stopping kosztuje ~0,024 straty wobec jednego drzewa** (~2% od ln 3). Przyczyną jest
+  szum przy 57 wierszach walidacji. Część okien dokłada 10–58 drzew dopasowanych do
+  przypadku. Nie zmienia to werdyktów M1/F1, bo trafność mierzono tam na danych testowych
+  z tymi samymi modelami. Oznacza to jednak, że przyrząd ma własny, niewielki szum.
+- **Runda mierzy jedną konfigurację.** Zakres opisałem w „Kogo NIE ma w zbiorze”.
+- **Wniosek o S1b dotyczy wag `balanced`.** Przy `none` (S1b) kierunek efektu mógł być inny.
+  Tego nie mierzyłem, bo `none` nie jest już konfiguracją domyślną (K2/A1).
+
+## Wniosek
+
+Early stopping robi to, co ma robić. Bez niego model uczy się przypadkowych zbiegów
+okoliczności i wypada znacznie gorzej na danych, których nie widział: błąd prognozy o 58%
+większy, we wszystkich 86 oknach. Próg „co najmniej 30 wierszy” w obecnej konfiguracji
+w ogóle nie działa, bo 20% danych zawsze daje około 70 wierszy. Ryzyko z Z17b (próg po
+cichu wyłącza zabezpieczenie) tu nie występuje.
+
+Wynik uboczny, ważniejszy od samego pytania: **najlepszy możliwy model jest ledwie lepszy
+od zgadywania.** Na danych, których wybór nie widział, nawet idealnie dobrana liczba drzew
+poprawia prognozę tylko o 0,7% wobec „każda z trzech możliwości po równo”. Najczęściej
+najlepiej wypada model z jednym drzewem, czyli praktycznie bez nauki. To ten sam wniosek
+co M1/F1 (trafność ~50%), osiągnięty inną drogą: przez jakość prognoz prawdopodobieństwa
+na danych treningowych, a nie przez trafność transakcji na danych testowych. Cztery cechy
+cenowe nie niosą informacji o tym, jak skończy się kolejne 12 godzin.
+
+## Rekomendacja
+
+1. **Nie zmieniać niczego w kodzie.** `validation_fraction = 0,2`, `EARLY_STOPPING_ROUNDS = 20`
+   i `MIN_VALIDATION_ROWS = 30` zostają. T4 zamknięte.
+2. **`MIN_VALIDATION_ROWS` zostaje jako zabezpieczenie**, nie jako parametr. Zadziała dopiero
+   przy oknie treningowym poniżej ~150 wierszy.
+3. **Jeśli kiedyś przyrząd będzie mierzył coś, w czym jest sygnał** (inny instrument, inny
+   cel, §17 ETAP 4), `validation_fraction` należy skalibrować na wyroczni K1/K2 (znany
+   sygnał), a nie na realnych danych BTC. Tutaj „mniej drzew = lepiej” wynika z braku
+   sygnału. Zapis w backlogu, bez wariantu.
