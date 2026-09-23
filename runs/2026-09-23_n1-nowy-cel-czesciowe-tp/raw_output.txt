@@ -1,0 +1,68 @@
+========================================================================================================
+N1 — NOWY CEL MODELU: częściowe wyjście 50 % + stop na wejściu (konfiguracja ZAMROŻONA)
+========================================================================================================
+dane      : 12042 świec 4h od 2021-01-01 00:00:00+00:00 do 2026-06-30 20:00:00+00:00 (zasada 20: min_start = 2021-01-01T00:00:00Z)
+pipeline  : BEZ bramki reżimu, V=3, wagi klas `balanced`, cechy ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20'],
+            walk-forward 60/28/28, seed 42, wejście limit_close k=1
+JEDNA zmienna: zarządzanie pozycją po wejściu (exit_rule=ManagedExitRule(partial_fraction=0.5, near_pct=0.0167)); etykieta bez zmian.
+
+  trening zakończony po 3 s
+  foldy: 69 aktywne / 69 łącznie
+           ocenione świece:    11592
+    odpadło na abstynencji:     4681
+           bramka pewności:        0
+           bramka kosztowa:        0
+       sygnały kandydujące:     6911
+               abstynencja:   40.38%
+
+1. WYNIK — zwrot netto per trade (kryterium) i trafność (próg uogólniony p*)
+      ramię |     n |  r̄ netto |                CI 95% |  mediana |      t |  N_eff | t_neff |       p |             CI(p) |     p* |  BE ±B
+  --------------------------------------------------------------------------------------------------------------------------------
+   kontrola |  6789 |  -0.1069% | [ -0.1487;  -0.0650] | -0.1036% |  -5.01 |   4919 |  -4.26 |  49.58% | [ 48.39;  50.77] | 53.64% | 53.07%
+         N1 |  6795 |  -0.0942% | [ -0.1309;  -0.0575] | +0.0015% |  -5.03 |   4474 |  -4.08 |  53.33% | [ 52.15;  54.52] | 57.24% | 53.32%
+  >>> WERDYKT N1: NEGATYWNY — średni zwrot netto istotnie ujemny przy n >= wymaganym
+  (kontrola: NEGATYWNY — średni zwrot netto istotnie ujemny przy n >= wymaganym — odniesienie, 0 wariantów)
+  r̄ = średni zwrot netto w % nominału wejścia; t z próby, t_neff po korekcie N_eff (autokorelacja);
+  p* = (L̄ + C)/(W̄ + L̄) — trafność zerująca oczekiwaną wypłatę przy ZMIERZONYCH W̄/L̄; „BE ±B” = 0,5(1+C/B)
+  z `summarize_edge_by_regime` — przy wypłatach asymetrycznych DIAGNOSTYKA, nie próg (W1b).
+
+2. PORÓWNANIE PAROWANE N1 − kontrola (te same sygnały i wypełnienia) — obserwacja, nie kryterium
+  wspólnych transakcji 6736 (kontrola 6789, N1 6795); identycznych (różnica 0): 4577
+  średnia różnica +0.0071% nominału, 95% CI [-0.0092; +0.0235], t = +0.85; mediana różnicy +0.0000%
+
+3. ŚCIEŻKI WYJŚCIA N1 — kogo NIE ma w zbiorze i skąd biorą się pieniądze
+                       ścieżka |     n |  udział | brutto śr. |  netto śr. | wygrane
+  ----------------------------------------------------------------------------------
+                timeout (cała) |  3489 |   51.3% |   -0.2569% |   -0.3467% |   41.5%
+                   stop (cała) |  1131 |   16.6% |   -2.3008% |   -2.3910% |    0.0%
+      bliższy cel → dalszy cel |   841 |   12.4% |   +2.0770% |   +2.0374% |  100.0%
+         bliższy cel → timeout |   807 |   11.9% |   +1.5055% |   +1.4411% |  100.0%
+  bliższy cel → stop na wejściu |   527 |    7.8% |   +0.8176% |   +0.7537% |  100.0%
+  kontrola: W̄ = 1.3029%, L̄ = 1.3329%, C = 0.0808%, std zwrotu 1.759%, p5/p95 [-2.973%; +2.748%], niewypełnione 43, stłumione 79
+  N1: W̄ = 1.1101%, L̄ = 1.3021%, C = 0.0786%, std zwrotu 1.543%, p5/p95 [-2.813%; +2.103%], niewypełnione 42, stłumione 74
+  udział transakcji z bliższym celem: 32.0%
+
+4. MIERZALNOŚĆ (zasada 18) — ex ante wg pre-rejestracji i ex post
+  expected_trades ex ante (abstynencja 43.84%, wypełnienia 99.4%) = 6,471; ex post = 6,869; journal N1 = 6,795
+  se zwrotu netto N1 = 0.0187% → wykrywalny efekt (moc 80%) |r̄| >= 0.0524%; próg mocy dla negatywu n >= 4,000: spełniony
+  trafność (diagnostyka): pasmo 1.19 pp; measurability_report(p_kontroli, BE ±B kontroli, n) = NIEMIERZALNA
+
+========================================================================================================
+5. PEŁNE TABELE (do raw_output)
+========================================================================================================
+  --- kontrola ---
+   regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      6789  0.495802 -0.691786 0.483909 0.507695       0.649138          0.503359          0.491718      0.01318  0.000808      0.530656 -0.034854
+   regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat       n_eff  t_stat_neff
+  __all__      6789    -0.000075    0.001235         -0.061094 -5.033868 4124.705329    -3.923696
+  {'classification': 'NO-GO', 'n_valid_folds': 69, 'n_total_folds': 69, 'fraction_above_threshold': 0.2318840579710145, 'fraction_le_zero': 0.7391304347826086, 'fraction_positive_sign': 0.2608695652173913, 'mean_sharpe': -2.230137706707724}
+  UWAGA: `classification` NIE jest kryterium (wniosek 24); `barrier_pct`/`break_even_p` liczone z OSTATNIEJ nogi — diagnostyka.
+  --- N1 ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p   margin
+  __all__      6795  0.533333 5.495453 0.521471 0.545195        0.63223          0.547419           0.52514     0.011823  0.000786      0.533242 0.000092
+   regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat       n_eff  t_stat_neff
+  __all__      6795     -0.00008    0.001148         -0.069422 -5.722592 4118.764396    -4.455347
+  {'classification': 'NO-GO', 'n_valid_folds': 69, 'n_total_folds': 69, 'fraction_above_threshold': 0.2898550724637681, 'fraction_le_zero': 0.6956521739130435, 'fraction_positive_sign': 0.30434782608695654, 'mean_sharpe': -2.377443306473756}
+  UWAGA: `classification` NIE jest kryterium (wniosek 24); `barrier_pct`/`break_even_p` liczone z OSTATNIEJ nogi — diagnostyka.
+
+  czas całkowity: 3 s

@@ -21,7 +21,8 @@
     "data@synced": true,
     "engineering@synced": true,
     "security-guidance@claude-plugins-official": true,
-    "claude-code-setup@claude-plugins-official": true
+    "claude-code-setup@claude-plugins-official": true,
+    "discernment-nudge@anthropic-agent-skills": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {

@@ -133,12 +133,14 @@ from backtest.costs import (
     EXIT_REASON_TP,
     execution_legs,
     gate_cost_fraction,
+    multi_leg_cost,
     total_round_trip_cost,
 )
 from backtest.execution import (
     DEFAULT_ENTRY_VALIDITY_CANDLES,
     EntryRule,
     IntrabarPath,
+    ManagedExitRule,
     build_intrabar_path,
     simulate_trade,
 )
@@ -230,6 +232,11 @@ TRADE_COLUMNS = [
     # W1: ile świec po sygnale nastąpiło wypełnienie (0 = wejście po close świecy sygnału,
     # jak w trybie "label"; NaN dla wierszy stłumionych kill-switchem).
     "fill_bar_offset",
+    # N1: wyjście wielonogowe (`ManagedExitRule`). n_legs = 1 dla pojedynczego wyjścia i trybu
+    # "label"; przy 2 nogach `partial_*` opisują pierwszą (częściową), `exit_*` ostatnią.
+    "n_legs",
+    "partial_exit_price",
+    "partial_exit_bar_offset",
 ]
 
 # W1: sygnały, których zlecenie wejścia NIE zostało wypełnione w oknie ważności (tylko tryb
@@ -644,6 +651,7 @@ def run_backtest(
     entry_rule: EntryRule | None = None,
     entry_validity_candles: int = DEFAULT_ENTRY_VALIDITY_CANDLES,
     intrabar_ohlcv: pd.DataFrame | None = None,
+    exit_rule: ManagedExitRule | None = None,
 ) -> dict:
     """
     Pełny backtest Fazy 0: surowy OHLCV -> cechy+labels+regime -> walk-forward per
@@ -734,6 +742,10 @@ def run_backtest(
         intrabar_ohlcv: W1 — opcjonalne świece drobne (np. 5m) do rozstrzygania kolejności
             zdarzeń wewnątrz świec decyzyjnych; muszą pokrywać każdą świecę, której dotyka
             jakakolwiek transakcja (inaczej ValueError). Tylko przy `"path"`.
+        exit_rule: N1 — reguła wyjścia wielonogowego (`backtest.execution.ManagedExitRule`:
+            bliższy cel zamyka część pozycji i przesuwa stop na wejście, dalszy zamyka resztę).
+            `None` (domyślnie) = pojedyncze wyjście TP/SL/timeout, bit w bit z W1. Tylko przy
+            `"path"`. P&L i koszt liczone per noga (`backtest.costs.multi_leg_cost`).
 
     Returns:
         {
@@ -789,6 +801,7 @@ def run_backtest(
         entry_rule=entry_rule,
         entry_validity_candles=entry_validity_candles,
         intrabar_ohlcv=intrabar_ohlcv,
+        exit_rule=exit_rule,
     )
 
 
@@ -897,6 +910,7 @@ def _validate_fill_setup(
     entry_validity_candles: int,
     vertical_barrier_candles: int,
     intrabar_ohlcv: pd.DataFrame | None,
+    exit_rule: ManagedExitRule | None = None,
 ) -> None:
     """Fail fast (przed pętlą, a w `run_backtest` — po treningu, więc tu bez kosztu)."""
     if fill_model not in VALID_FILL_MODELS:
@@ -906,6 +920,8 @@ def _validate_fill_setup(
     if fill_model == FILL_MODEL_LABEL:
         if intrabar_ohlcv is not None:
             raise ValueError("intrabar_ohlcv ma sens tylko przy fill_model='path'")
+        if exit_rule is not None:
+            raise ValueError("exit_rule ma sens tylko przy fill_model='path'")
         return
     if entry_rule is None:
         raise ValueError("fill_model='path' wymaga entry_rule (backtest.execution.EntryRule)")
@@ -935,6 +951,7 @@ def simulate_equity(
     entry_rule: EntryRule | None = None,
     entry_validity_candles: int = DEFAULT_ENTRY_VALIDITY_CANDLES,
     intrabar_ohlcv: pd.DataFrame | None = None,
+    exit_rule: ManagedExitRule | None = None,
 ) -> dict:
     """
     W1: część TANIA backtestu — dla posortowanych sygnałów kandydujących: kill-switch, wykonanie
@@ -945,7 +962,12 @@ def simulate_equity(
     działań na floatach zachowana) — pilnuje tego regresja bit-identyczności w test_engine.py.
     """
     _validate_fill_setup(
-        fill_model, entry_rule, entry_validity_candles, vertical_barrier_candles, intrabar_ohlcv
+        fill_model,
+        entry_rule,
+        entry_validity_candles,
+        vertical_barrier_candles,
+        intrabar_ohlcv,
+        exit_rule,
     )
     path_mode = fill_model == FILL_MODEL_PATH
     if path_mode:
@@ -1011,6 +1033,9 @@ def simulate_equity(
                     "equity_after": equity,
                     "kill_switch_active": True,
                     "fill_bar_offset": float("nan"),
+                    "n_legs": 0,
+                    "partial_exit_price": float("nan"),
+                    "partial_exit_bar_offset": float("nan"),
                 }
             )
             equity_curve.append({"timestamp": signal["timestamp"], "equity": equity})
@@ -1035,6 +1060,7 @@ def simulate_equity(
                 atr_14,
                 ATR_MULTIPLIER,
                 intrabar=intrabar,
+                exit_rule=exit_rule,
             )
             if not outcome.filled:
                 unfilled.append(
@@ -1058,12 +1084,14 @@ def simulate_equity(
             fill_bar_offset = float(outcome.fill_idx - t)
             # funding za świece od wypełnienia do wyjścia włącznie
             holding_candles = float(outcome.exit_idx - outcome.fill_idx + 1)
+            legs = outcome.legs
         else:
             exit_price = _resolve_exit_price(df, signal)
             exit_reason = _resolve_exit_reason(direction, signal["label"])
             exit_bar_offset = signal["exit_bar_offset"]
             fill_bar_offset = 0.0
             holding_candles = signal["exit_bar_offset"]
+            legs = ()
 
         sizing = risk_controller_fn(
             signal_direction=direction,
@@ -1089,6 +1117,30 @@ def simulate_equity(
             entry_leg=entry_leg,
             exit_leg=exit_leg,
         )
+        partial_exit_price = float("nan")
+        partial_exit_bar_offset = float("nan")
+        if len(legs) > 1:
+            # N1: wyjście wielonogowe — P&L i koszt sumowane po nogach. Pojedyncza noga
+            # zostaje przy formułach wyżej (bit w bit z W1 i wszystkimi rundami wcześniej).
+            gross_pnl = sum(
+                direction * (leg.price - entry_price) * position_size * leg.fraction for leg in legs
+            )
+            cost = multi_leg_cost(
+                notional,
+                entry_leg,
+                [
+                    (
+                        leg.fraction,
+                        float(leg.idx - outcome.fill_idx + 1),
+                        _execution_legs(execution_model, leg.reason, timeout_leg)[1],
+                    )
+                    for leg in legs
+                ],
+                direction,
+                candle_minutes=candle_minutes,
+            )
+            partial_exit_price = legs[0].price
+            partial_exit_bar_offset = float(legs[0].idx - t)
         net_pnl = gross_pnl - cost
 
         equity_before = equity
@@ -1113,6 +1165,9 @@ def simulate_equity(
                 "equity_after": equity,
                 "kill_switch_active": False,
                 "fill_bar_offset": fill_bar_offset,
+                "n_legs": max(len(legs), 1),
+                "partial_exit_price": partial_exit_price,
+                "partial_exit_bar_offset": partial_exit_bar_offset,
             }
         )
         equity_curve.append({"timestamp": signal["timestamp"], "equity": equity})

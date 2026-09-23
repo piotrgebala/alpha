@@ -100,6 +100,22 @@ def fetch_native(data_cfg: dict, timeframe: str) -> pd.DataFrame:
     )
 
 
+def fetch_window(data_cfg: dict, timeframe: str) -> pd.DataFrame:
+    """
+    N1 / CLAUDE.md zasada 20: natywne świece od `data_cfg["min_start"]` włącznie. Filtr nakładany
+    na pełny cache (bez nowego pobierania), więc zamknięte rundy zachowują swoje pliki, a nowe
+    rundy nie mogą przypadkiem sięgnąć przed datę graniczną. Brak klucza `min_start` = błąd
+    głośny, nie ciche „całe dane".
+    """
+    if "min_start" not in data_cfg:
+        raise ValueError("data_cfg bez `min_start` — zasada 20 wymaga jawnej daty granicznej")
+    df = fetch_native(data_cfg, timeframe)
+    min_start = pd.Timestamp(data_cfg["min_start"])
+    if min_start.tzinfo is None:
+        min_start = min_start.tz_localize("UTC")
+    return df.loc[pd.to_datetime(df["timestamp"], utc=True) >= min_start].reset_index(drop=True)
+
+
 def summarize_result(result: dict, seed: int = PRIMARY_SEED) -> dict:
     """
     W1: miary raportowe dla GOTOWEGO wyniku `run_backtest`/`simulate_equity` — wydzielone

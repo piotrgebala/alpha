@@ -174,11 +174,24 @@ Te pliki zmieniają się często — traktuj jako aktualny stan, nie jako źród
     runda niezrobiona (jak brak testów w zasadzie 10).
     **Wtyczki:** potrzebne wtyczki włącza się w `.claude/settings.json` PROJEKTU, nie globalnie
     (dziś z chmury konta: `engineering`, `data`; z GitHuba: `security-guidance`,
-    `claude-code-setup` — ze źródłem w `extraKnownMarketplaces`; powody i to, czego świadomie
-    NIE włączamy, w wytycznej o skillach niżej). Skill niedostępny w sesji (wtyczka
+    `claude-code-setup`, `discernment-nudge` — ze źródłem w `extraKnownMarketplaces`; powody
+    i to, czego świadomie NIE włączamy, w wytycznej o skillach niżej). Skill niedostępny w sesji (wtyczka
     wyłączona, chmura niezsynchronizowana) → w README „niedostępny w sesji” i procedura z repo:
     bramki z `docs/skills/bramki-jakosci.md`, runda z zasad 11–19 i `runs/INDEX.md` („Jak dodać
     nowy wpis”). Dokument w repo pozostaje źródłem procedury; skill jest drugą parą oczu.
+20. **Testy na realnych danych używają WYŁĄCZNIE danych od 2021-01-01 (decyzja użytkownika
+    2026-09-23: „testuj tylko na danych po 2021 roku”, doprecyzowane: rok 2021 włącznie).**
+    Dotyczy każdej nowej rundy od W2: trening, walk-forward, kalibracje i rachunek mocy liczą
+    się na oknie `2021-01-01 → koniec danych`. Wcześniejsze świece (2019-09 → 2020-12, w tym
+    krach COVID) zostają w cache jako zamrożone źródło zamkniętych rund (Z5b → W1), ale nie
+    wchodzą do żadnego nowego pomiaru. Konsekwencje, zapisane jawnie: (a) to NOWA BAZA DANYCH
+    w sensie wytycznej o licznikach — wyniki rund sprzed W2 (6,8 roku) nie porównują się 1:1
+    z nowymi; (b) próba maleje z ~14 400 do ~11 600 ocenianych świec 4h (5,5 roku, ~69 okien
+    walk-forward 60/28/28), więc rachunek mocy (zasada 18) liczy się od nowa dla każdej
+    hipotezy; (c) filtr daty mieszka w JEDNYM miejscu — `config/settings.yaml`
+    (`data.min_start`) nakładany przez `backtest/checkpoint_lib.py::fetch_window` (nowe skrypty
+    wołają `fetch_window`, nie `fetch_native`) — nie w każdym skrypcie z osobna; skrypty
+    zamrożone (zasada 13) wołają `fetch_native` bez filtra i pozostają odtwarzalne.
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 
@@ -241,6 +254,10 @@ Te pliki zmieniają się często — traktuj jako aktualny stan, nie jako źród
   w `.claude/settings.json`). Pojedynczego skilla z wtyczki wyłączyć się nie da — tylko całą
   wtyczkę; `skillOverrides` działa wyłącznie na skille spoza wtyczek (sprawdzone w kodzie
   Claude Code 2.1.280).
+  **`discernment-nudge`** (decyzja użytkownika 2026-09-23): raz na rozmowę, po odpowiedzi,
+  na której użytkownik ma oprzeć decyzję, dopisuje 2–3 pytania kontrolne (fakty, założenia,
+  brakujący kontekst). Pytania i zdanie wprowadzające **po polsku** (zasada 17 ma pierwszeństwo
+  przed angielskim szablonem skilla); pomijane, gdy użytkownik sam prosi o sprawdzenie.
   **`claude-code-setup`** radzi tworzyć skille w `.claude/skills/` — u nas ta rada nie
   obowiązuje (skille tylko w chmurze). **`security-guidance` — tylko warstwa wzorców**
   (decyzja użytkownika 2026-09-23): przeglądy modelem (diff po każdej turze, agent przy

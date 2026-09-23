@@ -57,7 +57,18 @@ _VALID_LEGS = (MAKER, TAKER)
 EXIT_REASON_TP = "tp"
 EXIT_REASON_SL = "sl"
 EXIT_REASON_TIMEOUT = "timeout"
-VALID_EXIT_REASONS = (EXIT_REASON_TP, EXIT_REASON_SL, EXIT_REASON_TIMEOUT)
+# N1 (2026-09-23): wyjścia wielonogowe. `tp_partial` = bliższy cel, wychodzi CZĘŚĆ pozycji
+# (limit spoczywa w księdze → maker); `be_stop` = stop przesunięty na cenę wejścia po pierwszym
+# celu (stop-market → taker). Pre-rejestracja: runs/2026-09-23_n1-nowy-cel-czesciowe-tp/README.md.
+EXIT_REASON_TP_PARTIAL = "tp_partial"
+EXIT_REASON_BE_STOP = "be_stop"
+VALID_EXIT_REASONS = (
+    EXIT_REASON_TP,
+    EXIT_REASON_SL,
+    EXIT_REASON_TIMEOUT,
+    EXIT_REASON_TP_PARTIAL,
+    EXIT_REASON_BE_STOP,
+)
 
 EXECUTION_TAKER_ONLY = "taker_only"
 EXECUTION_MAKER_LIMIT = "maker_limit"
@@ -122,11 +133,67 @@ def exit_leg_for_reason(exit_reason: str, timeout_leg: str = DEFAULT_TIMEOUT_LEG
         )
     if timeout_leg not in _VALID_LEGS:
         raise ValueError(f"timeout_leg musi być jednym z {_VALID_LEGS}, dostałem: {timeout_leg!r}")
-    if exit_reason == EXIT_REASON_TP:
-        return MAKER
-    if exit_reason == EXIT_REASON_SL:
-        return TAKER
+    if exit_reason in (EXIT_REASON_TP, EXIT_REASON_TP_PARTIAL):
+        return MAKER  # cel = limit spoczywający w księdze, cena znana przy składaniu
+    if exit_reason in (EXIT_REASON_SL, EXIT_REASON_BE_STOP):
+        return TAKER  # stop = wyjście przymusowe po rynku
     return timeout_leg
+
+
+def multi_leg_cost(
+    notional: float,
+    entry_leg: str,
+    legs: list[tuple[float, float, str]],
+    direction: int,
+    taker_fee_rate: float = TAKER_FEE_RATE,
+    funding_rate_8h: float = FUNDING_RATE_8H,
+    slippage_bps: float = SLIPPAGE_BPS,
+    candle_minutes: int = CANDLE_MINUTES,
+    maker_fee_rate: float = MAKER_FEE_RATE,
+) -> float:
+    """
+    N1: koszt transakcji zamykanej w KILKU nogach. `legs` = lista `(ułamek pozycji,
+    świece trzymania tej części, typ nogi wyjścia)`.
+
+        koszt = fee/poślizg nogi wejścia na CAŁYM nominale
+              + Σ_nóg [ fee/poślizg nogi wyjścia na (ułamek × nominał) + funding tej części ]
+
+    Jedna noga o ułamku 1,0 DELEGUJE do `total_round_trip_cost` — bit w bit ten sam wynik, co
+    pojedyncze wyjście (W1 i wszystkie wcześniejsze rundy pozostają odtwarzalne co do cyfry).
+
+    Raises:
+        ValueError: gdy ułamki nie sumują się do 1 (z tolerancją 1e-9) albo noga jest nieznana.
+    """
+    if not legs:
+        raise ValueError("legs nie może być puste")
+    total_fraction = sum(fraction for fraction, _, _ in legs)
+    if abs(total_fraction - 1.0) > 1e-9:
+        raise ValueError(f"ułamki nóg muszą sumować się do 1, dostałem: {total_fraction!r}")
+    if len(legs) == 1:
+        fraction, holding_candles, exit_leg = legs[0]
+        return total_round_trip_cost(
+            notional=notional,
+            holding_candles=holding_candles,
+            direction=direction,
+            taker_fee_rate=taker_fee_rate,
+            funding_rate_8h=funding_rate_8h,
+            slippage_bps=slippage_bps,
+            candle_minutes=candle_minutes,
+            entry_leg=entry_leg,
+            exit_leg=exit_leg,
+            maker_fee_rate=maker_fee_rate,
+        )
+    slip = slippage_bps / 10_000.0
+    cost = notional * leg_fee_rate(entry_leg, maker_fee_rate, taker_fee_rate)
+    if entry_leg == TAKER:
+        cost += notional * slip
+    for fraction, holding_candles, exit_leg in legs:
+        part = notional * fraction
+        cost += part * leg_fee_rate(exit_leg, maker_fee_rate, taker_fee_rate)
+        if exit_leg == TAKER:
+            cost += part * slip
+        cost += funding_cost(part, holding_candles, direction, funding_rate_8h, candle_minutes)
+    return cost
 
 
 def execution_legs(
