@@ -99,6 +99,10 @@ costs:
   # Świadomie BEZ klucza runtime dla `timeout_leg` — tak samo jak `execution_model`, który
   # też jest stałą modułową. Drugie źródło prawdy byłoby kolejnym miejscem na rozjazd.
   maker_fee_rate: 0.0002            # 0.02% za stronę (Binance USDS-M Futures, VIP0 maker)
+  # C1 (2026-09-23) — noga SPOT w cash-and-carry (long spot + short perp): Binance Spot VIP0
+  # 0,10 % za stronę (maker = taker), bez zniżki BNB (konserwatywnie). Używane wyłącznie przez
+  # backtest/run_cash_and_carry_c1.py; silnik Fazy 0 handluje tylko perpetualem i tego nie czyta.
+  spot_fee_rate: 0.001              # 0.10% za stronę (Binance Spot, VIP0)
   funding_rate_8h: 0.0001           # 0.01% / 8h — przybliżenie, brak jeszcze realnych danych funding
   slippage_bps: 2                   # 2 bps = 0.02%, stała wartość startowa
 
