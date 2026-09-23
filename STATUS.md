@@ -2258,6 +2258,21 @@ Trzy niezależne usterki, wszystkie mechaniczne:
      poprawki partii 1 zachowane): `clas5-runda` — „operacje git po stronie użytkownika”
      sprzeczne z „Podziałem ról” w `CLAUDE.md`; `quant-strategy-catalog` — historia danych 4h
      to 6,8 roku (od 2019-09), nie 3 lata (dwa miejsca).
+   - Partia 4 — **PRZYGOTOWANA 2026-09-23 (po A1), czeka na wgranie przez użytkownika**; paczki:
+     `Downloads/clas5-skille-2026-09-23-po-a1/{ta-toolkit,quant-strategy-catalog,clas5-quant}.skill`
+     (walidacja frontmatteru `skill-creator` OK; test przecieku nowej funkcji OK). Powód: po A1
+     skille twierdziły, że formacje świecowe są „nietknięte", a kryterium werdyktu ma jeden
+     warunek. `ta-toolkit` — status formacji ZMIERZONE-odrzucone (A1: 46,35 % [44,38; 48,31],
+     kierunek odwrotny; jako cecha 0), krok 7 workflow „nie odwracaj znaku po wyniku",
+     `compute_cdl_score_6` w `ta_features.py` (kopia kanonicznej z repo), częstości formacji na
+     realnych świecach; `quant-strategy-catalog` — rodzina A5 (klasyczna AT jako reguła) ze
+     statusem, overlay wykonania/zarządzania (W1/N1) jako nie-źródło edge'u, czwarty błąd
+     (odwrócenie znaku / podgrupa post hoc), `n` z częstości zdarzenia dla reguł; `clas5-quant` —
+     „Stan projektu" o zasadę 20, serie W/N/A, kryterium dwóch warunków (`t_neff` + `ci_low > p*`),
+     cap N_eff ≤ n (Poprawka 2), wzorce błędów 11–14 w `lessons-learned.md`, §3/§4/§6/§7
+     `methodology.md`, wykonanie i wyjścia wielonogowe w `risk-and-sizing.md` §4. `clas5-runda`
+     bez zmian (procedura aktualna). Do czasu wgrania obowiązują wersje z chmury (`CLAUDE.md`).
+     Weryfikacja po wgraniu: `diff -r` scratchpadu z `~/.claude/skills/synced/`.
 3. **Konfiguracja maszyny nie została ruszona.** Wtyczki `data` świadomie nie włączam: to plik
    poza repo, wyłączony celowo razem z sześcioma innymi, a działający na wszystkie projekty
    użytkownika. Rozwiązanie z punktu 1 jest odporniejsze — działa też w sesji chmurowej.
