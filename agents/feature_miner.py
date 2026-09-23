@@ -46,9 +46,7 @@ DEFAULT_CANDLES_PER_DAY = 288
 
 def compute_atr_14(df: pd.DataFrame) -> pd.Series:
     """Average True Range, Wilder smoothing, 14-period (TA-Lib)."""
-    atr = talib.ATR(
-        df["high"].values, df["low"].values, df["close"].values, timeperiod=14
-    )
+    atr = talib.ATR(df["high"].values, df["low"].values, df["close"].values, timeperiod=14)
     return pd.Series(atr, index=df.index, name="atr_14")
 
 
@@ -181,9 +179,7 @@ def compute_adx_14(df: pd.DataFrame) -> pd.Series:
     testu OOS: `backtest/evaluate_feature_candidate.py`,
     `runs/2026-09-21_c2.8-adx14-oos-evaluation/README.md`.
     """
-    adx = talib.ADX(
-        df["high"].values, df["low"].values, df["close"].values, timeperiod=14
-    )
+    adx = talib.ADX(df["high"].values, df["low"].values, df["close"].values, timeperiod=14)
     return pd.Series(adx, index=df.index, name="adx_14")
 
 
@@ -197,6 +193,41 @@ def compute_price_zscore_20(df: pd.DataFrame) -> pd.Series:
     roll = df["close"].rolling(window=20, min_periods=20)
     z = (df["close"] - roll.mean()) / roll.std()
     return z.rename("price_zscore_20")
+
+
+# ---------------------------------------------------------------------------
+# A1 (2026-09-23): formacje świecowe z podręcznika jako JEDEN wskaźnik
+# ---------------------------------------------------------------------------
+
+# Sześć formacji z materiału XTB (skill `ta-toolkit`, mapa CDL_MAP) — zestaw zapisany
+# w pre-rejestracji runs/2026-09-23_a1-formacje-swiecowe/README.md PRZED spojrzeniem na dane.
+# Doji świadomie poza listą: TA-Lib zwraca dla niego 100 = „formacja jest", bez kierunku,
+# więc jego włączenie zawyżałoby stronę long mechanicznie.
+CDL_SCORE_6_PATTERNS = (
+    "CDLENGULFING",  # objęcie: +100/+80 hossy, −100/−80 bessy
+    "CDLHAMMER",  # młot: +100
+    "CDLSHOOTINGSTAR",  # spadająca gwiazda: −100
+    "CDLMORNINGSTAR",  # gwiazda poranna: +100
+    "CDLEVENINGSTAR",  # gwiazda wieczorna: −100
+    "CDLRISEFALL3METHODS",  # trójka hossy +100 / bessy −100
+)
+
+
+def compute_cdl_score_6(df: pd.DataFrame) -> pd.Series:
+    """
+    Suma ZNAKÓW sześciu formacji świecowych TA-Lib: Σ_k sign(CDL_k(t)) ∈ {−6, …, +6}.
+
+    `sign` normalizuje wyjście TA-Lib do {−1, 0, +1} — TA-Lib 0.7.1 zwraca dla objęcia także
+    ±80 (wariant „słabszy"); SIŁA formacji nie wchodzi do wskaźnika (zero stopni swobody).
+    Każda funkcja CDL* liczy formację w świecy t wyłącznie z barów ≤ t (lookback TA-Lib),
+    więc cecha jest trailing z konstrukcji; test przecieku i tak obowiązuje
+    (agent_5_compliance/test_leakage.py, parametryzowany po FEATURE_FUNCTIONS).
+    """
+    o, h, low_, c = (df[k].to_numpy(dtype=float) for k in ("open", "high", "low", "close"))
+    score = np.zeros(len(df), dtype=float)
+    for name in CDL_SCORE_6_PATTERNS:
+        score += np.sign(getattr(talib, name)(o, h, low_, c))
+    return pd.Series(score, index=df.index, name="cdl_score_6")
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +245,7 @@ FEATURE_FUNCTIONS = {
     "rsi_14": compute_rsi_14,
     "price_zscore_20": compute_price_zscore_20,
     "adx_14": compute_adx_14,
+    "cdl_score_6": compute_cdl_score_6,
 }
 
 
@@ -240,9 +272,7 @@ def compute_all_features(
     out = df.copy()
     for name, fn in FEATURE_FUNCTIONS.items():
         out[name] = fn(df)
-    out["regime"] = classify_regime(
-        df, trend_threshold, range_threshold, candles_per_day
-    )
+    out["regime"] = classify_regime(df, trend_threshold, range_threshold, candles_per_day)
     return out
 
 
@@ -253,10 +283,6 @@ def split_by_regime(
     Filtruje do dwóch podzbiorów: (test1_trend_momentum, test2_range_reversion).
     Wymaga, żeby df_with_features miał już kolumnę 'regime' (patrz compute_all_features).
     """
-    test1 = df_with_features[df_with_features["regime"] == "trend"].reset_index(
-        drop=True
-    )
-    test2 = df_with_features[df_with_features["regime"] == "range"].reset_index(
-        drop=True
-    )
+    test1 = df_with_features[df_with_features["regime"] == "trend"].reset_index(drop=True)
+    test2 = df_with_features[df_with_features["regime"] == "range"].reset_index(drop=True)
     return test1, test2
