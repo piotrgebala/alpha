@@ -14,6 +14,7 @@ t_neff zwrotu BRUTTO ~ N(0, 1): średnia |·| < 0,5, odsetek |t| > 1,96 w granic
 wokół 5 % (przy 40 losowaniach: 0–5 z 40); zwrot NETTO ujemny (koszty). Kontrola czułości: t > 5.
 
     PYTHONUTF8=1 py -m backtest.run_negative_control_nc1
+    PYTHONUTF8=1 py -m backtest.run_negative_control_nc1 --x1-ogon 400   # dopisane po przebiegu
 """
 
 from __future__ import annotations
@@ -85,6 +86,37 @@ def one_seed(seed: int) -> dict:
     return out
 
 
+def x1_tail(n_seeds: int) -> None:
+    """Dopisane PO przebiegu (diagnostyka, bez zmiany kryterium): ogon rozkładu t silnika X1."""
+    t0 = time.time()
+    ts = []
+    for s in range(n_seeds):
+        r = synthetic_returns(N_DAYS, N_COINS, seed=s)
+        close = 100.0 * (1.0 + r).cumprod()
+        fund = pd.DataFrame(0.0, index=close.index, columns=close.columns)
+        start = close.index[120].normalize()
+        end = close.index[-1] + pd.Timedelta(days=1)
+        xs = long_short_returns(
+            close,
+            fund,
+            all_members(close, start, end),
+            rebalance_dates(close.index, start, end),
+            FEE,
+        )
+        ts.append(_t(xs["r_ls_gross"])[0])
+    t = np.array(ts)
+    print(SEP)
+    print(f"NC1 — OGON X1 brutto: {n_seeds} losowań (dopisane po przebiegu, diagnostyka)")
+    print(SEP)
+    print(f"  średnia t {t.mean():+.3f}, sd {t.std(ddof=1):.3f}")
+    for thr, p_norm in ((1.96, 0.05), (2.576, 0.01), (3.0, 0.0027)):
+        k = int((np.abs(t) > thr).sum())
+        print(
+            f"  |t| > {thr}: {k}/{n_seeds} = {100 * k / n_seeds:.2f}% (rozkład normalny: {100 * p_norm:.2f}%)"
+        )
+    print(f"  max |t| {np.abs(t).max():.2f}; czas {time.time() - t0:.0f}s")
+
+
 def main() -> None:
     t0 = time.time()
     rows = {}
@@ -114,4 +146,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if len(sys.argv) > 2 and sys.argv[1] == "--x1-ogon":
+        x1_tail(int(sys.argv[2]))
+    else:
+        main()
