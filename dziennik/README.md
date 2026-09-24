@@ -79,6 +79,23 @@ Decyzja użytkownika przy przenosinach pracy na serwer: „Tak, auto-commit i pu
 niczego nie commitował, więc wyniki leżały tylko na dysku komputera. Teraz po każdym udanym przebiegu
 pliki dziennika trafiają do gita (szczegóły w „Codziennie”). Reguły handlu i liczenia — bez zmian.
 
+## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
+
+Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
+Opis commita zawiera nazwę maszyny („Dziennik: przebieg RRRR-MM-DD (host)”), więc `git log --grep='^Dziennik:'`
+pokazuje, gdzie dziennik faktycznie liczy. **Nigdy w dwóch miejscach naraz** (te same dni dopisywane
+dwa razy, konflikt w `przebiegi.log`). Kolejność przejścia:
+1. Serwer (bez crona): `git clone https://github.com/piotrgebala/alpha.git ~/alpha-dziennik`,
+   `cd ~/alpha-dziennik && bash tools/setup_serwer.sh` (bez paczki danych — dziennik pobiera własne),
+   logowanie do GitHuba z prawem zapisu (`gh auth login` albo klucz SSH), test: `git push --dry-run origin master`.
+2. Komputer: zadanie „CLAS5 dziennik” wyłączone (`schtasks /change /tn "CLAS5 dziennik" /disable`) —
+   dopiero po kroku 1, tak by nie przepadł żaden dzień.
+3. Serwer: próbny przebieg `bash ~/alpha-dziennik/dziennik/uruchom.sh` (~12 min); w
+   `dziennik/ostatni_wydruk.txt` ma być „kod 0” i „zapis do gita: wypchnięte” albo „brak zmian”.
+4. Serwer: `crontab -e` → `30 2 * * * bash $HOME/alpha-dziennik/dziennik/uruchom.sh`.
+5. Kontrola następnego dnia: `git log -1 --format='%cs %s' --grep='^Dziennik:'` — nazwa serwera w nawiasie.
+Powrót na komputer: odwrotnie (usunąć wpis crona, `schtasks /change /tn "CLAS5 dziennik" /enable`).
+
 ## Codziennie
 
 ```

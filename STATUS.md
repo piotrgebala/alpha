@@ -151,7 +151,9 @@
 > `py -m pytest -q`, `/skills` (czy są skille konta), `git pull` przed każdą rundą. Preferencje użytkownika —
 > `docs/rag/10`. Dziennik zostaje na komputerze (Harmonogram 02:30, osobny klon `alpha-dziennik`, 3 próby co 30 min)
 > i od poprawki 5 sam commituje i wypycha wyniki (przegląd 16c: 10 znalezisk potwierdzonych, poprawione, testy);
-> przeniesienie dziennika na serwer (`dziennik/uruchom.sh` + cron) — decyzja użytkownika.
+> DZIENNIK → SERWER (2026-09-24, decyzja użytkownika): w toku — procedura 5 kroków w `dziennik/README.md`
+> („Przeniesienie na serwer”); komputer wyłączamy dopiero po przygotowaniu serwera; commit dziennika podaje
+> nazwę maszyny.
 > BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >

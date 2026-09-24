@@ -44,7 +44,7 @@ git add -- "${files[@]}" || { say "git add nieudany"; exit 1; }
 if git diff --cached --quiet -- "${files[@]}"; then
   say "brak zmian"
 else
-  git commit -q -m "Dziennik: przebieg $(date -u '+%F')" -- "${files[@]}" || { say "commit nieudany"; exit 1; }
+  git commit -q -m "Dziennik: przebieg $(date -u '+%F') ($(hostname))" -- "${files[@]}" || { say "commit nieudany"; exit 1; }
 fi
 
 git fetch -q origin master || { say "fetch nieudany — commit zostaje lokalnie"; exit 1; }
