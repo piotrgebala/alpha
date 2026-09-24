@@ -134,6 +134,12 @@
 > RU3 (start TR1/X2), X1 w dzienniku.**
 > RU3 (2026-09-24, decyzja użytkownika): start TR1/X2 od 2021-02 — TR1 +15,5 %/rok, t 1,99 (formalnie ponad 1,96,
 > znany z AU1, niesiony przez 02–04.2021; od 2022 t 1,32), X2 t 1,59 — obraz bez zmian (wniosek 88).**
+> X1F (2026-09-24): X1 jako średnia 7 dni tygodnia +9,5 %/rok, t 0,61 — dawne +42 % to najlepszy dzień;
+> X1 w dzienniku papierowym od 25.09 (osobno, decyzja użytkownika); poprawka filtra nazw dziennika (wniosek 89).
+> HARMONOGRAM (2026-09-24, prośba użytkownika): zadanie „CLAS5 dziennik” 02:30 — dodane nadrabianie terminu,
+> budzenie, bateria, 3 ponowienia; tryb bez logowania wymaga administratora (polecenie w `dziennik/README.md`).
+> SERIA SW (decyzja użytkownika 2026-09-24): cechy spoza wykresu — etap 1 pojedyncze reguły, etap 2 jeden model
+> XGBoost ze wszystkimi (okno 365 dni) jako JEDEN wariant = świadomy wyjątek od zasady 4.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny

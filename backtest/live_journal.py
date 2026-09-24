@@ -5,6 +5,10 @@ połączone regułą R1 (budżet ryzyka: cel 20 %/rok, sufit 2, bez hamulca). Re
 w `dziennik/README.md` (pre-rejestracja dziennika); silnik ten sam co w rundach
 (`ts_momentum.portfolio`, `run_coinbase_cp1.daily_premium/premium_signal`, `sizing.apply_rules`).
 
+Obok, OSOBNO i poza portfelem R1 (poprawka 3): X1 — momentum przekrojowe top-20 (nogi po 5, sygnał
+28 dni, trzymanie 7 dni) jako średnia 7 faz, kapitał 1 = 0,5 long + 0,5 short, bez dźwigni i likwidacji
+(jak w rundach X1/X1F); silnik `xs_momentum.long_short_returns`; zapis `x1_sygnaly.csv`, `x1_wyniki.csv`.
+
 Po co: sprawdzian MECHANIKI na 2–3 miesiące (czy sygnał liczy się na czas, czy dane są kompletne,
 czy wynik papierowy zgadza się z przeliczeniem), nie dowód przewagi (wniosek 80, `runs/INDEX.md`).
 
@@ -42,7 +46,15 @@ from backtest.ts_momentum import (
     portfolio,
     signal_sign,
 )
-from backtest.xs_momentum import daily_funding_panel
+from backtest.xs_momentum import (
+    CAPITAL_PER_LEG,
+    LEG_SIZE,
+    _month_of,
+    daily_funding_panel,
+    long_short_returns,
+    rank_legs,
+    signal_panel,
+)
 
 LIVE_DIR = Path("data/raw/live")
 JOURNAL_DIR = Path("dziennik")
@@ -51,6 +63,9 @@ JOURNAL_START = pd.Timestamp("2026-09-24", tz="UTC")  # pierwszy dzień wyniku (
 LEV_TREND, LEV_CB, MMR = 2.0, 3.0, 0.01
 WARN_DD = 0.184  # największe obsunięcie R1 w historii (SZ1 na pełnym uniwersum, RU1)
 STOP_DD = 0.276  # 1,5 × powyższe — reguła zapisana z góry (poprawka 2)
+X1_START = pd.Timestamp("2026-09-25", tz="UTC")  # pierwszy dzień wyniku X1 (poprawka 3)
+X1_WARN_DD = 0.550  # największe obsunięcie X1 (średnia 7 faz) w historii 2021–2026 (runda X1F)
+X1_STOP_DD = 0.825  # 1,5 × powyższe — ta sama reguła co dla R1, zapisana z góry (poprawka 3)
 BTC = "BTCUSDT"
 TOL = 1e-9
 
@@ -199,6 +214,70 @@ def positions(data: dict, as_of: pd.Timestamp, fee: float) -> tuple:
     return pos, k, hist, rets
 
 
+def x1_component(
+    close: pd.DataFrame,
+    funding: pd.DataFrame,
+    members: dict,
+    as_of: pd.Timestamp,
+    end: pd.Timestamp,
+    fee: float,
+) -> tuple[pd.Series, pd.DataFrame]:
+    """
+    X1 (poprawka 3): dzienny zwrot netto jako średnia 7 faz `long_short_returns` (fazy startują
+    w kolejne dni od `ENGINE_START`, wspólne okno) + nogi ostatniego formowania każdej fazy (≤ `as_of`)
+    w jednostkach kapitału X1 (±0,5/5 na monetę, / 7 faz).
+    """
+    signal = signal_panel(close)
+    month_starts = sorted(members)
+    series, rows = [], []
+    for ph in range(PHASES):
+        dates = formation_dates(close.index, ENGINE_START, end, ph)
+        out = long_short_returns(close, funding, members, dates, fee)
+        if len(out):
+            series.append(out.set_index("date")["r_net"].rename(ph))
+        past = [t for t in dates if t <= as_of]
+        if not past:
+            continue
+        t = past[-1]
+        m = _month_of(t, month_starts)
+        legs = rank_legs(signal.loc[t], members[m]) if m is not None else None
+        if legs is None:
+            continue
+        for sign, syms in ((1, legs[0]), (-1, legs[1])):
+            for sym in syms:
+                rows.append(
+                    {
+                        "phase": ph,
+                        "formed": t.date().isoformat(),
+                        "today": t == as_of,
+                        "symbol": sym,
+                        "sign": sign,
+                        "weight": sign * CAPITAL_PER_LEG / LEG_SIZE / PHASES,
+                    }
+                )
+    pos = pd.DataFrame(rows, columns=["phase", "formed", "today", "symbol", "sign", "weight"])
+    if len(series) < PHASES:
+        return pd.Series(dtype=float, name="x1"), pos
+    panel = pd.concat(series, axis=1)
+    panel = panel[panel.index >= max(s.first_valid_index() for _, s in panel.items())]
+    return panel.mean(axis=1).rename("x1"), pos
+
+
+def x1_rows(r: pd.Series, start: pd.Timestamp | None = None) -> pd.DataFrame:
+    """Wynik papierowy X1 od `start` (domyślnie `X1_START`): zwrot, kapitał, obsunięcie."""
+    s = r[r.index >= (X1_START if start is None else start)]
+    eq = np.cumprod(1.0 + s.to_numpy())
+    dd = 1.0 - eq / np.maximum.accumulate(np.maximum(eq, 1.0)) if len(s) else eq
+    return pd.DataFrame(
+        {
+            "date": [d.date().isoformat() for d in s.index],
+            "r_x1": s.to_numpy(),
+            "equity": eq,
+            "drawdown": dd,
+        }
+    )
+
+
 # ------------------------------------------------------------------ zapis
 def journal_rows(
     hist: pd.DataFrame, rets: pd.DataFrame, start: pd.Timestamp | None = None
@@ -266,10 +345,10 @@ def append_rows(
     return len(add), changed
 
 
-def stop_status(drawdown: float) -> str:
-    if drawdown >= STOP_DD:
+def stop_status(drawdown: float, warn: float = WARN_DD, stop: float = STOP_DD) -> str:
+    if drawdown >= stop:
         return "STOP"
-    if drawdown >= WARN_DD:
+    if drawdown >= warn:
         return "OSTRZEŻENIE"
     return "OK"
 
@@ -317,16 +396,28 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         ["date"],
         ["r_trend", "r_coinbase", "r_port", "k_trend", "k_coinbase"],
     )
+    # X1 osobno: jego błąd nie może zatrzymać dziennika głównego (kompletność liczona z logu)
+    try:
+        n_sig_x1, n_res_x1, ch_x1, eq_x1, dd_x1, pos_x1 = run_x1(data, as_of, fee, journal_dir)
+        status_x1 = stop_status(dd_x1, X1_WARN_DD, X1_STOP_DD)
+        text_x1 = summarize_x1(pos_x1, eq_x1, dd_x1, status_x1)
+    except Exception as exc:  # noqa: BLE001 — zapis błędu zamiast przerwania przebiegu
+        n_sig_x1 = n_res_x1 = 0
+        ch_x1, eq_x1, dd_x1 = [], float("nan"), float("nan")
+        status_x1 = f"BŁĄD {type(exc).__name__}: {str(exc)[:120]}"
+        text_x1 = f"  X1: {status_x1} (dziennik główny zapisany normalnie)"
     dd = float(res["drawdown"].iloc[-1]) if len(res) else 0.0
     eq = float(res["equity"].iloc[-1]) if len(res) else 1.0
     status = stop_status(dd)
+    changed = ch_sig + ch_res + ch_x1
     late = (started.normalize() - as_of).days > 1
-    summary = summarize(pos, k, as_of, eq, dd, status, late, ch_sig + ch_res, last)
+    summary = summarize(pos, k, as_of, eq, dd, status, late, changed, last) + "\n" + text_x1
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
         f"premia {last['coinbase_premia'].date()} | sygnały +{n_sig} | wyniki +{n_res} | "
         f"kapitał {eq:.4f} | obsunięcie {100 * dd:.1f}% | {status} | "
-        f"historia zmieniona: {len(ch_sig) + len(ch_res)}\n"
+        f"X1 sygnały +{n_sig_x1} wyniki +{n_res_x1} kapitał {eq_x1:.4f} "
+        f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | historia zmieniona: {len(changed)}\n"
     )
     journal_dir.mkdir(parents=True, exist_ok=True)
     with open(journal_dir / "przebiegi.log", "a", encoding="utf-8") as f:
@@ -364,6 +455,51 @@ def summarize(pos, k, as_of, eq, dd, status, late, changed, last) -> str:
                     for r in today.sort_values("exposure").itertuples()
                 )
             )
+    return "\n".join(lines)
+
+
+def run_x1(data: dict, as_of: pd.Timestamp, fee: float, journal_dir: Path) -> tuple:
+    """Pozycje i wynik X1 do `as_of` + zapis `x1_sygnaly.csv` / `x1_wyniki.csv` (append-only)."""
+    d = truncate(data, as_of)
+    r_x1, pos_x1 = x1_component(
+        d["close"],
+        d["funding"],
+        monthly_members(d["volume"], _months(as_of)),
+        as_of,
+        as_of + pd.Timedelta(days=1),
+        fee,
+    )
+    pos_x1.insert(0, "as_of", as_of.date().isoformat())
+    res_x1 = x1_rows(r_x1)
+    n_sig, ch_sig = append_rows(
+        journal_dir / "x1_sygnaly.csv", pos_x1, ["as_of", "phase", "symbol"], ["sign", "weight"]
+    )
+    n_res, ch_res = append_rows(journal_dir / "x1_wyniki.csv", res_x1, ["date"], ["r_x1"])
+    dd = float(res_x1["drawdown"].iloc[-1]) if len(res_x1) else 0.0
+    eq = float(res_x1["equity"].iloc[-1]) if len(res_x1) else 1.0
+    return n_sig, n_res, ch_sig + ch_res, eq, dd, pos_x1
+
+
+def summarize_x1(pos: pd.DataFrame, eq: float, dd: float, status: str) -> str:
+    lines = [
+        f"  X1 (papierowo, osobno, poza R1; od {X1_START.date()}): kapitał {eq:.4f} ({100 * (eq - 1):+.2f} %), "
+        f"obsunięcie {100 * dd:.1f} % → {status} (ostrzeżenie od {100 * X1_WARN_DD:.1f} %, "
+        f"STOP od {100 * X1_STOP_DD:.1f} %)",
+    ]
+    agg = pos.groupby("symbol")["weight"].sum()
+    lines.append(
+        f"    ekspozycja netto {agg.sum():+.2f}× kapitału X1, brutto {agg.abs().sum():.2f}× "
+        f"(fazy po skompensowaniu; bez dźwigni, jak w backteście)"
+    )
+    today = pos[pos["today"]]
+    if len(today):
+        lines.append(
+            f"    dziś formowana faza {int(today['phase'].iloc[0])}: "
+            + ", ".join(
+                f"{'LONG' if r.sign > 0 else 'SHORT'} {r.symbol} {100 * abs(r.weight):.1f}%"
+                for r in today.sort_values(["sign", "symbol"], ascending=[False, True]).itertuples()
+            )
+        )
     return "\n".join(lines)
 
 

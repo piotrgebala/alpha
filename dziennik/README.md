@@ -45,6 +45,34 @@ od początku ma pełne dane, więc **reguły się nie zmieniają**. Progi liczon
 regułą (ostrzeżenie = największe obsunięcie R1 w historii, STOP = 1,5 × to) z poprawionego backtestu:
 **ostrzeżenie 18,4 % (było 17,7 %), STOP 27,6 % (było 26,5 %)**.
 
+## Poprawka 3 (2026-09-24, ok. 17:00 UTC — X1 osobno, przed pierwszym wynikiem X1)
+
+Decyzja użytkownika (2026-09-24, po audycie AU1): **X1 jako osobna reguła papierowa**, poza portfelem R1.
+Reguły trendu i premii Coinbase oraz portfel R1 — **bez zmian**.
+
+| reguła | sygnał i skład | kapitał | start wyniku | progi |
+|---|---|---|---|---|
+| X1 — momentum przekrojowe (wnioski 64, 68, 89) | koszyk top-20 jak w trendzie; zwrot 28 dni; long 5 najmocniejszych, short 5 najsłabszych; trzymanie 7 dni; **7 faz** (siedem kopii startujących w kolejne dni tygodnia, każda z 1/7 kapitału) | 1 = 0,5 long + 0,5 short, wagi równe w nodze, bez dźwigni i bez likwidacji (jak w backteście) | **2026-09-25** | ostrzeżenie **55,0 %**, STOP **82,5 %** |
+
+- Dlaczego 7 faz: w wersji z jednym dniem wynik zależał od dnia tygodnia (poniedziałek +41,7 %/rok,
+  pozostałe dni od −1 do +22 %; runda X1F). Średnia 7 faz na historii: +9,5 %/rok, t 0,61 — słaby ślad.
+- Dlaczego start 25.09, a nie 24.09: reguła zapisana ok. 17:00 UTC 24.09, czyli w trakcie dnia; pierwszy
+  cały dzień ogłoszony przed wynikiem to 25.09.
+- Progi tą samą regułą co R1: ostrzeżenie = największe obsunięcie średniej 7 faz w historii 2021–2026
+  (55,0 %, 04.2025 → 03.2026), STOP = 1,5 × (82,5 %). Decyzja przy STOP należy do użytkownika.
+- Silnik: `xs_momentum.long_short_returns` (ten sam co w rundach X1/X1F), `live_journal.x1_component`.
+- Zapis: `x1_sygnaly.csv` (nogi ostatniego formowania każdej fazy, wagi ±0,5/5/7), `x1_wyniki.csv`
+  (zwrot, kapitał, obsunięcie) — append-only jak reszta; linia X1 w `przebiegi.log`.
+
+## Poprawka 4 (2026-09-24, ok. 17:00 UTC — przed pierwszym wynikiem): monety z nazwą spoza ASCII
+
+Sprawdzian X1 (dziennik vs backtest, 258 dni) wykrył, że filtr nazw symboli `[A-Z0-9]{1,40}USDT`
+(przegląd bezpieczeństwa) po cichu odrzucał kontrakty z nazwą w innym alfabecie — `币安人生USDT` był
+w koszyku top-20 w 2026-05. Reguła mówi „top-20 po obrocie”, więc to usterka wykonania, nie reguła.
+Filtr dopuszcza teraz litery spoza ASCII (`(?:[A-Z0-9]|(?![\x00-\x7f])\w){1,40}USDT`); nadal odrzuca
+kropki, ukośniki, dwukropki, spacje, znaki sterujące i małe litery ASCII (test
+`test_symbol_names_are_safe_for_file_paths`). Wynik papierowy nie miał jeszcze żadnego wiersza.
+
 ## Codziennie
 
 ```
@@ -54,6 +82,22 @@ PYTHONUTF8=1 py -m backtest.live_journal
 Najlepiej zaraz po zamknięciu dnia UTC (od 02:00 czasu polskiego latem, od 01:00 zimą); pobranie trwa ~10 min.
 Wydruk mówi: mnożniki R1, wynik od startu, obsunięcie i status progów, ekspozycję i depozyt każdej
 składowej oraz zlecenia fazy formowanej dziś (kierunek i nominał jako % kapitału).
+
+**Automat (Harmonogram zadań Windows, zadanie „CLAS5 dziennik”):** codziennie 02:30 czasu lokalnego
+uruchamia `dziennik/uruchom.bat` (wydruk dopisywany do `dziennik/ostatni_wydruk.txt` ze znacznikiem
+startu, końca i kodem wyjścia). Ustawienia (2026-09-24): start przy najbliższej okazji, gdy termin
+przepadł (komputer wyłączony); budzenie komputera; praca na baterii; limit 2 h; przy błędzie do 3 ponowień
+co 30 min; jedna instancja naraz. Przebieg jest idempotentny — ponowienie tego samego dnia nic nie dubluje.
+- **Ograniczenie:** zadanie działa, gdy użytkownik jest zalogowany (także przy zablokowanym ekranie).
+  Po restarcie bez logowania ruszy dopiero po zalogowaniu. Tryb „bez logowania” wymaga administratora —
+  jednorazowo w PowerShell uruchomionym jako administrator:
+  `Set-ScheduledTask -TaskName "CLAS5 dziennik" -Principal (New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType S4U -RunLevel Limited)`
+- **Dzień przegapiony w całości** (komputer wyłączony przez dobę) zostaje pusty w `sygnaly.csv` — sygnału nie
+  dopisuje się po fakcie; liczy się do kryterium kompletności (≥ 95 % dni).
+- Sprawdzenie: `Get-ScheduledTaskInfo -TaskName "CLAS5 dziennik"` (ostatni start, wynik, następny start);
+  wyłączenie: `schtasks /delete /tn "CLAS5 dziennik" /f`.
+- Pliki `sygnaly.csv`, `wyniki.csv`, `x1_*.csv`, `przebiegi.log` zmieniają się w katalogu roboczym repo —
+  commit robi Claude przy najbliższej pracy na `master` (automat niczego nie commituje).
 
 ## Co zapisujemy (append-only, w gicie)
 
@@ -109,3 +153,9 @@ składowej oraz zlecenia fazy formowanej dziś (kierunek i nominał jako % kapit
   (w backteście zostawała do końca notowań).
 - Wynik zakłada wykonanie po cenie zamknięcia dnia; realne zlecenie złożone kilka godzin później
   będzie miało inną cenę — to jeden z celów sprawdzianu mechaniki.
+- **X1 bez likwidacji** (jak w backteście): nominał = kapitał, strata na jednej monecie nieograniczona
+  depozytem. Przy dźwigni izolowanej 3× skok monety w nodze short o +33 % kończy się likwidacją, więc
+  realna strata byłaby MNIEJSZA niż papierowa (np. MYX 7–8.09.2025: −44 pkt w średniej 7 faz).
+- **Skład koszyka a monety wycofane:** dziennik liczy rozbieg z aktywnych dziś kontraktów, więc moneta
+  wycofana później znika z historii (X1F: 2 z 3 różnic składu na 258 dniach — IPUSDT, TONUSDT). X1 jest
+  na to wrażliwszy niż trend: trzy zamiany po jednej monecie przesunęły sumę o ~10 pkt w 258 dniach.
