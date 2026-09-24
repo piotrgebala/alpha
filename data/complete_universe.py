@@ -51,7 +51,7 @@ def _klines_job(sym: str, cache_dir: Path) -> tuple[str, int]:
     return sym, len(kl)
 
 
-def run(cache_dir: str) -> None:
+def run(cache_dir: str, top_n: int = 20) -> None:
     from backtest.rebalance_premium import load_universe, monthly_members
 
     d = Path(cache_dir)
@@ -67,11 +67,12 @@ def run(cache_dir: str) -> None:
     lo, end = pd.Timestamp("2021-01-01", tz="UTC"), pd.Timestamp(END, tz="UTC")
     volume = volume[(volume.index >= lo) & (volume.index < end)]
     months = [m for m in pd.date_range("2021-02-01", END[:10], freq="MS", tz="UTC") if m < end]
-    members = monthly_members(volume, months)
+    members = monthly_members(volume, months, top_n=top_n)
     need = sorted({s for v in members.values() for s in v} | {"BTCUSDT"})
     todo = [s for s in need if not cache_paths(d, s)[0].exists()]
     print(
-        f"[uzup] członkowie top-20 2021–2026: {len(need)}, brak fundingu: {len(todo)}", flush=True
+        f"[uzup] członkowie top-{top_n} 2021–2026: {len(need)}, brak fundingu: {len(todo)}",
+        flush=True,
     )
     for sym in todo:
         fu = fetch_funding_raw(ex, sym, _ms(START), _ms(END), FUNDING_PACING_S)
@@ -84,4 +85,4 @@ def run(cache_dir: str) -> None:
 
 
 if __name__ == "__main__":
-    run(sys.argv[1])
+    run(sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else 20)
