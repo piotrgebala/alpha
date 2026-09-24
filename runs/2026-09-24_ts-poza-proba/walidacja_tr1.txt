@@ -1,0 +1,3 @@
+(1) TR1 faza 0 niezależnie: +12.54%/rok; silnik: +12.54%/rok
+(2) wspólne monety TR1 ∩ top-20 łącznie po miesiącach: 0 (oczekiwane 0)
+(3) korelacja dzienna TR1 z TS1 (ten sam okres od 2021-05, top-20): +0.86 na 1880 dniach; TS1 w tym okresie +12.1%/rok; różnica TR1 − TS1 +2.0%/rok

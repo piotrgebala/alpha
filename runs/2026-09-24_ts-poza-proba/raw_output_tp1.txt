@@ -1,0 +1,11 @@
+========================================================================================================
+TP1 — REGUŁA TS1 (zamrożona) NA NOWYCH DANYCH 2026-07-01 → 2026-09-23 (top-20, 7 faz)
+========================================================================================================
+  dane: 653 symboli, 2025-06-01 → 2026-09-23 (rozbieg σ̂ i sygnału przed 2026-07-01); składy: 2026-07-01: 1000PEPE, ADA, BEAT, BNB, BTC, DOGE, ENA, ETH, H, HYPE, LAB, NEAR, SOL, SUI, SYN, VELVET, WLD, XLM, XRP, ZEC; 2026-08-01: 1000PEPE, ADA, AKE, BANK, BNB, BTC, DEXE, DOGE, ESPORTS, ETH, EVAA, HYPE, LAB, NEAR, SOL, SUI, TLM, WLD, XRP, ZEC; 2026-09-01: 1000PEPE, ACE, ADA, AKE, BNB, BTC, BTW, CYS, DOGE, ENA, ETH, HYPE, LINK, PUMP, SOL, SUI, TRUMP, TUT, XRP, ZEC
+  dni ze wszystkimi fazami: 78 (2026-07-08 → 2026-09-23); zwrot netto skumulowany +0.69% (brutto +1.26%, funding -0.04%, koszt 0.23%)
+  średnia roczna +4.6%/rok; zmienność zrealizowana 17.0%/rok; nominał netto średnio +0.12×
+  PRÓG OBALENIA (z góry): przy prawdziwym +14.8%/rok i zmienności 19.6%/rok średnia z 78 dni poniżej -68.3%/rok zdarza się w < 2,5% przypadków
+  >>> ODCZYT TP1 (opisowy): brak obalenia (i brak potwierdzenia)
+  7 faz (skumulowane netto): +6.9%, +8.4%, -2.1%, -2.3%, -4.4%, -0.6%, -0.9%
+========================================================================================================
+czas: 3s
