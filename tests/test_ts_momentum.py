@@ -138,3 +138,13 @@ def test_shift_signs_preserves_cross_section_and_rolls_time():
     sh = tm.shift_signs(s, 14)
     np.testing.assert_array_equal(sh.iloc[40].to_numpy(), s.iloc[26].to_numpy())
     np.testing.assert_array_equal(sh.iloc[5].to_numpy(), s.iloc[-9].to_numpy())
+
+
+def test_members_rank_band_excludes_top():
+    from backtest.run_ts_momentum_oos import members_rank_band
+
+    idx = pd.date_range("2021-01-01", periods=60, freq="D", tz="UTC")
+    vol = pd.DataFrame({f"C{i}USDT": float(100 - i) for i in range(60)}, index=idx)
+    m = pd.Timestamp("2021-02-15", tz="UTC")
+    band = members_rank_band(vol, [m], lo=5, hi=12)[m]
+    assert band == sorted(f"C{i}USDT" for i in range(5, 12))
