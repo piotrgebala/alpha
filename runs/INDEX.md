@@ -1,5 +1,47 @@
 # runs/ — spis treści
 
+## Stan wiedzy — skrót (czytaj najpierw; stan na 2026-09-24)
+
+Krótka mapa dla kogoś, kto wchodzi do projektu. Pełne liczby i uzasadnienia: tabela niżej
+i „Wnioski skumulowane” (numery w nawiasach). Aktualizuj, gdy runda zmienia obraz — nie przy
+każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
+
+**Zamknięte — nie wracać bez NOWEJ informacji:**
+- Przewidywanie kierunku BTC modelem na świecach 5m / 1h / 4h / 1d: trafność ~50 % na dużych
+  próbach — dowód braku, nie brak dowodu (Faza 0, M1, F1, Y1/Y2; wnioski 12, 39, 69).
+- Klasyczna analiza techniczna na BTC 4h — 7 rodzin (48–53). Wykonanie i zarządzanie pozycją nie
+  tworzą przewagi (42–45).
+- Pozycjonowanie (OI, funding, L/S) jako zapowiedź kierunku — 4 formy bez skutku (O1, F1, TF1, TL1; 66, 73, 75).
+- Carry przekrojowy (niemierzalny), przełączanie carry po znaku, premia rebalansowa, short nowych
+  listingów (40, 55, 57, 71). Carry z hedgem działa (COIN-M ~+9 %/rok, 61), ale to nie cel
+  użytkownika (zwroty rzędu zakładu o kierunek).
+- Skalowanie pozycji siłą sygnału — niemierzalne na 5 latach (78).
+
+**Kandydaci — ślady, nie dowody (każdy wybrany spośród ~30 odczytów na tej samej historii):**
+- Premia Coinbase → BTC na tydzień (CP1): jedyny POZYTYWNY, ~+32 %/rok, t 2,09; poza próbą
+  (lip–wrz 2026) bez potwierdzenia (72). Replikacja na ETH/SOL: CP2.
+- Trend tygodniowy na koszyku top-20 (TS1): ~+15 %/rok [−2; +31], przetrwał dwa sprawdziany poza
+  próbą, nadal nieistotny (70, 74). Momentum przekrojowe top-20 (X1): ~+22 %/rok,
+  nierozstrzygnięte, wrażliwe na dzień rebalansu (64, 68).
+
+**Ryzyko i wielkość pozycji (opisowo, na historii):**
+- Dźwignia 3× na altach kosztuje trend ~3,6 pkt/rok w likwidacjach, 2× ~1,6 pkt (76).
+- Trend + premia Coinbase razem: ~+19 %/rok, największy spadek ~19 %, depozyt ~23 % kapitału;
+  hamulec „pół pozycji po −15 %” szkodzi (77).
+
+**Przyrząd — dlaczego ufamy liczbom:**
+- Kontrola pozytywna K1 (przyrząd widzi znany sygnał) i negatywna NC1 (silniki TS1 / X1 / CP1
+  nie wymyślają zysku z szumu o grubych ogonach) (79).
+- Werdykt ma dwa warunki: zwrot netto t_neff > 1,96 i — przy regułach z trafnością — dolny
+  kraniec trafności nad progiem (43); N_eff ≤ n (50); rachunek mocy przed rundą (zasada 18).
+- Większość serii zamknięta regułą STOP: kolejne odczyty na tej samej historii tylko zwiększają
+  szansę przypadkowego sukcesu. Rozstrzygnąć może test prospektywny (dziennik na żywo).
+
+**Otwarte:** CP2 (premia Coinbase na ETH/SOL); dziennik prospektywny trend + Coinbase; nowe
+źródła popytu (premia koreańska, emisja stablecoinów, przepływy ETF) — każde z rachunkiem mocy.
+
+## Konwencja katalogów
+
 Katalog na surowy output ciężkich obliczeń (kalibracje, sweepy, testy odporności na realnych
 danych). **Konwencja od 2026-09-22 (CLAUDE.md zasada 11): każdy run ma WŁASNY KATALOG**
 `runs/YYYY-MM-DD_<id>-<slug>/` zawierający:
@@ -77,6 +119,7 @@ podsumowanie pod tabelą.
 | **LQ1** | 2026-09-24 | [lq1-likwidacje](2026-09-24_lq1-likwidacje/README.md) | **POPRAWKA TS1: likwidacja izolowana przy 3×** (depozyt = ekspozycja/3, próg 1/3 − 1 %, dzienne high/low z archiwum — nowy kolektor `data/fetch_universe_ohlc.py`); 0 wariantów | **Koszt likwidacji −3,6 %/rok [−5,8; −1,4], t −3,16;** TS1 z likwidacją +11,3 %/rok [−5,3; +27,8], t 1,34 — NIEROZSTRZYGNIĘTY; 4,75 % pozycji-tygodni likwidowanych; opisowo 2× +13,2 %/rok. Walidacja: **READY** |
 | **SZ1** | 2026-09-24 | [sz1-wielkosc-pozycji](2026-09-24_sz1-wielkosc-pozycji/README.md) | **Reguły wielkości pozycji (opisowo, 0 wariantów przewagi)** dla portfela trend (likwidacja 2×) + premia Coinbase (3×): R0 po połowie, R1 budżet ryzyka (1/σ, cel 20 %, sufit 2), R2 = R1 + hamulec 15 %/7,5 %; pre-rejestracja `a635c8c` | Korelacja składowych 0,30; **R0 +19,9 %/rok, obsunięcie 18,9 %; R1 +18,6 % / 17,7 %; R2 +10,3 % / 17,7 % (hamulec 36 % czasu — szkodzi)**; depozyt ~23 % kapitału. Składowe in-sample. Walidacja: **READY (Caveats)** |
 | **SC1** | 2026-09-24 | [sc1-sila-sygnalu](2026-09-24_sc1-sila-sygnalu/README.md) | Wielkość pozycji ∝ sile sygnału (trend, premia Coinbase), ekspozycja wyrównana stałą z sygnałów; kryterium różnica parowana z wersją znakową (m = 2) | **NIEMIERZALNA — nie wystartowała (zasada 18):** half-width różnicy ±13,2 %/rok (trend), ±16,7 %/rok (Coinbase) wobec oczekiwanego efektu kilku %/rok. 0 wariantów |
+| **NC1** | 2026-09-24 | [nc1-kontrola-negatywna](2026-09-24_nc1-kontrola-negatywna/README.md) | **Kontrola NEGATYWNA silników dziennych** (wytyczna SIGMA 2): TS1, X1, reguła znaku CP1 na 40 losowaniach danych bez informacji o przyszłości (t-Student df 3, GARCH, ρ 0,5, 20 monet × 2 000 dni) + kontrola czułości (celowe zajrzenie w przyszły tydzień); pre-rejestracja `433505a` | **0 — POZA licznikami** (kalibracja przyrządu) | **ZALICZONA:** brutto średnie t −0,12 / +0,17 / −0,20, fałszywe alarmy 4/120 = 3,3 % [1,3; 8,3]; netto ≤ brutto; czułość t +13…+30 w 40/40. Ogon X1 (dopisane po przebiegu): 20/400 = 5,00 % przy \|t\| > 1,96 — kalibracja poprawna. Walidacja: **READY** (niezależne przeliczenie X1, korelacja 0,998) |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -111,7 +154,7 @@ podsumowanie pod tabelą.
 - **Analiza produktu carry (D1, 2026-09-23) — POZA licznikami: 0 wariantów reguł.** Siatka depozytu = zakres inżynierski (raportowany w całości); COIN-M i basis kwartalny = ta sama reguła „zawsze w pozycji" na innym instrumencie (generalizacja C1a, jak zasada 9), nie warianty serii C (STOP dla reguł bez zmian).
 - **Sonda źródeł II + podłączenie (P3, 2026-09-23) — POZA licznikami: 0 wariantów.** Pobranie i profil 13 zbiorów, zero korelacji ze zwrotem. Każda hipoteza na nowych danych (O1 pozycjonowanie, VRP z DVOL, on-chain, F&G, premia Coinbase, basis/COIN-M) = NOWA SERIA z własnym licznikiem.
 - **Sonda wykonalnosci carry przekrojowego (P2) — POZA licznikami: 0 wariantow.** Liczy tylko mechanizm (funding − koszt) i rozrzut do rachunku mocy; srednia zwrotu z cen i P&L NIE policzone. Werdykt NIEMIERZALNA ⇒ hipoteza C (carry przekrojowy na perpetualach) NIE dostaje licznika.
-- **Kalibracja przyrzadu (Z9, Z19, K1, K2, K3, T4) — POZA licznikami hipotez: 0 wariantow.** Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
+- **Kalibracja przyrzadu (Z9, Z19, K1, K2, K3, T4, NC1) — POZA licznikami hipotez: 0 wariantow.** Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
 - **Model kosztow / wykonanie — POZA licznikami hipotez: 0 wariantow.** C2.12 policzono jako **1 wariant**, bo raportowal werdykt klasyfikacyjny na tych samych danych. H3 **nie** — pre-rejestracja (regula D5) zakazala raportowania trafnosci, CI, z_stat, marginesu i klasyfikacji jako wyniku; liczby te sa w `raw_output.txt` z jawna adnotacja, ze nie uczestnicza w decyzji. Uzasadnienie mechaniczne: koszt moze ruszyc trafnosc WYLACZNIE przez selekcje (inny moment kill-switcha), czyli bylby to szum selekcyjny.
 - **NOWA SERIA W — wykonanie po konkretnej cenie (od W1, 2026-09-23): 3/3 ZUŻYTE — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Licznik od zera (decyzja użytkownika: zasada obowiązująca też na żywo). Trzy reguły wejścia z werdyktem na tych samych danych = 3 warianty (precedens C2.12). Kontrola w trybie `label` za **0** (odtworzyła ramię A z M1/F1 co do sztuki), część kalibracyjna 5m vs 4h i wrażliwość na czas ważności k = 2, 3 za **0** (bez werdyktów, reguła H3/D5). Wynik: W1a NEGATYWNY, W1b NIEROZSTRZYGNIĘTY wg kryterium trafności przy istotnie ujemnym zwrocie netto (t = −3,90), W1c NEGATYWNY. Żadnej kolejnej reguły wejścia, cofnięcia ani czasu ważności.
 - **NOWA BAZA DANYCH od N1 (2026-09-23): 2021-01-01 → 2026-06-30 (CLAUDE.md zasada 20).** Wszystkie liczniki poniżej i wyżej dotyczą baz WCZEŚNIEJSZYCH; wyniki na nowej bazie (od N1) nie porównują się 1:1 z żadną wcześniejszą rundą. Kontrola N1 na nowej bazie: p 49,58 % [48,39; 50,77], zwrot netto −0,107 % — liczby odniesienia dla przyszłych rund (0 wariantów).
@@ -737,6 +780,12 @@ podsumowanie pod tabelą.
     między sygnałami samo generuje zmienność; realistyczna poprawa (kilka %/rok) byłaby niewidoczna.
     Rachunek mocy przed obejrzeniem wyniku oszczędził kolejnego odczytu na tych samych danych;
     zostaje prostsza reguła znaku (bez koncentracji ryzyka w skrajnych sygnałach).
+79. **SILNIKI DZIENNE NIE WYMYŚLAJĄ ZYSKU Z SZUMU — KONTROLA NEGATYWNA ZALICZONA (NC1, 2026-09-24).**
+    TS1, X1 i reguła znaku CP1 na 40 losowaniach cen bez informacji o przyszłości (grube ogony,
+    GARCH, czynnik rynkowy): t brutto ≈ 0, fałszywe alarmy 3,3 % [1,3; 8,3]; ten sam silnik z celowym
+    zajrzeniem w przyszłość: t ≥ 13 w 40/40. Dodatnie wyniki TS1/CP1 nie są artefaktem kodu (co nie
+    czyni ich dowodem). Ogon X1 na 400 losowaniach: dokładnie 5,00 % |t| > 1,96, ale jedno t = 3,62
+    — pojedyncze t ≈ 3 na 5,5 roku bywa przypadkiem (~1 na 300–400 przebiegów szumu).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

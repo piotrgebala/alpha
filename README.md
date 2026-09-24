@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **828/828** (2026-09-24).
+Stan testów: **850/850** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -356,6 +356,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **LQ1 — trend z likwidacją przy 3×: koszt 3,6 pkt/rok** | 2026-09-24 | Przy 3× na każdej pozycji z osobnym depozytem co ~20. pozycja tygodniowa jest likwidowana; trend spada z +14,8 do **+11,3 %/rok**. Przy 2× koszt ok. 1,6 pkt. | [lq1-likwidacje](runs/2026-09-24_lq1-likwidacje/README.md) |
 | **SZ1 — wielkość pozycji: razem lepiej, hamulec szkodzi** | 2026-09-24 | Trend + premia Coinbase po połowie: **~+19 %/rok, największy spadek ~19 %**, depozyt ~23 % kapitału (historia, strategie wybrane na tych danych). Hamulec „pół pozycji po −15 %” obciął zysk do +10 %. | [sz1-wielkosc-pozycji](runs/2026-09-24_sz1-wielkosc-pozycji/README.md) |
 | **SC1 — pozycja według siły sygnału: nie da się zmierzyć** | 2026-09-24 | Rachunek mocy przed wynikiem: szum ±13–17 %/rok przy oczekiwanym efekcie kilku %/rok — test nie wystartował (zasada 18). Zostaje prosta reguła znaku. | [sc1-sila-sygnalu](runs/2026-09-24_sc1-sila-sygnalu/README.md) |
+| **NC1 — kontrola negatywna: narzędzia nie oszukują** | 2026-09-24 | Na sztucznych cenach bez żadnej przewidywalności trend, momentum i reguła premii Coinbase dały zero; ten sam silnik z celowym „podglądaniem przyszłości” od razu pokazał ogromny zysk. Dodatnie wyniki nie są błędem kodu (co nie czyni ich dowodem). | [nc1-kontrola-negatywna](runs/2026-09-24_nc1-kontrola-negatywna/README.md) |
 
 ## Hipoteza w skrócie
 

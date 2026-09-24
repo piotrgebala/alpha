@@ -26,6 +26,8 @@
 | [`05_metodologia_wytwarzania_i_testow.md`](rag/05_metodologia_wytwarzania_i_testow.md) | Piramida testów (unit/leakage/property-based/integration/walk-forward) i Definition of Done per commit |
 | [`06_llm_nadzorczy_i_baza_wiedzy.md`](rag/06_llm_nadzorczy_i_baza_wiedzy.md) | Projekt trzech komponentów LLM offline/nadzorczo (`ai_interpreter`, `post_trade_critic`, `test_mathematics`) i `docs/rag/` jako baza wiedzy |
 | [`07_notatki_spotkania_i_szersza_wizja_systemu.md`](rag/07_notatki_spotkania_i_szersza_wizja_systemu.md) | Analiza rozbieżności między notatkami ze spotkania (pełny zakres PRD, zespoły z terminami) a dyscypliną Fazy 0 — otwarte pytania |
+| [`08_zasady_pelne_brzmienie.md`](rag/08_zasady_pelne_brzmienie.md) | Pełne brzmienie zasad 1–20 z uzasadnieniami, historią i sprostowaniami — kopia `CLAUDE.md` sprzed odchudzenia (2026-09-24); `CLAUDE.md` mówi CO, ten plik DLACZEGO |
+| [`Repo lessons i sigma — co przydatne dla alpha.md`](<rag/Repo lessons i sigma — co przydatne dla alpha.md>) | Przegląd dwóch innych projektów użytkownika (SIGMA na QuantConnect, lessons/AI_devs) — wytyczne 1–7 wdrożone w `docs/skills/bramki-jakosci.md` (A6, B6a, C1), kontrola negatywna NC1, strażnik `tests/test_runs_index_guard.py`, odchudzony `CLAUDE.md`. Kolejność propozycji w pliku jest już nieaktualna (D1/O1 zamknięte, carry odrzucone jako cel) |
 
 ## `docs/skills/` — procedury pracy (wersjonowane z repo, niezależne od pluginów)
 

@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-09-22
+last_verified: 2026-09-24
 depends_on: [../rag/03_ryzyko_i_sizing.md, ../rag/05_metodologia_wytwarzania_i_testow.md]
 ---
 
@@ -149,6 +149,31 @@ barier = 100%; liczba foldów aktywnych + pominiętych = łączna; n_eff ≤ n.
 | **Caveats** | Wynik prawidłowy, ale obowiązuje z ograniczeniem, które czytelnik MUSI znać. | Lista zastrzeżeń numerowana, każde jednym zdaniem + wpływ na wniosek. (Wzorzec: S1 — 6,95% historii.) |
 | **Revision** | Znaleziono błąd, złą metodę albo brakujący pomiar. | Lista poprawek z priorytetem. Nie publikuj wniosku, dopóki nie naprawione. |
 
+### A6. Kontrola negatywna — nowy silnik albo nowy przyrząd (od NC1, 2026-09-24)
+
+**Kiedy obowiązkowa:** runda wprowadza NOWY silnik pomiaru (nowy `portfolio`/`*_returns`, nowy
+model, nowy sposób liczenia zwrotu) albo zmienia istniejący w miejscu, które dotyka rachuby
+zwrotów, wag lub dat. Nie dotyczy rund, które tylko podają inny sygnał do przetestowanego silnika.
+
+**Co zrobić:** uruchomić silnik na danych BEZ informacji o przyszłości z
+`backtest/negative_control.py` (`synthetic_returns`: t-Student df 3, GARCH, czynnik rynkowy —
+wygląda jak krypto, ale kierunku nie da się przewidzieć) i sprawdzić, że wynik brutto ≈ 0:
+|średnie t| < 0,5 na ≥ 20 losowaniach, |t| > 1,96 w ~5 % losowań (dwumian), netto ≤ brutto.
+Do tego **kontrola czułości:** ten sam silnik z celowym zajrzeniem w przyszłość MUSI dać
+ogromne t — inaczej kontrola negatywna jest ślepa. Wzorzec: `backtest/run_negative_control_nc1.py`
+i test `tests/test_negative_control.py::test_trend_engine_finds_nothing_on_noise`.
+
+**Dlaczego:** kontrola pozytywna (K1: wyrocznia) mówi, że przyrząd WIDZI sygnał; negatywna —
+że nie WYMYŚLA go z szumu. W projekcie SIGMA brak tej drugiej przepuścił AUC 0,84, które
+pochodziło z etykiety liczonej z przyszłego wskaźnika (przegląd w
+`docs/rag/Repo lessons i sigma — co przydatne dla alpha.md`, wytyczna 2). Na losowym spacerze
+takie AUC spada do 0,5 tylko wtedy, gdy etykieta jest uczciwa — dlatego test na szumie wyłapuje
+przeciek, którego nie widać na prawdziwych danych.
+
+**Uwaga — szum musi mieć grube ogony i grupowanie zmienności.** Gaussowski szum bez GARCH jest
+za łagodny: nie odtwarza sytuacji, w których silnik może się „zachłysnąć” (skoki > 20 %
+dziennie, długie nerwowe okresy, skalowanie zmiennością). Stąd df = 3 i GARCH w generatorze.
+
 ---
 
 ## B. Standard raportowania statystyk (zasada 16b)
@@ -238,6 +263,34 @@ Każdy wariant przetestowany na tych samych danych to losowanie — przy 20 wari
 - **Cherry-picking okresu** — wynik na 6,8 roku i wynik na najlepszym roku to dwa różne
   twierdzenia. Raportuj cały zakres.
 
+### B6a. Wytyczne z przeglądu SIGMA (2026-09-24) — gdzie mieszkają
+
+Przegląd drugiego projektu użytkownika (QuantConnect, `docs/rag/Repo lessons i sigma — co
+przydatne dla alpha.md`) dał siedem wytycznych. Mapowanie na nasze bramki:
+
+| # | Wytyczna | Gdzie u nas |
+|---|---|---|
+| 1 | Etykieta tylko z przyszłej CENY, nigdy z przyszłego wygładzonego wskaźnika | C1 (pierwszy punkt) |
+| 2 | Kontrola negatywna na losowych danych z grubymi ogonami | A6 |
+| 3 | Parametry etykiety i kryterium w pre-rejestracji; nie nagradzać samego wysokiego AUC/trafności | niżej + B3 |
+| 4 | Zbiór testowy użyty raz | niżej |
+| 5 | Minimalna liczba transakcji / N_eff przed werdyktem | B4, zasada 18 |
+| 6 | Przewaga = dodatni wynik PO kosztach z przedziałem | B2, B3 (dwa warunki) |
+| 7 | Człowiek zatwierdza zmiany, bez automatycznego wdrożenia | CLAUDE.md, „Podział ról” |
+
+- **(3) Wysoka miara jakości modelu to sygnał alarmowy, nie sukces.** AUC 0,84 albo trafność
+  > 60 % na dziennych/4h danych krypto jest mało prawdopodobne; najpierw szukaj przecieku
+  (A4, A6). Parametry etykiety (bariery, horyzont, wygładzanie) zapisuje się w pre-rejestracji
+  i nie zmienia po obejrzeniu wyniku — bramka nagradzająca wysokie AUC sama wybiera etykietę
+  z przeciekiem.
+- **(4) Zbiór testowy użyty raz.** Okres „poza próbą” (np. TP1: lipiec–wrzesień 2026) po
+  jednym odczycie staje się próbą — kolejna reguła sprawdzana na tym samym okresie nie jest
+  już testem poza próbą. Zapisuj w README, który okres został „zużyty”.
+- **Dla rund opisowych o ryzyku (sizing, dźwignia):** obok maksymalnego obsunięcia podawaj
+  historyczny Expected Shortfall (średnia z 5 % najgorszych dni) i rozrzut z losowania
+  ścieżki (Monte Carlo/bootstrap bloków) — jedna historyczna ścieżka to jedna realizacja
+  (wskazówka Tokenomii z tego samego przeglądu).
+
 ### B7. Język liczb (zasada 17)
 
 Każda kluczowa liczba w rozmowie i w sekcjach *Wniosek*/*Rekomendacja* dostaje tłumaczenie:
@@ -260,6 +313,11 @@ diff pod kątem czterech rzeczy: poprawność, testy, spójność z zasadami, cz
 
 ### C1. Poprawność — pytania specyficzne dla CLAS-5
 
+- **Etykieta tylko z przyszłej CENY (SIGMA, wytyczna 1).** Target/etykieta liczona z
+  przyszłego zwrotu, przyszłego high/low albo barier na cenie — tak. Z PRZYSZŁEJ wartości
+  wygładzonego wskaźnika (ADX, średnia, RSI za k świec) — nie: wskaźnik wygładzony w chwili
+  t + k zawiera ceny z okna, które częściowo nakłada się na cechy z chwili t, więc model
+  „przewiduje” coś, co w dużej części już widzi. SIGMA: AUC 0,84 z etykiety „przyszły ADX”.
 - **Przeciek na poziomie cechy.** Nowa funkcja `compute_*` liczy tylko z danych do świecy t
   włącznie? Rolling window jest trailing (kończy się na bieżącej świecy), nigdy centered?
   Jest test w `agent_5_compliance/test_leakage.py`?
