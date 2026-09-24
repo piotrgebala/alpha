@@ -73,6 +73,7 @@ podsumowanie pod tabelą.
 | **TF1** | 2026-09-24 | [tf1-trend-filtr-tloku](2026-09-24_tf1-trend-filtr-tloku/README.md) | **NOWA SERIA TF — trend TS1 z filtrem tłoku** (decyzja użytkownika „sprawdź 3 nowe hipotezy”): pozycja zerowana, gdy jej strona płaci Σ funding 7 dni > 0,63 %; kryterium różnica parowana z TS1; pre-rejestracja `4762d86` (1/1) | **NIEROZSTRZYGNIĘTY, punktowo gorzej:** TF1 − TS1 −1,41 %/rok [−6,58; +3,77], t_neff −0,53; 9,3 % pozycji wyzerowanych; 4/6 lat ujemnych. Walidacja: **READY** |
 | **TR1 / TP1** | 2026-09-24 | [ts-poza-proba](2026-09-24_ts-poza-proba/README.md) | **Reguła TS1 poza próbą** (decyzja użytkownika „sprawdź na innych przedziałach”): TR1 = monety z miejsc 21–50 (inne aktywa, 2021-05 → 2026-06, werdykt), TP1 = top-20 na nowych danych 2026-07 → 09 (opisowo, próg obalenia z góry); pre-rejestracja `40d604a` (seria TS 2/2) | **TR1 NIEROZSTRZYGNIĘTY, powtarza TS1:** +14,1 %/rok [−3,0; +31,2], t 1,62, ponad 99 % H0, 6/6 lat, 7/7 faz; korelacja z TS1 0,86. **TP1:** 78 dni, +0,69 % (+4,6 %/rok) — brak obalenia. Walidacja: **READY (Caveats)** |
 | **CP1P** | 2026-09-24 | [cp1-poza-proba](2026-09-24_cp1-poza-proba/README.md) | Odczyt prospektywny CP1 (reguła zamrożona) na danych 2026-07 → 09, 0 wariantów, próg obalenia z góry | **Brak obalenia, brak potwierdzenia:** 78 dni, +0,13 % przy BTC +33 %; fazy ±30 %. Walidacja: **READY** |
+| **TL1** | 2026-09-24 | [tl1-tlok-przekrojowy](2026-09-24_tl1-tlok-przekrojowy/README.md) | **NOWA SERIA TL — tłok lewara na przekroju top-20** (nowe źródło: dzienny OI z archiwum, `data/fetch_oi_panel.py`): crowd = Δlog OI 7 dni × znak zwrotu 7 dni, long 5 najniższych / short 5 najwyższych, 7 faz; pre-rejestracja `3983e3a` (1/1) | **NIEROZSTRZYGNIĘTY, punktowo ujemny:** −10,5 %/rok [−25,2; +4,2], t_neff −1,39; IC +0,008 [−0,024; +0,040] — brak informacji, koszty 23,6 %. Walidacja: **Caveats** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -93,6 +94,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
+- **NOWA SERIA TL — tłok przekrojowy (od TL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna/nogi, odwrócenie znaku (post hoc).
 - **SERIA TS — uzupełnienie (TR1/TP1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — zamknięta na historii.** Dalej tylko dziennik prospektywny tej samej reguły (0 wariantów).
 - **NOWA SERIA TF — trend z filtrem tłoku (od TF1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne progi/okna fundingu, OI jako filtr trendu bez nowego mechanizmu.
 - **NOWA SERIA CP — premia Coinbase (od CP1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna, progi, giełdy na tych samych danych. Dozwolone bez nowego licznika: ta sama reguła poza próbą (dane od 2026-07-01, prospektywnie).
@@ -708,6 +710,13 @@ podsumowanie pod tabelą.
     sam czynnik rynku, więc replikacja przekrojowa daje mało nowej informacji. Na nowych danych
     (78 dni) +0,7 % — brak obalenia. Metodologicznie: replikację w krypto trzeba mierzyć
     korelacją szeregów, nie liczbą monet; jedynym naprawdę niezależnym sprawdzianem jest czas.
+75. **POZYCJONOWANIE (OI, FUNDING) NIE WSKAZUJE KIERUNKU NA HORYZONCIE TYGODNIA — TRZECI RAZ
+    (TL1, 2026-09-24).** Lewar dokładany za ruchem 7-dniowym na przekroju top-20: IC +0,008
+    [−0,024; +0,040], portfel −10,5 %/rok (koszty obrotu). Razem z O1 (OI jako cecha 4h), F1
+    (funding jako cecha) i TF1 (funding jako filtr): dane o pozycjonowaniu z Binance nie niosą
+    informacji kierunkowej w żadnej z czterech zmierzonych form. Uwaga metodologiczna: H0 z
+    sygnałem przesuniętym w czasie może mieć niższą zmienność niż portfel realny (inna
+    dywersyfikacja faz) — przy rozbieżności zmienności rozstrzyga t_neff, nie pozycja wobec H0.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

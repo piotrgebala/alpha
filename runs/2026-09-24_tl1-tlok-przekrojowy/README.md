@@ -1,6 +1,10 @@
 # TL1 — tłok lewara na przekroju monet (open interest × kierunek ruchu) (2026-09-24)
 
-> **STATUS: PRE-REJESTRACJA (przed pomiarem).** Decyzja użytkownika 2026-09-24: „sprawdź 3 nowe
+> **STATUS: ZAMKNIĘTA — NIEROZSTRZYGNIĘTY (punktowo ujemny):** −10,5 %/rok [−25,2; +4,2],
+> t_neff −1,39; IC tygodniowe +0,008 [−0,024; +0,040] — sygnał bez informacji, stratę robią koszty
+> obrotu (23,6 % w 4,5 roku). Pre-rejestracja `3983e3a`. **Seria TL: 1/1, STOP.** Walidacja:
+> **Caveats** (H0 węższe niż portfel realny); przegląd: **Approve**.
+> Poprzednio: **PRE-REJESTRACJA (przed pomiarem).** Decyzja użytkownika 2026-09-24: „sprawdź 3 nowe
 > hipotezy” — trzecia hipoteza (po CP1 i TF1). **NOWA SERIA TL (zbiór informacyjny:
 > pozycjonowanie/OI na przekroju), 1/1, STOP.**
 
@@ -52,4 +56,51 @@ neutralny na rynek jak X1. Test zobaczy efekt rzędu 8 % rocznie lub większy.
 
 ---
 
-_(sekcje poniżej po przebiegu)_
+## Wynik
+
+`raw_output.txt` (669 s): 1 652 dni (2021-12-15 → 2026-06-30), 7 faz.
+
+| miara | wartość |
+|---|---|
+| **zwrot netto [CI 95 %]** | **−10,5 %/rok [−25,2; +4,2]**, t_neff −1,39 |
+| H0 (50 portfeli, crowd przesunięty) | q97,5 +5,7 %/rok; TL1 poniżej wszystkich (zastrzeżenie niżej) |
+| Σ brutto / funding / koszt | −31,2 % / +7,5 % / 23,6 % |
+| noga long / zwrot monet nogi short | −36,4 %/rok / −22,6 %/rok |
+| per rok (Σ netto) | 2021 +2,5 · 2022 −25,1 · 2023 +6,0 · 2024 −30,0 · 2025 −8,1 · 2026 +7,3 % |
+| 7 faz (%/rok) | −12,7 / −9,5 / −20,6 / −27,7 / −15,4 / +8,5 / +1,3 |
+| **werdykt** | **NIEROZSTRZYGNIĘTY** |
+
+## Co na plus (+) / Co na minus (−)
+
+**(+)** Nowe źródło danych w repo (dzienny OI z archiwum, point-in-time, 99,7 % pokrycia); test
+czysty, pre-rejestrowany.
+**(−)** Sygnał nie niesie informacji (IC ≈ 0), a obrót jest wysoki — koszty 23,6 % w 4,5 roku.
+**Zastrzeżenie do H0:** zmienność portfeli H0 (8,4 %/rok) jest o połowę mniejsza niż portfela
+realnego (16,0 %/rok) — przesunięty sygnał daje fazom bardziej różne nogi, więc średnia 7 faz
+bardziej się dywersyfikuje; stwierdzenie „poniżej wszystkich portfeli H0” nie jest wiarygodne,
+rozstrzyga t_neff. **Kogo nie ma:** rozbieg XI–XII 2021, 0,3 % braków OI u członków.
+
+## Walidacja, statystyka, przegląd (16a–c)
+
+`data:validate-data`: **Caveats** (H0). Druga droga bez silnika (`walidacja.py`): IC tygodniowe
+Spearmana crowd vs zwrot 7 dni, 236 tygodni: **+0,008 [−0,024; +0,040]**, 51,7 % dodatnich —
+brak informacji, zgodne z brutto ≈ −7 %/rok w granicach szumu. `data:statistical-analysis`:
+odwrócenie znaku (long tłok) to hipoteza post hoc (wniosek 49) — IC ≈ 0 i tak jej nie wspiera.
+`engineering:code-review`: kolektor tylko przez `http_get` (https, stałe hosty, symbol kodowany,
+404 = brak pliku); crowd z danych ≤ t (test); nogi z `signal_row.name` (test). **Approve.**
+
+## Wniosek
+
+**Prostym językiem:** to, że na monecie przybywa lewara w kierunku ostatniego ruchu, nie
+mówi nic o tym, co zrobi w następnym tygodniu. Strategia na tym sygnale straciła ok. 10 %
+rocznie, głównie na prowizjach za częste przebudowy. Tłok z otwartych pozycji, podobnie jak
+funding (TF1), nie wyznacza końca ruchu w tych danych.
+
+## Rekomendacja
+
+Seria TL: 1/1, STOP; nie odwracać znaku. Dane OI zostają w repo (`data/fetch_oi_panel.py`) jako
+źródło do ewentualnych przyszłych hipotez z nowym mechanizmem. Użyte skille (rejestr
+`runs/skille/tl1-tlok-przekrojowy.jsonl`): `clas5-runda`, `clas5-quant`, `data:explore-data`
+(profil panelu OI), `data:validate-data`, `data:statistical-analysis`, `engineering:code-review`.
+Pominięte: `testing-strategy` (4 testy według wzorca TS1/NL1), `security-review` (bez nowego hosta
+ani kluczy — ten sam `http_get` co P3), `dataviz`.

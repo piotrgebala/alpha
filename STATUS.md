@@ -97,6 +97,8 @@
 > seria TS zamknięta na historii, dalej dziennik prospektywny.**
 > CP1P (2026-09-24): premia Coinbase na nowych danych lip–wrz 2026 — **+0,1 % przy BTC +33 %**,
 > brak obalenia i brak wsparcia; dziennik CP co kwartał.**
+> TL1 (2026-09-24): tłok lewara (OI) na przekroju top-20 — **−10,5 %/rok [−25,2; +4,2],
+> NIEROZSTRZYGNIĘTY**, IC ≈ 0. Wniosek 75; seria TL 1/1 STOP.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
