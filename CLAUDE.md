@@ -9,7 +9,8 @@ potem mała kwota; sposób mierzenia (zasady 1–20) bez zmian. Ten plik
 mówi, CO obowiązuje. **DLACZEGO** (uzasadnienia, historia, przykłady z rund) —
 `docs/rag/08_zasady_pelne_brzmienie.md`; numeracja zasad jest tam ta sama.
 Stan prac, decyzje, ryzyka → `STATUS.md`; wyniki rund → `runs/INDEX.md` (na górze „Stan wiedzy —
-skrót”). Tych plików nie kopiuj tutaj — zmieniają się często.
+skrót”). Tych plików nie kopiuj tutaj — zmieniają się często. Preferencje użytkownika (sposób
+handlu, cel zwrotów, rynek przed 2022) → `docs/rag/10_preferencje_uzytkownika.md`.
 
 ## Nienaruszalne zasady
 
@@ -125,8 +126,15 @@ skrót”). Tych plików nie kopiuj tutaj — zmieniają się często.
   `docs/rag/08`.
 - Lint/format: `ruff` + `black` na dotykanych plikach; zamrożonych nie reformatuj. Różnice
   CRLF/LF są normalne.
-- **Dwa środowiska pracują na repo** (Cowork w chmurze + lokalny Claude Code): przed rundą
-  przeczytaj świeży stan plików; nowszej wersji na dysku nie nadpisuj — zmerguj.
+- **Środowiska pracujące na repo:** serwer Linux w Polsce (praca badawcza od 2026-09-24;
+  przygotowanie `bash tools/setup_serwer.sh`), komputer użytkownika z Windows (dziennik papierowy
+  z Harmonogramu zadań) i Cowork w chmurze. Przed rundą `git pull` i świeży stan plików; nowszej
+  wersji nie nadpisuj — zmerguj. Wersje bibliotek: `requirements-lock.txt` (inne wersje = inne liczby).
+- **Dziennik papierowy:** pliki `dziennik/*.csv` i `przebiegi.log` zapisuje wyłącznie automat
+  (commit i push po każdym przebiegu, poprawka 5). Zmiana kodu, którego dziennik używa
+  (`backtest/live_journal.py`, `ts_momentum.py`, `xs_momentum.py`, `sizing.py`, `rebalance_premium.py`,
+  `run_coinbase_cp1.py`, `data/fetch_live.py`), wymaga decyzji użytkownika i wpisu „Poprawka N”
+  w `dziennik/README.md` — inaczej wynik dziennika przestaje być zapisem z góry.
 
 ## Podział ról i autonomia
 
@@ -155,7 +163,7 @@ tools/skill_audit.py + runs/skille/<gałąź>.jsonl         — rejestr skilli (
 tools/frozen_guard.py + runs/ZAMROZONE.txt               — zamrożone skrypty (zasada 13)
 ```
 
-## Komendy (Windows: `py`; sesja chmurowa Linux: `python3`)
+## Komendy (Windows: `py`; serwer Linux: `py` z `.venv` po `tools/setup_serwer.sh`; Cowork: `python3`)
 
 ```
 py -m pytest -q                                   # cały zestaw testów (DoD, zasada 10)

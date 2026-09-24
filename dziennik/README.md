@@ -73,6 +73,12 @@ Filtr dopuszcza teraz litery spoza ASCII (`(?:[A-Z0-9]|(?![\x00-\x7f])\w){1,40}U
 kropki, ukośniki, dwukropki, spacje, znaki sterujące i małe litery ASCII (test
 `test_symbol_names_are_safe_for_file_paths`). Wynik papierowy nie miał jeszcze żadnego wiersza.
 
+## Poprawka 5 (2026-09-24, wieczór — przed pierwszym wynikiem): zapis wyników do gita
+
+Decyzja użytkownika przy przenosinach pracy na serwer: „Tak, auto-commit i push”. Do tej pory automat
+niczego nie commitował, więc wyniki leżały tylko na dysku komputera. Teraz po każdym udanym przebiegu
+pliki dziennika trafiają do gita (szczegóły w „Codziennie”). Reguły handlu i liczenia — bez zmian.
+
 ## Codziennie
 
 ```
@@ -100,8 +106,14 @@ co 30 min; jedna instancja naraz. Przebieg jest idempotentny — ponowienie tego
   dopisuje się po fakcie; liczy się do kryterium kompletności (≥ 95 % dni).
 - Sprawdzenie: `Get-ScheduledTaskInfo -TaskName "CLAS5 dziennik"` (ostatni start, wynik, następny start);
   wyłączenie: `schtasks /delete /tn "CLAS5 dziennik" /f`.
-- Pliki `sygnaly.csv`, `wyniki.csv`, `x1_*.csv`, `przebiegi.log` zmieniają się w katalogu roboczym repo —
-  commit robi Claude przy najbliższej pracy na `master` (automat niczego nie commituje).
+- **Zapis do gita (poprawka 5, decyzja użytkownika 2026-09-24):** po udanym przebiegu
+  `dziennik/zapisz_do_gita.sh` (na Windows przez Git Bash) commituje `dziennik/*.csv` i `przebiegi.log`
+  i wypycha na `master` — tylko gdy kopia robocza jest na `master`; przy odrzuconym pushu robi
+  `pull --rebase` i próbuje raz jeszcze; przy konflikcie przerywa rebase i zostawia commit lokalnie.
+  Wynik w `ostatni_wydruk.txt` („===== zapis do gita: …”). Pliki dziennika zapisuje tylko automat.
+- **Dziennik działa tylko w jednym miejscu naraz.** Dziś: komputer z Windows. Przeniesienie na serwer
+  (decyzja użytkownika): wyłączyć zadanie na komputerze (`schtasks /delete /tn "CLAS5 dziennik" /f`),
+  na serwerze cron `30 0 * * * bash <repo>/dziennik/uruchom.sh` (czas UTC = 02:30 w Polsce latem).
 
 ## Co zapisujemy (append-only, w gicie)
 

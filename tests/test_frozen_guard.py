@@ -134,9 +134,13 @@ def test_extract_target_path_ignores_non_edit_events_and_bad_shapes(event):
     assert extract_target_path(event) is None
 
 
-def test_absolute_path_git_bash_drive_only_on_windows():
+@pytest.mark.skipif(os.name != "nt", reason="litera dysku istnieje tylko na Windows")
+def test_absolute_path_git_bash_drive_on_windows():
     win = absolute_path("/c/Users/x/repo/a.py", None, windows=True)
     assert str(win).replace("\\", "/").lower().startswith("c:/users/x/repo/a.py")
+
+
+def test_absolute_path_git_bash_drive_ignored_on_posix():
     posix = absolute_path("/c/Users/x/repo/a.py", None, windows=False)
     assert str(posix).replace("\\", "/").endswith("/c/Users/x/repo/a.py")
 

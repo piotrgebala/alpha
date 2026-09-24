@@ -24,3 +24,8 @@ data/raw/*
 # runs/skille/<galaz>.jsonl; `py tools/skill_audit.py csv` odbudowuje CSV z nich.
 runs/skille/*.csv
 dziennik/ostatni_wydruk.txt
+
+# Pliki lokalne (2026-09-24): paczki danych i katalogi robocze Claude Code — nigdy do repo
+# (GitHub odrzuca pliki > 100 MB; worktree to osobne repo robocze).
+/*.zip
+.claude/worktrees/
