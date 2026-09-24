@@ -144,10 +144,12 @@ def build_formations(
     rng=None,
     target: float = TARGET_VOL,
     cap: float = CAP,
+    keep_fn=None,
 ) -> list[tuple[int, np.ndarray]]:
     """
     Wagi na każdy dzień formowania: członkowie miesiąca (point-in-time), znak z `signs`
     (albo z `sign_fn(real_signs, symbols, rng)` — H0 / zawsze long), σ̂ z `vols`.
+    `keep_fn(t, symbols, znaki_wag) -> maska 0/1` zeruje wybrane pozycje (N bez zmian).
     """
     cols = list(signs.columns)
     col_pos = {c: i for i, c in enumerate(cols)}
@@ -163,7 +165,11 @@ def build_formations(
             if sign_fn is not None:
                 valid = np.isfinite(s_row) & (s_row != 0)
                 s_row = np.where(valid, sign_fn(s_row, syms, rng), np.nan)
-            w[idx] = position_weights(s_row, vols.loc[t].to_numpy(dtype=float)[idx], target, cap)
+            w_sel = position_weights(s_row, vols.loc[t].to_numpy(dtype=float)[idx], target, cap)
+            if keep_fn is not None:
+                # filtr (np. tłok, TF1): pozycja wyzerowana, N bez zmian — ekspozycja maleje
+                w_sel = w_sel * np.asarray(keep_fn(t, syms, np.sign(w_sel)), dtype=float)
+            w[idx] = w_sel
         out.append((signs.index.get_loc(t), w))
     return out
 
@@ -214,6 +220,8 @@ def portfolio(
     phases: int = PHASES,
     lookback: int = LOOKBACK_DAYS,
     sign_shift_days: int | None = None,
+    signs_override: pd.DataFrame | None = None,
+    keep_fn=None,
 ) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
     """
     Średnia `phases` pod-portfeli (każdy 1/phases kapitału) — dzienny szereg w dniach, w których
@@ -221,9 +229,13 @@ def portfolio(
     `sign_fn_factory()` tworzy świeżą funkcję znaku na fazę (H0 ma stan per faza).
     `sign_shift_days` — H0 kanoniczne TS1: prawdziwe znaki przesunięte cyklicznie w czasie
     (`shift_signs`), wagi i σ̂ z właściwego dnia.
+    `signs_override` — panel znaków z innego sygnału (np. premia Coinbase, CP1) zamiast znaku
+    zwrotu; `keep_fn` — filtr pozycji (TF1). Domyślnie oba None = reguła TS1 bez zmian.
     """
     close = close[close.index < end]
     signs = signal_sign(close, lookback)
+    if signs_override is not None:
+        signs = signs_override.reindex(index=close.index, columns=close.columns)
     if sign_shift_days is not None:
         signs = shift_signs(signs, sign_shift_days)
     vols = ewma_vol(close)
@@ -234,7 +246,7 @@ def portfolio(
     for ph in range(phases):
         dates = formation_dates(close.index, start, end, ph)
         fn = sign_fn_factory() if sign_fn_factory is not None else None
-        forms = build_formations(signs, vols, members, dates, sign_fn=fn, rng=rng)
+        forms = build_formations(signs, vols, members, dates, sign_fn=fn, rng=rng, keep_fn=keep_fn)
         per_phase.append(phase_returns(rets, fund, close.index, forms, fee).set_index("date"))
     first_common = max(p.index.min() for p in per_phase)
     cols = ["gross", "funding", "cost", "net", "gross_notional", "net_notional", "turnover"]

@@ -86,6 +86,10 @@
 > NL1 (2026-09-24): short na 569 nowych kontraktach USDT-M przez 14 dni — **+2,1 % na zdarzenie
 > [−2,7; +6,9], NIEROZSTRZYGNIĘTY**; mediana +13,5 %, ale 12 % nowych monet podwaja cenę
 > (likwidacja nawet przy 1×); przy 3× 42 % likwidacji. Wniosek 71; seria NL 1/1 STOP.**
+> CP1 (2026-09-24): premia Coinbase → BTC na tydzień — **POZYTYWNY wg pre-rejestracji (pierwszy
+> w projekcie): +32 %/rok [+2; +62], t_neff 2,09**, bez śladu przecieku; po korekcie na ~28
+> odczytów nieistotny, alfa ponad trend t 1,67. Wniosek 72; seria CP 1/1 STOP; następny krok:
+> ta sama reguła na danych od 2026-07-01.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2589,6 +2593,15 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Seria CP — premia Coinbase ⚪ ZAMKNIĘTA 2026-09-24 (CP1), 1/1, reguła STOP, POZYTYWNY (pre-rejestracja), nieistotny rodzinnie
+
+Pierwsza z trzech nowych hipotez sesji 2026-09-24 (decyzja użytkownika „sprawdź 3 nowe hipotezy”).
+Sygnał: znak(średnia premii Coinbase/Binance spot z 7 dni − z 90 dni), pozycja BTC silnikiem TS1
+(haki `signs_override`/`keep_fn` dodane do `ts_momentum`, TS1 odtworzone). Wynik +32,0 %/rok
+[+2,0; +62,1], t_neff 2,09, > q97,5 H0; test opóźnienia bez przecieku; alfa ponad trend t 1,67;
+próg rodzinny niespełniony. Wniosek 72. Ścieżka odwrotu: revert commitu scalającego.
+Pełne wyniki: `runs/2026-09-24_cp1-premia-coinbase/`.
 
 #### Seria NL — short na nowych listingach ⚪ ZAMKNIĘTA 2026-09-24 (NL1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY
 

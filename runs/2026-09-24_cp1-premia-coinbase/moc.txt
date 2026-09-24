@@ -1,0 +1,7 @@
+========================================================================================================
+CP1 — RACHUNEK MOCY; konfiguracja ZAMROŻONA
+========================================================================================================
+  premia: 2007 dni (2021-01-01 → 2026-06-30), mediana +0.013%, p5/p95 [-0.116%; +0.108%], braki w sygnale od startu: 0
+  sygnał: udział dni long 49.0%, zmiana znaku 5.4% dni; zgodność z trendem 28 dni (TS1 na BTC): 63.7%
+  dni 1880; zmienność H0 35.1%/rok; half-width 95% 31.5%/rok = 0.90 SR; q97,5 H0 +28.1%/rok
+  czas: 48s

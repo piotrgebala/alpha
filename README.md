@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **806/806** (2026-09-24).
+Stan testów: **812/812** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -236,6 +236,15 @@ części dziełem przypadku (kalendarza), momentum przekrojowe w krypto zostaje 
 słabym poparciem. Kolejne warianty na tych samych danych nic nie rozstrzygną; jedyna droga
 to pomiar na żywo przez co najmniej dwa lata.
 
+### 🟡 Premia Coinbase — CP1 (2026-09-24): pierwszy wynik, który przeszedł test, ale jeszcze nie dowód
+
+BTC long albo short co tydzień, zależnie od tego, czy na Coinbase (popyt z USA) płaci się ostatnio
+więcej niż zwykle w porównaniu z Binance. [CP1](runs/2026-09-24_cp1-premia-coinbase/README.md):
+**+32 % rocznie po kosztach** (niepewność od +2 do +62 %), zapisane z góry kryterium spełnione,
+kontrola błędów w danych czysta. **Co to znaczy:** najmocniejszy kandydat w projekcie, ale przy
+~28 próbach w dwa dni jeden taki wynik może być szczęściem, a część zysku to zwykły trend.
+Następny krok: ta sama reguła na danych od lipca 2026, których jeszcze nie oglądaliśmy.
+
 ### ⚪ Short na nowych monetach — NL1 (2026-09-24): zwykle działa, średnio nie
 
 Short każdej nowej monety na Binance od drugiego dnia notowań przez 14 dni, 569 przypadków od
@@ -339,6 +348,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **Y1 / Y2 — ten sam model na 1h i 1d: horyzont nie pomaga** | 2026-09-23 | Na 1h trafność **48,3 %** przy progu 54 % (23 334 transakcje, przedział w całości poniżej 50 %, 6/6 lat ujemnych) — negatywnie z ogromnym zapasem; na 1d **50,2 %** przy progu 51,7 %, ale 978 transakcji — nierozstrzygnięte, jak policzono przed przebiegiem. Model kontrolny zmierzony na trzech interwałach, na każdym 48–50 %. | [y1-horyzont-1h](runs/2026-09-23_y1-horyzont-1h/README.md), [y2-horyzont-1d](runs/2026-09-23_y2-horyzont-1d/README.md) |
 | **TS1 — trend tygodniowy na koszyku: najlepszy ślad, bez dowodu** | 2026-09-24 | Long/short każdej z 20 monet wg jej trendu z 4 tygodni: **+14,8 %/rok po kosztach [−2; +31]**, 6/6 lat na plusie, bez bety rynku; t 1,76 przy wymaganym 1,96 — nierozstrzygnięte. 3× kapitału → +5 %/rok i obsunięcie 90 %. | [ts1-trend-koszyk](runs/2026-09-24_ts1-trend-koszyk/README.md) |
 | **NL1 — short na nowych listingach: zwykle działa, średnio nie** | 2026-09-24 | 569 nowych kontraktów, short 14 dni: mediana +13,5 %, ale średnio **+2,1 % [−2,7; +6,9]** — co ósma moneta podwaja cenę; przy 3× 42 % likwidacji. Nierozstrzygnięte. | [nl1-nowe-listingi](runs/2026-09-24_nl1-nowe-listingi/README.md) |
+| **CP1 — premia Coinbase: pierwszy POZYTYWNY, jeszcze nie dowód** | 2026-09-24 | BTC long/short wg premii Coinbase (7 vs 90 dni): **+32 %/rok [+2; +62]**, t 2,09 — kryterium spełnione, przecieku brak; po korekcie na ~28 testów nieistotny, część zysku to trend. Następny krok: dane od 07.2026. | [cp1-premia-coinbase](runs/2026-09-24_cp1-premia-coinbase/README.md) |
 
 ## Hipoteza w skrócie
 
