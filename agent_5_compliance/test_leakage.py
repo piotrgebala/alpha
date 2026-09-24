@@ -38,6 +38,11 @@ from agents.feature_miner import FEATURE_FUNCTIONS, compute_atr_pctrank_20d
 from agents.ta_rules import TA_FEATURE_FUNCTIONS
 from agents.positioning_features import POSITIONING_FEATURE_FUNCTIONS, RAW_COLUMN
 from agents.external_features import EXTERNAL_FEATURE_FUNCTIONS
+from agents.sw_features import (
+    SW_POSITIONING_FUNCTIONS,
+    attach_positioning_extra,
+    rule_score,
+)
 from agents.funding_features import attach_funding_rate
 from agents.labeling import compute_triple_barrier_labels
 
@@ -427,3 +432,88 @@ def test_external_feature_no_leakage(synthetic_ohlcv: pd.DataFrame, feature_name
         check_names=False,
         check_exact=True,
     )
+
+
+# ------------------------------------------------------------------ SW (2026-09-24)
+def test_sw_positioning_functions_match_registry() -> None:
+    """SW: cechy pozycjonowania serii SW (agents/sw_features.py) 1:1 z sekcją `sw_positioning:`."""
+    with open(FEATURE_REGISTRY_PATH, encoding="utf-8") as f:
+        registry = set(yaml.safe_load(f)["sw_positioning"].keys())
+    code = set(SW_POSITIONING_FUNCTIONS.keys())
+    assert (
+        code == registry
+    ), f"registry-only: {sorted(registry - code)}, code-only: {sorted(code - registry)}"
+
+
+def _synthetic_metrics(start: pd.Timestamp, n_candles: int, seed: int = 13) -> pd.DataFrame:
+    """Odczyty co 5 min (jak archiwum) z trzema proporcjami > 0."""
+    rng = np.random.default_rng(seed)
+    ts = pd.date_range(start, periods=n_candles * 48, freq="5min", tz="UTC")
+    return pd.DataFrame(
+        {
+            "timestamp": ts,
+            "sum_toptrader_long_short_ratio": np.exp(rng.normal(0.2, 0.1, len(ts))),
+            "count_long_short_ratio": np.exp(rng.normal(0.3, 0.1, len(ts))),
+            "sum_taker_long_short_vol_ratio": np.exp(rng.normal(0.0, 0.2, len(ts))),
+        }
+    )
+
+
+def _as_4h(df: pd.DataFrame) -> pd.DataFrame:
+    """Syntetyczne świece z siatką 4h UTC (cechy SW dopinają odczyty do świec 4h)."""
+    return df.assign(timestamp=pd.date_range("2025-01-01", periods=len(df), freq="4h", tz="UTC"))
+
+
+def _with_sw_positioning(df: pd.DataFrame) -> pd.DataFrame:
+    df = _as_4h(df)
+    start = pd.to_datetime(df["timestamp"].iloc[0], utc=True)
+    return attach_positioning_extra(df, _synthetic_metrics(start, len(df) + 2))
+
+
+@pytest.mark.parametrize("feature_name", sorted(SW_POSITIONING_FUNCTIONS.keys()))
+def test_sw_positioning_feature_no_leakage(
+    synthetic_ohlcv: pd.DataFrame, feature_name: str
+) -> None:
+    """SW (zasada 2): shift-forward bit w bit do CUTOFF — cecha nie zależy od świec po CUTOFF."""
+    fn = SW_POSITIONING_FUNCTIONS[feature_name]
+    df_full = _with_sw_positioning(synthetic_ohlcv)
+    df_past = df_full.iloc[:CUTOFF].reset_index(drop=True)
+    pd.testing.assert_series_equal(
+        fn(df_past).reset_index(drop=True),
+        fn(df_full).iloc[:CUTOFF].reset_index(drop=True),
+        check_names=False,
+        check_exact=True,
+    )
+
+
+def test_sw_attach_ignores_readings_after_candle(synthetic_ohlcv: pd.DataFrame) -> None:
+    """Dopięcie: odczyty z chwili zamknięcia świecy i później nie zmieniają wartości tej świecy."""
+    df = _as_4h(synthetic_ohlcv.iloc[:200].reset_index(drop=True))
+    start = pd.to_datetime(df["timestamp"].iloc[0], utc=True)
+    m = _synthetic_metrics(start, 202)
+    base = attach_positioning_extra(df, m)
+    cut = pd.to_datetime(df["timestamp"].iloc[100], utc=True)  # otwarcie świecy 100
+    m2 = m.copy()
+    late = m2["timestamp"] >= cut  # od zamknięcia świecy 99 wzwyż
+    for c in (
+        "sum_toptrader_long_short_ratio",
+        "count_long_short_ratio",
+        "sum_taker_long_short_vol_ratio",
+    ):
+        m2.loc[late, c] = m2.loc[late, c] * 7.0
+    changed = attach_positioning_extra(df, m2)
+    cols = ["toptrader_close", "global_ls_close", "taker_log_mean"]
+    pd.testing.assert_frame_equal(base.loc[:99, cols], changed.loc[:99, cols])
+    assert not np.allclose(base.loc[101:, "taker_log_mean"], changed.loc[101:, "taker_log_mean"])
+
+
+def test_sw_rule_score_is_trailing() -> None:
+    """Reguła SW: mediana trailing — dopisanie przyszłości nie zmienia kierunku przeszłych świec."""
+    rng = np.random.default_rng(5)
+    x = pd.Series(rng.normal(0.0, 1.0, 3000))
+    x.iloc[::7] = 0.0001  # masa punktowa jak funding
+    full = rule_score(x, -1, window=500, min_periods=200)
+    past = rule_score(x.iloc[:1500], -1, window=500, min_periods=200)
+    pd.testing.assert_series_equal(full.iloc[:1500], past, check_exact=True)
+    assert full.iloc[:199].isna().all() and full.iloc[250:].notna().all()
+    assert set(full.dropna().unique()) <= {-1.0, 0.0, 1.0}
