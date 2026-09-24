@@ -73,6 +73,12 @@ Filtr dopuszcza teraz litery spoza ASCII (`(?:[A-Z0-9]|(?![\x00-\x7f])\w){1,40}U
 kropki, ukośniki, dwukropki, spacje, znaki sterujące i małe litery ASCII (test
 `test_symbol_names_are_safe_for_file_paths`). Wynik papierowy nie miał jeszcze żadnego wiersza.
 
+## Poprawka 5 (2026-09-24, wieczór — przed pierwszym wynikiem): zapis wyników do gita
+
+Decyzja użytkownika przy przenosinach pracy na serwer: „Tak, auto-commit i push”. Do tej pory automat
+niczego nie commitował, więc wyniki leżały tylko na dysku komputera. Teraz po każdym udanym przebiegu
+pliki dziennika trafiają do gita (szczegóły w „Codziennie”). Reguły handlu i liczenia — bez zmian.
+
 ## Codziennie
 
 ```
@@ -84,24 +90,34 @@ Wydruk mówi: mnożniki R1, wynik od startu, obsunięcie i status progów, ekspo
 składowej oraz zlecenia fazy formowanej dziś (kierunek i nominał jako % kapitału).
 
 **Automat (Harmonogram zadań Windows, zadanie „CLAS5 dziennik”):** codziennie 02:30 czasu lokalnego
-uruchamia `dziennik/uruchom.bat` (wydruk dopisywany do `dziennik/ostatni_wydruk.txt` ze znacznikiem
-startu, końca i kodem wyjścia). Ustawienia (2026-09-24): start przy najbliższej okazji, gdy termin
-przepadł (komputer wyłączony); budzenie komputera; praca na baterii; limit 2 h; przy błędzie do 3 ponowień
-co 30 min; jedna instancja naraz. Przebieg jest idempotentny — ponowienie tego samego dnia nic nie dubluje.
-- **Bez widocznego okna:** akcja to `conhost.exe --headless cmd.exe /c <repo>/dziennik/uruchom.bat`.
-  Pierwszy próbny start (24.09, 18:36) otwierał czarne okno konsoli i skończył się po minucie kodem
-  0xC000013A (okno zamknięte / Ctrl+C) — zamknięcie takiego okna zabija przebieg. Od 18:48 zadanie
-  działa w tle.
-- **Ograniczenie:** zadanie działa, gdy użytkownik jest zalogowany (także przy zablokowanym ekranie).
-  Po restarcie bez logowania ruszy dopiero po zalogowaniu. Tryb „bez logowania” wymaga administratora —
-  jednorazowo w PowerShell uruchomionym jako administrator:
-  `Set-ScheduledTask -TaskName "CLAS5 dziennik" -Principal (New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType S4U -RunLevel Limited)`
+uruchamia `dziennik/uruchom.bat` w **osobnym klonie `C:\Users\pitge\GIT\alpha-dziennik`** (zawsze
+`master`; nikt w nim nie pracuje — od 2026-09-24 wieczór, po przeglądzie). Kolejno:
+1. aktualizacja kodu: `git pull --rebase --no-autostash origin master` (nieudana → przebieg na dotychczasowym kodzie);
+2. przebieg z **ponowieniami w pliku startowym: 3 próby co 30 min** — akcja `conhost.exe --headless`
+   (bez okna) zawsze zwraca Harmonogramowi kod 0, więc ponowienia Harmonogramu nie działają;
+3. **zapis do gita (poprawka 5):** `dziennik/zapisz_do_gita.sh` (Git Bash) commituje wyłącznie
+   `dziennik/*.csv` i `przebiegi.log` i wypycha na `master`; nie chowa niczyich zmian, nie wypycha cudzej
+   pracy, przy konflikcie przerywa rebase i zostawia commit lokalnie (testy `tests/test_zapis_dziennika.py`).
+Wydruk i każdy wynik zapisu („===== zapis do gita: …”) → `dziennik/ostatni_wydruk.txt` klonu dziennika.
+Ustawienia zadania: start przy najbliższej okazji po przegapionym terminie, budzenie komputera, praca na
+baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowienie tego samego dnia nic nie dubluje.
+- **Czy zapis działa — sprawdzenie z dowolnej maszyny:** `git log -1 --format=%cs --grep='^Dziennik:'` po
+  `git pull`. Data starsza niż 2 dni = dziennik nie zapisuje (komputer wyłączony, wygasłe logowanie do GitHuba,
+  konflikt) — zajrzyj do `ostatni_wydruk.txt` w klonie dziennika.
+- **Pierwszy próbny start (24.09, 18:36)** otwierał czarne okno konsoli i skończył się po minucie kodem
+  0xC000013A (okno zamknięte / Ctrl+C) — stąd akcja bez okna.
+- **Logowanie:** zadanie działa, gdy użytkownik jest zalogowany (także przy zablokowanym ekranie). Tryb
+  „bez logowania” (S4U) **odcina zapisane hasła** (Menedżer poświadczeń), więc push do GitHuba by nie działał —
+  nie włączać przy zapisie do gita.
 - **Dzień przegapiony w całości** (komputer wyłączony przez dobę) zostaje pusty w `sygnaly.csv` — sygnału nie
   dopisuje się po fakcie; liczy się do kryterium kompletności (≥ 95 % dni).
-- Sprawdzenie: `Get-ScheduledTaskInfo -TaskName "CLAS5 dziennik"` (ostatni start, wynik, następny start);
-  wyłączenie: `schtasks /delete /tn "CLAS5 dziennik" /f`.
-- Pliki `sygnaly.csv`, `wyniki.csv`, `x1_*.csv`, `przebiegi.log` zmieniają się w katalogu roboczym repo —
-  commit robi Claude przy najbliższej pracy na `master` (automat niczego nie commituje).
+- Sprawdzenie zadania: `Get-ScheduledTaskInfo -TaskName "CLAS5 dziennik"`; wyłączenie:
+  `schtasks /delete /tn "CLAS5 dziennik" /f`.
+- **Dziennik działa tylko w jednym miejscu naraz.** Przeniesienie na serwer (decyzja użytkownika): wyłączyć
+  zadanie na komputerze, na serwerze osobny klon `~/alpha-dziennik` (`bash tools/setup_serwer.sh`), cron
+  `30 2 * * * bash $HOME/alpha-dziennik/dziennik/uruchom.sh` (02:30 czasu serwera; ponowienia i blokada
+  jednej instancji są w skrypcie).
+- Pliki dziennika zapisuje wyłącznie automat — w pracy badawczej ich nie edytujemy.
 
 ## Co zapisujemy (append-only, w gicie)
 

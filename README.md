@@ -67,7 +67,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **891/891** (2026-09-24).
+Stan testów: **897/897** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 

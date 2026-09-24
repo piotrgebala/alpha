@@ -1,0 +1,19 @@
+# Dokładne wersje z maszyny lokalnej (2026-09-24) — te same liczby na Windows i na serwerze Linux.
+# requirements.txt ma tylko dolne granice; świeża instalacja bierze nowszy XGBoost, a XGBoost 3.4
+# daje inne wyniki niż 3.2 (CI 2026-09-24: 1 273 zamiast 1 280 transakcji w teście kontrolnym).
+# Instalacja: pip install -r requirements-lock.txt (serwer: bash tools/setup_serwer.sh).
+pandas==3.0.2
+numpy==2.4.4
+scipy==1.17.1
+pyarrow==23.0.1
+ccxt==4.5.48
+TA-Lib==0.7.1
+PyYAML==6.0.3
+requests==2.32.5
+pytest==9.1.1
+hypothesis==6.163.0
+ruff==0.16.8
+black==26.5.1
+xgboost==3.2.0; sys_platform != "linux"
+# Linux: ten sam XGBoost bez ~350 MB bibliotek GPU (moduł nadal nazywa się `xgboost`)
+xgboost-cpu==3.2.0; sys_platform == "linux"

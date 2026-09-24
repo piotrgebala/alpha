@@ -143,7 +143,16 @@
 > XGBoost ze wszystkimi (okno 365 dni) jako JEDEN wariant = świadomy wyjątek od zasady 4.**
 > SW (2026-09-24): 8 reguł tracą po kosztach, model 365 dni −0,050 %/tr (t −1,78); duża przewaga wykluczona; ślad
 > przed kosztami +0,02–0,05 %/tr < koszt 0,08 % (wniosek 90). Seria zamknięta STOP. DO DECYZJI: wolniejszy horyzont
-> (nowa hipoteza). SKILL: `quant-strategy-catalog` — statusy D1/E1/E2/F1/H1 nieaktualne po P3/AU1/SW (do nowej wersji).**
+> (nowa hipoteza).**
+> SKILL (2026-09-24): `quant-strategy-catalog` — nowa wersja ze statusami po P3/AU1/SW/X1F/RU3 (wnioski 1–90, nowa sekcja C2
+> „popyt spoza Binance”, J1 „trend poza krypto”, „Stan po SW”); paczka w Pobranych, obowiązuje po wgraniu na claude.ai.**
+> SERWER (2026-09-24, decyzja użytkownika): praca badawcza przenosi się na serwer Linux w Polsce. Przygotowanie:
+> `git clone`, `bash tools/setup_serwer.sh <data_raw.zip>` (venv z `requirements-lock.txt`, `py`, dane, test Binance),
+> `py -m pytest -q`, `/skills` (czy są skille konta), `git pull` przed każdą rundą. Preferencje użytkownika —
+> `docs/rag/10`. Dziennik zostaje na komputerze (Harmonogram 02:30, osobny klon `alpha-dziennik`, 3 próby co 30 min)
+> i od poprawki 5 sam commituje i wypycha wyniki (przegląd 16c: 10 znalezisk potwierdzonych, poprawione, testy);
+> przeniesienie dziennika na serwer (`dziennik/uruchom.sh` + cron) — decyzja użytkownika.
+> BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
