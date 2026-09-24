@@ -355,6 +355,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **TL1 — tłok lewara na przekroju monet: nic** | 2026-09-24 | Short monet, na których lewar goni ruch, long tych, z których ucieka: **−10,5 %/rok [−25; +4]** — sygnał bez informacji, stratę robią prowizje. | [tl1-tlok-przekrojowy](runs/2026-09-24_tl1-tlok-przekrojowy/README.md) |
 | **LQ1 — trend z likwidacją przy 3×: koszt 3,6 pkt/rok** | 2026-09-24 | Przy 3× na każdej pozycji z osobnym depozytem co ~20. pozycja tygodniowa jest likwidowana; trend spada z +14,8 do **+11,3 %/rok**. Przy 2× koszt ok. 1,6 pkt. | [lq1-likwidacje](runs/2026-09-24_lq1-likwidacje/README.md) |
 | **SZ1 — wielkość pozycji: razem lepiej, hamulec szkodzi** | 2026-09-24 | Trend + premia Coinbase po połowie: **~+19 %/rok, największy spadek ~19 %**, depozyt ~23 % kapitału (historia, strategie wybrane na tych danych). Hamulec „pół pozycji po −15 %” obciął zysk do +10 %. | [sz1-wielkosc-pozycji](runs/2026-09-24_sz1-wielkosc-pozycji/README.md) |
+| **SC1 — pozycja według siły sygnału: nie da się zmierzyć** | 2026-09-24 | Rachunek mocy przed wynikiem: szum ±13–17 %/rok przy oczekiwanym efekcie kilku %/rok — test nie wystartował (zasada 18). Zostaje prosta reguła znaku. | [sc1-sila-sygnalu](runs/2026-09-24_sc1-sila-sygnalu/README.md) |
 
 ## Hipoteza w skrócie
 
