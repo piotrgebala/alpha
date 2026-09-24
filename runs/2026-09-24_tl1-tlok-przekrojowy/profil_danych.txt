@@ -1,0 +1,5 @@
+wiersze 35745 symbole 114 daty 2021-11-21 -> 2026-06-30
+duplikaty (symbol,data): 0 | OI<=0: 0
+godzina ostatniego odczytu (h po 00:00 dnia): mediana 23.92, min 1.25, max 24.00
+Δlog OI 7d: p1 -0.471 p50 -0.001 p99 0.462; |Δ|>1.5 (skoki >4,5×): 5; dokładnie 0: 0.000%
+największe skoki: {(Timestamp('2026-06-30 00:00:00+0000', tz='UTC'), 'HBARUSDT'): nan, (Timestamp('2026-06-30 00:00:00+0000', tz='UTC'), 'LTCUSDT'): nan, (Timestamp('2026-06-30 00:00:00+0000', tz='UTC'), 'TRXUSDT'): nan, (Timestamp('2026-06-30 00:00:00+0000', tz='UTC'), 'UNIUSDT'): nan, (Timestamp('2026-06-30 00:00:00+0000', tz='UTC'), 'XMRUSDT'): nan}
