@@ -75,6 +75,7 @@ podsumowanie pod tabelą.
 | **CP1P** | 2026-09-24 | [cp1-poza-proba](2026-09-24_cp1-poza-proba/README.md) | Odczyt prospektywny CP1 (reguła zamrożona) na danych 2026-07 → 09, 0 wariantów, próg obalenia z góry | **Brak obalenia, brak potwierdzenia:** 78 dni, +0,13 % przy BTC +33 %; fazy ±30 %. Walidacja: **READY** |
 | **TL1** | 2026-09-24 | [tl1-tlok-przekrojowy](2026-09-24_tl1-tlok-przekrojowy/README.md) | **NOWA SERIA TL — tłok lewara na przekroju top-20** (nowe źródło: dzienny OI z archiwum, `data/fetch_oi_panel.py`): crowd = Δlog OI 7 dni × znak zwrotu 7 dni, long 5 najniższych / short 5 najwyższych, 7 faz; pre-rejestracja `3983e3a` (1/1) | **NIEROZSTRZYGNIĘTY, punktowo ujemny:** −10,5 %/rok [−25,2; +4,2], t_neff −1,39; IC +0,008 [−0,024; +0,040] — brak informacji, koszty 23,6 %. Walidacja: **Caveats** |
 | **LQ1** | 2026-09-24 | [lq1-likwidacje](2026-09-24_lq1-likwidacje/README.md) | **POPRAWKA TS1: likwidacja izolowana przy 3×** (depozyt = ekspozycja/3, próg 1/3 − 1 %, dzienne high/low z archiwum — nowy kolektor `data/fetch_universe_ohlc.py`); 0 wariantów | **Koszt likwidacji −3,6 %/rok [−5,8; −1,4], t −3,16;** TS1 z likwidacją +11,3 %/rok [−5,3; +27,8], t 1,34 — NIEROZSTRZYGNIĘTY; 4,75 % pozycji-tygodni likwidowanych; opisowo 2× +13,2 %/rok. Walidacja: **READY** |
+| **SZ1** | 2026-09-24 | [sz1-wielkosc-pozycji](2026-09-24_sz1-wielkosc-pozycji/README.md) | **Reguły wielkości pozycji (opisowo, 0 wariantów przewagi)** dla portfela trend (likwidacja 2×) + premia Coinbase (3×): R0 po połowie, R1 budżet ryzyka (1/σ, cel 20 %, sufit 2), R2 = R1 + hamulec 15 %/7,5 %; pre-rejestracja `a635c8c` | Korelacja składowych 0,30; **R0 +19,9 %/rok, obsunięcie 18,9 %; R1 +18,6 % / 17,7 %; R2 +10,3 % / 17,7 % (hamulec 36 % czasu — szkodzi)**; depozyt ~23 % kapitału. Składowe in-sample. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -724,6 +725,12 @@ podsumowanie pod tabelą.
     Przy 2× (ta sama ekspozycja, depozyt połowa pozycji) koszt ~1,6 pkt. Wniosek dla przełożeń:
     „ta sama ekspozycja” nie znaczy „ten sam wynik” — dźwignia na pozycji zmienia rozkład
     przez likwidacje, zwłaszcza na altcoinach; backtesty na zamknięciach zawyżają wynik.
+77. **DWIE SŁABO SKORELOWANE STRATEGIE RAZEM > KAŻDA OSOBNO; HAMULEC PO STRACIE SZKODZI (SZ1,
+    2026-09-24).** Trend (2×) i premia Coinbase (3×), korelacja 0,30: po połowie kapitału +19,9 %/rok
+    przy obsunięciu 18,9 % (składowe osobno 18,2 % i 34,5 %); budżet ryzyka (cel 20 %) podobnie.
+    Hamulec „pół pozycji po −15 %” obciął zwrot do +10,3 % bez zmniejszenia obsunięcia — w
+    strategiach trendowych obsunięcie ~15–20 % jest typowe i poprzedza odbicie. Opisowo,
+    składowe in-sample.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

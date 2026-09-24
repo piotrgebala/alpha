@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **823/823** (2026-09-24).
+Stan testów: **828/828** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -354,6 +354,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **CP1P — premia Coinbase na nowych danych: zero** | 2026-09-24 | Ta sama reguła na lip–wrz 2026: **+0,1 %**, gdy BTC urósł o 33 % — reguła nie obalona (za krótko), ale bez wsparcia. | [cp1-poza-proba](runs/2026-09-24_cp1-poza-proba/README.md) |
 | **TL1 — tłok lewara na przekroju monet: nic** | 2026-09-24 | Short monet, na których lewar goni ruch, long tych, z których ucieka: **−10,5 %/rok [−25; +4]** — sygnał bez informacji, stratę robią prowizje. | [tl1-tlok-przekrojowy](runs/2026-09-24_tl1-tlok-przekrojowy/README.md) |
 | **LQ1 — trend z likwidacją przy 3×: koszt 3,6 pkt/rok** | 2026-09-24 | Przy 3× na każdej pozycji z osobnym depozytem co ~20. pozycja tygodniowa jest likwidowana; trend spada z +14,8 do **+11,3 %/rok**. Przy 2× koszt ok. 1,6 pkt. | [lq1-likwidacje](runs/2026-09-24_lq1-likwidacje/README.md) |
+| **SZ1 — wielkość pozycji: razem lepiej, hamulec szkodzi** | 2026-09-24 | Trend + premia Coinbase po połowie: **~+19 %/rok, największy spadek ~19 %**, depozyt ~23 % kapitału (historia, strategie wybrane na tych danych). Hamulec „pół pozycji po −15 %” obciął zysk do +10 %. | [sz1-wielkosc-pozycji](runs/2026-09-24_sz1-wielkosc-pozycji/README.md) |
 
 ## Hipoteza w skrócie
 
