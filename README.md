@@ -67,7 +67,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **866/866** (2026-09-24).
+Stan testów: **872/872** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -367,6 +367,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **RU1 — naprawa dziury w danych** | 2026-09-24 | Koszyk „20 największych monet” był liczony z 287 z 685 kontraktów. Po naprawie: trend ~+11 %/rok (było 15), momentum ~+42 % (w tym jeden wystrzał MYX), portfel trend+Coinbase ~+17 %/rok przy spadku 18 %. Nadal nic istotnego. | [ru1-pelne-uniwersum](runs/2026-09-24_ru1-pelne-uniwersum/README.md) |
 | **RU2 — pozostałe rundy po naprawie danych** | 2026-09-24 | Trend na monetach 21–50 ~+13 %/rok (dodatni w każdym roku), momentum top-50 ~+23 %, dźwignia 3× kosztuje trend ~2,4 %/rok w likwidacjach; żaden werdykt się nie zmienił. | [ru2-korekta-pozostalych](runs/2026-09-24_ru2-korekta-pozostalych/README.md) |
 | **ADR-09 — drabina dowodów zamiast dowodu na historii** | 2026-09-24 | Decyzja użytkownika: przewagi strategii tygodniowych nie da się udowodnić na 5 latach danych, więc o kapitale decydują kolejne szczeble dowodów, zakończone małą kwotą i twardym STOP. | [docs/rag/09](docs/rag/09_drabina_dowodow.md) |
+| **TX1 — trend na walutach, ropie, indeksach i obligacjach** | 2026-09-24 | Ta sama reguła trendu na 19 zwykłych rynkach: 1990–2026 ok. +5 % rocznie (to nie przypadek), ale po 2013 około zera — działa jeszcze na ropie i akcjach, na walutach zanikła. Mechanizm prawdziwy, ale „wyjadany” na dojrzałych rynkach. | [tx1-trend-inne-rynki](runs/2026-09-24_tx1-trend-inne-rynki/README.md) |
 
 ## Hipoteza w skrócie
 

@@ -41,7 +41,7 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 RU2 przeliczyła TR1, X2, LQ1, TF1, R1 (werdykty bez zmian, 83); TL1 czeka (dane OI); NL1 i P2 nie dotyczy.
 
 **Kryterium od 2026-09-24 (ADR-09):** o kapitale decyduje drabina dowodów (`docs/rag/09`); ten plik nadal
-księguje każdy odczyt. Trend: szczebel 2 spełniony (post hoc), TX1 = szczebel 1(b).
+księguje każdy odczyt. Trend: szczebel 2 spełniony (post hoc); szczebel 1(b) TX1 NIEROZSTRZYGNIĘTY — działa 1990–2012, zanika po 2013 (84).
 
 **Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1); nowe
 źródła popytu (premia koreańska, emisja stablecoinów, przepływy ETF) — każde z rachunkiem mocy.
@@ -130,6 +130,7 @@ podsumowanie pod tabelą.
 | **SH1** | 2026-09-24 | [sh1-sonda-hipotez](2026-09-24_sh1-sonda-hipotez/README.md) | Sonda 15 nowych hipotez (popyt spoza Binance, makro, kalendarz, on-chain/uwaga), 10 zweryfikowanych przeciwniczo z pobraniem danych | **0 — POZA licznikami** | **0 kandydatów: 9 NIEMIERZALNYCH, 1 słaby mechanizm** (niepewność 2–5× większa od realistycznego efektu). Znalezisko: uniwersum obcięte → RU1. Walidacja: **Caveats** |
 | **RU1** | 2026-09-24 | [ru1-pelne-uniwersum](2026-09-24_ru1-pelne-uniwersum/README.md) | **Korekta danych:** `data/raw/universe` miał 287 z 685 kontraktów (A–G + 12); pełne `universe_full`, reguły TS1/X1/SZ1 zamrożone co do bajtu; pre-rejestracja `d2316cc` | **0 — korekta danych** | Skład top-20 inny na 5,1/20 miejsc. **TS1 +11,1 %/rok [−4,2; +26,3] t 1,43 (było +14,8); X1 +41,7 %/rok t_neff 1,86 (było +22), z tego ~83 pkt z jednego zdarzenia (MYX), bez niego +26,3 %; SZ1 R1 +17,1 % / obs. 18,4 %.** Oba ślady odporne, oba NIEROZSTRZYGNIĘTE. Walidacja: **READY (Caveats)** — dziennik vs pełny backtest kor. 0,9990 |
 | **RU2** | 2026-09-24 | [ru2-korekta-pozostalych](2026-09-24_ru2-korekta-pozostalych/README.md) | Korekta danych dla TR1, X2, LQ1, TF1, R1 (pełne uniwersum, reguły zamrożone); pre-rejestracja `1d00e7a` | **0 — korekta danych** | Wszystkie odporne, werdykty bez zmian: **TR1 +13,0 %/rok t 1,63; X2 +23,1 % t 1,60; koszt likwidacji 3× −2,4 %/rok; TF1 −1,3 pkt; R1 −10,6 %/rok.** TL1 nieprzeliczony (OI). Walidacja: **READY (Caveats)** |
+| **TX1** | 2026-09-24 | [tx1-trend-inne-rynki](2026-09-24_tx1-trend-inne-rynki/README.md) | **ADR-09 szczebel 1(b):** reguła TS1 bez zmian na 19 rynkach FRED (13 walut, Brent, Nasdaq, Nikkei, obligacje USA) 1990–2026; pre-rejestracja `6532994`; moc 0,33 SR | **1 — seria TX 1/1, STOP** | **Kryterium POZYTYWNE: +5,1 %/rok [+1,4; +8,7], t 2,73; po 2013 −0,2 %/rok [−6,0; +5,6] (4/14 lat)** — wynik z lat 1990–2012; po 2013 ropa +23 %, akcje +8 %, waluty −3 %. Szczebel 1(b) NIEROZSTRZYGNIĘTY. Walidacja: **READY (Caveats)**, numpy 0,9996 |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -155,6 +156,7 @@ podsumowanie pod tabelą.
 - **NOWA SERIA TF — trend z filtrem tłoku (od TF1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne progi/okna fundingu, OI jako filtr trendu bez nowego mechanizmu.
 - **NOWA SERIA CP — premia Coinbase (od CP1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna, progi, giełdy na tych samych danych. Dozwolone bez nowego licznika: ta sama reguła poza próbą (dane od 2026-07-01, prospektywnie). CP2 (ETH/SOL, 2026-09-24): NIEMIERZALNA, 0 wariantów, 0 odczytów wyniku.
 - **NOWA SERIA NL — nowe listingi (od NL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina G2, zbiór informacyjny: kalendarz zdarzeń). Zakazane bez decyzji użytkownika: inne okna/opóźnienia, filtry listingów, stop-loss na wystrzał (inny rozkład wypłat = nowa hipoteza), long po listingu (post hoc).
+- **NOWA SERIA TX — trend TS1 na rynkach spoza krypto (TX1, 2026-09-24, ADR-09): 1/1 ZUŻYTE — STOP.** Zakazane: dobór rynków lub okresów po wyniku (np. „tylko ropa i akcje”).
 - **NOWA SERIA TS — momentum w czasie na koszyku (od TS1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina A1 katalogu na horyzoncie tygodniowym, uniwersum wielu monet; nie B1). Zakazane bez decyzji użytkownika: inne okna, cele zmienności, uniwersa (top-50), sam BTC, łączenie z X1 — każdy kolejny odczyt na tej samej historii zwiększa szansę przypadkowego sukcesu. Rozstrzygnąć może tylko test prospektywny.
 - **NOWE BAZY Y1 (1h) / Y2 (1d) — model kontrolny na innych interwałach (od Y1/Y2, 2026-09-23, decyzja użytkownika): każda 1/1 ZUŻYTE — OBIE ZAMKNIĘTE REGUŁĄ STOP.** Osobne liczniki per baza (wytyczna o bazach); wyników nie porównuje się 1:1 z 4h. Y1 NEGATYWNY (48,3 %, n 23 334), Y2 NIEROZSTRZYGNIĘTY (50,2 %, n 978). Zakazane bez decyzji użytkownika: inne V/bariery/okna na 1h i 1d, filtry godzin/dni, odwrócenie znaku na 1h (hipoteza post hoc, wniosek 49).
 - **NOWA SERIA X2 — momentum przekrojowe na top-50 (od X2, 2026-09-23, decyzja użytkownika): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Rodzina B1 ma teraz DWA odczyty (X1 top-20, X2 top-50) — raportowane obok siebie, bez sumowania i wyboru; trzeci odczyt na tych danych zakazany; pozostaje wyłącznie pomiar prospektywny z regułą zamrożoną.
@@ -816,6 +818,10 @@ podsumowanie pod tabelą.
 83. **KOREKTA DANYCH NIE ZMIENIŁA ŻADNEGO WERDYKTU (RU2, 2026-09-24).** TR1 +13,0 %/rok (dodatni 6/6
     lat), X2 +23,1 % (2026 głównie z fundingu), koszt likwidacji 3× −2,4 %/rok, TF1 −1,3 pkt, R1
     −10,6 %/rok — znaki bez zmian. Liczby we wnioskach 57, 64, 68, 70, 73, 74, 76 zastępują RU1/RU2.
+84. **TREND DZIAŁA NA ZWYKŁYCH RYNKACH, ALE ZANIKA PO PUBLIKACJI (TX1, 2026-09-24).** Reguła TS1 bez zmian
+    na 19 rynkach FRED: 1990–2026 +5,1 %/rok, t 2,73 (POZYTYWNY); po 2013 −0,2 %/rok (4/14 lat) — na
+    walutach −3,4 %, na ropie +22,9 %, akcjach +7,6 %. Mechanizm istnieje, ale jest „wyjadany” na dojrzałych
+    rynkach. ADR-09 szczebel 1(b) dla trendu krypto: NIEROZSTRZYGNIĘTY.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
