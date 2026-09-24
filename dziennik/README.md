@@ -93,10 +93,16 @@ maszyny, komputer wyłącza swoje zadanie (`schtasks /change /disable`) i nie li
 `tests/test_zapis_dziennika.py`.
 
 Na serwerze (jednorazowo; kopia `~/alpha-dziennik` z `setup_serwer.sh` i dostępem SSH do GitHuba — gotowe
-2026-09-24): `crontab -e` → `30 2 * * * bash $HOME/alpha-dziennik/dziennik/uruchom.sh`. Pierwszej nocy
-mogą policzyć obie maszyny naraz (wygra pierwszy push, drugi zostawi commit lokalnie — dane te same);
-od następnej nocy liczy tylko serwer. Kontrola: `git log -1 --format='%cs %s' --grep='^Dziennik: przebieg'` —
-w nawiasie nazwa serwera. Powrót na komputer: usunąć wpis crona i `schtasks /change /tn "CLAS5 dziennik" /enable`.
+2026-09-24): najlepiej raz ręcznie `bash ~/alpha-dziennik/dziennik/uruchom.sh` (zapis „(dantey1)” trafia na
+GitHub i komputer nie liczy już ani razu), potem `crontab -e` → `30 2 * * * bash $HOME/alpha-dziennik/dziennik/uruchom.sh`.
+Gdyby pierwszej nocy obie maszyny policzyły naraz: `przebiegi.log` łączy wpisy obu (`merge=union`
+w `.gitattributes`), a gdy różnią się wiersze CSV, maszyna, która przegrała wyścig, przy następnym starcie
+przyjmuje stan z GitHuba i dolicza bieżący dzień (`dziennik/aktualizuj.sh`, tylko gdy różnią się wyłącznie
+pliki dziennika). Od następnej nocy liczy tylko serwer. Kontrola: `git log -1 --format='%cs %s'
+--grep='^Dziennik: przebieg'` — w nawiasie nazwa serwera. Powrót na komputer: usunąć wpis crona i
+`schtasks /change /tn "CLAS5 dziennik" /enable` (komputer policzy dopiero, gdy od ostatniego zapisu serwera
+miną 3 dni — wcześniej sam się wyłączy).
+- `uruchom.bat` działa z kopii w `%TEMP%` — `git pull` podmienia plik w trakcie, a cmd czyta `.bat` linia po linii.
 
 ## Codziennie
 

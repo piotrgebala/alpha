@@ -11,8 +11,7 @@ flock -n 9 || { echo "===== inny przebieg dziennika trwa — wyjście" >> dzienn
 export PYTHONUTF8=1 GIT_TERMINAL_PROMPT=0
 PY=.venv/bin/python
 LOG=dziennik/ostatni_wydruk.txt
-git pull -q --rebase --no-autostash origin master >> "$LOG" 2>&1 \
-  || { git rebase --abort 2>/dev/null; echo "===== aktualizacja kodu nieudana — przebieg na dotychczasowym kodzie" >> "$LOG"; }
+bash dziennik/aktualizuj.sh >> "$LOG" 2>&1
 RC=1
 for n in 1 2 3; do
   echo "===== start $(date -u '+%F %T UTC') (próba $n)" >> "$LOG"

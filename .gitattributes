@@ -4,3 +4,5 @@ runs/skille/*.jsonl merge=union text eol=lf
 *.sh text eol=lf
 # Pliki wsadowe Windows: CRLF w każdym klonie (cmd źle czyta etykiety przy LF)
 *.bat text eol=crlf
+# Log przebiegów dziennika: dopisywany na końcu przez różne maszyny — przy scalaniu zachowaj oba wpisy
+dziennik/przebiegi.log merge=union
