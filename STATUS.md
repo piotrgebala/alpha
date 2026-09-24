@@ -99,6 +99,8 @@
 > brak obalenia i brak wsparcia; dziennik CP co kwartał.**
 > TL1 (2026-09-24): tłok lewara (OI) na przekroju top-20 — **−10,5 %/rok [−25,2; +4,2],
 > NIEROZSTRZYGNIĘTY**, IC ≈ 0. Wniosek 75; seria TL 1/1 STOP.**
+> LQ1 (2026-09-24): poprawka TS1 o likwidacje przy 3× — **koszt −3,6 %/rok, TS1 +11,3 %/rok
+> (t 1,34)**; przy 2× koszt ~1,6 pkt. Wniosek 76.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
