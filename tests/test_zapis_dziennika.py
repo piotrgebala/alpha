@@ -5,6 +5,7 @@ Scenariusze na tymczasowych repozytoriach (bare „origin” + klony); wymagają
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -93,7 +94,8 @@ def test_commits_and_pushes_only_journal_files(repos):
         "dziennik/przebiegi.log",
         "dziennik/sygnaly.csv",
     ]
-    assert "Dziennik: przebieg" in git(origin, "log", "-1", "--format=%s", "master")
+    msg = git(origin, "log", "-1", "--format=%s", "master")
+    assert re.fullmatch(r"Dziennik: przebieg \d{4}-\d{2}-\d{2} \(.+\)", msg), msg  # z nazwą maszyny
     assert run_script(journal).count("brak zmian") == 1  # idempotentnie
 
 
