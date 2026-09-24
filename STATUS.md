@@ -83,6 +83,9 @@
 > **+14,8 %/rok [−1,7; +31,3], t_neff 1,76: NIEROZSTRZYGNIĘTY, najsilniejszy ślad w projekcie**
 > (6/6 lat, 7/7 faz dodatnich, bez bety; ponad 100 % H0). 3× kapitału niszczy wynik (CAGR +5 %,
 > obsunięcie 90 %). Wniosek 70; seria TS 1/1 STOP; rozstrzygnąć może tylko test na żywo.**
+> NL1 (2026-09-24): short na 569 nowych kontraktach USDT-M przez 14 dni — **+2,1 % na zdarzenie
+> [−2,7; +6,9], NIEROZSTRZYGNIĘTY**; mediana +13,5 %, ale 12 % nowych monet podwaja cenę
+> (likwidacja nawet przy 1×); przy 3× 42 % likwidacji. Wniosek 71; seria NL 1/1 STOP.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2586,6 +2589,16 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Seria NL — short na nowych listingach ⚪ ZAMKNIĘTA 2026-09-24 (NL1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY
+
+Drugi kandydat panelu „co dalej” (decyzja użytkownika „testuj dalej różne kombinacje”). Nowe
+źródło danych: `data/fetch_listings.py` (archiwum data.binance.vision — pierwszy dzienny plik =
+data listingu, point-in-time, wycofane włącznie; miesięczne świece 1d i funding). 569 zdarzeń
+2021–2026. Pre-rejestracja `47e196d`. Wynik: +2,12 % na zdarzenie [−2,68; +6,93], t 0,87;
+mediana +13,5 %; 11,8 % likwidacji przy 1×, 41,5 % przy 3×. Wniosek 71. Ścieżka odwrotu: revert
+commitu scalającego (nowe moduły, bez zmian w istniejących). Pełne wyniki:
+`runs/2026-09-24_nl1-nowe-listingi/`.
 
 #### Seria TS — momentum w czasie na koszyku top-20 ⚪ ZAMKNIĘTA 2026-09-24 (TS1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY (najsilniejszy ślad)
 

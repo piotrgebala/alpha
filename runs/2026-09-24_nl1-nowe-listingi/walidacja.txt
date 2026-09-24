@@ -1,0 +1,7 @@
+C:\Users\pitge\GIT\alpha\runs\2026-09-24_nl1-nowe-listingi\walidacja.py:47: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  ("kwartał", d.dt.to_period("Q").astype(str)),
+(1) wektorowo: n 569, średnia +2.12% (raw_output +2.12%), mediana +13.54% (raw +13.54%), likwidacje 1×: 67 (11.8%)
+(2) klastry miesiąc: 62 klastrów, CI [-2.68; +6.93], t +0.87
+(2) klastry kwartał: 22 klastrów, CI [-3.47; +7.72], t +0.74
+(2) klastry rok: 6 klastrów, CI [-0.89; +5.14], t +1.38
+(3) bez 5% najgorszych (28): średnia +7.81%; bez 5% najlepszych: -1.18%; zdarzenia ≤ −50%: 79, ich suma -7703% vs suma reszty +8911%

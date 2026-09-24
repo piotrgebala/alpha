@@ -1,0 +1,3 @@
+[listings] symboli USDT w archiwum dziennym: 887
+[listings] zdarzeń w próbie: 589; powody wykluczeń: {'': 589, 'klasa:TRADIFI': 199, 'przed bazą (zasada 20)': 80, 'okno poza końcem danych': 12, 'klasa:INDEX': 5, 'klasa:STABLE': 1, 'redenominacja/duplikat bazy': 1}
+[listings] zapisano: świece 21374 (589 symboli), funding 120113 (586 symboli)
