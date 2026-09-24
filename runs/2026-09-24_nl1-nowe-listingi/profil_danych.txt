@@ -1,0 +1,26 @@
+zdarzenia w próbie: 589 | per rok: {2021: 58, 2022: 24, 2023: 98, 2024: 131, 2025: 239, 2026: 39}
+d0 − onboardDate (dni), zdarzenia z onboard: 569 rozkład: {-1769.0: 1, -1035.0: 1, -631.0: 1, -621.0: 1, -399.0: 1, -327.0: 1, -124.0: 1, -89.0: 1, -80.0: 1, 0.0: 480}
+  |różnica| > 1 dzień: 26        symbol                        d0                   onboard
+84   SANDUSDT 2021-01-25 00:00:00+00:00 2021-01-18 07:00:00+00:00
+88    LITUSDT 2021-02-18 00:00:00+00:00 2025-12-23 17:30:00+00:00
+90   UNFIUSDT 2021-02-19 00:00:00+00:00 2021-02-09 07:00:00+00:00
+91   REEFUSDT 2021-02-22 00:00:00+00:00 2021-01-25 07:00:00+00:00
+102  LINAUSDT 2021-03-19 00:00:00+00:00 2021-03-17 07:00:00+00:00
+103  STMXUSDT 2021-03-22 00:00:00+00:00 2021-03-17 07:00:00+00:00
+112   DGBUSDT 2021-04-21 00:00:00+00:00 2021-04-19 07:00:00+00:00
+114   ICPUSDT 2021-05-11 00:00:00+00:00 2021-07-30 07:00:00+00:00
+116   GTCUSDT 2021-06-11 00:00:00+00:00 2021-03-15 07:00:00+00:00
+119   TLMUSDT 2021-07-16 00:00:00+00:00 2023-03-29 00:00:00+00:00
+122   RAYUSDT 2021-08-20 00:00:00+00:00 2021-08-18 07:00:00+00:00
+124  MASKUSDT 2021-08-27 00:00:00+00:00 2021-07-16 07:00:00+00:00
+148   BNXUSDT 2022-04-01 00:00:00+00:00 2023-02-22 07:00:00+00:00
+161   CVXUSDT 2022-09-22 00:00:00+00:00 2025-07-23 11:30:00+00:00
+164   QNTUSDT 2022-10-20 00:00:00+00:00 2022-10-18 07:00:00+00:00
+  bez onboard (wycofane, nieobecne w exchangeInfo): 20
+świece: duplikaty (symbol, dzień): 0 | ceny ≤ 0: 0 | high < max(open,close): 0
+pierwsza świeca archiwum miesięcznego − d0 (dni): {0: 588, 1: 1}
+świec w oknie na zdarzenie: min 21 mediana 37.0 | zdarzenia z < 15 świec: 0
+funding: interwał (h) rozkład rozliczeń: {4: 93986, 8: 15043, 1: 10946, 2: 138} | duplikaty: 0 | symbole bez fundingu: ['BNXUSDT', 'ICPUSDT', 'TLMUSDT']
+funding stawka: p1 -0.4859% p50 0.0050% p99 0.1537%, udział ujemnych 20.1%
+wykluczone przed bazą — najpóźniejsze d0: 2020-12-25 00:00:00+00:00
+wykluczone redenominacje: ['BOBUSDT']
