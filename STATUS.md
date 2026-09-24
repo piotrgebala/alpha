@@ -126,6 +126,9 @@
 > WF1 + HC1 (2026-09-24, decyzje użytkownika): dłuższe okno uczenia modelu 4h — oba warianty NEGATYWNE
 > (wniosek 85); cykl halvingowy — 0–18 mies. wzrosty 9/9, 18–24 mies. spadki 3/3, trend traci w 24–30 mies.
 > 4/4 (opis, wniosek 86). DO DECYZJI: czy zmniejszać dźwignię trendu w fazie 18–30 mies. (reguła ryzyka).**
+> SKILL (2026-09-24): `zarzadzanie-pozycja` rozszerzony o tryb systemowy (sekcja E: lista zleceń z `dziennik/sygnaly.csv`,
+> kontrole konta, dziennik wykonania papier vs rzeczywistość; bez reguł B/D trybu ręcznego) — paczka w Pobranych,
+> obowiązuje po wgraniu na claude.ai przez użytkownika; wpis w tabeli zasady 19.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny

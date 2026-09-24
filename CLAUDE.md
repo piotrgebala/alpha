@@ -85,6 +85,7 @@ skrót”). Tych plików nie kopiuj tutaj — zmieniają się często.
     | nowa wersja skilla projektu + paczka do wgrania na claude.ai | `anthropic-skills:skill-creator` |
     | plik Word / Excel / PowerPoint / PDF | `anthropic-skills:docx` / `anthropic-skills:xlsx` / `anthropic-skills:pptx` / `anthropic-skills:pdf` |
     | nowy zbiór danych: dziury, duplikaty, dziwne wartości (obok `clas5-quant`) | `data:explore-data` |
+    | wykonanie sygnałów dziennika na realnych pieniądzach (szczebel 4 ADR-09): lista zleceń, kontrole konta, dziennik wykonania | `anthropic-skills:zarzadzanie-pozycja` (sekcja E, tryb systemowy) |
     | kod z kluczami API, zleceniami albo nowym połączeniem sieciowym | `security-review` (wbudowany; jednorazowo w tym momencie, nie przy każdym commicie) |
     | pytanie, jakie automatyzacje Claude Code dodać | `claude-code-setup:claude-automation-recommender` (tylko czyta; nowe skille i tak trafiają do chmury, nie do repo) |
 
