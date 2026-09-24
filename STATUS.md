@@ -123,6 +123,9 @@
 > X1: poza dziennikiem. Szczebel 4 (≤ 5 % kapitału) — decyzja użytkownika po odczycie dziennika ~2026-12-25.**
 > TX1 (2026-09-24): trend na 19 rynkach FRED 1990–2026 +5,1 %/rok (t 2,73, POZYTYWNY), po 2013 −0,2 % →
 > szczebel 1(b) NIEROZSTRZYGNIĘTY (wniosek 84).**
+> WF1 + HC1 (2026-09-24, decyzje użytkownika): dłuższe okno uczenia modelu 4h — oba warianty NEGATYWNE
+> (wniosek 85); cykl halvingowy — 0–18 mies. wzrosty 9/9, 18–24 mies. spadki 3/3, trend traci w 24–30 mies.
+> 4/4 (opis, wniosek 86). DO DECYZJI: czy zmniejszać dźwignię trendu w fazie 18–30 mies. (reguła ryzyka).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny

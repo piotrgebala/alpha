@@ -67,7 +67,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **872/872** (2026-09-24).
+Stan testów: **874/874** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -368,6 +368,8 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **RU2 — pozostałe rundy po naprawie danych** | 2026-09-24 | Trend na monetach 21–50 ~+13 %/rok (dodatni w każdym roku), momentum top-50 ~+23 %, dźwignia 3× kosztuje trend ~2,4 %/rok w likwidacjach; żaden werdykt się nie zmienił. | [ru2-korekta-pozostalych](runs/2026-09-24_ru2-korekta-pozostalych/README.md) |
 | **ADR-09 — drabina dowodów zamiast dowodu na historii** | 2026-09-24 | Decyzja użytkownika: przewagi strategii tygodniowych nie da się udowodnić na 5 latach danych, więc o kapitale decydują kolejne szczeble dowodów, zakończone małą kwotą i twardym STOP. | [docs/rag/09](docs/rag/09_drabina_dowodow.md) |
 | **TX1 — trend na walutach, ropie, indeksach i obligacjach** | 2026-09-24 | Ta sama reguła trendu na 19 zwykłych rynkach: 1990–2026 ok. +5 % rocznie (to nie przypadek), ale po 2013 około zera — działa jeszcze na ropie i akcjach, na walutach zanikła. Mechanizm prawdziwy, ale „wyjadany” na dojrzałych rynkach. | [tx1-trend-inne-rynki](runs/2026-09-24_tx1-trend-inne-rynki/README.md) |
+| **WF1 — dłuższe okno uczenia modelu** | 2026-09-24 | Model kierunku BTC uczony na roku lub 2 latach zamiast 2 miesięcy dalej trafia jak rzut monetą (48,5–49,6 %). Krótkie okno nie było przyczyną porażki. | [wf1-okno-uczenia](runs/2026-09-24_wf1-okno-uczenia/README.md) |
+| **HC1 — cykl halvingowy (opis)** | 2026-09-24 | We wszystkich 3 cyklach: 18 miesięcy wzrostów po halvingu, potem spadki; trend traci w fazie dołka (24–30 mies.). Jesteśmy teraz w 29. miesiącu. Opis, nie dowód — kandydat na zasadę ryzyka. | [hc1-cykl-halvingowy](runs/2026-09-24_hc1-cykl-halvingowy/README.md) |
 
 ## Hipoteza w skrócie
 
