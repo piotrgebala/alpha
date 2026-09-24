@@ -1,0 +1,6 @@
+========================================================================================================
+WF1 — MIERZALNOŚĆ; konfiguracja ZAMROŻONA
+========================================================================================================
+  dane 4h: 12042 świec od 2021-01-01 00:00:00+00:00 (zasada 20); ramiona train_days (60, 365, 730) (60 = kontrola), test/krok 28/28
+  wspólny okres oceny od 2023-01-01 00:00:00+00:00 (7662 świec); próg ±B ≈ 51.74%; oczekiwane n na ramię 4,541; half-width 1.45 pp (z 1,96) / 1.66 pp (z 2,241)
+  measurability_report(p = 0.56, BE = 0.5174, n = 4,541) → MIERZALNA
