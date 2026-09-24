@@ -141,6 +141,9 @@
 > logowania wymaga administratora (polecenie w `dziennik/README.md`).
 > SERIA SW (decyzja użytkownika 2026-09-24): cechy spoza wykresu — etap 1 pojedyncze reguły, etap 2 jeden model
 > XGBoost ze wszystkimi (okno 365 dni) jako JEDEN wariant = świadomy wyjątek od zasady 4.**
+> SW (2026-09-24): 8 reguł tracą po kosztach, model 365 dni −0,050 %/tr (t −1,78); duża przewaga wykluczona; ślad
+> przed kosztami +0,02–0,05 %/tr < koszt 0,08 % (wniosek 90). Seria zamknięta STOP. DO DECYZJI: wolniejszy horyzont
+> (nowa hipoteza). SKILL: `quant-strategy-catalog` — statusy D1/E1/E2/F1/H1 nieaktualne po P3/AU1/SW (do nowej wersji).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny

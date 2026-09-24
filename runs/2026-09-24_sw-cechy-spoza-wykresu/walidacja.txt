@@ -1,0 +1,23 @@
+1. Zwrot BRUTTO (przed kosztami) i koszt na transakcję; netto per rok (opis)
+            funding_rate | n  8460 | brutto +0.0274% [-0.0059; +0.0608] | koszt 0.0851% | netto -0.0577% | lata netto dodatnie 1/6: 2021: +0.050, 2022: -0.066, 2023: -0.067, 2024: -0.055, 2025: -0.085, 2026: -0.038
+           oi_change_24h | n 10220 | brutto +0.0397% [+0.0083; +0.0711] | koszt 0.0817% | netto -0.0420% | lata netto dodatnie 1/6: 2021: -0.150, 2022: -0.088, 2023: -0.074, 2024: +0.080, 2025: -0.053, 2026: -0.017
+        toptrader_ls_log | n  7255 | brutto -0.0237% [-0.0600; +0.0126] | koszt 0.0844% | netto -0.1081% | lata netto dodatnie 1/6: 2021: -0.197, 2022: +0.092, 2023: -0.134, 2024: -0.086, 2025: -0.111, 2026: -0.056
+           global_ls_log | n 10277 | brutto +0.0540% [+0.0225; +0.0854] | koszt 0.0816% | netto -0.0277% | lata netto dodatnie 2/6: 2021: -0.024, 2022: -0.008, 2023: +0.028, 2024: -0.079, 2025: -0.082, 2026: +0.027
+     taker_imbalance_24h | n  9432 | brutto +0.0244% [-0.0077; +0.0565] | koszt 0.0812% | netto -0.0568% | lata netto dodatnie 1/6: 2021: +0.045, 2022: -0.141, 2023: -0.028, 2024: -0.085, 2025: -0.042, 2026: -0.092
+                 vrp_30d | n  9692 | brutto +0.0103% [-0.0221; +0.0427] | koszt 0.0795% | netto -0.0692% | lata netto dodatnie 0/6: 2021: -0.042, 2022: -0.102, 2023: -0.043, 2024: -0.072, 2025: -0.061, 2026: -0.083
+     ex_supply_change_7d | n 10139 | brutto +0.0206% [-0.0113; +0.0526] | koszt 0.0825% | netto -0.0618% | lata netto dodatnie 1/6: 2021: -0.160, 2022: -0.036, 2023: -0.097, 2024: -0.069, 2025: -0.051, 2026: +0.056
+               fng_level | n  9772 | brutto -0.0271% [-0.0588; +0.0046] | koszt 0.0824% | netto -0.1095% | lata netto dodatnie 0/6: 2021: -0.082, 2022: -0.130, 2023: -0.131, 2024: -0.078, 2025: -0.126, 2026: -0.085
+
+2. Niezależna droga: Spearman(kierunek reguły, log-zwrot close_t → close_t+3) na świecach OOS
+            funding_rate | n  9083 | IC +0.0189 (p 0.071) | kierunek = znak ruchu 12h: 50.94%
+           oi_change_24h | n 10944 | IC +0.0229 (p 0.017) | kierunek = znak ruchu 12h: 51.11%
+        toptrader_ls_log | n  8131 | IC -0.0104 (p 0.349) | kierunek = znak ruchu 12h: 49.81%
+           global_ls_log | n 10836 | IC +0.0280 (p 0.004) | kierunek = znak ruchu 12h: 50.19%
+     taker_imbalance_24h | n 10151 | IC +0.0058 (p 0.561) | kierunek = znak ruchu 12h: 49.96%
+                 vrp_30d | n 10462 | IC +0.0307 (p 0.002) | kierunek = znak ruchu 12h: 50.87%
+     ex_supply_change_7d | n 10948 | IC +0.0251 (p 0.009) | kierunek = znak ruchu 12h: 50.67%
+               fng_level | n 10739 | IC -0.0016 (p 0.865) | kierunek = znak ruchu 12h: 50.64%
+
+3. Etap 2 (model) — brutto, koszt, lata
+                model SW | n  5521 | brutto +0.0285% [-0.0119; +0.0690] | koszt 0.0789% | netto -0.0503% | lata netto dodatnie 2/5: 2022: -0.101, 2023: -0.044, 2024: +0.024, 2025: -0.120, 2026: +0.012
+            kontrola 365 | n  5407 | brutto -0.0145% [-0.0565; +0.0276] | koszt 0.0799% | netto -0.0944% | lata netto dodatnie 0/5: 2022: -0.117, 2023: -0.091, 2024: -0.085, 2025: -0.129, 2026: -0.004

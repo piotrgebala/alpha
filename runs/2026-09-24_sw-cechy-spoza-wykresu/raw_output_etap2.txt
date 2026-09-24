@@ -1,0 +1,13 @@
+==============================================================================================================
+SW ETAP 2 — jeden model XGBoost, cechy ['funding_rate', 'oi_change_24h', 'global_ls_log', 'taker_imbalance_24h', 'vrp_30d', 'ex_supply_change_7d', 'fng_level']; okno 365/28/28; z* = 2.773
+==============================================================================================================
+  trening modelu: 4 s
+  trening kontroli (4 cechy wykresu, te same świece): 7 s
+  [model SW] foldy aktywne 54/58; świece ocenione 8954; abstynencja 37.8 %; pierwszy test 2022-04-23 00:00:00+00:00
+  [kontrola] foldy aktywne 54/55; świece ocenione 8948; abstynencja 38.5 %; pierwszy test 2022-04-22 00:00:00+00:00
+                   ramię |     n |  r̄ netto |                CI 95% |  mediana | t_neff |  N_eff |       p |            CI*(p) |     p*
+                model SW |  5521 |  -0.0503% | [ -0.0908;  -0.0099] | -0.0721% |  -1.78 |   2936 |  50.50% | [ 48.63;  52.36] | 52.67%
+     kontrola 365 (opis) |  5407 |  -0.0944% | [ -0.1364;  -0.0523] | -0.1234% |  -4.40 |   5407 |  48.77% | [ 46.89;  50.66] | 52.67%
+
+  >>> ODCZYT KRYTERIUM model SW: NIEROZSTRZYGNIĘTY — |t_neff| < 2.773 albo ci_low*(p) <= p*
+==============================================================================================================

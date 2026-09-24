@@ -11,8 +11,9 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
   próbach — dowód braku (Faza 0, M1, Y1, WF1; wnioski 12, 39, 69, 85). 1d (Y2) niezmierzony.
 - Klasyczna analiza techniczna na BTC 4h — 7 rodzin (48–53). Wykonanie i zarządzanie pozycją nie
   tworzą przewagi (42–45).
-- Pozycjonowanie i dane spoza wykresu jako cechy modelu 60-dniowego — bez skutku, ALE przyrząd nie widzi
-  słabej cechy (AU1, 87): cechy niezmierzone jako takie; TF1/TL1 bez skutku (TL1 na obciętych danych).
+- Dane spoza wykresu (funding, OI, L/S, przewaga kupujących, VRP, podaż na giełdach, F&G) na BTC 4h — zmierzone
+  (SW, 90): jako reguły i jako model 365 dni tracą po kosztach; duża przewaga wykluczona; ślad przed kosztami
+  +0,02 … +0,05 %/tr, mniejszy niż koszt 0,08 %.
 - Carry przekrojowy (niemierzalny), przełączanie carry po znaku, premia rebalansowa, short nowych
   listingów (40, 55, 57, 71). Carry z hedgem działa (COIN-M ~+9 %/rok, 61), ale to nie cel
   użytkownika (zwroty rzędu zakładu o kierunek).
@@ -141,6 +142,7 @@ podsumowanie pod tabelą.
 | **AU1** | 2026-09-24 | [au1-audyt-metodologii](2026-09-24_au1-audyt-metodologii/README.md) | Audyt wieloagentowy: czy testy mogły ukryć przewagę (koszty, kryteria, dane, silnik, przyrząd Fazy 0), 12 weryfikacji przeciwniczych | **0 — przegląd** | **CZĘŚCIOWO:** obliczenia poprawne; model 60 dni gubi ~85 % słabej 5. cechy (F1/O1/L1/V1/G1 niezmierzone); TR1 od 2021-02 t 1,99 (po fakcie); „nierozstrzygnięty” = za mało lat (moc ~25 % przy +10 %/rok). Naprawiony `max(1, N_eff)`. Walidacja: **Caveats** |
 | **RU3** | 2026-09-24 | [ru3-data-startu](2026-09-24_ru3-data-startu/README.md) | Korekta daty startu TR1 i X2 (2021-05 → 2021-02, pełne uniwersum; X2 jako średnia 7 faz); pre-rejestracja `e4c2350`; wynik znany z AU1 | **0 — korekta danych** | **TR1 +15,5 %/rok [+0,2; +30,8], t 1,99 — formalnie POZYTYWNY, ale znany z góry, poniżej progu rodzinnego ~2,9, a cały przyrost to 82 dni hossy 02–04.2021 (od 2022: +11,4 %, t 1,32). X2 +21,9 % t 1,59 — NIEROZSTRZYGNIĘTY** (fazy 12–39 %/rok). Walidacja: **Caveats** (RU2 odtworzone co do 1e-17) |
 | **X1F** | 2026-09-24 | [x1f-siedem-faz](2026-09-24_x1f-siedem-faz/README.md) | X1 (momentum przekrojowe top-20) jako średnia 7 faz (dni startu tygodnia) + X1 w dzienniku papierowym od 2026-09-25 (poprawka 3) + poprawka filtra nazw dziennika (poprawka 4) | **0 — zapis porządkowy** | **X1 7 faz: +9,5 %/rok [−21,1; +40,1], t 0,61 — dawne +41,7 % (t 1,86) to najlepsza z 7 faz (poniedziałek); pozostałe od −1,3 do +21,6. Kandydat skreślony na historii.** MYX: long w 1 fazie, short w 5 (−44 pkt średniej). Dziennik vs backtest X1: kor. 0,9875 → 0,9986 po poprawce filtra (币安人生USDT). Walidacja: **Caveats** |
+| **SW** | 2026-09-24 | [sw-cechy-spoza-wykresu](2026-09-24_sw-cechy-spoza-wykresu/README.md) | **NOWA SERIA SW:** 8 cech spoza wykresu (funding, OI, L/S dużych graczy i wszystkich kont, przewaga kupujących, VRP, podaż na giełdach, F&G) — etap 1: każda jako reguła „za/przeciw odchyleniu od mediany 365 dni” (kierunek z mechanizmu); etap 2: jeden XGBoost na 7 cechach, okno 365 dni (wyjątek od zasady 4, decyzja użytkownika); pre-rejestracja `e03cfa4` | **9/9 — seria zamknięta (STOP)**, z\* 2,773 | **Wszystkie 8 reguł tracą po kosztach (−0,03 … −0,11 %/tr; 4 NEGATYWNE, 4 NIEROZSTRZ.); model −0,050 % [−0,091; −0,010], t −1,78 — NIEROZSTRZ. Duża przewaga (≥ +0,06 %/tr) wykluczona.** Przed kosztami +0,02 … +0,05 %/tr (L/S kont +0,054 [+0,023; +0,085]) — 2–3× mniej niż koszt 0,08 %. Walidacja: **Ready** (IC niezależne od silnika zgodne) |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -169,6 +171,7 @@ podsumowanie pod tabelą.
 - **NOWA SERIA NL — nowe listingi (od NL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina G2, zbiór informacyjny: kalendarz zdarzeń). Zakazane bez decyzji użytkownika: inne okna/opóźnienia, filtry listingów, stop-loss na wystrzał (inny rozkład wypłat = nowa hipoteza), long po listingu (post hoc).
 - **NOWA SERIA WF — okno uczenia modelu 4h (WF1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — STOP.** Oba NEGATYWNE.
 - **NOWA SERIA TX — trend TS1 na rynkach spoza krypto (TX1, 2026-09-24, ADR-09): 1/1 ZUŻYTE — STOP.** Zakazane: dobór rynków lub okresów po wyniku (np. „tylko ropa i akcje”).
+- **NOWA SERIA SW — cechy spoza wykresu (od SW, 2026-09-24): 9/9 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** 8 reguł + 1 model, Bonferroni m = 9 (z\* 2,773). Zakazane na tej historii: inne okna mediany, progi skrajności, kombinacje cech w regułach, podzbiory lat, odwrócone kierunki. Wolniejszy horyzont = NOWA hipoteza (decyzja użytkownika).
 - **NOWA SERIA TS — momentum w czasie na koszyku (od TS1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina A1 katalogu na horyzoncie tygodniowym, uniwersum wielu monet; nie B1). Zakazane bez decyzji użytkownika: inne okna, cele zmienności, uniwersa (top-50), sam BTC, łączenie z X1 — każdy kolejny odczyt na tej samej historii zwiększa szansę przypadkowego sukcesu. Rozstrzygnąć może tylko test prospektywny.
 - **NOWE BAZY Y1 (1h) / Y2 (1d) — model kontrolny na innych interwałach (od Y1/Y2, 2026-09-23, decyzja użytkownika): każda 1/1 ZUŻYTE — OBIE ZAMKNIĘTE REGUŁĄ STOP.** Osobne liczniki per baza (wytyczna o bazach); wyników nie porównuje się 1:1 z 4h. Y1 NEGATYWNY (48,3 %, n 23 334), Y2 NIEROZSTRZYGNIĘTY (50,2 %, n 978). Zakazane bez decyzji użytkownika: inne V/bariery/okna na 1h i 1d, filtry godzin/dni, odwrócenie znaku na 1h (hipoteza post hoc, wniosek 49).
 - **NOWA SERIA X2 — momentum przekrojowe na top-50 (od X2, 2026-09-23, decyzja użytkownika): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Rodzina B1 ma teraz DWA odczyty (X1 top-20, X2 top-50) — raportowane obok siebie, bez sumowania i wyboru; trzeci odczyt na tych danych zakazany; pozostaje wyłącznie pomiar prospektywny z regułą zamrożoną.
@@ -870,6 +873,14 @@ podsumowanie pod tabelą.
     papierowym od 2026-09-25 decyzją użytkownika (bez dźwigni i likwidacji, progi 55,0 / 82,5 %). Przy okazji:
     filtr nazw dziennika pomijał monety z nazwą spoza ASCII (`币安人生USDT` w top-20 2026-05) — poprawione
     przed pierwszym wynikiem (poprawka 4); mnożnik R1 z 23.09: 0,5709 → 0,5700.
+90. **DANE SPOZA WYKRESU: ŚLAD JEST, ALE MNIEJSZY NIŻ KOSZT (SW, 2026-09-24).** Osiem cech na BTC 4h, kierunki
+    z mechanizmu zapisane z góry, m = 9 (z\* 2,773). Reguły „za/przeciw odchyleniu od mediany 365 dni”: netto
+    −0,028 … −0,110 %/tr, górne krańce CI ≤ +0,004 % → efekty ≥ +0,06 %/tr wykluczone; NEGATYWNE: funding,
+    L/S dużych graczy („za nimi”), VRP, F&G. Model XGBoost na 7 cechach, okno 365 dni: −0,050 % [−0,091; −0,010],
+    t −1,78 (kontrola z cechami wykresu −0,094 %). Przed kosztami: +0,01 … +0,05 %/tr w 6/8 regułach (L/S wszystkich
+    kont +0,054 [+0,023; +0,085]), IC niezależne od silnika +0,02 … +0,03 w 5/8 — koszt handlu co 4h ~0,08 %/tr
+    zjada to 2–3×. Zastępuje „niezmierzone” z wniosku 87 dla tych cech. Odwrócenie kierunku nie ratuje (płaci ten
+    sam koszt). Jedyna otwarta droga: wolniejszy horyzont (mniej transakcji) — NOWA hipoteza, decyzja użytkownika.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
