@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **786/786** (2026-09-24).
+Stan testów: **806/806** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -236,6 +236,15 @@ części dziełem przypadku (kalendarza), momentum przekrojowe w krypto zostaje 
 słabym poparciem. Kolejne warianty na tych samych danych nic nie rozstrzygną; jedyna droga
 to pomiar na żywo przez co najmniej dwa lata.
 
+### ⚪ Short na nowych monetach — NL1 (2026-09-24): zwykle działa, średnio nie
+
+Short każdej nowej monety na Binance od drugiego dnia notowań przez 14 dni, 569 przypadków od
+2021. [NL1](runs/2026-09-24_nl1-nowe-listingi/README.md): dwie na trzy nowe monety rzeczywiście
+tanieją (typowo o kilkanaście procent), ale co ósma podwaja cenę i short traci całą stawkę.
+Średnio **+2 % na zdarzenie**, niepewność od −3 do +7 % — nierozstrzygnięte. **Co to znaczy:**
+przy dźwigni 3× prawie połowa pozycji kończy się likwidacją; ta strategia sprzedaje
+ubezpieczenie od wystrzału i przy dźwigni ogon staje się regułą.
+
 ### 🟡 Trend tygodniowy na koszyku — TS1 (2026-09-24): najlepszy wynik projektu, ale bez dowodu
 
 Każda z 20 największych monet gra co tydzień w kierunku swojego trendu z 4 tygodni (long albo
@@ -329,6 +338,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **X2 — momentum na top-50: słabiej, a X1 zależało od kalendarza** | 2026-09-23 | Ta sama reguła na 50 monetach: **+16 %/rok [−12; +44]**, nierozstrzygnięte; IC zero, połowa zysku w 33 dniach, 2022 −20 %. Reguła X1 na innym kalendarzu rebalansów: +9 % zamiast +22 %/rok. Momentum przekrojowe = hipoteza ze słabym poparciem; kolejne warianty zakazane, zostaje pomiar na żywo | [runs/x2](runs/2026-09-23_x2-momentum-top50/README.md) |
 | **Y1 / Y2 — ten sam model na 1h i 1d: horyzont nie pomaga** | 2026-09-23 | Na 1h trafność **48,3 %** przy progu 54 % (23 334 transakcje, przedział w całości poniżej 50 %, 6/6 lat ujemnych) — negatywnie z ogromnym zapasem; na 1d **50,2 %** przy progu 51,7 %, ale 978 transakcji — nierozstrzygnięte, jak policzono przed przebiegiem. Model kontrolny zmierzony na trzech interwałach, na każdym 48–50 %. | [y1-horyzont-1h](runs/2026-09-23_y1-horyzont-1h/README.md), [y2-horyzont-1d](runs/2026-09-23_y2-horyzont-1d/README.md) |
 | **TS1 — trend tygodniowy na koszyku: najlepszy ślad, bez dowodu** | 2026-09-24 | Long/short każdej z 20 monet wg jej trendu z 4 tygodni: **+14,8 %/rok po kosztach [−2; +31]**, 6/6 lat na plusie, bez bety rynku; t 1,76 przy wymaganym 1,96 — nierozstrzygnięte. 3× kapitału → +5 %/rok i obsunięcie 90 %. | [ts1-trend-koszyk](runs/2026-09-24_ts1-trend-koszyk/README.md) |
+| **NL1 — short na nowych listingach: zwykle działa, średnio nie** | 2026-09-24 | 569 nowych kontraktów, short 14 dni: mediana +13,5 %, ale średnio **+2,1 % [−2,7; +6,9]** — co ósma moneta podwaja cenę; przy 3× 42 % likwidacji. Nierozstrzygnięte. | [nl1-nowe-listingi](runs/2026-09-24_nl1-nowe-listingi/README.md) |
 
 ## Hipoteza w skrócie
 
