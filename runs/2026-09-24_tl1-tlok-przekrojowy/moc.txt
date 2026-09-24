@@ -1,0 +1,6 @@
+========================================================================================================
+TL1 — RACHUNEK MOCY (H0: crowd przesunięty w czasie); konfiguracja ZAMROŻONA
+========================================================================================================
+  OI: 114 symboli, 35745 dni-symboli; pokrycie crowd u członków od 2021-12-15: średnio 99.7% (min miesiąc 93.4%)
+  dni 1652; zmienność H0 8.4%/rok; half-width 95% 7.7%/rok = 0.92 SR; q97,5 H0 +5.7%/rok
+  czas: 699s
