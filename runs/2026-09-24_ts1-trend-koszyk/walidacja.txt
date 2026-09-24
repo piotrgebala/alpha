@@ -1,0 +1,6 @@
+(1) faza 0 niezależnie: 1975 dni, średnia +12.14%/rok (raw_output: +12.1%/rok)
+(2) bootstrap blokowy (bloki 28 dni, 5000): średnia +14.8%/rok, CI 95% [+1.1; +29.3]%/rok; udział bootstrapów ≤ 0: 1.9%
+(3) bez 10 najlepszych dni: +6.1%/rok; bez 10 najgorszych: +22.6%/rok
+    pierwszy dzień z pozycją wszystkich faz: 2021-02-08
+    członkowie koszyka wycofani przed końcem próby (po wycofaniu = gotówka): 2: ['EOSUSDT', 'FRONTUSDT']
+    dni z dodatnim netto: 51.5%; mediana +0.021%/dzień vs średnia +0.041%/dzień

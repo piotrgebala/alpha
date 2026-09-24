@@ -78,6 +78,11 @@
 > NIEROZSTRZYGNIĘTY** (50,20 % [47,07; 53,34] vs 51,7 %, n 978 — jak policzono przed
 > przebiegiem). Wniosek 69: zmiana horyzontu nie jest drogą; rodzina „kierunek z OHLCV"
 > zmierzona na trzech interwałach. Serie Y1/Y2 1/1 STOP.**
+> TS1 (2026-09-24, decyzja użytkownika „testuj dalej różne kombinacje”): trend tygodniowy na
+> koszyku top-20 (każda moneta long/short wg znaku 28 dni, skalowanie zmiennością) —
+> **+14,8 %/rok [−1,7; +31,3], t_neff 1,76: NIEROZSTRZYGNIĘTY, najsilniejszy ślad w projekcie**
+> (6/6 lat, 7/7 faz dodatnich, bez bety; ponad 100 % H0). 3× kapitału niszczy wynik (CAGR +5 %,
+> obsunięcie 90 %). Wniosek 70; seria TS 1/1 STOP; rozstrzygnąć może tylko test na żywo.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2581,6 +2586,18 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Seria TS — momentum w czasie na koszyku top-20 ⚪ ZAMKNIĘTA 2026-09-24 (TS1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY (najsilniejszy ślad)
+
+Decyzja użytkownika 2026-09-23 („testuj dalej różne kombinacje”); kandydat wybrany z panelu pięciu
+propozycji (trend tygodniowy, listingi, kalendarz, przepływ zleceń, relatywne/test na żywo — trzy
+ostatnie NIEMIERZALNE lub słabe). Reguła: znak zwrotu 28 dni per moneta, w = s·min(3, 0,40/σ̂)/N,
+7 faz tygodniowych, realny funding. Pre-rejestracja `d066412`. Wynik: +14,8 %/rok netto
+[−1,7; +31,3], t_neff 1,76 (kryterium 1,96 niespełnione), ponad 100 % H0, 6/6 lat i 7/7 faz
+dodatnich, bez bety rynku. Przełożenie: 3× kapitału → CAGR +4,9 %, obsunięcie 90 % (drag).
+Wniosek 70. Ścieżka odwrotu: revert commitu scalającego (nowy moduł, bez zmian w istniejących).
+Otwarte dla użytkownika: test prospektywny (paper trading) TS1 i X1 od 2026-07-01.
+Pełne wyniki: `runs/2026-09-24_ts1-trend-koszyk/`.
 
 #### Serie Y1 / Y2 — model kontrolny na 1h i 1d ⚪ ZAMKNIĘTE 2026-09-23, każda 1/1, reguła STOP, Y1 NEGATYWNY / Y2 NIEROZSTRZYGNIĘTY
 

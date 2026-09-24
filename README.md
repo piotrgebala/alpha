@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **773/773** (2026-09-23).
+Stan testów: **786/786** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -236,6 +236,16 @@ części dziełem przypadku (kalendarza), momentum przekrojowe w krypto zostaje 
 słabym poparciem. Kolejne warianty na tych samych danych nic nie rozstrzygną; jedyna droga
 to pomiar na żywo przez co najmniej dwa lata.
 
+### 🟡 Trend tygodniowy na koszyku — TS1 (2026-09-24): najlepszy wynik projektu, ale bez dowodu
+
+Każda z 20 największych monet gra co tydzień w kierunku swojego trendu z 4 tygodni (long albo
+short), z pozycją dobraną do zmienności. [TS1](runs/2026-09-24_ts1-trend-koszyk/README.md):
+**+14,8 % rocznie po kosztach**, na plusie w każdym z 6 lat, bez udziału hossy (samo „zawsze
+long” dało ~0). Przedział niepewności od −2 do +31 % i wymagany test minimalnie nieprzekroczony
+(t 1,76 przy 1,96), więc formalnie nierozstrzygnięte. **Co to znaczy:** to najsilniejszy ślad,
+jaki projekt znalazł; rozstrzygnąć go może tylko test na żywo bez pieniędzy. Pełna dźwignia 3×
+kapitału zniszczyłaby wynik (ok. +5 % rocznie przy obsunięciu 90 %).
+
 ### ⚪ Inne horyzonty — Y1 (1h) i Y2 (1d), 2026-09-23: zmiana interwału nie pomaga
 
 Ten sam model co zawsze, tylko na świecach godzinowych i dziennych (decyzja użytkownika).
@@ -318,6 +328,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **L1 / V1 / G1 — on-chain, opcje, sentyment: trzy razy negatywnie** | 2026-09-23 | Podaż na giełdach (7 dni), premia za zmienność z opcji i Fear & Greed jako 5. cecha modelu 4h: trafność 49,8 / 50,5 / 49,9 % przy progu ~53,5 %, różnice wobec kontroli zero w granicach błędu. Po pięciu źródłach spoza wykresu: dokładanie cech do modelu 4h nie wyprowadzi go ponad koszty (wniosek 67). Serie zamknięte (1/1 każda) | [l1](runs/2026-09-23_l1-onchain-podaz/README.md) · [v1](runs/2026-09-23_v1-premia-zmiennosci/README.md) · [g1](runs/2026-09-23_g1-strach-chciwosc/README.md) |
 | **X2 — momentum na top-50: słabiej, a X1 zależało od kalendarza** | 2026-09-23 | Ta sama reguła na 50 monetach: **+16 %/rok [−12; +44]**, nierozstrzygnięte; IC zero, połowa zysku w 33 dniach, 2022 −20 %. Reguła X1 na innym kalendarzu rebalansów: +9 % zamiast +22 %/rok. Momentum przekrojowe = hipoteza ze słabym poparciem; kolejne warianty zakazane, zostaje pomiar na żywo | [runs/x2](runs/2026-09-23_x2-momentum-top50/README.md) |
 | **Y1 / Y2 — ten sam model na 1h i 1d: horyzont nie pomaga** | 2026-09-23 | Na 1h trafność **48,3 %** przy progu 54 % (23 334 transakcje, przedział w całości poniżej 50 %, 6/6 lat ujemnych) — negatywnie z ogromnym zapasem; na 1d **50,2 %** przy progu 51,7 %, ale 978 transakcji — nierozstrzygnięte, jak policzono przed przebiegiem. Model kontrolny zmierzony na trzech interwałach, na każdym 48–50 %. | [y1-horyzont-1h](runs/2026-09-23_y1-horyzont-1h/README.md), [y2-horyzont-1d](runs/2026-09-23_y2-horyzont-1d/README.md) |
+| **TS1 — trend tygodniowy na koszyku: najlepszy ślad, bez dowodu** | 2026-09-24 | Long/short każdej z 20 monet wg jej trendu z 4 tygodni: **+14,8 %/rok po kosztach [−2; +31]**, 6/6 lat na plusie, bez bety rynku; t 1,76 przy wymaganym 1,96 — nierozstrzygnięte. 3× kapitału → +5 %/rok i obsunięcie 90 %. | [ts1-trend-koszyk](runs/2026-09-24_ts1-trend-koszyk/README.md) |
 
 ## Hipoteza w skrócie
 

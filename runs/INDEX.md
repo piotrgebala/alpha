@@ -67,6 +67,7 @@ podsumowanie pod tabelą.
 | **X2** | 2026-09-23 | [x2-momentum-top50](2026-09-23_x2-momentum-top50/README.md) | **NOWA SERIA X2 — momentum przekrojowe (B1) na szerszym koszyku** (decyzja użytkownika „wykonaj oba"): top-50 point-in-time, nogi po 10, od 2021-05-01 (wcześniej < 50 kandydatów), reszta jak X1; moc z symulacji: half-width 17,5 %/rok (×1,3 = 22,8) → MIERZALNA; pre-rejestracja `5293346` | **1 — LICZNIK X2 WYCZERPANY (1/1)** | **NIEROZSTRZYGNIĘTY, słabszy niż X1:** +0,044 %/dzień [−0,034; +0,121], t 1,10, **+15,9 %/rok [−12,3; +44,2]**; IC **−0,006 [−0,033; +0,022]**; 33 skrajne dni = 52 % sumy; 2022 −20 %; korelacja z BTC −0,11. **Walidacja krzyżowa: reguła X1 na siatce X2 daje +0,024 %/dzień (Σ +46 %) zamiast +0,060 — X1 wrażliwe na fazę tygodniowego rebalansu.** Walidacja: **READY** |
 | **Y1** | 2026-09-23 | [y1-horyzont-1h](2026-09-23_y1-horyzont-1h/README.md) | **NOWA BAZA 1h (decyzja użytkownika „dla 2 sprawdź horyzont 1h oraz 1d"): model kontrolny (4 cechy REVERSION, V = 3 świece, 60/28/28) na natywnych 1h od 2021-01-01 (1/1)** | **NEGATYWNY z ogromnym zapasem:** p **48,34 % [47,70; 48,98]** (CI w całości < 50 %) vs p* 54,01 %; r̄ netto −0,078 % [−0,090; −0,066], t_neff −11,74, n 23 334 (41× wymaganego); 6/6 lat ujemnych; timeout 63 % z p 45,6 %. Ex ante/ex post zgodne (hw 0,59 → 0,64 pp). Walidacja: **READY** |
 | **Y2** | 2026-09-23 | [y2-horyzont-1d](2026-09-23_y2-horyzont-1d/README.md) | **NOWA BAZA 1d: ten sam model, okna 365/91/91 (parametr bazy), natywne 1d od 2021-01-01 (1/1)** | **NIEROZSTRZYGNIĘTY (jak zapowiedziano przy n ≈ 1 000):** p 50,20 % [47,07; 53,34] vs p* 51,70 %; r̄ netto −0,094 % [−0,344; +0,156], t_neff −0,60, n 978, half-width 3,1 pp; lata 2022 +92 % / 2024 −140 % = rozrzut bariery 6 %, nie sygnał. Walidacja: **READY** |
+| **TS1** | 2026-09-24 | [ts1-trend-koszyk](2026-09-24_ts1-trend-koszyk/README.md) | **NOWA SERIA TS — momentum w czasie (trend) na koszyku top-20** (decyzja użytkownika „testuj dalej różne kombinacje”; kandydat z panelu 5 propozycji): znak zwrotu 28 dni per moneta, σ̂ EWMA, cel 40 %/rok, sufit 3×, 7 faz tygodniowych, realny funding; H0 = prawdziwe znaki przesunięte w czasie; pre-rejestracja `d066412` (1/1) | **NIEROZSTRZYGNIĘTY, najsilniejszy ślad w projekcie:** +14,8 %/rok netto [−1,7; +31,3], t_neff **1,76**; ponad 100/100 portfeli H0 (q97,5 +13,0); bootstrap blokowy [+1,1; +29,3]; 6/6 lat i 7/7 faz dodatnich; zawsze-long +1,5 %/rok, korelacja −0,19; bez 10 najlepszych dni +6,1 %; 3× kapitału → CAGR +4,9 %, obsunięcie 90 %. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -87,6 +88,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
+- **NOWA SERIA TS — momentum w czasie na koszyku (od TS1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina A1 katalogu na horyzoncie tygodniowym, uniwersum wielu monet; nie B1). Zakazane bez decyzji użytkownika: inne okna, cele zmienności, uniwersa (top-50), sam BTC, łączenie z X1 — każdy kolejny odczyt na tej samej historii zwiększa szansę przypadkowego sukcesu. Rozstrzygnąć może tylko test prospektywny.
 - **NOWE BAZY Y1 (1h) / Y2 (1d) — model kontrolny na innych interwałach (od Y1/Y2, 2026-09-23, decyzja użytkownika): każda 1/1 ZUŻYTE — OBIE ZAMKNIĘTE REGUŁĄ STOP.** Osobne liczniki per baza (wytyczna o bazach); wyników nie porównuje się 1:1 z 4h. Y1 NEGATYWNY (48,3 %, n 23 334), Y2 NIEROZSTRZYGNIĘTY (50,2 %, n 978). Zakazane bez decyzji użytkownika: inne V/bariery/okna na 1h i 1d, filtry godzin/dni, odwrócenie znaku na 1h (hipoteza post hoc, wniosek 49).
 - **NOWA SERIA X2 — momentum przekrojowe na top-50 (od X2, 2026-09-23, decyzja użytkownika): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Rodzina B1 ma teraz DWA odczyty (X1 top-20, X2 top-50) — raportowane obok siebie, bez sumowania i wyboru; trzeci odczyt na tych danych zakazany; pozostaje wyłącznie pomiar prospektywny z regułą zamrożoną.
 - **NOWE SERIE L / V / G — cechy dzienne spoza OHLCV jako 5. cecha modelu 4h (L1 on-chain, V1 DVOL/VRP, G1 Fear & Greed; 2026-09-23): każda 1/1 ZUŻYTE — ZAMKNIĘTE REGUŁĄ STOP.** Pre-rejestrowane razem (jeden commit, bez dobierania po wyniku poprzedniej). Zakazane bez decyzji użytkownika: inne metryki CoinMetrics, inne okna, poziom/zmiana DVOL, skew, VRP jako target, zmiany F&G, progi skrajności, inne horyzonty.
@@ -653,6 +655,21 @@ podsumowanie pod tabelą.
     na każdym; dalsze badanie horyzontu dziennego wymaga INNEGO zbioru informacyjnego lub
     INNEJ formuły (przekrojowej), nie tego modelu. Odwrócenie znaku na 1h (~51,7 % ex ante,
     pod progiem 54 %) zapisane jako hipoteza post hoc — nie wariant.
+70. **TREND TYGODNIOWY NA KOSZYKU TO NAJSILNIEJSZY ŚLAD PROJEKTU — I NADAL NIE DOWÓD (TS1,
+    2026-09-24).** Momentum w czasie (znak zwrotu 28 dni per moneta, skalowanie zmiennością,
+    7 faz) na top-20: +14,8 %/rok netto [−1,7; +31,3], t_neff 1,76 — kryterium niespełnione;
+    ponad wszystkimi 100 portfelami H0 (znaki przesunięte w czasie), bootstrap blokowy CI > 0,
+    6/6 lat i 7/7 faz dodatnich, bez bety (zawsze-long ~0, korelacja −0,19). Razem z X1 (+22 %/rok,
+    t 1,58) to druga konstrukcja „ceny trzymają kierunek przez tygodnie” z dodatnim punktem —
+    rodzina tygodniowego momentum na koszyku ma najlepsze poparcie w projekcie, a horyzonty
+    godzinowe (Faza 0, M1, A2, Y1) konsekwentnie przeczą. Hamulce: ~24 odczyty w dwa dni
+    (Bonferroni → t ~3,0), bez 10 najlepszych dni zostaje +6 %/rok, zbiór informacyjny wciąż
+    tylko ceny. Metodologicznie: (a) H0 z niezależnych losowych znaków per moneta jest ZA WĄSKI
+    dla portfeli skorelowanych monet (zmienność 3 % zamiast 21 %) — kanoniczne H0 dla reguł
+    znakowych na koszyku to prawdziwe znaki przesunięte w czasie; (b) dla użytkownika z 3×:
+    pełna dźwignia 3× kapitału na strategii o zmienności ~20 % × 7 daje drag, który zjada zysk
+    (CAGR +4,9 %, obsunięcie 90 %) — dźwignię wyznacza cel zmienności, nie sufit giełdy.
+    Rozstrzygnąć może tylko test prospektywny na danych od 2026-07-01.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
