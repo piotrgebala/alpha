@@ -26,7 +26,8 @@ i wybór rund, więc mieszkają w repo. Źródło każdej: decyzja użytkownika 
 - Przy wynikach z bazy od 2021 (zasada 20) pokazuj opisowo „2021 vs od 2022”, ale NIE przesuwaj startu
   bazy na podstawie obejrzanych wyników (post hoc). Zmiana startu na 2022 = decyzja użytkownika dla
   wszystkiego naraz.
-- Obserwacja na żywo 2–3 miesiące = sprawdzian mechaniki, nie przewagi.
+- Dziennik papierowy: pierwsze ~3 miesiące (ADR-09, szczebel 3: ≥ 3 mies.) to sprawdzian mechaniki,
+  nie przewagi.
 
 ## Skille i wtyczki
 - Skille projektu (`clas5-runda`, `clas5-quant`, `quant-strategy-catalog`, `ta-toolkit`, `lean-research`,

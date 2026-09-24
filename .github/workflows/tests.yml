@@ -21,9 +21,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+          cache-dependency-path: requirements-lock.txt
 
       - name: Instaluj zależności
-        run: pip install -r requirements.txt
+        # przypięte wersje (2026-09-24): XGBoost 3.4 daje inne liczby niż lokalny 3.2
+        run: pip install -r requirements-lock.txt
 
       - name: Uruchom testy
         # Bare `pytest` (bez ścieżki) — auto-discovery po całym repo, żeby przyszłe pliki

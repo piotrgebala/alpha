@@ -130,11 +130,14 @@ handlu, cel zwrotów, rynek przed 2022) → `docs/rag/10_preferencje_uzytkownika
   przygotowanie `bash tools/setup_serwer.sh`), komputer użytkownika z Windows (dziennik papierowy
   z Harmonogramu zadań) i Cowork w chmurze. Przed rundą `git pull` i świeży stan plików; nowszej
   wersji nie nadpisuj — zmerguj. Wersje bibliotek: `requirements-lock.txt` (inne wersje = inne liczby).
-- **Dziennik papierowy:** pliki `dziennik/*.csv` i `przebiegi.log` zapisuje wyłącznie automat
-  (commit i push po każdym przebiegu, poprawka 5). Zmiana kodu, którego dziennik używa
-  (`backtest/live_journal.py`, `ts_momentum.py`, `xs_momentum.py`, `sizing.py`, `rebalance_premium.py`,
-  `run_coinbase_cp1.py`, `data/fetch_live.py`), wymaga decyzji użytkownika i wpisu „Poprawka N”
-  w `dziennik/README.md` — inaczej wynik dziennika przestaje być zapisem z góry.
+- **Dziennik papierowy:** działa w osobnym klonie (`alpha-dziennik`, zawsze `master`); pliki
+  `dziennik/*.csv` i `przebiegi.log` zapisuje wyłącznie automat (commit i push po każdym przebiegu,
+  poprawka 5). Świeżość: `git log -1 --format=%cs --grep='^Dziennik:'` — starsze niż 2 dni = alarm.
+  Zmiana kodu lub konfiguracji, z których dziennik korzysta (`backtest/live_journal.py` i jego importy:
+  `ts_momentum`, `xs_momentum`, `sizing`, `rebalance_premium`, `run_coinbase_cp1`, `checkpoint_lib.load_config`;
+  `data/fetch_live.py` i jego importy: `fetch_universe`, `fetch_ohlcv`, `fetch_external`; koszty
+  w `config/settings.yaml`), wymaga decyzji użytkownika i wpisu „Poprawka N” w `dziennik/README.md` —
+  klon dziennika pobiera `master` przed każdym przebiegiem.
 
 ## Podział ról i autonomia
 

@@ -2,3 +2,5 @@
 runs/skille/*.jsonl merge=union text eol=lf
 # Skrypty bash muszą mieć końce linii LF także w kopii roboczej na Windows (Git Bash, serwer Linux)
 *.sh text eol=lf
+# Pliki wsadowe Windows: CRLF w każdym klonie (cmd źle czyta etykiety przy LF)
+*.bat text eol=crlf

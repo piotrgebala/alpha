@@ -10,7 +10,9 @@ cd "$(dirname "$0")/.."
 
 python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' \
   || { echo "Potrzebny Python >= 3.11 (jest: $(python3 --version))"; exit 1; }
-[ -d .venv ] || python3 -m venv .venv
+python3 -c "import ensurepip" 2>/dev/null \
+  || { echo "Brak modułu venv/ensurepip — zainstaluj: sudo apt install python3-venv"; exit 1; }
+[ -x .venv/bin/python ] || { rm -rf .venv; python3 -m venv .venv; }
 .venv/bin/python -m pip install -q --upgrade pip
 .venv/bin/python -m pip install -q -r requirements-lock.txt
 ln -sf python .venv/bin/py
@@ -31,5 +33,5 @@ code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://fapi.binance
 echo "Binance fapi: HTTP $code (200 = OK; 451/403 = blokada regionu; 000 = brak sieci)"
 echo
 echo "Gotowe. Dalej:"
-echo "  source .venv/bin/activate      # albo dopisz tę linię do ~/.bashrc"
+echo "  source $PWD/.venv/bin/activate   # tę linię można dopisać do ~/.bashrc"
 echo "  py -m pytest -q                # oczekiwane: wszystkie testy zielone"

@@ -149,7 +149,8 @@
 > SERWER (2026-09-24, decyzja użytkownika): praca badawcza przenosi się na serwer Linux w Polsce. Przygotowanie:
 > `git clone`, `bash tools/setup_serwer.sh <data_raw.zip>` (venv z `requirements-lock.txt`, `py`, dane, test Binance),
 > `py -m pytest -q`, `/skills` (czy są skille konta), `git pull` przed każdą rundą. Preferencje użytkownika —
-> `docs/rag/10`. Dziennik zostaje na komputerze (Harmonogram 02:30) i od poprawki 5 sam commituje i wypycha wyniki;
+> `docs/rag/10`. Dziennik zostaje na komputerze (Harmonogram 02:30, osobny klon `alpha-dziennik`, 3 próby co 30 min)
+> i od poprawki 5 sam commituje i wypycha wyniki (przegląd 16c: 10 znalezisk potwierdzonych, poprawione, testy);
 > przeniesienie dziennika na serwer (`dziennik/uruchom.sh` + cron) — decyzja użytkownika.
 > BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
