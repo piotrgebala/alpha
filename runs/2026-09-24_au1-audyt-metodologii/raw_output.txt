@@ -1,0 +1,857 @@
+LOGI:
+Audyt: 5/5 soczewek, 14 istotnych znalezisk do weryfikacji
+Obcięto weryfikację do 12 z 14 znalezisk
+
+=== SYNTEZA ===
+# Czy nasze testy mogły ukryć prawdziwą przewagę? Wyniki audytu
+
+**Krótka odpowiedź: częściowo.** Nie znalazłem błędu w obliczeniach, który po cichu zjadałby zysk. Znalazłem natomiast trzy miejsca, w których test był ślepy albo nasze opisy szły dalej niż dowody. W jednym teście (TR1) poprawka daty sprawia, że wynik formalnie przechodzi próg, choć tylko o włos. Nie ma też śladu dużej, schowanej przewagi. Tam, gdzie test był ślepy, prawdziwe sygnały, które mamy w danych, i tak są około trzy razy słabsze od tego, czego test nie potrafił zobaczyć.
+
+Część tez pierwszego przejścia audytu obaliła druga, niezależna kontrola. Wszystkie liczby niżej podaję już po tej poprawce. Repo nie było zmieniane. Skrypty audytu leżą w `scratchpad\audyt`.
+
+---
+
+## 1. Jak wyglądają nasze testy i skąd bierzemy próbki
+
+Mamy dwie zupełnie różne rodziny testów.
+
+### A. Model, który przewiduje kierunek BTC ze świec (Faza 0, M1, F1, O1, L1, V1, G1, Y1, Y2, WF1…)
+
+- **Dane:** tylko BTC, świece 4-godzinne (w niektórych rundach 1h lub 1d), od 1 stycznia 2021 (zasada 20). To około 11 600 świec 4h.
+- **Pytanie zadawane na każdej świecy:** czy w ciągu 12 godzin cena najpierw wzrośnie o 1,5×ATR, czy najpierw spadnie o 1,5×ATR. ATR to typowa wielkość ruchu jednej świecy.
+- **Uczenie krocząco** (walk-forward: model uczy się tylko na przeszłości, a sprawdzamy go na kolejnym kawałku, którego nie widział). Model uczy się na 60 dniach, gra przez następne 28 dni, potem całość przesuwa się o 28 dni. Takich okien jest około 69. 60 dni to około 360 świec. 20% z nich idzie na kontrolę, więc do samej nauki zostaje **około 286 świec**.
+- **Model:** XGBoost na 4 podstawowych cechach z wykresu. W rundach z nową cechą dochodzi jedna, piąta cecha (zasada 4: jedna na raz).
+- **Na ilu świecach model gra:** w 40–47% świec model nie zajmuje pozycji. Na rundę wychodzi kilka tysięcy transakcji (M1: 8 033; Y1 na 1h: 23 334).
+- **Werdykt:** trafność (odsetek trafionych zakładów) musi być wyraźnie powyżej progu opłacalności. Na 4h przy koszcie około 0,08% na transakcję ten próg wynosi około 52,7–53%. Do tego zwrot po kosztach musi być istotnie dodatni.
+
+### B. Reguły tygodniowe na koszyku monet (TS1, TR1, X1, X2, CP1, TF1, TL1…)
+
+- **Z czego wybieramy:** wszystkie kontrakty perpetual USDT-M na Binance, także wycofane (685 kontraktów). Monety, które upadły, jak LUNA ze spadkiem −100%, są więc w danych. Nie ma błędu „liczymy tylko tych, którzy przetrwali”.
+- **Koszyk:** co miesiąc 20 monet (w TR1 i X2: 50) o największym obrocie z 30 dni *przed* tym miesiącem. Wybór nie korzysta więc z przyszłości.
+- **Sygnał:**
+  - TS1: long, jeśli moneta urosła przez ostatnie 4 tygodnie, short, jeśli spadła. Spokojniejsze monety dostają większą pozycję, a żadna nie więcej niż 3×.
+  - X1: long na najsilniejszych monetach, short na najsłabszych.
+  - CP1: premia ceny BTC na Coinbase względem Binance.
+- **Przebudowa portfela co 7 dni.** TS1 liczy 7 wersji, po jednej dla każdego dnia tygodnia, i bierze średnią, żeby wynik nie zależał od szczęśliwego dnia. X1 i X2 mają tylko jedną wersję.
+- **Wejście:** dzień po sygnale. Koszt to 0,07% od obrotu (opłata 0,05% plus poślizg 0,02%). Funding, czyli okresowa dopłata między longami i shortami, jest brany z prawdziwych stawek Binance.
+- **Okres:** luty 2021 – czerwiec 2026, czyli około 5,4 roku (1 880–1 970 dni).
+- **Werdykt ma dwa warunki:**
+  1. **t_neff > 1,96.** Wskaźnik t mówi, ile razy średni zysk jest większy od swojej niepewności; 1,96 odpowiada około 95% pewności. Dopisek „neff” oznacza poprawkę na to, że kolejne dni nie są od siebie niezależne.
+  2. **Wynik lepszy niż 97,5% portfeli kontrolnych.** To te same reguły z sygnałem przesuniętym w czasie o losową liczbę tygodni, więc na pewno nie znają przyszłości.
+
+Wszystkie odczyty zliczamy (na tej samej historii jest ich już około 30). Przy tylu próbach jeden „sukces” może wyjść z czystego przypadku. Dlatego dla całej rodziny testów uczciwy próg to około t 2,9, a nie 1,96.
+
+---
+
+## 2. Dlaczego odpowiedź brzmi „częściowo”
+
+**Gdzie „nic” znaczy naprawdę nic.** Chodzi o przewidywanie kierunku BTC z wykresu na horyzoncie od 1 godziny do 3 dni, o klasyczną analizę techniczną i o sposób wejścia i wyjścia z pozycji. Próby były duże, a wyniki wyraźnie ujemne; to około 18 odczytów, np. Y1: t_neff −11,7 na 23 334 transakcjach. Nie przeszkodziła ani mała próba, ani za krótkie okno uczenia. WF1 sprawdziło okna 365 i 730 dni i oba wyszły ujemne.
+
+**Gdzie test był ślepy albo za słaby:**
+1. Nowe cechy (funding, OI, DVOL, zapas BTC na giełdach, Fear & Greed) dokładane jako piąta cecha do modelu uczonego na 60 dniach. Taki przyrząd nie widzi sygnału, który sam z siebie zarabiałby około +0,20% na transakcję (problem P1).
+2. Strategie tygodniowe. 5,4 roku to za mało, żeby odróżnić zysk +10% rocznie od zera. Wiedzieliśmy o tym z góry, więc to nie błąd. Wynik „nierozstrzygnięty” znaczy jednak „nie da się zmierzyć”, a nie „nie ma” (problem P3).
+3. Zła data startu w TR1 (problem P2).
+
+---
+
+## 3. Potwierdzone problemy i ich wpływ
+
+### P1. Model uczony na 60 dniach nie widzi słabej nowej cechy
+**Kierunek: ukrywa przewagę. Waga: średnia.**
+
+Sprawdziłem to sztuczną cechą, tak zwaną wyrocznią: w 20% świec zna prawdziwy wynik, a w pozostałych jest losowa.
+
+- **Jako prosta reguła** „graj w kierunku, który wskazuje cecha” daje trafność 55,3% i **+0,20% zysku na transakcję po kosztach**. To wyraźny zysk.
+- **Jako piąta cecha modelu z oknem 60 dni** daje trafność 51,05%. Model przenosi tylko około 15–17% przewagi tej cechy. Po kryterium z rund O1–G1 werdykt wychodzi **NEGATYWNY w 2 z 3 losowań**.
+- **Przyczyną jest rozcieńczenie**, nie sama cecha. Ta sama cecha, gdy jest jedyną cechą modelu, zachowuje 54,99% trafności. Z oknem 365 dni model już ją widzi: +0,10% na transakcję, t od +3,5 do +4,8.
+- **Prawdziwe odczyty są tej samej wielkości.** O1 dał poprawę +0,024% na transakcję (przedział od −0,019 do +0,067), a V1 +0,018%. Tyle samo daje w modelu sztuczna cecha zarabiająca +0,20%, więc tych odczytów nie da się od niej odróżnić.
+
+**Czego to dotyczy:** F1, O1, L1, V1, G1, M1 oraz części modelowych A1b i A2.5. Nie dotyczy testów reguł bez modelu (A1a, A2.1–A2.4), Y1 ani cech z wykresu.
+
+**Dlaczego to raczej nie są przegapione pieniądze:**
+- Najlepsze grupy tych prawdziwych cech, wybrane już po obejrzeniu danych, dają około +0,08 do +0,107% na transakcję przed kosztami. Koszt wynosi około 0,08%. Po kosztach zostaje od 0 do +0,03%, czyli około trzy razy mniej niż zysk sztucznej cechy, której model nie zauważył.
+- Gęstsza, ciągła cecha tej samej siły byłaby widoczna. L1 (+0,003%) i G1 (+0,002%) wykluczają ją, choć na granicy.
+
+**Co z tego wynika:** zdanie „pozycjonowanie i dane zewnętrzne: dowód braku” (wniosek 67, `runs/INDEX.md` linia 14) jest za mocne. Poprawne brzmienie: „model z tą cechą nie zarabia; sama cecha nie została zmierzona”. Wniosek 85 z WF1 („brak nie wynikał z krótkiego okna”) dotyczy tylko cech z wykresu. Rachunek „MIERZALNA” w tych rundach znaczył „wynik modelu da się zmierzyć”, a nie „cechę da się zobaczyć”.
+
+### P2. Data startu TR1 i X2 została po obciętych danych
+**Kierunek: w TR1 ukrywa przewagę, w X2 nie. Waga: średnia.**
+
+Start w maju 2021 wziął się stąd, że w starym, obciętym katalogu brakowało 50 monet. W pełnych danych było ich 77–88 już w lutym–kwietniu. Poprawka danych (RU2) zmieniła katalog, ale nie zmieniła wpisanej na sztywno daty (`run_ts_momentum_oos.py:57,63`, `run_xs_momentum_x2.py:38`).
+
+- **TR1 ze startem w lutym 2021:** zysk +13,0 → **+15,5% rocznie**, przedział od +0,2 do +30,8, t_neff 1,63 → **1,99**. Wynik jest lepszy niż 100% portfeli kontrolnych. **Według własnego kryterium to formalnie POZYTYWNY**, z zapasem 0,03.
+  - Bez 3 najlepszych dni z dodanego okresu t spada do 1,82.
+  - TR1 jest w 87% zgodny z TS1 (to prawie ta sama strategia), a TS1 na tym samym oknie ma t 1,43.
+  - Progu dla całej rodziny testów (około 2,9) TR1 nie osiąga.
+- **X2:** dodane 3 miesiące dały **−4,0 pkt**, więc nie ma tu schowanego zysku. Zwykłe przeliczenie z samą zmianą daty pokazałoby t 2,52, ale tylko dlatego, że przebudowa portfela przesunęłaby się z soboty na poniedziałek. Samo zdarzenie z MYX w dniach 7–8.09.2025 to +45 pkt różnicy. Średnia z 7 dni tygodnia: +21,9% rocznie, t 1,59. Bez zmiany.
+
+### P3. Za mało lat, żeby rozstrzygnąć strategie tygodniowe
+**Kierunek: ogranicza czułość, nie przesuwa wyniku. Dotyczy TS1, TR1, X1, X2.**
+
+TS1 zarabia średnio +11,1% rocznie przy wahaniach 18,1% rocznie. Niepewność średniej to ±7,8% rocznie, a przedział obejmuje od −4,2% do +26,3%.
+
+Szansa, że test zauważy przewagę, która naprawdę istnieje:
+
+| prawdziwy zysk | przy progu 1,96 | przy progu rodzinnym 2,9 |
+|---|---|---|
+| +10% rocznie | 25% | 5% |
+| +15% rocznie | 49% | 17% |
+| +20% rocznie | 73% | 37% |
+
+Symulacja na naszym silniku to potwierdza. Wbudowany zysk +10,4% rocznie test wykrył w 20–26% losowań, a +22,5% w 88%.
+
+Trzy zastrzeżenia:
+- Szansa, że test wyda błędny werdykt NEGATYWNY przy prawdziwych +10% rocznie, wynosi 0,06%. Etykiety niczego więc nie „obaliły” fałszywie; test mówi po prostu „nie wiem”.
+- Szacunek „około +10%” to najlepszy wynik z około 30 prób, więc sam jest zawyżony. Czysty przypadek przy 30 próbach daje najlepszy wynik podobnej wielkości.
+- Żeby mieć 80% szansy na wykrycie +10% rocznie, trzeba około 18–26 lat danych. Dziennik na żywo nie da więc dowodu szybko. Może tylko obalić strategię, jeśli wyraźnie się posypie.
+
+Było to zapisane z góry: w pre-rejestracji TS1, we wniosku 81 i w ADR-09. Brakowało tylko jasnego przekazu, że „nierozstrzygnięty” ≠ „nic nie ma”.
+
+### P4. Sposób liczenia niepewności jest odrobinę za surowy
+**Kierunek: ukrywa przewagę. Waga: niska.**
+
+Poprawka na zależność kolejnych dni jest liczona tak, że może tylko obniżyć t, nigdy go podnieść. To była świadoma decyzja (wniosek 50). Na danych bez żadnej zależności obniża t średnio o 4–5%, a szansę wykrycia o 3–5 pkt proc.
+
+Porównanie z metodą Newey-West (standardowy sposób liczenia niepewności, gdy dni są ze sobą powiązane):
+
+| strategia | nasze t_neff | Newey-West, automatyczne okno 7 dni | Newey-West, okno 28 dni |
+|---|---|---|---|
+| TS1 | 1,43 | 1,51 | 1,70 |
+| TR1 | 1,63 | 1,74 | 2,04 |
+| X1 | 1,86 | 1,88 | 1,86 |
+| CP1 | 2,09 | 2,07 | 2,13 |
+
+Przy standardowym oknie żaden werdykt się nie zmienia. Okno 28 dni zmieniłoby TR1, ale takie okno wybrano by po obejrzeniu wyniku. Samo zdjęcie ograniczenia byłoby gorsze, bo zawyżałoby wyniki (TS1 2,07, TR1 2,77).
+
+Drobny błąd w kodzie: w `backtest/carry_hedged.py:130` brakuje `max(1, …)`. W rzadkim przypadku daje to pusty wynik (NaN). Żadnej rundy to nie dotknęło.
+
+### P5. Opisy mocniejsze niż dowody
+
+- **Y2 (świece 1d)** jest w skrócie opisany jako „dowód braku”. Tymczasem to 978 transakcji z trafnością 50,20%, przedział od 47,1 do 53,3%, przy progu 51,7%. Poprawnie: **niezmierzony**. Model miał tu tylko 365 dni do nauki, więc dochodzi też problem P1.
+- **TL1** jest liczony na obciętych danych (`run_crowding_tl1.py:31`). Na pełnym rynku 27,5% właściwych miejsc w koszyku nie ma danych OI. Nie powinien być cytowany jako „czwarty dowód”. Zmiana na plus jest jednak mało prawdopodobna: wynik to −10,5% rocznie.
+- **TX1, wniosek 84 („zanika po 2013”).** Wynik po 2013 to −0,2% rocznie z przedziałem ±5,8%, więc zera nie da się ani potwierdzić, ani wykluczyć. Różnica przed i po 2013 (+8,4% rocznie, z = 2,17) jest za to realna. Poprawnie: **„wyraźnie słabnie; czy do zera — nie wiadomo”**. Słabną też akcje i obligacje, nie tylko waluty.
+- **Wniosek 41 (T4)** nie jest niezależnym potwierdzeniem. Model zatrzymuje się po 1–3 drzewach także wtedy, gdy dostaje opłacalną sztuczną cechę.
+- **M1, „próba 1,9× większa od wymaganej”.** Transakcje się nakładają, więc realny przedział jest o około 27% szerszy. W rzeczywistości to około 1,3–1,4×. Werdykt się nie zmienia.
+- **CP1P (78 dni poza próbą):** to zero informacji, a nie informacja przeciw. Zapis w skrócie można źle odczytać.
+
+### P6. Rzeczy, które ZAWYŻAJĄ wynik kandydatów (dla uczciwości w drugą stronę)
+
+- **X1 stoi na kilku dniach.**
+  - Bez jednego dnia (MYX, +65%) t spada z 2,07 do 1,83.
+  - Bez 5 najlepszych dni t wynosi 1,30.
+  - Bez zysku z cen 5 najlepszych monet zostaje +14,1% rocznie, t 0,89.
+  - Z innym dniem przebudowy portfela suma to +46% zamiast +119% (wniosek 68).
+- **Funding w X1 i X2.** W X1 to +49 pkt z +226, bez niego zostaje +32,6% rocznie przy t 1,53. W 2026 roku **cały** wynik X1 i X2 to funding. X1: ceny −11,1 pkt, funding +20,7 pkt. X2: ceny +0,75 pkt, funding +27,8 pkt.
+  - To prawdziwe pieniądze, policzone ze znakiem zgodnym z danymi Binance, a nie błąd.
+  - Oznacza to jednak, że część X1 i większość X2 to nie „momentum”, tylko dopłaty od graczy grających na spadek.
+  - Opis w README jest nieścisły. Łącznie więcej funding dali longi (+27,5 pkt) niż shorty (+21,5 pkt). Wkład longów pochodzi jednak głównie z dwóch monet (LAB, MYX), a wkład shortów jest rozłożony szeroko.
+- **X1 codziennie wyrównuje obie strony portfela do połowy kapitału i nie nalicza za to opłaty.** Przy wykonaniu „kup i trzymaj przez tydzień” t wynosi 1,67 zamiast 1,86.
+- **TS1:** zdanie „bootstrap blokowy powyżej zera” (wniosek 70) jest nieaktualne po poprawce danych. Teraz przedział to od około −3 do +26% rocznie.
+- **TX1:** obligacje liczą odsetki bez kosztu finansowania pozycji. Po poprawce wynik 1990–2026 spada z +5,1 do +4,3–4,5% rocznie, a t z 2,73 do 2,34–2,40. Werdykt bez zmian.
+- **TS1 + X1 + CP1 razem mają t 2,44.** Po uwzględnieniu, że wybraliśmy 3 najlepsze z około 28–30 prób, szansa na taki wynik z czystego przypadku wynosi **36–78%**. Bez 2 dni MYX t wynosi 2,16, bez 10 najlepszych dni 1,34. To nie jest ukryty dowód.
+
+---
+
+## 4. Co było sprawdzone i jest w porządku
+
+- **Silnik liczy poprawnie.** Niezależnie napisana druga wersja zgadza się z nim co do 1e-17. Na danych z wbudowanym, znanym zyskiem silnik ten zysk oddaje: wbudowane +10,4% rocznie → pokazane +10,1%, wbudowane +22,5% → pokazane +22,2%. Na danych bez zysku fałszywy alarm pojawił się 1 raz na 100 losowań.
+- **Brak zaglądania w przyszłość.** Wejście następuje dzień po sygnale. Opóźnienie o 1–2 dni obniża wynik tylko łagodnie: TS1 11,1% → 10,3% → 9,3% rocznie.
+- **Koszty nie ukrywają przewagi.** Koszt 0,07% na stronę jest realistyczny, nic nie jest liczone podwójnie, a znak fundingu jest poprawny.
+  - Modele na świecach nie zarabiają **nawet przed kosztami**. Najlepszy wariant ma +0,041% na transakcję przy t +1,15, O1 ma +0,006%. Przy zerowym koszcie też żaden nie przechodzi progu.
+  - W strategiach tygodniowych koszt to 0,8–3,4% rocznie. Przy zerowym koszcie: TS1 t 1,53, TR1 1,74, X2 1,84, X1 2,01. Ten ostatni wynik to jednak odczyt po fakcie, przy już skupionym na kilku dniach wyniku.
+- **Dane są czyste.** Nie ma dziur ani zdublowanych dni, wszystko jest w UTC. Funding jest kompletny u wszystkich członków koszyków (0 braków na 1 300 miejsc top-20). Wycofane monety są w danych. Wyrównanie Coinbase jest poprawne: rozjazd 0,078%, a po przesunięciu o dzień byłoby 3,0%.
+- **Portfele kontrolne są poprawne i nie za szerokie.** Nigdy nie decydowały o werdykcie.
+- **Konstrukcja zakładu nie gubi sygnału.** Etykieta, odmawianie gry przez model i wyłącznik bezpieczeństwa zachowują 94–99% sztucznego sygnału. Sygnał gubi dopiero etap uczenia (P1).
+- **Cechy z wykresu na horyzoncie 12 godzin naprawdę nie działają.** Dłuższe okno uczenia nic nie odkrywa (365 dni: 49,1%, 730 dni: 48,7%). Najlepsza grupa, wybrana po fakcie, daje 0,072% przed kosztami, czyli mniej niż koszt.
+- **CP1 jest odporny na metodę liczenia.** Inne metody dają t od 2,07 do 2,18, bez najlepszego dnia 1,96.
+- **Wycięcie roku 2020** zmniejsza dokładność tylko o około 8%. To nie jest przyczyna braku rozstrzygnięć.
+
+---
+
+## 5. Poprawki do zrobienia, od największego wpływu
+
+1. **Zmierzyć cechy spoza wykresu bez modelu 60-dniowego.** Chodzi o funding, OI, DVOL, zapas BTC na giełdach i Fear & Greed. Można to zrobić prostą regułą „graj w kierunku cechy” albo modelem z oknem 365 dni. Potrzebna jest jedna pre-rejestracja z rachunkiem mierzalności i nowy licznik testów. Warto też dopisać do rachunku mierzalności kalibrację „ile przewagi cechy przenosi model”. Uczciwe oczekiwanie: po kosztach blisko zera (0 do +0,03% na transakcję). Da to jednak prawdziwe zamknięcie tego pytania zamiast pozornego.
+2. **Runda korekty RU3: data startu TR1 i X2 na luty 2021**, z pre-rejestracją. X2 trzeba liczyć jako średnią z 7 dni tygodnia, inaczej wyjdzie fałszywe t 2,52. Trzeba też jawnie zapisać, że wynik TR1 (t 1,99) znamy już z audytu, więc nie może być cytowany jako potwierdzenie.
+3. **Poprawić opisy (tanie, a ważne):**
+   - Y2 → „niezmierzony”;
+   - TL1 → „nieprzeliczony na pełnym rynku”;
+   - wnioski 67, 70, 84 i 41;
+   - „1,9×” w M1;
+   - CP1P → „brak informacji”;
+   - mechanizm fundingu w X1 i X2;
+   - w „Stanie wiedzy” jedno zdanie, że „nierozstrzygnięty” znaczy „za mało lat, żeby zmierzyć”, razem z tabelą szans z P3.
+4. **W nowych rundach, nie wstecz:** z góry zapisać Newey-West z automatycznym oknem zamiast obecnej poprawki. Przedział trafności liczyć z uwzględnieniem nakładających się transakcji. Dopisać `max(1, …)` w `carry_hedged.py:130`.
+5. **X1:** jeśli ma być kiedyś rozstrzygnięty, trzeba go zamrozić i dopisać do dziennika na żywo jako osobną regułę zapisaną z góry. Najlepiej w wersji z 7 dniami tygodnia, ale to wymaga Twojej decyzji.
+6. **TL1:** przeliczyć na pełnym rynku. Wymaga to pobrania OI dla około 100 monet. Spodziewany wpływ jest mały.
+7. **Opcjonalnie nowa hipoteza: suma kilku słabych sygnałów „przeciw tłumowi”.** Tego nikt nie testował. Wstępnie wychodzi +0,084% na transakcję przed kosztami i około 0 po kosztach, przy czym w latach 2024–26 było lepiej. Cechy wybrałem jednak po obejrzeniu 13 kandydatów, więc to tylko trop. Sensownie da się to sprawdzić wyłącznie na danych, których jeszcze nie ma.
+8. **TX1:** obligacje z kosztem finansowania, a waluty z różnicą stóp procentowych. Tylko jeśli wrócimy do tego szczebla drabiny dowodów.
+
+---
+
+## 6. Co to znaczy dla pytania „czy nic nie znaleźliśmy”
+
+„Nic” to w rzeczywistości cztery różne rzeczy:
+
+- **Zmierzone i naprawdę nie działa:** kierunek BTC z wykresu (od 1 godziny do 3 dni), analiza techniczna, sposób wejścia i wyjścia. Tu test był mocny i uczciwy.
+- **Są realne, małe efekty, ale mniejsze niż koszt:** krótki powrót ceny do średniej po około 20 godzinach (trafność 53,7% vs 47,8% w skrajnych grupach) oraz sygnały „przeciw tłumowi” z fundingu i OI. Przegrywają z kosztem o 0–0,02% na transakcję.
+- **Dodatnie ślady, których nie da się udowodnić na 5,4 roku:** CP1 (+32% rocznie, t 2,09), TS1 (+11%), TR1 (po poprawce daty t 1,99), X1 (+42%, ale oparty na kilku dniach i fundingu). Rozstrzygnąć je może tylko czas, i to raczej przez obalenie niż przez szybki dowód.
+- **Nie zostało naprawdę zmierzone:** nowe cechy jako osobne reguły, horyzont 1d, połączenie słabych sygnałów. Tu jest uczciwa luka do domknięcia (poprawki 1 i 7). Spodziewany zysk jest jednak mały, nie rzędu kilkudziesięciu procent rocznie.
+
+=== AUDYT (5 soczewek) ===
+[
+ {
+  "lens": "koszty",
+  "summary": "Sprawdziłem, jak liczone są koszty. Przejrzałem config/settings.yaml, backtest/costs.py, silnik modeli Fazy 0 (engine.py, checkpoint_lib.py, metrics.py) i silniki tygodniowe (ts_momentum.py, xs_momentum.py). Pięć rund tygodniowych (TS1, TR1, X1, X2, CP1) przeliczyłem ponownie na pełnym uniwersum przy 8 poziomach kosztu, od zera do 0,10 % na stronę; wyniki bazowe odtworzyły się co do cyfry. Dla 21 ramion modeli 4h/1h/1d rozłożyłem wynik netto na „przed kosztami” i koszt, a potem policzyłem próg opłacalności przy koszcie 0,08 %, 0,04 % i zero. Ogólna ocena: koszty NIE ukrywają przewagi. Model 0,07 % na stronę (opłata taker 0,05 % plus poślizg 0,02 %) jest realistyczny, dla BTC lekko ostrożny. Nic nie jest liczone podwójnie, a znak fundingu jest poprawny (long płaci, gdy stawka jest dodatnia). Modele na świecach mają zysk przed kosztami ≈ 0 (najlepsze ramię t +1,15), więc nawet przy darmowym handlu żadne nie przechodzi progu. W rundach tygodniowych koszty są małe, 0,8–3,4 %/rok, a werdykt przy tańszym koszcie zmieniłby się tylko w X1, i to o włos (t 1,86 → 1,97). Wbrew obawie użytkownika znalazłem raczej miejsca, gdzie wynik jest nieco ZAWYŻONY: w X1/X2 duża część zysku pochodzi z fundingu kilku monet w trakcie gwałtownego wzrostu ceny, a silnik X1 codziennie wyrównuje nogi bez naliczania za to opłaty. Pliki pomocnicze: C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt\\ (koszty_tygodniowe.py, faza0_koszt.py, x1_funding_per_symbol.py, x1_buyhold.py, x1_implicit.py, opoznienie.py).",
+  "findings": [
+   {
+    "title": "Modele na świecach 4h/1h/1d nie zarabiają nawet przed kosztami, więc koszt nie ukrywa przewagi",
+    "area": "Faza 0 i następcy: próg opłacalności a koszt (engine.py, checkpoint_lib.py:233-285, metrics.py:318)",
+    "evidence": "Liczyłem tak: zysk przed kosztami = wynik netto + koszt C z raw_output (faza0_koszt.py). O1: netto −0,0738 %, C 0,0802 %, więc przed kosztami +0,006 % na transakcję (t +0,30). V1: +0,005 % (t +0,21). Y1 (n 23 334): +0,0025 % (t +0,41). A2.2: +0,041 % (t +1,15, najlepsze ramię). Kontrola 4h: −0,026 % (t −1,22). A1a: −0,094 % (t −2,71). Próg p* = (L̄+C)/(W̄+L̄), czyli na 4h każde 0,01 % kosztu podnosi wymaganą trafność o ~0,38 pp; na 1h o ~0,73 pp, na 1d o ~0,16 pp. Na 4h przy C = 0 próg spada do 49,9–50,6 %, a dolny kraniec przedziału trafności wynosi 48,4–49,4 % we wszystkich ramionach (kontrola 48,39; O1 49,06; V1 49,21; A2.2 49,43 wobec 49,85). N1 nie przechodzi nawet przy zerowym koszcie: 52,15 wobec 53,98. W1b: netto −0,0962 %, koszt 0,0813 %, więc przed kosztami −0,015 %. Z10 w całości: trafność 50,27 % [49,15; 51,38] — dolny kraniec jest poniżej 50 %, czyli poniżej progu przy zerowym koszcie.",
+    "direction": "neutralne",
+    "severity": "wysoka",
+    "affected_rounds": "Z10, M1, F1, W1, N1, A1, A2, O1, L1, V1, G1, Y1, Y2 (oraz rundy 5m C2.x)",
+    "would_change_verdict": "Żadna runda nie staje się POZYTYWNA nawet przy zerowym koszcie. Zmienia się tylko etykieta części rund. Przy koszcie maker po obu stronach (0,04 %) O1 (t ≈ −1,58, a t_neff ≈ −1,3), V1 (−1,56) i A2.4 (−1,54) przeszłyby z NEGATYWNY na NIEROZSTRZYGNIĘTY. Taki koszt jest jednak nieosiągalny, bo stop musi być zleceniem rynkowym. Realne minimum to ~0,066 % (zniżka BNB + wejście maker). Wniosek dla użytkownika: te testy nie pokazują przewagi, którą zjadają koszty. Pokazują brak przewagi przed kosztami, a koszty zamieniają zero w wyraźny minus."
+   },
+   {
+    "title": "Poziom kosztu 0,07 % na stronę jest realistyczny, dla BTC lekko ostrożny",
+    "area": "config/settings.yaml (costs) i backtest/costs.py",
+    "evidence": "W configu: taker_fee_rate 0,0005, maker_fee_rate 0,0002, slippage_bps 2. Silniki tygodniowe biorą koszt = taker + poślizg = 0,07 % × obrót (run_ts_momentum_ts1.py:52, run_xs_momentum_x1.py:55, run_coinbase_cp1.py:62). Cennik Binance USDT-M VIP0: taker 0,05 %, maker 0,02 %; ze zniżką BNB 10 %: 0,045 % / 0,018 %. Poślizg 2 bps dla BTC przy małych zleceniach jest raczej zawyżony, bo spread BTCUSDT to ułamek bps. Dla monet z top-20 jest rozsądny. Model nie uwzględnia zniżki BNB ani USDC-M (mniejsza opłata maker), co działa ostrożnie, ale różnica to ~0,005–0,025 pp na stronę.",
+    "direction": "ukrywa przewagę",
+    "severity": "niska",
+    "affected_rounds": "wszystkie rundy z opłatami perpetuali (TS1, TR1, X1, X2, CP1, TL1, TF1, NL1, SZ1, modele 4h)",
+    "would_change_verdict": "Nie zmienia. Przy stawce realistycznej (taker z BNB, 0,045 %) t zmienia się tak: TS1 1,43→1,46, TR1 1,63→1,67, X1 1,86→1,92, X2 1,60→1,68, CP1 2,09→2,13."
+   },
+   {
+    "title": "Rundy tygodniowe: koszty są małe; tańsze wykonanie zmieniłoby werdykt tylko w X1, o włos",
+    "area": "Rundy tygodniowe TS1/TR1/X1/X2/CP1 (ts_momentum.py:100-102, xs_momentum.py:130-135)",
+    "evidence": "Przeliczyłem na pełnym uniwersum (koszty_tygodniowe.py). Poziom bazowy odtworzył się co do cyfry. Koszty rocznie przy 0,07 %: TS1 ~0,8 %, TR1 ~0,8 %, CP1 ~1,5 %, X1 ~3,4 %, X2 ~3,4 %. Wskaźnik t_neff przy kolejnych kosztach (baza 0,07 % / maker 0,02 % / zero): TS1 1,43 / 1,50 / 1,53; TR1 1,63 / 1,71 / 1,74; X2 1,60 / 1,77 / 1,84; CP1 2,09 / 2,16 / 2,19. X1 wynosi 1,86 / 1,97 (+44,1 %/rok, przedział [+0,2; +88,0]) / 2,01 (+45,1 %/rok). Nawet przy koszcie 0,10 % X1 ma jeszcze 1,80, a CP1 2,05.",
+    "direction": "ukrywa przewagę",
+    "severity": "niska",
+    "affected_rounds": "X1 (po RU1); w mniejszym stopniu X2, TS1, TR1, CP1",
+    "would_change_verdict": "Tylko X1: przy wykonaniu zleceniami maker (0,02 %, bez poślizgu) t_neff rośnie z 1,86 do 1,97, czyli formalnie ponad 1,96 i z dolnym krańcem przedziału +0,2 %/rok. Są jednak trzy zastrzeżenia. Zmiana założenia kosztowego po obejrzeniu wyniku to nowy wariant testu. Wynik jest daleko od progu dla ~30 odczytów na tej samej historii (t ≈ 2,9). A X1 w dużej części stoi na MYX i fundingu (następne znalezisko). TS1, TR1 i X2 zostają NIEROZSTRZYGNIĘTE nawet przy zerowym koszcie. CP1 jest POZYTYWNY przy każdym koszcie do 0,10 %."
+   },
+   {
+    "title": "W X1/X2 funding to duża i skupiona część zysku (kilka monet w trakcie gwałtownego wzrostu ceny)",
+    "area": "Funding w silniku przekrojowym (xs_momentum.py:159-165)",
+    "evidence": "X1 po RU1: Σ funding netto +49,06 % (~+9 %/rok) wobec Σ brutto z cen +194,87 %. Bez fundingu t_neff spada z 1,86 do 1,69. X2: funding +44,93 %; w 2026 funding +27,77 % przy wyniku netto +26,71 %, więc cały wynik 2026 to funding. Rozbicie X1 po monetach (x1_funding_per_symbol.py odtwarza 49,06 % co do cyfry): LAB (long) +10,64 pkt, MYX (long) +8,33, TRB (long) +6,17, BLZ +3,97, SIREN +3,34. Pięć monet daje 32,4 z 49,1 pkt. Skrajne stawki są w danych: MYX 2025-08-05 −38,5 % dziennie, COAI −32 %, HYPER −30 %. Long w monecie, na której zakład na spadek jest przepełniony, dostaje wtedy ogromny funding. Znak jest poprawny, ale zapłata wymaga trzymania pozycji w chwilach limitów pozycji i dźwigni na Binance.",
+    "direction": "zawyża przewagę",
+    "severity": "średnia",
+    "affected_rounds": "X1, X2 (i RU1/RU2 dla nich)",
+    "would_change_verdict": "W stronę słabszego wyniku. Bez fundingu z 5 największych monet X1 miałoby ok. +35 %/rok i t ≈ 1,6 (przybliżenie: odjęcie średniej). Werdykt NIEROZSTRZYGNIĘTY się nie zmienia, ale odsuwa od progu i podważa scenariusz „maker przepycha X1 ponad 1,96”."
+   },
+   {
+    "title": "Silnik X1 codziennie wyrównuje nogi do 0,5 bez opłaty; prawdziwe „kup i trzymaj” daje niższe t",
+    "area": "Wykonanie w xs_momentum.long_short_returns (xs_momentum.py:186-189)",
+    "evidence": "Po każdym dniu wagi nóg są przeskalowywane z powrotem do 0,5 kapitału. W praktyce to codzienna transakcja, za którą silnik nie nalicza kosztu: ukryty obrót 11,7 kapitału/rok ≈ 0,82 %/rok przy 0,07 % (x1_implicit.py), wobec jawnego obrotu 48,3/rok = 3,38 %/rok. Prawdziwe kup i trzymaj przez tydzień (x1_buyhold.py) daje +43,6 %/rok [−7,5; +94,7], t_neff 1,67 wobec silnika +41,7 % [−2,2; +85,6], t_neff 1,86. Średnia podobna, zmienność wyższa. TS1 wykonuje kup i trzymaj poprawnie (ts_momentum.py:122: w·(1+r)/(1+brutto)).",
+    "direction": "zawyża przewagę",
+    "severity": "niska",
+    "affected_rounds": "X1, X2, NC1 (kontrola X1)",
+    "would_change_verdict": "Nie zmienia werdyktu (nadal NIEROZSTRZYGNIĘTY). Wynik jest przy realistycznym wykonaniu trochę dalej od progu (t 1,67 zamiast 1,86)."
+   },
+   {
+    "title": "Koszty nie są liczone podwójnie",
+    "area": "costs.py, engine.py:1106-1144, metrics.py:386, ts_momentum.py, xs_momentum.py",
+    "evidence": "Trafność p liczy się na gross_pnl > 0 (metrics.py:386, definicja Z18), a koszt wchodzi tylko do progu p* i do zwrotu netto (checkpoint_lib.py:249-265). Nie ma więc kary za koszt w obu miejscach. W silniku świecowym koszt = opłaty nóg + funding ze stałej 0,01 %/8h + poślizg tylko na nogach taker (costs.py total_round_trip_cost). Innego fundingu nie ma. W trybie „path” strata na stopie z luką cenową (min(open, poziom), execution.py:250) i 2 bps poślizgu to dwa różne zjawiska, nie jedno liczone dwa razy. W silnikach tygodniowych opłata × obrót jest naliczana raz, w pierwszym dniu formowania, a funding osobno z realnych stawek (stałej FUNDING_RATE_8H nie używają). Średnia z 7 faz jest liczona poprawnie w jednostkach całego kapitału. Spójność TS1 sprawdzona: 94,1 − 9,4 − 4,6 = 80,1 ≈ 80,0.",
+    "direction": "neutralne",
+    "severity": "średnia",
+    "affected_rounds": "wszystkie",
+    "would_change_verdict": "Nie — brak błędu do poprawienia."
+   },
+   {
+    "title": "Znak fundingu jest poprawny (long płaci przy dodatniej stawce) i zgadza się z danymi",
+    "area": "costs.funding_cost, ts_momentum.py:107, xs_momentum.py:165, data/fetch_universe.py",
+    "evidence": "costs.py: direction × nominał × stawka × okresy (long +1 płaci). ts_momentum: fund = −w·f. xs_momentum: funding_net = Σw_s·f_s − Σw_l·f_l. Ceny i funding pochodzą z tego samego rynku perpetual (/fapi/v1/klines, /fapi/v1/fundingRate), więc nie ma rozjazdu spot–perp. Sprawdzenie na danych: średni funding BTC +0,0109 %/8h. TS1 płaci −1,4 %/rok (trend był long w hossie 2021: −4,1 %). Long MYX w trakcie gwałtownego wzrostu ceny (funding ujemny) dostaje +8,3 pkt. T1-diag: stała 0,01 %/8h to dokładnie mediana; strony long/short 49,96/50,04, więc w modelach 4h funding się znosi.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, TR1, X1, X2, CP1, TF1, TL1, NL1, modele 4h",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Wejście tego samego dnia co sygnał nie jest warunkiem wyniku — opóźnienie o 1–2 dni obniża go łagodnie",
+    "area": "Wykonanie: moment wejścia w silnikach dziennych",
+    "evidence": "opoznienie.py: TS1 bez opóźnienia +11,1 %/rok (t 1,43), 1 dzień +10,3 % (1,32), 2 dni +9,3 % (1,21). X1: +41,7 % (1,86) → +35,8 % (1,75) → +31,2 % (1,54). Dla CP1 ten test był w rundzie: +27,5 / +20,9 %/rok. Spadek jest łagodny, więc nic nie wskazuje na przeciek z przyszłości ani na wynik zależny od nierealnie szybkiego wykonania. Wynik z opóźnieniem 0 odtwarza bazę co do cyfry.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, X1 (CP1 sprawdzone w rundzie)",
+    "would_change_verdict": "Nie; realne opóźnienie kilku minut po 00:00 UTC kosztowałoby mniej niż pokazany 1 dzień."
+   },
+   {
+    "title": "Rundy z ujemnym wynikiem przed kosztami — koszt ich nie przesądził",
+    "area": "TL1, R1, NL1, C1b",
+    "evidence": "TL1: Σ przed kosztami −31,2 %, funding +7,5 %, koszt 23,6 %. Przy koszcie maker ~−6,7 %/rok zamiast −10,5 %, nadal ujemny. R1 (przeliczony w RU2): przed kosztami −9,62 %/rok, koszt 1,00 %/rok. NL1: koszt 0,14 % na zdarzenie wobec ruchu ceny +3,41 % i fundingu −1,15 %. C1b (najbardziej wrażliwy na koszt): funding + hedge +64,3 %, koszty 166,4 %. Wyjście na zero wymagałoby ≤ 0,073 % na przełączenie na stronę, a sama noga spot ze zniżką BNB kosztuje 0,075 %.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TL1, R1, NL1, C1b",
+    "would_change_verdict": "Nie; C1b przy minimalnym realnym koszcie ~−17 % w sumie zamiast −102 %, nadal ujemny (a carry użytkownik i tak odpuścił)."
+   },
+   {
+    "title": "TX1 liczy na cenach spot bez carry, dywidend i kosztu finansowania",
+    "area": "TX1 (run_trend_tradfi_tx1.py:5-6, data/tradfi_panel.py:11-12)",
+    "evidence": "Koszt 0,02 % × obrót jest realistyczny dla kontraktów futures. Waluty są jednak bez różnicy stóp procentowych: w koszyku są MXN i BRL, gdzie carry jest duże. Indeksy są bez dywidend i bez odjęcia stopy wolnej od ryzyka. Obligacje to indeks z narosłymi odsetkami bez kosztu finansowania. Po 2013 roku waluty dały −3,37 %/rok, akcje +7,61 %, obligacje +0,21 %. Ograniczenie jest zapisane w skrypcie jako „dowód mechanizmu, nie wynik do handlu”.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TX1 (szczebel 1b ADR-09)",
+    "would_change_verdict": "Kierunek nieznany: short na walucie z wysokim carry kosztowałby, a short JPY by zarabiał. Nie da się tego policzyć bez danych o stopach; nie wskazuje to na ukrytą przewagę po 2013."
+   }
+  ]
+ },
+ {
+  "lens": "kryteria",
+  "summary": "Przeliczyłem od nowa szeregi dzienne TS1, X1 i CP1 na pełnym uniwersum. Wyszły te same liczby co w raportach: TS1 +11,1 %/rok, t 1,43; X1 +41,7 %/rok, t 2,07, a po korekcie t_neff 1,86 (t_neff to t policzone z efektywną liczbą obserwacji, czyli z poprawką na to, że dni nie są od siebie niezależne); CP1 +32,0 %/rok, t 2,09. Każdą strategię sprawdziłem czterema niezależnymi sposobami liczenia niepewności: zwykłym testem t, Newey-Westem, bootstrapem blokowym (losowanie całych kawałków historii) i ilorazem wariancji. Werdykty się nie zmieniają. TS1 mieści się w 1,43–1,77, X1 w 1,86–1,91, a CP1 w 2,07–2,18. Kryteria nie są błędnie policzone, a H0 z przesuniętymi znakami (portfele kontrolne, które nie mogą znać przyszłości) nie jest za szerokie. Są tylko dwa lekkie, systematyczne przechyły w stronę ostrożności: nasz sposób liczenia N_eff i zbyt szerokie liczenie wszystkich testów do korekty Bonferroniego. Żaden z nich nie zmienia werdyktu na obecnych danych. „Nierozstrzygnięty” wynika głównie z danych, a nie z kryterium. Strategia, która naprawdę zarabia jak TS1 (Sharpe ~0,6), przeszłaby próg t > 1,96 na 5,4 roku tylko w ~30 % przypadków. Uczciwa odpowiedź dla użytkownika: nie jest tak, że „nic nie ma”. Są trzy słabe, dodatnie ślady, a portfel z nich trzech ma łącznie t ≈ 2,4. Po poprawce na to, że wybraliśmy trzy najlepsze z ~8–12 testów, to jednak wciąż tylko poszlaka (p ≈ 0,06–0,14), nie dowód.",
+  "findings": [
+   {
+    "title": "Główny powód „nierozstrzygniętych”: za mało lat danych, nie złe kryterium",
+    "area": "moc testu / zasada 18",
+    "evidence": "Przewidywane t ≈ Sharpe · √lat. TS1: 0,61 · √5,39 = 1,42, więc szansa przejścia progu 1,96 wynosi Φ(1,42 − 1,96) ≈ 29–31 %. CP1: 0,92 · √5,15 = 2,09, szansa ~55 %. X1: 0,89 · √5,41 = 2,07, szansa ~54 %. Żeby mieć 80 % szansy wykrycia, trzeba (2,8/Sharpe)² lat: 22 lata przy Sharpe 0,6 i 9,7 roku przy 0,9. Rachunek z ADR-09 sprawdzony: 1,96 · 18/√5,39 = ±15,2 %/rok, a próg wykrywalności przy 80 % mocy to 2,8 · 7,8 = 21,8 %/rok. Zgadza się z „≥ 20–25 %/rok”.",
+    "direction": "ukrywa przewagę",
+    "severity": "wysoka",
+    "affected_rounds": "TS1, TR1, X1, X2, CP1 (wszystkie strategie tygodniowe na 5,4 roku)",
+    "would_change_verdict": "Nie przez zmianę kryterium: żaden próg 5 % nie da mocy 80 % na 5 latach. Dla orientacji: przy jednostronnym progu 5 % (t > 1,645) X1 by przeszło (t_neff 1,86), a TS1 tylko przy liczeniu Newey-Westem (1,70). Przy ~30 odczytach luzowanie progu byłoby jednak nieuczciwe. Rozstrzygnąć może tylko czas, czyli dziennik prowadzony na bieżąco."
+   },
+   {
+    "title": "Nikt nie policzył łącznej siły trzech kandydatów; razem t ≈ 2,44, ale po poprawce na wybór to tylko poszlaka",
+    "area": "kryterium per strategia vs rodzina",
+    "evidence": "Wspólny okres 2021-05-08 → 2026-06-30 (1 880 dni). Korelacje: TS1–X1 0,24, TS1–CP1 0,29, X1–CP1 0,06. Portfel o równym ryzyku: +20,8 %/rok, t 2,44. Łączne Z Stouffera z uwzględnieniem korelacji: 2,44 (p jednostronne 0,007). Symulacja wyboru 3 najlepszych z m testów przy braku przewagi: P(Z ≥ 2,44) = 0,028 dla m = 6, 0,063 dla m = 8, 0,143 dla m = 12, 0,57 dla m = 30. Pary: X1+CP1 t 2,66, TS1+CP1 t 2,00.",
+    "direction": "ukrywa przewagę",
+    "severity": "średnia",
+    "affected_rounds": "TS1, X1, CP1 (i SZ1 opisowo)",
+    "would_change_verdict": "Formalnie nie. Połączenie wybrano po obejrzeniu wyników, więc nie może być werdyktem. Merytorycznie to najmocniejszy argument, że „coś tam jest”. Portfel tych strategii można zarejestrować z góry jako jedną hipotezę do dziennika (TS1+CP1 już jest w dzienniku, X1 nie)."
+   },
+   {
+    "title": "N_eff liczony z 50 surowych autokorelacji i przycięty tylko w dół: systematycznie zaniża t",
+    "area": "N_eff (summarize_pnl / effective_sample_size)",
+    "evidence": "backtest/carry_hedged.py:130: n_eff = min(ESS, n). agents/labeling.py:225-227: suma 50 autokorelacji bez wag, szum tej sumy ±0,16 (1 sd). Na szumie bez autokorelacji (600 losowań z TS1) N_eff przycina się do n w 59 % przebiegów. t_neff/t średnio 0,958, w 10 % przypadków ≤ 0,85. Moc przy Sharpe 0,85 spada z 50,2 % do 45,5 %. Ujemna autokorelacja trendu jest ignorowana: TS1 ma sumę 50 autokorelacji −0,264 (N_eff bez przycięcia 4 172), VR(28) = 0,62. Newey-West daje t 1,51 (L 7) / 1,70 (L 28) / 1,76 (L 50), bootstrap blokowy 28 dni t 1,70 (p 0,045), a nasze t_neff to 1,43. Na starym, obciętym cache t_neff 1,76 zamiast Newey-Westa L 28 równego 2,07.",
+    "direction": "ukrywa przewagę",
+    "severity": "średnia",
+    "affected_rounds": "TS1, TR1, X1, X2, CP1, TX1 (każda runda używająca summarize_pnl)",
+    "would_change_verdict": "Na pełnym uniwersum nie: TS1 najwyżej 1,76 < 1,96, CP1 i tak przechodzi, X1 bez zmian. Na starym cache TS1 przeszedłby próg (2,07), ale tamte dane były błędne. Na przyszłość: z góry zarejestrować Newey-Westa z wagami Bartletta (np. L = 28) albo bootstrap blokowy, bez jednostronnego przycięcia. Nie wolno tego zmieniać wstecz."
+   },
+   {
+    "title": "H0 ze znakami przesuniętymi w czasie jest w porządku, nie za szerokie i nie zjada przewagi",
+    "area": "H0 (_shifts, _null, shift_signs)",
+    "evidence": "TS1 na pełnym uniwersum, 100 przesunięć. Średnia portfeli kontrolnych −1,1 %/rok. Zgodność przesuniętych znaków z prawdziwymi 50,6 % (45,5–56,0). Krótkie przesunięcia (8–26 tygodni) dają −5,3 %/rok, więc nie zachowują przewagi. Korelacja zgodności ze średnią +0,23. Rozrzut średnich kontrolnych 6,8 %/rok, czyli 0,87 błędu analitycznego (7,8 %). q97,5 = +12,0 %/rok, a więc mniej niż próg testu t (1,96 · 7,8 = 15,2 %/rok). Warunek H0 jest więc łagodniejszy niż warunek t i nigdy nie decydował. TS1 wypada ponad 93 % portfeli kontrolnych (z = 1,79).",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, TR1, CP1, TX1",
+    "would_change_verdict": "Nie. Ten test jest poprawny. Jedyny drobiazg: 100 losowań to mało, żeby dokładnie wyznaczyć percentyl 97,5 (±~2 %/rok), ale ten warunek i tak nie decyduje."
+   },
+   {
+    "title": "Korekta na liczbę testów liczy za dużo testów, ale nawet przy uczciwym liczeniu nic jej nie przechodzi",
+    "area": "Bonferroni / licznik odczytów",
+    "evidence": "Próg ~2,9–3,1 wzięty z „~24–34 odczytów”: z(1 − 0,025/24) = 3,08. Do liczby testów weszły jednak modele 4h, których zwrot koszty spychają pod zero (t od −2,9 do −11,7). Takie testy praktycznie nie mogą dać fałszywego sukcesu. Weszły też testy na niezależnych danych (TX1, gdzie w README wspomniano „próg rodzinny ~2,9”) i testy prawie identyczne (TS1/TR1, korelacja 0,86). Uczciwa rodzina tygodniowa to ~6–10 testów, co daje próg ~2,6–2,8.",
+    "direction": "ukrywa przewagę",
+    "severity": "niska",
+    "affected_rounds": "narracja przy TS1, X1, CP1, TX1",
+    "would_change_verdict": "Nie. Najwyższe t kandydata to CP1 2,09, poniżej 2,6. Nawet FDR (kontrola odsetka fałszywych odkryć) przy q = 0,10 nic nie wskazuje. Bonferroni i tak służy tylko jako hamulec w opisie, a nie jako formalne kryterium."
+   },
+   {
+    "title": "CP1: wynik odporny na metodę liczenia; brak odczytu 78 dni poza próbą nie jest dowodem przeciw",
+    "area": "CP1 / CP1P",
+    "evidence": "CP1 (1 880 dni): t 2,09; t_neff 2,09; Newey-West 2,07–2,16; bootstrap blokowy 7–56 dni t 2,08–2,18, przedział 95 % [+2,1…+4,5; +61…+64] %/rok, p jednostronne 0,016–0,023. Po winsoryzacji (przycięciu skrajnych dni) t 2,11, bez najlepszego dnia t 1,96. CP1P: 78 dni, rozdzielczość ±150 %/rok, co README zapisało wprost. Tymczasem skrót w runs/INDEX.md („poza próbą bez potwierdzenia”) laik może odczytać jako dowód przeciw.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "CP1, CP1P",
+    "would_change_verdict": "Nie. Status „kandydat” wynika z liczby testów, z bety 0,36 wobec trendu i z braku niezależnego potwierdzenia. Błąd statystyki nie ma tu nic do rzeczy. Warto w skrócie dopisać, że 78 dni to zero informacji, a nie informacja ujemna."
+   },
+   {
+    "title": "X1: kara N_eff to artefakt jednej pary dni MYX, ale wypada w tym samym miejscu co metody odporne",
+    "area": "X1 / N_eff przy grubych ogonach",
+    "evidence": "Dni 2025-09-07/08: +18,0 % i +65,3 %. To one dają autokorelację z dnia na dzień +0,089. Po winsoryzacji jest −0,035, a na rangach −0,027. Po winsoryzacji t 1,88 (N_eff przycięte do n), bez korekty t 2,07, t_neff 1,86, Newey-West 1,85–1,89. Skośność 9,6, kurtoza 254. Bootstrap percentylowy [+4,0; +89,0] wyklucza zero tylko przez skośność; p z wycentrowaniem 0,04. Bez 5 najlepszych dni t 1,30.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "X1 (RU1)",
+    "would_change_verdict": "Nie. Każda odporna metoda daje t ≈ 1,86–1,91 < 1,96. „Nierozstrzygnięty” wynika z zależności od ogona, a nie z kryterium. Przedziału percentylowego z bootstrapu nie należy cytować jako wsparcia."
+   },
+   {
+    "title": "Nieaktualne twierdzenie: „bootstrap blokowy CI > 0” dla TS1 nie zachodzi na pełnym uniwersum",
+    "area": "raportowanie TS1 (wniosek 70, README TS1)",
+    "evidence": "Stary cache: [+1,1; +29,3]. Pełne uniwersum, moje przeliczenie: bloki 7/14/28/56 dni dają [−3,2; +25,8] / [−2,1; +24,8] / [−1,8; +24,2] / [−1,1; +24,2]; udział wyników ≤ 0 wynosi 3,6–6,2 %. Bootstrap stacjonarny: [−1,5; +23,5]. Wniosek 70 nadal wymienia „bootstrap blokowy CI > 0” jako argument na plus.",
+    "direction": "zawyża przewagę",
+    "severity": "niska",
+    "affected_rounds": "TS1 (po RU1)",
+    "would_change_verdict": "Nie zmienia werdyktu (był i jest NIEROZSTRZYGNIĘTY). Zmienia tylko opis: po korekcie danych żadna z trzech dróg nie daje „ponad zerem” na poziomie 95 %."
+   },
+   {
+    "title": "Wymóg „dwóch warunków” nie dokłada surowości",
+    "area": "kryterium dwuwarunkowe",
+    "evidence": "Strategie tygodniowe: warunek H0 (q97,5 = +12,0 %) jest łagodniejszy niż warunek t (+15,2 %/rok) i nigdy nie decyduje. TS1 nie spełnia obu, CP1 spełnia oba. Reguły oceniane trafnością: t > 0 to bardzo łagodny warunek, a dodano go po W1b (trafność 53,15 % nad progiem przy t = −3,9). Chroni przed fałszywym sukcesem i nie ukrywa przewagi.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, CP1, TX1, W1b i rundy z trafnością",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Zasada 18 (mierzalność) jest łagodna, ale sprawia, że część hipotez nigdy nie była testowana",
+    "area": "measurability_report / sonda SH1",
+    "evidence": "backtest/metrics.py:719-720: hipoteza jest „mierzalna”, gdy zakładany efekt przekracza próg opłacalności plus połowę przedziału, co odpowiada mocy ~50 %. To łagodny próg. Filtr SH1 „efekt ≥ 1,4 × niepewność” odpowiada mocy ~78 %. SH1 odrzuciła 10 hipotez BEZ pomiaru (np. AA1: ±14–16 %/rok przy efekcie 0–6 %; KU1: ±0,92 Sharpe’a przy 0–0,5).",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "SH1, CP2, SC1 (hipotezy zatrzymane przed pomiarem)",
+    "would_change_verdict": "Nie. Test o mocy 15–30 % niczego by nie rozstrzygnął. Warto jednak mówić użytkownikowi wprost: w „nic nie znaleźliśmy” siedzą trzy różne rzeczy. Część pomysłów zbadano i wyszła negatywnie (kierunek BTC). Część dała dodatni wynik, ale nieistotny (TS1, X1). Części nie mierzono, bo pomiar by nie rozstrzygnął (SH1)."
+   },
+   {
+    "title": "TX1 / szczebel 1(b): kryterium zapisane z góry i łagodne; wynik „nierozstrzygnięty” pochodzi z danych",
+    "area": "ADR-09 szczebel 1(b)",
+    "evidence": "Mapowanie zapisane przed wynikiem: SPEŁNIONY, gdy kryterium główne wychodzi POZYTYWNE i średnia po 2013 jest > 0. Warunek znaku jest łagodny: przy prawdziwym Sharpe 0,4 i błędzie 0,27 Sharpe’a szansa, że wyjdzie > 0, to ~93 %. Wynik po 2013: −0,2 %/rok [−6,0; +5,6], co wyklucza Sharpe powyżej ~0,55. Ograniczenia danych opisano w README: 13 z 19 rynków to waluty spot bez carry, brak rolowania ropy i dywidend, okno 28 dni zamiast 12 miesięcy z literatury. To jednak kwestia danych, nie statystyki.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TX1",
+    "would_change_verdict": "Nie przez statystykę. Na werdykt po 2013 wpływa skład koszyka (głównie waluty spot bez carry). To pytanie do przeglądu danych, a nie do kryterium."
+   }
+  ]
+ },
+ {
+  "lens": "dane",
+  "summary": "Sprawdziłem wszystkie źródła danych rund z 23–24.09: oba katalogi uniwersum (stary 287 i pełny 685), dziennik na żywo, świece BTC, Coinbase, OI, listingi i FRED. Przeliczyłem luki, duplikaty dni, strefy czasowe, pokrycie fundingu u członków koszyków, wycofane monety, skład koszyków i to, kto nadal czyta stary katalog. Dane są dziś w dobrym stanie. Nie ma dziur w notowaniach ani zdublowanych dni, wszystko jest w UTC (czasie uniwersalnym), a funding (opłata między longami i shortami) jest kompletny u wszystkich członków top-20 i top-50. CP1, CP2, NL1, P2 i modele 4h czytają pliki, których obcięcie nie dotyczyło. Znalazłem jeden nowy ślad tego samego błędu co w RU1. X2 i TR1 zaczynają się w maju 2021 tylko dlatego, że na obciętych danych brakowało 50 monet. Na pełnych danych w lutym–kwietniu 2021 jest 77–88 monet, a RU2 przeniosło tę datę bez zmian, więc z próby wypadły 3 miesiące. Do tego dochodzą: TL1 wciąż liczony na złym koszyku (27,5 % właściwych miejsc bez danych OI, czyli otwartych pozycji) oraz skład TX1, w którym waluty to 66 % ryzyka. Główny powód „braku znalezisk” to jednak nie błąd w danych, tylko moc testu. Na 5,5 roku test wykryłby prawdziwą przewagę trendu +10 %/rok tylko w ok. 25 % przypadków. Wynik „NIEROZSTRZYGNIĘTY” znaczy więc „nie umiemy odróżnić”, a nie „nie ma”.",
+  "findings": [
+   {
+    "title": "X2 i TR1: start w maju 2021 wynikał z obciętego katalogu, a RU2 go nie poprawiło",
+    "area": "dobór próby (okno czasu) po korekcie uniwersum",
+    "evidence": "backtest/run_xs_momentum_x2.py:38 FIRST_MONTH=\"2021-05-01\" z komentarzem „luty–kwiecień 2021: 41–46 kandydatów”; backtest/run_ts_momentum_oos.py:57,63 ma na sztywno 2021-05-01; README X2:45-46 i README TR1:38 uzasadniają start brakiem 50 monet. Na data/raw/universe_full w oknach 30 dni przed miesiącem jest 77 kandydatów (luty), 82 (marzec) i 88 (kwiecień); próg top-50 wynosi wtedy 32–70 mln $/dzień. Reguła z pre-rejestracji („pierwszy miesiąc z ≥50 kandydatami”) daje więc na pełnych danych 2021-02. RU2 (backtest/run_universe_fix_ru2.py:27-33) podmieniło tylko katalog i zostawiło stałą. Z próby wypadły 3 miesiące hossy na altcoinach (ok. 88 dni, 4–5 % próby). Istniejąca seria TS1 (pełne uniwersum, odtworzona: +11,09 %/rok) zarobiła w tym oknie +10,5 pkt netto.",
+    "direction": "ukrywa przewagę",
+    "severity": "średnia",
+    "affected_rounds": "X2, TR1 (oraz ich przeliczenia w RU2)",
+    "would_change_verdict": "TR1 (dziś +13,0 %/rok, t 1,63, 1 880 dni): przy wkładzie takim jak TS1 w tym oknie (+10,5 pkt) wyszłoby ok. +14,4 %/rok i t ≈ 1,84, czyli werdykt raczej bez zmiany. Do t 1,96 trzeba ok. +15 pkt w 88 dni (1,5× wyniku TS1). X2 (dziś +23,1 %/rok, t 1,60): do t 1,96 trzeba ok. +30 pkt w 88 dni. To możliwe, bo według wniosku 68 dla X1 samo to okno plus inna faza tygodnia dało dziesiątki punktów. Zmiana X2 na POZYTYWNY według jego własnego kryterium jest więc realna, ale nie przekroczy progu rodzinnego t ≈ 2,9 przy ~35 odczytach. Celowo tego NIE policzyłem. Wynik pokazany przed pre-rejestracją skaziłby poprawkę, dlatego trzeba to zrobić rundą korekty (RU3) z pre-rejestracją, jak RU1/RU2."
+   },
+   {
+    "title": "Moc testu: prawdziwa przewaga rzędu 10 %/rok byłaby zwykle niewidoczna (główny powód „nic nie znaleźliśmy”)",
+    "area": "wielkość próby i niezależność obserwacji",
+    "evidence": "TS1 po RU1: +11,1 %/rok, CI [−4,2; +26,3], czyli błąd standardowy ok. 7,8 %/rok. Szansa wykrycia (t > 1,96) przy prawdziwym efekcie +10 %/rok = 1 − Φ(1,96 − 10/7,78) ≈ 25 %; przy +15 %/rok ≈ 49 %; przy +20 %/rok ≈ 73 % (przed dodatkowym warunkiem H0). Przekrój monet nie mnoży próby: korelacja dzienna TS1–TR1 wynosi 0,86 (wniosek 74), a 18 monet to efektywnie k_eff = 2,0 niezależnych zakładów (P2, wniosek 40). Te same granice podają ADR-09 i wniosek 81 (wykrywalne dopiero ≥ 20–25 %/rok).",
+    "direction": "ukrywa przewagę",
+    "severity": "wysoka",
+    "affected_rounds": "TS1, TR1, X1, X2, CP1, TF1, TL1, LQ1 (wszystkie tygodniowe na koszykach)",
+    "would_change_verdict": "To nie jest błąd do poprawienia. Ta sama zasada działa na każdą rundę: przy efektach 10–15 %/rok werdykt NIEROZSTRZYGNIĘTY jest najbardziej prawdopodobnym wynikiem NAWET gdy przewaga istnieje. „Nic nie znaleźliśmy” trzeba czytać jako „nie da się tego zmierzyć na 5,5 roku”, nie jako „nie działa”. Rozstrzygnąć może tylko dłuższy czas (dziennik)."
+   },
+   {
+    "title": "TL1 nadal liczony na obciętym uniwersum; co czwarte właściwe miejsce w koszyku nie ma danych OI",
+    "area": "stary cache + brakujące dane OI",
+    "evidence": "backtest/run_crowding_tl1.py:31 UNIVERSE_DIR=\"data/raw/universe\" (287 z 685 kontraktów); RU2 świadomie pominęło TL1. Na pełnym uniwersum w okresie TL1 (2021-12 → 2026-06, 55 miesięcy, 1 100 miejsc top-20) średnio 5,47 z 20 miejsc różni się od starego koszyka (maks. 9). 302 z 1 100 miejsc (27,5 %) to monety, których nie ma w data/raw/oi_panel (114 symboli), m.in. SUI, TON, OP, WLD, TAO, INJ, LDO, MATIC, ONDO, HYPER. README TL1:81 podaje „0,3 % braków OI”, ale ta liczba odnosi się do złego koszyka.",
+    "direction": "neutralne",
+    "severity": "średnia",
+    "affected_rounds": "TL1 (i wniosek 75 „pozycjonowanie — czwarty raz bez skutku”)",
+    "would_change_verdict": "Kierunek jest nieznany. TL1 wyszło −10,5 %/rok [−25,2; +4,2], IC +0,008, więc do POZYTYWNEGO trzeba by przesunięcia o ok. 30 pkt/rok, co jest mało prawdopodobne. Werdykt można by zmienić najwyżej na NEGATYWNY albo zostawić. Do czasu przeliczenia (wymaga pobrania OI dla ok. 100 monet) TL1 należy cytować jako „nieprzeliczony na pełnym rynku”, a nie jako czwarty dowód."
+   },
+   {
+    "title": "TX1: próba rynków to w 2/3 waluty, więc „zanik po 2013” to głównie zanik trendu na walutach",
+    "area": "dobór rynków w teście szczebla 1(b) ADR-09",
+    "evidence": "data/tradfi_panel.py:25-38: 13 z 19 serii to waluty, do tego 1 surowiec, 2 indeksy akcji i 3 obligacje (w badaniach Moskowitz–Ooi–Pedersen: 24 surowce na 58). Mój przelicz: waluty dają 65–66 % samodzielnego ryzyka portfela zarówno przed, jak i po 2013; sufit 3× jest aktywny w 89 % dni po 2013; średnia korelacja dzienna 13 walut po 2013 to 0,46 (w praktyce jeden zakład na dolara). raw_output TX1, po 2013 per klasa: waluty −3,37 %/rok, Brent +22,85, akcje +7,61, obligacje +0,21. Portfel po 2013: −0,20 %/rok, CI [−5,97; +5,57], czyli przedział obejmuje typowe dla okresu po publikacji +3–5 %/rok.",
+    "direction": "ukrywa przewagę",
+    "severity": "średnia",
+    "affected_rounds": "TX1, ADR-09 szczebel 1(b), wniosek 84",
+    "would_change_verdict": "Główny werdykt TX1 (POZYTYWNY 1990–2026) i etykieta 1(b) NIEROZSTRZYGNIĘTY się nie zmieniają. Zmienia się ich odczyt. Tytuł wniosku 84 „zanika po publikacji” nie ma pokrycia: po 2013 wynik jest niemierzalny (±5,8 %/rok) i słaby głównie w walutach. Dla porównania (post hoc, NIE jako werdykt): równe wagi 4 klas po 2013 dałyby (−3,37+22,85+7,61+0,21)/4 ≈ +6,8 %/rok. Bez Brentu (jeden rynek) zostaje tylko ok. +1,5 %/rok, więc ten argument jest kruchy w obie strony."
+   },
+   {
+    "title": "TX1: obligacje liczone ze zwrotem całkowitym bez kosztu finansowania lekko zawyżają lata sprzed 2013",
+    "area": "konstrukcja danych (obligacje)",
+    "evidence": "data/tradfi_panel.py:62: r = −D·Δy/100 + y_{t−1}/100/365, czyli pozycja long dostaje odsetki gotówkowe za darmo (w kontraktach terminowych byłaby tylko nadwyżka ponad stopę krótką). DTB3 w repo jest dopiero od 2019, więc jako przybliżenie finansowania wziąłem rentowność 2-letnią. Wynik: całość +5,08 → +4,47 %/rok, 1990–2012 +8,21 → +7,24, po 2013 −0,20 → −0,18. Różnica: +0,60 pkt (całość), +0,97 pkt (przed 2013), −0,02 pkt (po 2013).",
+    "direction": "zawyża przewagę",
+    "severity": "niska",
+    "affected_rounds": "TX1",
+    "would_change_verdict": "Nie. t całości spada z ok. 2,73 do ok. 2,40, co wciąż jest ponad 1,96 i ponad q97,5 H0 = 2,87 %/rok. Różnica „przed/po 2013” maleje o ok. 1 pkt, ale nie znika."
+   },
+   {
+    "title": "SC1: rachunek mocy liczony na obciętym uniwersum (nieprzeliczony)",
+    "area": "stary cache",
+    "evidence": "backtest/run_signal_strength_sc1.py:77 load_ts(\"data/raw/universe\"). Połowa przedziału TS1: stare dane ±16,5 %/rok, pełne ±15,2 %/rok (RU1), czyli ok. 8 % mniej.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "SC1",
+    "would_change_verdict": "Nie. Połowa przedziału różnicy spadłaby z ±13,2 do ok. ±12,2 %/rok, wobec oczekiwanego efektu kilku %/rok. Runda nadal byłaby NIEMIERZALNA."
+   },
+   {
+    "title": "Funding u członków koszyków jest kompletny (sprawdzone, w porządku)",
+    "area": "brakujący funding",
+    "evidence": "W universe_full 173 z 685 symboli nie ma pliku *_funding. To celowe: data/complete_universe.py:71-72 pobiera funding tylko dla członków koszyków. Członkowie bez pliku fundingu: 0 z 1 300 miejsc-miesięcy top-20 (2021-02 → 2026-06) i 0 z 3 100 top-50 (2021-05 → 2026-06). Częściowe pokrycie (<95 % dni) mają tylko 4 miejsca-miesiące, wszystkie z powodu wycofania kontraktu: BAKE i HIFI 10/2025 (9,7 %), DEGO 04/2026 (70 %), TON 06/2026 (77 %). Brak zdublowanych rozliczeń (0 par w odstępie < 10 min). Skrajne dzienne sumy (MYX −38 % 2025-08-05) to prawdziwe zdarzenia przy stawkach godzinowych.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, TR1, X1, X2, TF1, LQ1, SZ1, R1 (po RU1/RU2)",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Integralność danych: brak luk, duplikatów i przesunięć stref czasowych (w porządku)",
+    "area": "luki dat, duplikaty, strefy czasowe",
+    "evidence": "universe_full: 0 brakujących dni wewnątrz notowań w 675 niepustych seriach; 0 dni spoza północy UTC; duplikaty (symbol, dzień) blokuje backtest/rebalance_premium.py:49. Natywne pliki BTC (5m, 1h, 4h, 1d, 8h, funding): 0 luk i 0 duplikatów. Zamknięcie perpetuala względem spotu: BTC maks. 0,19 %, ETH 0,36 %; SOL 16,9 % 2022-11-09 to prawdziwe dyskonto z czasu upadku FTX. Coinbase (CP1): przy właściwym wyrównaniu odchylenie premii wynosi 0,078 %, a przy przesunięciu o dzień 3,0 % albo o 8 h 1,8–2,6 %, więc wyrównanie jest poprawne. Filtr 2021+ (config/settings.yaml:42) jest respektowany we wszystkich skryptach koszykowych. X1 z pandas 3.0.2 ma pct_change bez uzupełniania braków, tak jak TS1.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "wszystkie rundy z 23–24.09",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Rundy wciąż czytające stary katalog, ale obcięcie ich nie dotyczy (w porządku)",
+    "area": "stary cache",
+    "evidence": "CP1 (backtest/run_coinbase_cp1.py:31,63,73), CP2 (run_coinbase_cp2.py:56,65) i NL1 (run_listings_nl1.py:32) czytają z data/raw/universe tylko BTCUSDT, ETHUSDT i SOLUSDT. Porównanie DataFrame.equals ze starym katalogiem daje True dla BTC 1d, BTC funding, ETH 1d i SOL 1d. P2 używa jawnej listy 20 symboli (run_carry_probe_p2.py:43-64) i to od niej pochodzi 12 monet H–Z w starym katalogu. Modele 4h/1h/1d (N1, A1, A2, O1, L1, V1, G1, W1, Y1, Y2, T4, WF1) czytają natywne pliki BTC przez fetch_window, a nie katalog uniwersum. TP1 i CP1P czytają universe_2026q3 (685 symboli, ten sam zbiór co pełny).",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "CP1, CP1P, CP2, NL1, P2, TP1, modele 4h/1h/1d",
+    "would_change_verdict": "Nie. P2 ma własny, jawnie opisany błąd przeżywalności (lista dzisiejszych top-20), ale był NIEMIERZALNY z powodu mocy."
+   },
+   {
+    "title": "10 kontraktów z pustymi danymi (m.in. SXP, BTCST) nigdy nie weszło do koszyków",
+    "area": "kogo nie ma w uniwersum",
+    "evidence": "data/fetch_universe.py:275-280: gdy giełda odpowiada „Invalid symbol” (kontrakt przemianowany albo wycofany), zapisywany jest pusty plik. Puste świece w universe_full: AERGO, BDXN, BTCST, DATAIP, DOS, GAIB, GRAM, GRVT, SXP, 牛来. Próg top-50 w 2021 wynosił 32–151 mln $/dzień (liczone z universe_full). SXP i BTCST mogły go przekraczać w pojedynczych miesiącach 2021, ale bez sieci nie da się tego sprawdzić.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "X2, TR1 (top-50, 2021), marginalnie TS1/X1",
+    "would_change_verdict": "Mało prawdopodobne. Chodzi najwyżej o kilka z ok. 3 100 miejsc-miesięcy top-50, a kierunek jest nieznany."
+   },
+   {
+    "title": "Martwe i niekryptowe instrumenty w koszyku, bez znaczenia dla wyniku",
+    "area": "skład koszyka",
+    "evidence": "Ranking na podstawie obrotu z poprzedniego miesiąca wpuścił do top-20 kontrakty już martwe (zerowy obrót, stała cena przez cały miesiąc): FTT w 12/2022 i ALPACA w 05/2025. Pozycja na nich daje zwrot 0 i rozcieńcza portfel. Kontrakt wycofany w trakcie miesiąca: 6 z 1 300 miejsc-miesięcy top-20 (LUNA 05/2022 z pełnym spadkiem −100 % w danych, BNX, EOS, TON…). PAXG (złoto) był w top-20 przez 3 miesiące (02–04/2026) i w top-50 przez 8. Duplikatów tego samego aktywa (np. 1000X i X) brak. Rotacja: 195 różnych monet w 1 300 miejscach, 13,4 % miejsc to kontrakty młodsze niż 180 dni.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, X1, X2, TR1, LQ1, SZ1",
+    "would_change_verdict": "Nie. To mniej niż 1 % miejsc, a rozcieńczenie wynosi ≤ 1/20 w 2 z 65 miesięcy."
+   },
+   {
+    "title": "Zasada 20 (dane od 2021) wycina rok 2020, ale to prawie nic nie zmienia w mocy",
+    "area": "filtr daty",
+    "evidence": "universe_full ma dane od 2020-01-01, a BTC 4h od 2019-09. Dla TS1 dodanie ok. 12 miesięcy 2020 zwiększyłoby próbę o ok. 18 %, a połowę przedziału zmniejszyło tylko o ok. 8 % (±15,2 → ±14,0 %/rok). Żeby efekt +11 %/rok był istotny, trzeba ok. (15,2/11)² ≈ 1,9× dłuższej historii, czyli ok. 10 lat.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "wszystkie rundy od N1 (decyzja użytkownika)",
+    "would_change_verdict": "Nie dla werdyktów. Rok 2020 (silny trend) mógłby przesunąć średnie w górę, ale nie da wystarczającej precyzji, a jego użycie wymaga decyzji użytkownika."
+   },
+   {
+    "title": "Model 4h: co wypada z próby jest opisane i zmierzone (w porządku)",
+    "area": "kogo nie ma — modele 4h/1h/1d",
+    "evidence": "README rund: abstynencja (model nie wskazuje kierunku) 40–47 % świec (N1 4 681 świec), wyłącznik bezpieczeństwa tłumi 1–9 % sygnałów (Y1 2 258, A2 3,8–4,8 %), pierwsze okno treningowe, DVOL brakuje w 498 świecach przed 2021-03-25 (V1). K2 wykazało, że wyłącznik nie wpływa na trafność: różnica +0,04 pp przy CI ±0,34. Krótkie okno uczenia (60 dni ≈ 360 świec) mogło zaniżać model; WF1 (w toku, gałąź wf1-okno-uczenia) sprawdziło okna 365 i 730 dni: oba NEGATYWNE, p 49,59 % i 48,50 %.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "N1, A1, A2, O1, L1, V1, G1, W1, Y1, Y2, T4, WF1",
+    "would_change_verdict": "Nie. Wśród zmierzonych wykluczeń nie widać selekcji, która ukrywałaby przewagę; dowód braku (wnioski 46, 69) jest odporny."
+   }
+  ]
+ },
+ {
+  "lens": "silnik",
+  "summary": "Sprawdziłem silnik, który liczy zyski tygodniowe: backtest/ts_momentum.py (TS1, CP1, LQ1), backtest/xs_momentum.py (X1) i backtest/sizing.py. Porównałem go z drugą, niezależnie napisaną wersją obliczeń i puściłem na dane syntetyczne z wbudowanym, znanym zyskiem. To jest kontrola pozytywna, której projekt dotąd nie miał. Wynik: silnik liczy poprawnie. Druga wersja zgadza się z nim co do 1e-17. Wbudowany zysk wraca w całości: wbudowane +10,4 %/rok, silnik pokazuje +10,1; wbudowane +22,5 %/rok, silnik +22,2; odchyłka ±1,4 pkt to zwykły szum losowania. Znak fundingu, koszty i moment wejścia (dzień po sygnale) też się zgadzają. Nie znalazłem błędu, który zjadałby zysk w istotny sposób. Znalazłem tylko kilka drobnych ustawień ostrożnościowych warte 0,1–0,7 pkt/rok albo 0,2–0,3 w statystyce t. Żadne nie zmienia werdyktu żadnej rundy. Kilka innych drobnych ustawień działa w drugą stronę i lekko zawyża wynik. Najważniejsze odkrycie nie dotyczy błędu, tylko czułości testu. Gdyby strategia naprawdę zarabiała tyle, ile wstępnie szacujemy dla trendu (~+10 %/rok przy wahaniach ~16 %/rok), to na 5,4 roku danych nasze kryterium uznałoby ją za pewną tylko w ~26 % przypadków. Przewagę rzędu +22 %/rok wykrywa w 88 % przypadków. Werdykt „nierozstrzygnięty” znaczy więc „nie da się tego zmierzyć”, a nie „nic nie ma”. Skrypty audytu leżą w C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt (pc_silnik.py, pc_moc.py, pc_x1.py, d1_dane.py, d2_real.py, d3_liq.py, d4_x1fund.py, d5_x1bh.py). Repo nie było zmieniane.",
+  "findings": [
+   {
+    "title": "Test jest za mało czuły na przewagę takiej wielkości, jaką szacujemy dla trendu — to główny powód, że „nic nie znaleźliśmy”",
+    "area": "moc kryterium t_neff > 1,96 na 5,4 roku (silnik TS1 + summarize_pnl)",
+    "evidence": "Skrypt pc_moc.py. Dane syntetyczne: 20 monet, dryf ukryty w reżimach, szum z grubymi ogonami, wspólny czynnik rynku; funding 0,03 %/dzień; koszt 0,07 %. Po 100 losowań na każdy poziom. (1) Wbudowane 0 %/rok: silnik −0,3 %/rok, fałszywy alarm 1/100. (2) Wbudowane +10,4 %/rok brutto (+9,5 % netto, wahania 16,4 %/rok): silnik wykrył przewagę w 20/100 [12; 28] %. Wcześniejsze 40 losowań dało 16/40, razem 36/140 ≈ 26 %. Ze wzoru: oczekiwane t = 0,58·√5,4 = 1,34, więc P(t > 1,96) ≈ 27 %. Nawet przy prawdziwej przewadze 10 % losowań dało wynik netto ≤ +0,1 %/rok. (3) Wbudowane +22,5 %/rok: wykryte w 88/100 [82; 94] %. Dla porównania TS1 na pełnym uniwersum: +11,1 %/rok przy wahaniach 18,1 %/rok (runs/2026-09-24_ru1-pelne-uniwersum/raw_output_ts1.txt).",
+    "direction": "ukrywa przewagę",
+    "severity": "wysoka",
+    "affected_rounds": "TS1, TR1, X1, X2, CP1, LQ1, TF1, SC1 — każda runda tygodniowa oceniana kryterium t > 1,96 na historii 2021–2026",
+    "would_change_verdict": "Nie przestawia żadnego werdyktu, bo to cecha długości próby, nie błąd. Zmienia za to ich odczyt. Gdyby trend naprawdę zarabiał ~+10 %/rok, test w ~3 na 4 przypadkach dałby dokładnie to, co dostaliśmy: „NIEROZSTRZYGNIĘTY”. Potwierdza to na samym silniku to, co zapisano w ADR-09 i we wniosku 81."
+   },
+   {
+    "title": "Silnik TS1 liczy poprawnie: niezależne obliczenia zgodne, a wbudowany zysk wraca w całości",
+    "area": "backtest/ts_momentum.py: portfolio, phase_returns, build_formations, position_weights",
+    "evidence": "Skrypt pc_silnik.py. Napisałem od zera drugą wersję obliczeń: własna pętla, własna zmienność σ̂ (EWMA), własny dryf wag; bez funkcji ts_momentum. Największa różnica z silnikiem: brutto 2,8e-17, funding 1,9e-19, koszt 9,5e-20. Silnik oddaje wbudowany zysk: różnica −0,30 ± 1,40 / −0,32 ± 1,36 / −0,29 ± 1,30 pkt/rok na trzech poziomach (po 100 losowań). Wersja z „wyrocznią” (znak prawdziwego reżimu): oczekiwane +33,9 %/rok, silnik +30,6 ± 7,8. Funding w silniku równa się dokładnie −f × pozycja netto (−0,50 wobec −0,50 %/rok). Koszt naliczany tylko w dniu formowania. Obroty 7 faz się nie dublują: pozycja łączna zmienia się o obrót fazy/7.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, TR1, TP1, CP1, CP1P, TF1, LQ1, SZ1, RU1, RU2, TX1",
+    "would_change_verdict": "Nie. Silnik nie zaniża zysku, więc nie jest źródłem wyników negatywnych."
+   },
+   {
+    "title": "Silnik X1 też liczy poprawnie i oddaje wbudowany zysk przekrojowy",
+    "area": "backtest/xs_momentum.py: long_short_returns",
+    "evidence": "Skrypt pc_x1.py. Niezależne obliczenia zgodne z silnikiem: brutto 2,1e-17, funding 1,1e-19, koszt 2,2e-19. Na 40 losowaniach z wbudowanym dryfem: silnik +40,8 %/rok wobec oczekiwanych +40,0 (różnica +0,83 ± 2,86). Test wykrył przewagę w 39/40 przypadków (przy zmienności syntetycznej, nie realnej).",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "X1, X2, NC1 (część X1), RU1 (X1), RU2 (X2)",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Wejście nie jest spóźnione i nie ucinamy za dużo danych",
+    "area": "moment wejścia i początek próby (ts_momentum.py:103, xs_momentum.py:136, run_coinbase_cp1.py:40-56, ts_momentum.py:358)",
+    "evidence": "Pozycja wchodzi po zamknięciu dnia t, a pierwszy zwrot pochodzi z dnia t+1. Tak stoi w kodzie (range(t_pos + 1, ...) oraz index > t) i sprawdza to test tests/test_ts_momentum.py:81. Niezależna rekonstrukcja z wejściem t+1 zgadza się z silnikiem co do 1e-17. Dzień opóźnienia więcej dałby wyraźną różnicę. Sygnał CP1 bierze zamknięcie Coinbase z dnia d i świecę Binance 16:00–24:00 z dnia d. Nie ma dodatkowego przesunięcia. Wspólny start 7 faz odcina 6 dni (2021-02-01 → 02-08), czyli 0,3 % próby. Start w lutym 2021 wynika z zasady 20 i 30-dniowego okna obrotu.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "wszystkie rundy tygodniowe",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Dane wejściowe są czyste: nie ma dziur w cenach ani braków fundingu u monet z koszyka",
+    "area": "zamiana NaN na 0 i funding (ts_momentum.py:104-105, xs_momentum.py:116,157; dane universe_full)",
+    "evidence": "Skrypt d1_dane.py. 39 492 dni członkostwa w koszyku (195 różnych monet). Braki ceny: 0. Utracone zwroty (NaN zamieniony na 0): 0. Wszystkie 195 monet ma plik funding (w katalogu jest 512 plików funding na 685 plików świec, ale brakujące dotyczą monet spoza koszyka). Dni z ceną, ale bez fundingu: 7/39 492 (0,02 %). W trakcie członkostwa wycofano tylko LUNA (2022-05-13) i EOS (2025-05-21). Od tego dnia liczą się jak gotówka.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, X1, X2, TR1, TF1, LQ1 na universe_full (RU1/RU2)",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Sposób liczenia N_eff (efektywnej liczby niezależnych dni) z górnym limitem N_eff ≤ n systematycznie trochę zaniża t",
+    "area": "statystyka wyniku: carry_hedged.py:130 + agents/labeling.py:225-227 (suma 50 autokorelacji, bez wag Bartletta, ucięte do n)",
+    "evidence": "Skrypt d2_real.py. TS1 na pełnym uniwersum: suma autokorelacji ρ(1..50) = −0,264, ρ1 = −0,065. Wzór bez limitu dałby N_eff 4 172, ale limit tnie go do 1 969, więc t_neff = t = 1,43. Dwie inne standardowe metody dają więcej: Newey-West (L = 28) t = 1,70, bootstrap blokowy (bloki 28 dni) t = 1,69; Newey-West z L = 7 daje 1,51. X1: t 2,07 spada do t_neff 1,86. Newey-West (1,86–1,88) i bootstrap (1,86) potwierdzają ten spadek. To uzasadniona poprawka, bo ρ1 = +0,089 pochodzi od dnia MYX. Bez dnia MYX (+65 %): t_neff 1,83, a Newey-West(28) i bootstrap po 2,07. Na czystym szumie bez żadnej autokorelacji (300 losowań, n = 1 975, grube ogony) t_neff/t wynosi średnio 0,959. W 31 % losowań t zostało obcięte o ponad 5 %.",
+    "direction": "ukrywa przewagę",
+    "severity": "średnia",
+    "affected_rounds": "TS1, TR1, CP1, X1, X2, LQ1, TF1, TL1 — każda runda z werdyktem na t_neff z summarize_pnl",
+    "would_change_verdict": "Formalnie nie. TS1 przy t ≈ 1,69–1,70 nadal jest pod progiem 1,96. X1 na pełnej serii pozostaje przy 1,86, bo tu obniżka jest uzasadniona. Opisowo „X1 bez dnia MYX” przekracza 1,96 w bootstrapie (2,07), ale to odczyt post hoc, a próg dla całej rodziny testów to ~2,9. Pamiętajmy: bootstrap w oryginalnym TS1 (stary uniwersum) już wtedy nie obejmował zera [+1,1; +29,3], a t_neff 1,76 nie przeszedł."
+   },
+   {
+    "title": "Likwidacje liczone po cenie ostatniej transakcji, a Binance likwiduje po cenie znakowania (mark)",
+    "area": "phase_returns_liq (ts_momentum.py:173-178) + dane data/fetch_universe_ohlc.py (archiwum klines/1d, nie markPriceKlines)",
+    "evidence": "Skrypt d3_liq.py pobrał markPriceKlines 1d dla 797 miesięcy z likwidacją albo otarciem o próg. Przy 3×: likwidacje 2 189 → 2 104 (96 %), koszt likwidacji −2,4 → −1,7 pkt/rok, TS1 +8,7 → +9,4 %/rok (t 1,12 → 1,22). Przy 2×: 680 → 674, koszt −0,4 → −0,3 pkt/rok (t 1,37 → 1,39). Próg 1/lev − mmr (0,3233) jest dokładny do ±0,3 pkt ceny. Dokładny wzór to 0,3266 dla longa i 0,3201 dla shorta, więc te błędy się znoszą. Strata przy likwidacji równa całemu depozytowi to wierne odwzorowanie Binance.",
+    "direction": "ukrywa przewagę",
+    "severity": "niska",
+    "affected_rounds": "LQ1, SZ1 (trend przy 2×, Coinbase przy 3×), RU1 (sz1), RU2 (LQ1), dziennik na żywo",
+    "would_change_verdict": "Nie. TS1 bez likwidacji i tak jest nierozstrzygnięty. Koszt dźwigni 3× przy tym uniwersum to raczej ~1,7 pkt/rok niż 2,4."
+   },
+   {
+    "title": "Wyniki w %/rok dotyczą małej ekspozycji, a koszt likwidacji zależy od wybranego depozytu",
+    "area": "position_weights (ts_momentum.py:61): w = s·min(3, 0,40/σ̂)/N",
+    "evidence": "TS1 na pełnym uniwersum: łączna wartość pozycji (nominał brutto) to w medianie 0,38× kapitału (p10 0,27, p90 0,48). Reszta, 62 %, leży jako gotówka z zyskiem 0 %. Wynik +11,1 %/rok to więc ~+29 % w przeliczeniu na jednostkę pozycji. Statystyka t od tego nie zależy. Przy 3× całego kapitału (k = 7,88) wychodzi CAGR −14,6 % i obsunięcie 94 %, a przy k Kelly 3,4: +20,7 %/rok i obsunięcie 55 % (raw_output_ts1.txt, sekcja 4). Likwidacje z LQ1 zakładają osobny depozyt 1/3 na każdej pozycji. Portfel o ekspozycji 0,38× na wspólnym depozycie (cross) praktycznie nie byłby likwidowany.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, TR1, CP1, LQ1, SZ1",
+    "would_change_verdict": "Nie. Rozstrzyga t, a ono nie zależy od skali. To uwaga do czytania liczb w %/rok."
+   },
+   {
+    "title": "Dryf wag liczony od zwrotu brutto zamiast netto — bez znaczenia",
+    "area": "phase_returns (ts_momentum.py:121-122)",
+    "evidence": "Skrypt d2_real.py. Silnik przesuwa wagi o (1 + brutto), a dokładnie powinien o (1 + brutto + funding − koszt). Wynik: +11,088 zamiast +11,092 %/rok, czyli różnica +0,004 pkt/rok.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1 i pochodne",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Koszty transakcji są realistyczne i nie liczą się dwa razy",
+    "area": "fee = taker 0,05 % + poślizg 2 bp (run_ts_momentum_ts1.py:52, config/settings.yaml:86,112)",
+    "evidence": "Koszt to 0,07 % × obrót jednostronny. TS1: obrót 11,9× kapitału/rok, czyli ~0,8 %/rok (Σ 4,5 % w 5,4 roku). X1: Σ 18,3 %, ~3,4 %/rok. Zleceniami limit (maker 0,02 %) zaoszczędziłoby się ~0,6 pkt/rok w TS1 i ~2,4 pkt/rok w X1. To jednak inny sposób wykonania, a nie błąd.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "TS1, X1, X2, TR1, CP1",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "Konwencja nogi X1 (codzienny powrót do 0,5 kapitału) daje wynik inny niż „kup i trzymaj”, różnica w obie strony",
+    "area": "long_short_returns (xs_momentum.py:183-186)",
+    "evidence": "Skrypt d5_x1bh.py, dane realne. Silnik +41,70 %/rok wobec prawdziwego kup-i-trzymaj z pełnym rozliczeniem kapitału +43,63 %/rok (−1,9 pkt), korelacja 0,987. Różnica siedzi głównie w 2025 (MYX: 166 % wobec 185 %). W 2021 odwrotnie: silnik +6,5 %, kup-i-trzymaj −3,0 %. Na danych syntetycznych silnik jest wyżej o +0,34 ± 0,16 pkt/rok.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "X1, X2",
+    "would_change_verdict": "Nie. Przewaga kup-i-trzymaj pochodzi z jednego wystrzału."
+   },
+   {
+    "title": "Dodatni funding X1 pochodzi głównie z dwóch skrajnych przypadków, gdy krótkie pozycje zostały wyciśnięte (short squeeze)",
+    "area": "funding w long_short_returns (xs_momentum.py:165), dane *_funding.parquet",
+    "evidence": "Skrypt d4_x1fund.py. Σ funding netto +49,06 % (rekonstrukcja = silnik). Noga long +27,5 pkt, short +21,5. LAB (long 2026) dał +10,6 pkt, MYX (long 2025) +8,3 pkt. MYX miał dzienne sumy fundingu do −38,5 %, więc longi dostawały opłaty. Znak jest poprawny: long płaci, short otrzymuje, test xs_momentum:101.",
+    "direction": "zawyża przewagę",
+    "severity": "średnia",
+    "affected_rounds": "X1, X2, RU1 (x1), RU2 (x2)",
+    "would_change_verdict": "Nie przestawia werdyktu (X1 nierozstrzygnięty). Pokazuje jednak, że +41,7 %/rok X1 zależy od ogonów w cenie (dzień +65 %) i w fundingu. Nie jest to ukryta przewaga."
+   },
+   {
+    "title": "Drobne uproszczenia, które lekko zawyżają wynik",
+    "area": "ts_momentum.py:98-122, 359-363; sizing.py:47-64; xs_momentum.py:122",
+    "evidence": "Pozycje na końcu próby nie są zamykane, więc brakuje kosztu wyjścia (0,07 % × ~0,4 kapitału, jednorazowo). Zmiany mnożników k w SZ1 nie kosztują nic. Średnia 7 faz zakłada codzienne, darmowe wyrównywanie kapitału między fazami. Pozycja wycofanej monety (LUNA, EOS) ma koszt zamknięcia, choć monety już nie ma (2 przypadki). Wszystko razem to rząd 0,1 pkt/rok.",
+    "direction": "zawyża przewagę",
+    "severity": "niska",
+    "affected_rounds": "TS1, X1, SZ1",
+    "would_change_verdict": "Nie."
+   },
+   {
+    "title": "X1 liczony z jednego dnia rebalansu miał szczęśliwy dzień tygodnia",
+    "area": "rebalance_dates (xs_momentum.py:52-64) — jedna faza zamiast 7",
+    "evidence": "Wniosek 68 (X2): ta sama reguła X1 z innym dniem rebalansu dała +0,024 %/dzień zamiast +0,060 (Σ +46 % wobec +119 %). TS1 ma 7 faz z rozrzutem 7,4 pkt (+7,4…+14,8 %/rok), więc ten problem go nie dotyczy.",
+    "direction": "zawyża przewagę",
+    "severity": "niska",
+    "affected_rounds": "X1, RU1 (x1)",
+    "would_change_verdict": "Nie. Pojedyncza faza dodaje X1 szumu, a znane porównanie wskazuje, że wynik X1 jest raczej zawyżony niż zaniżony."
+   }
+  ]
+ },
+ {
+  "lens": "faza0",
+  "summary": "Przeczytałem kod pomiaru (backtest/checkpoint_lib.py, engine.py, metrics.py, agents/ml_optimizer.py, labeling.py, feature_miner.py) oraz rundy K1–K3, T4, M1, F1, O1/L1/V1/G1, Y1/Y2 i Z10. Przeliczyłem też kilka rzeczy na danych skryptami w scratchpadzie (C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt\\e1–e5). Najpierw sprawdziłem, że te skrypty odtwarzają opublikowane liczby co do sztuki: K2 (n 23 456, trafność 51,05 %) i M1 (n 8 033, trafność 50,37 %). Najważniejsze: model 4h rzeczywiście był przyrządem za grubym. Uczy się w oknie 60 dni, czyli na około 286 świecach, obok 4 cech bazowych. W takich warunkach cecha, która prostą regułą daje trafność 52,9–55,3 % i zysk netto +0,07 do +0,20 % na transakcję, wychodzi z modelu jako 50,8–51,1 %. Nasze kryterium nazwałoby taki wynik NEGATYWNYM. Przy oknie 730 dni ta sama cecha przechodzi przez model w 80–100 %. Niezależne sprawdzenie górnej granicy pokazuje jednak, że w cechach, które faktycznie badaliśmy, nie było przewagi większej niż koszt. Najlepsze piątki (kwintyle) danych dają 0,07–0,10 % zysku przed kosztami przy koszcie około 0,08 %, a cechy z wykresu w dłuższym oknie dają trafność 48,7–49,1 %. Odpowiedź dla użytkownika: to nie jest „nic”. Są realne, małe efekty: krótki powrót ceny do średniej oraz sygnały „przeciw tłumowi” z fundingu, open interest (OI) i zapasu BTC na giełdach. Są jednak wielkości kosztów. „Dowód braku” jest zasadny dla cech z wykresu na horyzoncie 12 h. Jest za mocny dla nowych cech dokładanych do modelu, dla horyzontu 1d i dla połączeń słabych sygnałów, których nigdy nie testowano.",
+  "findings": [
+   {
+    "title": "Okno treningu 60 dni na 4h razem z 4 cechami bazowymi gubi 80–95 % przewagi nowej cechy",
+    "area": "walk-forward / trening modelu (okno treningowe, early stopping)",
+    "evidence": "agents/labeling.py:31 TRAIN_WINDOW_DAYS=60. TRAIN_DAYS=60 także w backtest/run_momentum_m1.py:46, run_funding_measured_f1.py:52, run_positioning_o1.py:51, run_external_features_lvg.py:56 i run_partial_tp_n1.py:51. runs/2026-09-22_z5b-long-history-4h-preregistration/README.md:32: „okno treningowe zostaje 60 dni (360 świec)”. docs/rag/03:41 potwierdza, że okno testowe przeskalowano na 4h, a treningowego nie (na 5m 60 dni to 17 280 świec, na 4h tylko 360). agents/ml_optimizer.py:106 zabiera 20 % na walidację, więc do nauki zostaje około 286 wierszy, a do walidacji około 70. Przeliczenie (skrypt audytu e1_oracle_transfer.py): „wyrocznia” z K1/K2 to sztuczna cecha, która z zadanym prawdopodobieństwem q zna prawdziwy wynik. Użyłem ziaren z K2, 3 losowania na punkt, dane 4h 2019-09→2026-06. Wynik q=0,2 z oknem 60 dni i 4 cechami odtwarza K2 co do sztuki. Przy q=0,2 reguła „podążaj za cechą” ma trafność 55,28 % i zysk netto +0,20 % na transakcję (e5). Pipeline z oknem 60 dni i 4 cechami daje 51,05 %, a early stopping zatrzymuje się w medianie na 3 drzewach. Ta sama wyrocznia jako jedyna cecha, też w oknie 60 dni, daje 54,99 %. Z 4 cechami w oknie 365 dni daje 52,93 %, a w oknie 730 dni 54,16 % (mediana 28–34 drzewa). Przy q=0,1 reguła ma trafność 52,87 % i zysk netto +0,065 % na transakcję, a pipeline daje 50,79 % (1 drzewo). Dla każdego z 3 losowań q=0,2 werdykt według reguły M1/F1 (górny kraniec przedziału ufności poniżej progu ~52,84 %) brzmi NEGATYWNY. Górne krańce wynoszą 52,69 / 51,53 / 52,27 %.",
+    "direction": "ukrywa przewagę",
+    "severity": "wysoka",
+    "affected_rounds": "Wszystkie rundy modelu na 4h: S1, S1b, H2.1, K3, M1, F1, W1, N1, A1b, A2.5, O1, L1, V1, G1, T4. Y2 (1d, 365 wierszy treningu) ma ten sam problem.",
+    "would_change_verdict": "Dla 4 cech bazowych z wykresu nie zmienia werdyktu (patrz znalezisko neutralne o dłuższym oknie i górnej granicy). Dla nowych cech F1, O1, L1, V1, G1, A1b i A2.5 werdykt „NEGATYWNY / dowód braku” powinien brzmieć „nierozstrzygnięty co do samej cechy”. Przyrząd wydałby ten sam werdykt cesze, która zarabia +0,07 do +0,20 % na transakcję. Czy któraś z nich naprawdę by zarabiała? Raczej nie: najlepszy kwintyl in-sample daje 0,08–0,10 % przed kosztami, czyli mniej więcej tyle, ile wynosi koszt. Tego jednak nigdy nie zmierzono."
+   },
+   {
+    "title": "K1→K2→K3: pomylono dokładność pomiaru wyniku z tym, jak słabą cechę przyrząd w ogóle zauważy; liczbę „58 %” sprostowano w złą stronę",
+    "area": "kalibracja przyrządu i rachunek mierzalności (zasada 18)",
+    "evidence": "runs/INDEX.md:307, wniosek 23: wymóg „~58 %” uchylono jako artefakt siatki q. runs/INDEX.md:383, wniosek 31: „rozdzielczość 1,09 pp jest lepsza niż luka 2,42 pp”. backtest/metrics.py:675–727: measurability_report porównuje zakładaną trafność hipotezy bezpośrednio z wald_half_width(n) i nie uwzględnia, ile przewagi cechy gubi model po drodze. W K2 (raw_output) wersja A1 wykrywa sygnał dopiero przy q=0,30 i daje tam 53,57 %. Przeliczenie e1: przy q=0,30 reguła „podążaj za cechą” ma trafność 58,45 %. Mierzona w języku cechy, próg wykrywalności wynosi więc nadal ~58 %, dokładnie jak w pierwotnym K1. Przewaga cechy przy q=0,1 i q=0,2 (52,9 % i 55,3 %; netto +0,065 % i +0,20 %) jest dla przyrządu niewidoczna mimo n≈24 000. Wyrocznia to najłatwiejszy możliwy sygnał: przyjmuje tylko 3 wartości i jest równa etykiecie. Realna, ciągła, słaba cecha będzie trudniejsza do wyuczenia; K2 README:326–327 samo zapisuje to ograniczenie.",
+    "direction": "ukrywa przewagę",
+    "severity": "wysoka",
+    "affected_rounds": "K2 i K3 (wnioski 23, 31, 32) oraz pre-rejestracje oparte na measurability_report: F1, O1, L1, V1, G1, A1, A2, W1, N1, Y1, Y2",
+    "would_change_verdict": "Liczby się nie zmieniają, zmienia się ich znaczenie. „MIERZALNA” w tych pre-rejestracjach znaczyła „wynik modelu da się zmierzyć”, a nie „przewagę cechy da się zobaczyć”. Pasmo „opłacalne, ale niewidoczne” dla cech to w przybliżeniu trafność od 53 do 58 %, czyli zysk netto od +0,07 do +0,35 % na transakcję. Nie jest to 1,1 pp."
+   },
+   {
+    "title": "Skrót „Stan wiedzy” nazywa horyzont 1d „dowodem braku”, choć runda Y2 jest nierozstrzygnięta",
+    "area": "interpretacja wyników / synteza w runs/INDEX.md",
+    "evidence": "runs/INDEX.md:10–11 zalicza Y1/Y2 do „dowodu braku”. Tymczasem runs/2026-09-23_y2-horyzont-1d/README.md:3 i :53 podaje: n 978, trafność 50,20 % z przedziałem ufności [47,07; 53,34] przy progu opłacalności 51,70 %. Przedział obejmuje próg, a nawet wartości o 1,6 pp wyższe. Okno treningu to 365 dni, czyli 365 wierszy — prawie tyle samo co 360 na 4h, więc dochodzi utrata sygnału ze znaleziska 1. Zdanie z wniosku 69 (runs/INDEX.md:712), że rodzina jest „zamknięta na każdym interwale”, opisuje zamknięcie regułą STOP, a nie wynik pomiaru.",
+    "direction": "ukrywa przewagę",
+    "severity": "średnia",
+    "affected_rounds": "Y2, wniosek 69, sekcja „Stan wiedzy — skrót”",
+    "would_change_verdict": "Tak, zmienia sformułowanie. 1d to horyzont „niezmierzony”: za mała próba i za mało danych do nauki. Nie jest to „dowód braku”. To zarazem horyzont z najniższym progiem opłacalności (51,7 %) i jedyny, na którym model z danych świecowych (OHLCV) niczego nie rozstrzygnął."
+   },
+   {
+    "title": "Nigdy nie sprawdzono sumy kilku słabych sygnałów: przeszkodą jest reguła „jedna cecha na raz” w połączeniu z modelem w oknie 60 dni",
+    "area": "projekt serii cech (zasada 4) i dobór cech",
+    "evidence": "Skrypt audytu e4_ceiling_ext.py, baza 2021+, świece 4h, horyzont 12 h. Wzięte cechy to momentum_5, funding, oi_change_24h i ex_supply_change_7d. Prawie nie idą ze sobą w parze (korelacja Spearmana ≤ 0,13). Każda z nich w skrajnym kwintylu daje in-sample 0,06–0,10 % zysku przed kosztami. Złożyłem je w jeden wskaźnik „przeciw tłumowi”: znaki przyjęte z góry, a rangi i progi liczone tylko z przeszłości. Wynik: 4 496 transakcji, +0,084 % przed kosztami na transakcję, t 3,35, t po korekcie na nakładanie się transakcji (t_neff) 2,11 przy efektywnej liczbie obserwacji (N_eff) 1 773, trafność 53,43 %. Po koszcie 0,08 % zostaje +0,004 %, czyli praktycznie zero. Rok po roku (przed kosztami): 2021 −0,026 %, 2022 +0,074 %, 2023 +0,017 %, 2024 +0,112 %, 2025 +0,126 %, 2026 (I połowa) +0,198 %. Zastrzeżenie: te 4 cechy wybrałem po obejrzeniu 13 cech na tych samych danych. To odczyt eksploracyjny, nie dowód.",
+    "direction": "ukrywa przewagę",
+    "severity": "średnia",
+    "affected_rounds": "Żadna runda tego nie testowała. Dotyczy decyzji projektowych serii F, O, L, V, G i A (każda cecha osobno, jako 5. cecha modelu).",
+    "would_change_verdict": "Nie zmienia żadnego istniejącego werdyktu. Pokazuje obszar, którego nie zbadano: suma realnych, małych efektów sięga poziomu kosztów, a w latach 2024–26 punktowo go przekracza. Sprawdzenie wymagałoby osobnej pre-rejestracji z licznikiem od zera, ze składem i znakami zapisanymi z góry, najlepiej z odczytem prospektywnym, czyli na danych, których jeszcze nie ma."
+   },
+   {
+    "title": "Znaleźliśmy prawdziwe efekty, ale są wielkości kosztu transakcji",
+    "area": "ekonomia wypłaty: przewaga przed kosztami wobec kosztu",
+    "evidence": "Skrypt audytu e3_ceiling.py, 2021+, 12 039 świec 4h. Cecha momentum_5 podzielona na kwintyle od 1 do 5 daje trafność longa 53,7 / 54,0 / 50,9 / 47,5 / 47,8 %. To równy, monotoniczny powrót ceny do średniej po około 20 godzinach, a różnica skrajnych kwintyli to ~6 pp (z≈4). Mimo to najwyższy średni zysk przed kosztami w pojedynczej grupie to 0,072 %, mniej niż koszt 0,077–0,083 %. Wniosek 49 (runs/INDEX.md:532): odwrócona reguła A1 daje +0,094 % przed kosztami przy koszcie 0,083 %. Kandydaci z e4: funding q1 +0,103 % (t 2,73), OI q4 −0,107 % (t −3,02), zapas BTC na giełdach q1 +0,080 % (t 2,33). Przyjęty koszt według config/settings.yaml: maker 0,02 %, taker 0,05 %, poślizg 0,02 %, poziom VIP0, bez zniżki za BNB.",
+    "direction": "neutralne",
+    "severity": "średnia",
+    "affected_rounds": "A1, W1c, A2.1, Y1 (reguły „z ruchem” wychodzą poniżej 50 %), F1, O1, L1",
+    "would_change_verdict": "Nie zmienia. Test poprawnie ocenił te efekty jako nieopłacalne przy przyjętym koszcie. Nieprawdą jest jednak, że „nic nie znaleźliśmy”. Istnieje krótkoterminowy powrót do średniej i sygnały „przeciw tłumowi” z danych o pozycjach graczy, tylko przegrywają z kosztem o 0–0,02 % na transakcję. Dźwignią byłby niższy koszt wykonania, ale runda W1 pokazała, że zlecenia limit częściej wypełniają się wtedy, gdy rynek idzie przeciwko pozycji."
+   },
+   {
+    "title": "Wniosek T4 „model nie ma czego się nauczyć” nie jest niezależnym potwierdzeniem",
+    "area": "diagnostyka early stoppingu (T4)",
+    "evidence": "runs/INDEX.md:468, wniosek 41. W przeliczeniu e1, w tym samym oknie 60 dni, early stopping zatrzymuje się w medianie na 1 drzewie przy q=0,1 (cecha opłacalna, netto +0,065 %) i na 3 drzewach przy q=0,2 (netto +0,20 %). To ten sam obraz, który T4 odczytało jako brak informacji. Rachunek teoretyczny: najlepszy możliwy spadek ważonej straty przy wyroczni to 0,88 % wartości bazowej ln3 dla q=0,1 i 3,45 % ln3 dla q=0,2. T4 zmierzyło 0,7 %, i to przy liczbie drzew dobranej z wiedzą o wyniku. Na około 286 wierszach model realnie osiąga dużo mniejszy spadek niż ten teoretyczny.",
+    "direction": "ukrywa przewagę",
+    "severity": "niska",
+    "affected_rounds": "T4, wniosek 41, pośrednio wniosek 39",
+    "would_change_verdict": "Nie zmienia werdyktów. Odbiera wnioskowi 41 rolę „potwierdzenia inną drogą”. T4 wyklucza silne sygnały, ale nie te, które leżą na granicy opłacalności."
+   },
+   {
+    "title": "Symetryczny próg trafności p* zaniża opłacalność sygnałów, które przewidują duże ruchy",
+    "area": "kryterium: trafność wobec zwrotu",
+    "evidence": "Przeliczenie e5_follow_econ.py: reguła „podążaj za wyrocznią” przy q=0,1 ma trafność 52,86 %, czyli na progu symetrycznym ~52,9 % albo tuż pod nim. Mimo to zarabia +0,065 % netto na transakcję (n≈9 200). Przewaga siedzi w trafieniach barier (±1,5·ATR), a transakcje zamknięte po czasie (timeouty) są rzutem monetą. backtest/metrics.py:318–349 samo opisuje to ograniczenie wzoru. Werdykt NEGATYWNY w M1 i F1 oraz kolumna „wykryte?” w K2 opierały się na porównaniu górnego krańca trafności z progiem symetrycznym.",
+    "direction": "ukrywa przewagę",
+    "severity": "niska",
+    "affected_rounds": "M1, F1, H2.1, K1–K3. Od W1b/N1 naprawione: dodano warunek na zwrot netto i uogólniony próg p*.",
+    "would_change_verdict": "Dla M1 i F1 nie, bo zwrot netto kontroli jest istotnie ujemny (N1: −0,107 %, t_neff −4,08). Dla kalibracji K2 próg wykrywalności liczony w trafności okazuje się jeszcze bardziej pesymistyczny."
+   },
+   {
+    "title": "Przedział ufności trafności liczony tak, jakby transakcje były niezależne, a one się nakładają (V=3)",
+    "area": "statystyka: przedziały ufności",
+    "evidence": "backtest/metrics.py:401: przedział Walda liczony na pełnym n. Przeliczenie e2_neff_hits.py odtwarza ramię A z M1 (n 8 033, trafność 50,37 %). Kolejne trafienia są skorelowane (autokorelacja 0,148 dla sąsiednich transakcji). Efektywna liczba obserwacji (N_eff) to 5 701, czyli 71 % n. Bootstrap po 86 foldach daje przedział [48,95; 51,75] zamiast [49,27; 51,46] z Walda, czyli o ~27 % szerszy. Na bazie 2021+: [48,74; 51,51] zamiast [48,88; 51,25].",
+    "direction": "ukrywa przewagę",
+    "severity": "niska",
+    "affected_rounds": "M1, F1, Z10, N1, O1, L1, V1, G1, Y1 — wszystkie przedziały ufności trafności",
+    "would_change_verdict": "Nie zmienia. Górne krańce nadal leżą poniżej progów (np. 51,75 < 52,94). Zawyżone jest jednak sformułowanie „próba 1,90× większa od wymaganej” w M1; realnie to około 1,3–1,4×."
+   },
+   {
+    "title": "Zgodność „co do 0,01 pp” (wniosek 36) i zbiorcza liczba Z10 nie dowodzą, że przyrząd cokolwiek widzi",
+    "area": "walidacja przyrządu / synteza Z10",
+    "evidence": "runs/INDEX.md:422: zgodność 50,37 % (4h) z 50,38 % (5m) uznano za dowód, że aparat działa. Tymczasem ślepy przyrząd też pokazuje ~50 % wszędzie: w e1 q=0 daje 50,64 %, a q=0,1 (cecha opłacalna) daje 50,79 %. W runs/2026-09-22_z10-zamkniecie-fazy-0/README.md:82–86 aż 7 043 z 7 687 transakcji (92 %) pochodzi z 5m w reżimie `range`. Tam próg opłacalności wynosi ~82 %, a wynik porównano z progiem dla 4h (52,69 %).",
+    "direction": "ukrywa przewagę",
+    "severity": "niska",
+    "affected_rounds": "M1 (wniosek 36), Z10",
+    "would_change_verdict": "Nie zmienia, ale osłabia pewność. Dla 4h „dowód braku” opiera się na M1, F1, N1 i Y1, a nie na Z10."
+   },
+   {
+    "title": "Dla cech bazowych z wykresu „dowód braku” wytrzymuje dłuższe okno i sprawdzenie górnej granicy — tu test był w porządku",
+    "area": "cechy OHLCV, horyzont 12 h",
+    "evidence": "Przeliczenie e1 przy q=0: wyrocznia jest wtedy czystym szumem, więc model uczy się tylko na 4 cechach bazowych (6,8 roku, 3 losowania). Okno 365 dni daje 49,06 % [48,41; 49,71], okno 730 dni 48,74 % [48,02; 49,46]. Dłuższe okno nie odkrywa przewagi, a model jest wręcz lekko odwrócony, tak jak w Y1 na 1h (48,34 %). Odwrócenie kierunku dałoby ~51 %, czyli nadal poniżej progu. Przeliczenie e3 (2021+, 8 cech OHLCV × 5 kwintyli, in-sample, czyli optymistycznie): najlepsza komórka ma 53,95 % trafności. Z samego szumu spodziewane maksimum to ~52,3 %. Najwyższy średni zysk przed kosztami to 0,072 %, poniżej kosztu.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "Faza 0, M1, N1 (kontrola), Y1",
+    "would_change_verdict": "Nie zmienia, tylko potwierdza. Nawet idealny model z dłuższym oknem nie zarobiłby po kosztach na horyzoncie 12 h z tych cech."
+   },
+   {
+    "title": "Sam łańcuch pomiaru nie gubi sygnału (etykieta, abstynencja po A1, kill-switch) — gubi go etap uczenia",
+    "area": "etykieta triple-barrier, abstynencja, kill-switch",
+    "evidence": "Przeliczenie e1: wyrocznia jako jedyna cecha w oknie 60 dni przenosi 94–99 % swojej przewagi (q=0,2: 54,99 % wobec 55,28 %; q=0,3: 58,39 % wobec 58,45 %). Dzieje się tak mimo 66 % transakcji zamkniętych po czasie (timeoutów). K1 przy q=1 dało 100 %. K2/T6: włączenie i wyłączenie kill-switcha różni się o +0,04 pp przy niepewności ±0,34 pp. Abstynencja po A1 wynosi 40–45 %.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "K1, K2, T6",
+    "would_change_verdict": "Nie zmienia. Bariera 1,5·ATR, horyzont V=3 i odmawianie decyzji przez model nie są wąskim gardłem. Jest nim za mało danych do nauki na jedną cechę (znalezisko 1)."
+   },
+   {
+    "title": "Horyzont 12 h z założenia nie może pokazać przewag tygodniowych — to kwestia zakresu badania, nie błąd",
+    "area": "zakres horyzontu i cech modelu",
+    "evidence": "Cechy modelu mają okna najwyżej 20 świec, czyli ≤ 3,3 dnia (agents/ml_optimizer.py:45–46). Trend tygodniowy (TS1) daje ~+11 %/rok przy zmienności 35–40 %, co oznacza Sharpe roczny ~0,3–0,5. Przeliczony na 12 h to Sharpe ≈ 0,5/√730 ≈ 0,019, czyli trafność ≈ 50,7 %, wobec progu ~52,9 %. Sam koszt 0,08 % na transakcję to ~0,03 odchylenia standardowego ruchu 12 h — więcej niż cała ta przewaga.",
+    "direction": "neutralne",
+    "severity": "niska",
+    "affected_rounds": "Faza 0, M1, Y1 (horyzonty od 1 h do 3 dni)",
+    "would_change_verdict": "Nie zmienia. Wniosek „brak przewagi kierunkowej” dotyczy horyzontów od 1 h do 3 dni. Horyzont tygodniowy sprawdzano osobno regułami (TS1, X1, CP1)."
+   },
+   {
+    "title": "Na czystym szumie pipeline daje 50,5–50,6 %, a nie 50 %",
+    "area": "punkt odniesienia trafności",
+    "evidence": "K2 raw_output, ramię A1 przy q=0: n 97 014, trafność 50,48 % [50,16; 50,79]. W przeliczeniu e1: 50,64 % (3 losowania). Reguła z losowym kierunkiem (e1, q=0) daje 49,79 %. Wyniki realnych cech, 49,6–50,4 %, leżą więc na poziomie szumu samego przyrządu, a nawet lekko pod nim.",
+    "direction": "zawyża przewagę",
+    "severity": "niska",
+    "affected_rounds": "odczyty bez porównania z kontrolą (np. ramiona odniesienia M1 i F1)",
+    "would_change_verdict": "Nie zmienia, bo porównania z kontrolą na tych samych świecach znoszą to przesunięcie. Przy odczytach bez kontroli punktem odniesienia jest ~50,5 %, a nie 50 %."
+   }
+  ]
+ }
+]
+
+=== WERYFIKACJA PRZECIWNICZA ===
+[
+ {
+  "title": "Funding w X1/X2: liczby się zgadzają, ale nie ma dowodu, że funding zawyża wynik. To prawdziwe pieniądze, a skupienie na kilku monetach dotyczy ceny jeszcze bardziej",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "CO SIĘ POTWIERDZA (przeliczyłem sam, nie wziąłem z opisu):\n1. Liczby są dokładne. Silnik X1 na data/raw/universe_full daje Σ funding netto +49,06 pkt, Σ zysku z cen (brutto) +194,87 pkt i Σ netto +225,66 pkt. To ok. +9 %/rok przez 5,41 roku. Rekonstrukcja per moneta (skrypt adw/f1_days.py) odtwarza zarówno funding, jak i ceny co do setnej. Najwięcej dały długie pozycje (long): LAB +10,64 pkt, MYX +8,33, TRB +6,17, BLZ +3,97, SIREN +3,34. Razem 32,45 z 49,06 pkt. X2 (raw_output_x2.txt z RU2): funding +44,93 pkt; w 2026 funding +27,77 pkt przy wyniku netto +26,71 pkt i zysku z cen +0,75 pkt. Dodaję, czego znalezisko nie podało: w X1 za 2026 cena daje −11,11 pkt, funding +20,73 pkt, netto +7,90 pkt. W obu testach cały wynik 2026 pochodzi więc z fundingu.\n2. Znak jest poprawny: xs_momentum.py:165, `funding_net = w_short·f_s − w_long·f_l`. Long przy ujemnej stawce dostaje pieniądze.\n3. Dodatkowa poprawka na plus dla znaleziska: README RU1 i RU2 piszą, że funding „otrzymują shorty na przegrzanych monetach”. W X1 więcej dała jednak strona long (+27,54 pkt) niż short (+21,52 pkt). Wszystkie 5 głównych źródeł w X1 i wszystkie 5 w X2 za 2026 to longi (np. RIVER long +11,55). Opis mechanizmu w README jest więc błędny.\n\nCO JEST BŁĘDNE ALBO NIEPOPARTE:\nA. Zdanie „bez fundingu t_neff spada z 1,86 do 1,69” jest źle opisane. 1,69 to wynik brutto, czyli bez fundingu I bez kosztów. Uczciwy wariant (netto minus funding, koszty zostają) to +32,6 %/rok przy t_neff 1,53. Funding waży więc WIĘCEJ, niż napisano. W X2 bez fundingu zostaje +14,4 %/rok przy t 1,00.\nB. Kierunek „zawyża przewagę” nie ma dowodu. Funding to prawdziwy przepływ pieniędzy z Binance, a nie błąd obliczeń:\n- ceny pochodzą z /fapi/v1/klines, a funding z /fapi/v1/fundingRate (data/fetch_universe.py), czyli z tego samego rynku kontraktów;\n- nie ma podwójnych rozliczeń: 0 symboli z dwoma rozliczeniami w odstępie krótszym niż 10 minut (a13);\n- rozliczenia są co godzinę i nie przekraczają limitu ±2 %, zgodnie z zasadami Binance. LAB 04.06.2026: 24 rozliczenia, najniższe −1,997 %. MYX 09.09.2025: najniższe −2,000 %;\n- brakujący funding to tylko 3 z 19 750 dni pozycji (LUNA short, bez zmiany ceny).\nTeza, że Binance przez limity pozycji i dźwigni nie wypłaciłby tych pieniędzy, nie ma żadnej liczby. Long, który dostaje funding, nie musi nic robić. Ekspozycja to 10 % kapitału na monetę z top-20 po obrocie, a limity mają znaczenie dopiero przy dużych kwotach.\nC. Skrajne stawki, które przytacza znalezisko, prawie nie dotyczą X1. MYX −38,5 % było 05.08.2025, a X1 ma long MYX dopiero od 08.09.2025. COAI to 28 dni pozycji i razem +0,20 pkt. HYPER to 14 dni i +0,01 pkt. W X1 jest tylko 11 dni pozycji ze stawką dzienną powyżej 10 % (najwyżej 18,7 %). Jeden z nich działał przeciw strategii: short SOL w czasie upadku FTX (10.11.2022, −17,2 %) kosztował −1,04 pkt. Skrajne stawki działają w obie strony.\nD. Skupienie na kilku monetach to nie jest przesunięcie wyniku w jedną stronę (bias). W dodatku dotyczy ceny bardziej niż fundingu. Odjęcie 5 najlepszych monet PO obejrzeniu wyniku zawsze obniży wynik. Sprawdziłem to symetrycznie:\n- bez fundingu 5 najlepszych monet: +35,7 %/rok, t_neff 1,68 (znalezisko: „~+35 %, t ≈ 1,6”, prawie dobrze);\n- bez fundingu 5 najgorszych monet: +43,5 %/rok, t_neff 1,95;\n- bez zysku z cen 5 najlepszych monet (MYX long sam daje 87,6 pkt): +14,1 %/rok, t 0,89.\nW X2 bez cen 5 najlepszych monet zostaje +13,6 %/rok przy t 0,95. Funding jest też mniej skupiony w czasie niż cena. 10 najlepszych dni daje 14,6 z 49 pkt fundingu, a funding jest dodatni w 58 % dni. Tymczasem dwa dni MYX dały ok. 83 pkt z cen.\nE. Scenariusza „maker przepycha X1 ponad 1,96” (maker to tańsze zlecenie z limitem) nie ma w runs/INDEX.md ani w STATUS.md dla X1. Nie da się go tu sprawdzić.\n\nCO Z TEGO ZOSTAJE: jest uwaga o interpretacji, nie o zawyżaniu. Część wyniku X1, a w X2 większość, to nie „momentum” (cena, która rosła, rośnie dalej). To zapłata od graczy, którzy grają na spadek w monetach gwałtownie rosnących. W X2 rank IC wynosi +0,001, czyli ranking po cenie prawie nie przewiduje przyszłej ceny. Nie wynika z tego jednak, że test ukrywa lub zawyża przewagę. Funding był częścią wyniku netto zapisanego z góry i jest policzony poprawnie. Dla wyniku to NEUTRALNE. Dla opisu „dlaczego to działa” to ważna korekta.",
+  "quantified_impact": "X1 (pełne uniwersum): netto +41,7 %/rok, t_neff 1,86. Netto bez fundingu (z kosztami) +32,6 %/rok, t_neff 1,53 (a nie 1,69, jak podało znalezisko; 1,69 to brutto bez kosztów). Bez fundingu 5 najlepszych monet +35,7 %/rok, t_neff 1,68. Symetrycznie: bez fundingu 5 najgorszych +43,5 %/rok, t_neff 1,95; bez zysku z cen 5 najlepszych +14,1 %/rok, t 0,89. X2: netto +23,1 %/rok, t 1,60. Bez fundingu +14,4 %/rok, t 1,00. Bez fundingu 5 najlepszych monet +16,8 %/rok, t 1,16. Bez cen 5 najlepszych +13,6 %/rok, t 0,95. W 2026 cały wynik obu testów to funding (X1: cena −11,1 pkt / funding +20,7 pkt; X2: +0,75 / +27,8 pkt). Werdykt obu testów się NIE zmienia: NIEROZSTRZYGNIĘTY, bo t_neff jest poniżej 1,96. Nie znalazłem żadnego mechanizmu zawyżania: 0 podwójnych rozliczeń, 3 z 19 750 dni pozycji bez fundingu, stawki w limicie ±2 % na rozliczenie. Kierunek „zawyża przewagę” nie ma dowodu, dla wyniku to neutralne. Znalezisko ma rację co do skupienia wyniku i atrybucji, ale skupienie na kilku monetach jest większe w cenie niż w fundingu. Skrypty: C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt\\adw\\f1_days.py, f2_counterfactual.py, f3_ext.py, f4_missing.py, f5_x2.py. Kod: C:\\Users\\pitge\\GIT\\alpha\\backtest\\xs_momentum.py:159-165."
+ },
+ {
+  "title": "Za mało lat danych: rachunek się zgadza, ale to znana granica pomiaru, nie błąd testu ukrywający przewagę",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "Przeliczyłem wszystko sam, na dziennych szeregach TS1, X1 i CP1 zbudowanych na pełnym uniwersum. Skrypt: scratchpad/audyt/moc_przeciwnik/moc.py.\n\nCO SIĘ ZGADZA (arytmetyka jest poprawna):\n- TS1: średnio 11,1 %/rok przy wahaniach (sd) 18,1 %/rok. Sharpe (zysk na jednostkę ryzyka) wynosi 0,614, próba to 5,39 roku, więc t = 1,425. Zgadza się z raw_output_ts1.txt w katalogu RU1. X1: Sharpe 0,889, t 2,07. CP1: Sharpe 0,922, t 2,09.\n- Wzór „t = Sharpe · √lat” to zwykła tożsamość matematyczna, więc zgodność jest pewna.\n- Φ(1,42−1,96) = 0,30; Φ(2,09−1,96) = 0,55. (2,8/0,6)² = 21,8 roku, (2,8/0,9)² = 9,7 roku.\n- Liczby z ADR-09 też się zgadzają. Błąd średniej to 18,1/√5,39 = 7,79 %/rok. Połowa przedziału 95 % to ±15,3 %/rok, a próg wykrywalności przy 80 % mocy to 21,8 %/rok.\n- Teza główna jest prawdziwa: przy Sharpe ≤ 0,9 żaden próg istotności 5 % nie daje 80 % szansy wykrycia na 5 latach. Przy progu jednostronnym trzeba by Sharpe ≥ 1,07.\n\nDLACZEGO TYLKO CZĘŚCIOWO:\n1) To nie jest ukryta wada testów. Projekt zapisał to już wprost: docs/rag/09_drabina_dowodow.md:24-26 („Kryterium jest dla nich strukturalnie nieosiągalne… ±16–30 %/rok”), wniosek 81 (runs/INDEX.md:810) i wniosek 64 (runs/INDEX.md:661: „trzeba ~4× próby”). Testy nie dały werdyktu NEGATYWNEGO, tylko NIEROZSTRZYGNIĘTY. Strategie są w INDEX.md:20-25 opisane jako „Kandydaci — ślady”. Fałszywie negatywnego obrazu więc nie ma. Test uczciwie mówi „nie da się rozstrzygnąć”.\n2) Kierunek „ukrywa przewagę” jest jednostronny. Słaba moc testu działa w obie strony. Strategie, które przy słabej mocy przejdą przez sito, mają ZAWYŻONY wynik (tzw. klątwa zwycięzcy). Moc liczona z Sharpe'a zaobserwowanego jako „prawdziwego” zakłada wynik z góry. Nie dodaje żadnej informacji ponad samo t.\n   Porównanie z czystym szumem: przy braku jakiejkolwiek przewagi mediana najlepszego Sharpe'a z 30 niezależnych odczytów na 5,4 roku wynosi 0,86. Szansa, że najlepsze t ≥ 2,09, to 42 % przy 30 odczytach i ok. 17 % przy 10. Zaobserwowane 0,61–0,92 mieści się w tym, co daje sam przypadek.\n   Niezależne źródło (TX1) daje trend Sharpe ok. 0,45 w latach 1990–2026 i ok. 0 po 2013. Przy Sharpe 0,45 moc wynosi 18 %, a do 80 % mocy trzeba 39 lat. „Więcej lat” to nie gwarancja, że przewaga się pokaże. Tam, gdzie lat było więcej, efekt zanikał (wniosek 84).\n3) CP1 wrzucono tu niesłusznie. CP1 PRZESZŁO próg 1,96 (t_neff 2,09, werdykt POZYTYWNY w runs/2026-09-24_cp1-premia-coinbase/raw_output.txt). Blokuje je co innego:\n   - liczba testów: ~28 odczytów daje próg rodzinny ok. 2,9 (runs/INDEX.md:757);\n   - lata: tylko 3 z 5 lat dodatnich (ADR-09:55).\n   Przy progu 2,9 potrzeba prawie dwa razy więcej lat: TS1 37 (zamiast 21), X1 18, CP1 16,5. Szansa wykrycia przy Sharpe'ach z próby spada do 7 %, 20 % i 21 %. Znalezisko odkłada ten czynnik na bok, a to on rozstrzyga.\n4) X1 nie jest nierozstrzygnięte tylko przez długość próby. Wynik mocno zależy od kilku dni. Bez jednego najlepszego dnia (2025-09-08, +65,3 %, MYX) t spada z 2,07 do 1,83. Bez trzech dni spada do 1,54, bez pięciu do 1,30. Do tego dochodzi wrażliwość na dzień rebalansu (wniosek 68). Grube ogony to druga, niezależna przyczyna.\n5) „TS1 przy Newey-West 1,70” to wybór najkorzystniejszego parametru. Wynik 1,70 wychodzi dla opóźnienia 28 dni. Przy standardowym, automatycznym opóźnieniu (7 dni) jest 1,51, a CP1 ma wtedy 2,07.\n6) Rada „rozstrzygnąć może tylko czas” jest za optymistyczna. Przy Sharpe 0,6 potrzeba ok. 22 lat łącznie, czyli ~16,5 roku dziennika. 3 miesiące dziennika dają moc ok. 5 %. Dlatego ADR-09 używa progu OBALENIA, a nie dowodu.\n\nKierunek znaleziska: NEUTRALNE. To wyjaśnienie granicy pomiaru. Nie ukrywa przewagi i nie zawyża jej. Dotyczy tylko strategii tygodniowych. Wiele innych odczytów (Faza 0, Y1 1h, WF1, O1) to NEGATYWNE wyniki z dużym zapasem mocy, czyli dowód braku. Istotność: średnia, nie wysoka. Tłumaczy użytkownikowi „dlaczego nic”, ale nie zmienia żadnego werdyktu i nie wskazuje błędu w kodzie.",
+  "quantified_impact": "Żaden werdykt się nie zmienia. Szansa wykrycia, gdyby prawdziwy Sharpe równał się zmierzonemu:\n- przy progu 1,96: TS1 30 %, X1 54 %, CP1 55 % (liczby znaleziska potwierdzone);\n- przy uczciwym progu rodzinnym ~2,9 (po ~30 odczytach): 7 %, 20 % i 21 %.\n\nLata potrzebne do 80 % mocy:\n- przy progu 1,96: TS1 21, X1 10, CP1 9;\n- przy progu 2,9: TS1 37, X1 18, CP1 16,5.\n\nPrzy Sharpe 0,45 z TX1 moc wynosi 18 % i trzeba 39 lat. Sam szum daje najlepszy Sharpe z 30 odczytów w medianie 0,86, a t ≥ 2,09 z szansą 42 % (dla 10 odczytów ok. 17 %).\n\nX1 bez jednego najlepszego dnia ma t 1,83 zamiast 2,07. TS1 w Newey-West ma t 1,51 przy standardowym opóźnieniu, a 1,70 tylko przy opóźnieniu 28 dni."
+ },
+ {
+  "title": "Łączna siła TS1+X1+CP1: rachunek się zgadza (t 2,44), ale kierunek „ukrywa przewagę” jest błędny, a teza „nikt nie policzył” tylko w połowie prawdziwa",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "CO SIĘ ZGADZA (przeliczyłem sam, skrypt scratchpad/audyt/adv_combo.py na tych samych szeregach):\n- Wspólny okres 2021-05-08 → 2026-06-30, 1 880 dni. Korelacje 0,24 / 0,29 / 0,06. Portfel o równym ryzyku daje +20,8 %/rok, t 2,44. Pary: X1+CP1 t 2,66, TS1+CP1 t 2,00. Wszystkie liczby ze znaleziska odtwarzają się co do setnych.\n- Przy równych wagach kwotowych (1/3 każdej strategii zamiast wag z historycznej zmienności) wychodzi nawet t 2,57, więc wagi policzone na tej samej historii nie są tu problemem.\n\nCO SIĘ NIE ZGADZA:\n1) „Nikt nie policzył” to tylko połowa prawdy. Portfel TS1+CP1 policzono w rundzie SZ1 (+19,9 %/rok, po korekcie danych RU1 +17,1 %). README tej rundy pisze wprost: „składowe są in-sample (najlepsze z ~31 testów)” (runs/2026-09-24_sz1-wielkosc-pozycji/README.md:45 i :74). „In-sample” znaczy tu: wybrane i zmierzone na tej samej historii. Dołączenia X1 nikt nie przeoczył. Jest ono celowo zakazane w liczniku serii TS: „Zakazane: … łączenie z X1” (runs/INDEX.md:163). To świadoma reguła przeciw dobieraniu wyników po fakcie, a nie luka w teście.\n2) „Stouffer 2,44” nie jest drugim, niezależnym potwierdzeniem. Przy wagach 1/σ t portfela równa się z definicji sumie t składowych podzielonej przez √(suma macierzy korelacji). Oba sposoby dają identycznie 2,4353. To jedna liczba podana dwa razy.\n3) Symulacja wyboru w skrypcie audytu jest wewnętrznie niespójna. combo.py losuje NIEZALEŻNE wyniki, a dzieli je przez √(3+6·0,15) = √3,9, tak jakby były skorelowane. Poprawnie jest √3 dla wyników niezależnych albo losowanie z korelacją. Skutek: szansa, że taki wynik powstał z samego wyboru przy braku przewagi, wychodzi zaniżona. Po poprawce:\n   - m = 8: 0,133 dla wyników niezależnych i 0,080 przy korelacji 0,2 (audyt podał 0,063),\n   - m = 12: 0,285 / 0,146,\n   - m = 30: 0,78 / 0,38.\n4) Scenariusze m = 6 i m = 8 nie pasują do liczników samego projektu. Projekt sam liczy „każdy wybrany spośród ~30 odczytów” (runs/INDEX.md:20), „~24 odczyty” (wniosek 70), „~28 odczytów” (wniosek 72) i „~31 testów” (SZ1). Przy m ≈ 28–30 szansa, że wybór 3 najlepszych da Z ≥ 2,44 bez żadnej przewagi, wynosi 0,36–0,78. Jeśli dodatkowo wolno wybrać, czy łączyć 1, 2 czy 3 najlepsze, wychodzi 0,75, a dla pary t 2,66 wychodzi 0,61. Po uczciwej poprawce na wybór łączny wynik jest więc zgodny z czystym przypadkiem. Nie jest nawet mocną poszlaką. Próg Bonferroniego (surowa poprawka na liczbę testów) dla m = 28 to t ≈ 3,1.\n5) Wynik jest kruchy:\n   - bez 2 dni wystrzału MYX (7–8.09.2025) t portfela spada z 2,44 do 2,16 (+18,0 %/rok), a para X1+CP1 z 2,66 do 2,30;\n   - bez 10 najlepszych dni portfela zostaje t 1,34 (+10,5 %/rok);\n   - osobno w połowach okresu: t 1,50 (2021-05 → 2023) i 1,93 (2024 → 2026-06).\n6) Kierunek „ukrywa przewagę” jest błędny. Brak tego rachunku niczego nie ukrył. Werdykty TS1, X1 i CP1 opierają się na testach zarejestrowanych z góry, a połączenie wybrane po obejrzeniu wyników nie może ich zmienić. Znalezisko samo to przyznaje („Formalnie nie”). Projekt już teraz trzyma tych trzech jako „ślady, nie dowody” i rozstrzyga je dziennikiem na żywo (dziennik/README.md: TS1+CP1 zamrożone od 2026-09-24, X1 nie). Właściwy kierunek to „neutralne”.\n\nCO ZOSTAJE Z ZNALEZISKA: poprawny rachunek, którego nie było w dokumentacji dla trójki. Do tego rozsądna, ale nienowa sugestia: jeśli X1 ma kiedyś być rozstrzygnięty, trzeba go zamrozić i dopisać do dziennika prospektywnego (liczonego na nowych danych, których jeszcze nie oglądaliśmy) jako osobną, z góry zapisaną regułę. Dopisanie go teraz na podstawie tej samej historii byłoby tym samym dobieraniem po fakcie.\n\nPliki: C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt\\adv_combo.py (przeliczenie), ...\\audyt\\combo.py (niespójna symulacja: dzielenie przez np.sqrt(3 + 2 * 3 * 0.15) przy niezależnych losowaniach), C:\\Users\\pitge\\GIT\\alpha\\runs\\INDEX.md:20, :163, C:\\Users\\pitge\\GIT\\alpha\\runs\\2026-09-24_sz1-wielkosc-pozycji\\README.md:45, :74, C:\\Users\\pitge\\GIT\\alpha\\dziennik\\README.md.",
+  "quantified_impact": "Żaden werdykt się nie zmienia. Samo t 2,44 (p 0,007 bez poprawki) odtwarza się dokładnie, ale z poprawką na wybór 3 najlepszych spośród ~28–30 odczytów, zgodnie z licznikami samego projektu, szansa takiego wyniku z czystego przypadku wynosi 0,36–0,78. Audyt podał 0,57 dla m = 30 i 0,028–0,063 dla m = 6–8, bo jego symulacja zaniża tę szansę. Wrażliwość: bez 2 dni MYX t 2,16; bez 10 najlepszych dni portfela t 1,34 (+10,5 %/rok zamiast +20,8 %). Kierunek należy zmienić z „ukrywa przewagę” na „neutralne”, a wagę z „średnia” na „niska”."
+ },
+ {
+  "title": "N_eff przycięte tylko w dół: mechanizm prawdziwy, skala mniejsza, niż podaje znalezisko, a wpływ na werdykt pominięty (TR1)",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "Wszystko przeliczyłem sam. Szeregi TS1 zbudowałem od nowa kodem repo i zgadzają się z raportami: +11,09 %/rok (pełne dane) i +14,83 %/rok (stary cache).\n\nCO SIĘ POTWIERDZA\n1. Kod działa tak, jak opisuje znalezisko. `agents/labeling.py:225-227` sumuje 50 surowych autokorelacji bez wag. `backtest/carry_hedged.py:130` robi `min(ESS, n)`, a `backtest/checkpoint_lib.py:260` to samo. Autokorelacja to podobieństwo dzisiejszego wyniku do wyniku sprzed k dni. Poprawka może więc tylko obniżyć t (t to miara, jak daleko wynik jest od zera w stosunku do szumu). Nigdy go nie podniesie. To jednak świadoma decyzja, a nie ukryty błąd. Mówi o tym komentarz w `checkpoint_lib.py:256-259` i test `tests/test_checkpoint_rule_signals.py:192`. Pre-rejestracja TS1 (`runs/2026-09-24_ts1-trend-koszyk/README.md:113`) zapisuje wprost: „kryterium bierze większe” (analityczne se 9,2 %/rok zamiast empirycznego 7,3 %).\n2. Liczby TS1 odtwarzają się co do cyfry. t = t_neff = 1,425. Suma 50 autokorelacji −0,264. N_eff bez przycięcia 4 172. VR(28) = 0,617. Newey-West (metoda liczenia niepewności, która uwzględnia zależność kolejnych dni) daje t 1,51 przy L 7, 1,70 przy L 28 i 1,76 przy L 50; L to liczba dni wstecz branych pod uwagę. Bootstrap z blokami 28 dni daje t 1,69, a 4,5 % losowań ma średnią ≤ 0. Na starym cache: 1,76 wobec 2,07.\n3. Na czystym szumie (1 500 losowań) N_eff przycina się do n w 58–60 % przebiegów. t_neff/t wynosi średnio 0,960, a w 10 % przypadków ≤ 0,856. Fałszywe alarmy (jednostronnie, norma 2,5 %): t_neff 1,9–2,3 %, zwykłe t 2,2–3,0 %, NW L 28 2,6–3,0 %.\n\nCO JEST PRZESADZONE\n4. Utrata mocy wynosi ~3 pkt proc., nie 4,7. Moc to szansa, że test wykryje prawdziwy efekt. Przy Sharpe 0,85: 49,6 → 46,5 % (losowania z TS1) i 49,9 → 46,9 % (rozkład normalny).\n5. Słowo „systematycznie” jest za mocne. Przy dodatniej autokorelacji (X1) przyrząd repo nie zaniża: t_neff 1,861, NW 1,85–1,91, bootstrap 1,87–1,88.\n6. Ujemna autokorelacja TS1 prawie cała leży w dalekich opóźnieniach: lagi 1–7 dają tylko −0,053 z −0,264. Standardowy, automatyczny dobór L (Andrews L ≈ 4, reguła kciuka L = 7) daje t 1,51, a nie 1,70–1,76. t rośnie z każdym większym L, więc wybór L = 28 po obejrzeniu wyniku to dodatkowa swoboda badacza. Suma −0,264 to z = −1,66 wobec szumu, czyli sama w sobie nie jest istotna. Portfele H0 (te same zasady, znaki przesunięte w czasie) mają średnią sumę +0,001. Sama mechanika reguły więc tej zależności nie tworzy. TS1 leży jednak poniżej 98 % portfeli H0, więc to albo prawdziwa cecha trafień trendu, albo przypadek. Tych danych nie da się tego rozstrzygnąć.\n\nCZEGO ZNALEZISKO NIE POLICZYŁO (to działa w jego kierunku)\n7. Zdanie „na pełnym uniwersum werdykt się nie zmienia” jest nieprawdziwe dla TR1, który znalezisko samo wymienia wśród dotkniętych rund. TR1 na pełnych danych ma t_neff 1,63 po przycięciu. Bez przycięcia N_eff wynosi 5 414, a suma autokorelacji −0,326. NW daje 2,04 przy L 28 i 2,23 przy L 50, bootstrap z blokami 28 dni 2,01. Drugi warunek kryterium TR1 (średnia powyżej 97,5 percentyla H0) jest już spełniony: 99 % (`runs/2026-09-24_ru2-korekta-pozostalych/raw_output_tr1.txt`). Przy przyrządzie, który znalezisko samo zaleca, TR1 byłby więc POZYTYWNY. Próg 1,96 przekracza od L = 22 wzwyż. Przy automatycznym L (4–7) wychodzi 1,73–1,74, czyli nadal NIEROZSTRZYGNIĘTY. Na starym cache TS1 przechodzi od L = 17, a przy automatycznym L ma 1,86.\n8. TS1 na pełnych danych nie przechodzi przy żadnym wariancie: najwyżej 1,76. Niezależnie od N_eff odpada też na warunku H0: 93 % portfeli, a potrzeba 97,5 %. X1 też bez zmian (wszystkie warianty < 1,96).\n9. Drobiazg: w `carry_hedged.py:130` brakuje `max(1, …)`, które jest w `carry_probe.py:219`. Gdy suma autokorelacji spadnie poniżej −0,5, N_eff wychodzi ujemne, t_neff = NaN, a kryterium po cichu odpada. Na szumie zdarza się to rzadko (1 na 1 500), na żadną rundę nie wpłynęło.\n\nPODSUMOWANIE: kierunek „ukrywa przewagę” jest prawdziwy, ale mały i zależy od wyboru L. Duży zysk w t pojawia się tylko przy długim L, a tego nie wybrałaby żadna standardowa automatyczna reguła. Za to wpływ na werdykt jest większy, niż twierdzi znalezisko, bo pominęło TR1. Zmiana przyrządu wstecz jest zakazana. Nawet z nią TR1 to niemal kopia TS1 (korelacja 0,86) przy ~24 odczytach, a próg po korekcie na wiele testów to ~3,0.\n\nSkrypty (tylko scratchpad): C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt\\adv_neff_build.py, adv_neff_stats.py, adv_neff_sim.py, adv_neff_tr1.py, adv_neff_L.py.",
+  "quantified_impact": "Na szumie t_neff/t wynosi średnio 0,96 (p10 0,86). Moc przy Sharpe 0,85 spada o ~3 pkt proc. (49,6 → 46,5 %), nie o 4,7. TS1 na pełnych danych: 1,43 → 1,51 przy automatycznym L, 1,70 przy L 28, 1,76 przy L 50. Werdykt bez zmian, bo odpada też warunek H0 (93 % < 97,5 %). X1: 1,86 → 1,85–1,91, bez zmian. TR1 na pełnych danych: 1,63 → 1,73–1,74 przy automatycznym L (bez zmian), ale 2,04 przy L 28, 2,23 przy L 50 i 2,01 w bootstrapie z blokami 28 dni. Warunek H0 jest spełniony (99 %), więc werdykt zmieniłby się na POZYTYWNY przy każdym L ≥ 22. Tę zmianę znalezisko pominęło. Stary cache TS1: POZYTYWNY od L ≥ 17, a przy automatycznym L 1,86 (bez zmian). Po korekcie na wiele testów (~24 odczyty, próg ~3,0) nic nie przechodzi."
+ },
+ {
+  "title": "Start X2/TR1 w maju 2021 to pozostałość obciętego katalogu. Dla TR1 znalezisko się potwierdza, mocniej niż zakładało. Dla X2 mechanizm jest błędny: zmiana wyniku to przypadek dnia tygodnia, a nie ukryta przewaga",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "CO SIĘ POTWIERDZA (fakty):\n- backtest/run_xs_momentum_x2.py:38 ma FIRST_MONTH=\"2021-05-01\" z komentarzem „luty–kwiecień 2021: 41–46”.\n- backtest/run_ts_momentum_oos.py:57 i :63 mają na sztywno 2021-05-01.\n- backtest/run_universe_fix_ru2.py:27-33 podmienia tylko katalog danych. Przebieg RU2 zaczyna się więc w maju (raw_output_x2.txt: „270 formowań od 2021-05-01”).\n- Przeliczyłem kandydatów tą samą regułą co monthly_members (30 dni obrotu, co najmniej 30 notowań). Stary katalog: 41/44/46 kandydatów w lutym, marcu i kwietniu. Pełny katalog: 77/82/88. Obrót monety nr 50: 32,3 / 64,1 / 70,1 mln $/dzień.\n- Na pełnych danych reguła z pre-rejestracji („pierwszy miesiąc z ≥50 kandydatami”) daje luty 2021. To ten sam start co TS1 i X1. Docstring TR1 mówi zresztą wprost „ten sam okres” co TS1.\n- Funding dla członków z lutego–kwietnia jest pobrany (data/complete_universe.py:69 liczy członków od 2021-02-01).\n- TS1 na pełnym uniwersum odtworzyłem: +11,09 %/rok, t 1,43.\n\nTR1 — POTWIERDZONE, i to mocniej, niż znalezisko przewidywało:\n- Zmieniłem tylko start na 2021-02-01. Wynik: +15,5 %/rok [+0,2; +30,8], t_neff 1,988 (było +13,0 %, t 1,63). Szereg H0 policzony od nowa (100 przesunięć): q97,5 = +11,2 %/rok, a TR1 jest ponad 100 % portfeli H0.\n- Oba warunki kryterium TR1 są spełnione, więc formalnie wychodzi POZYTYWNY.\n- Na wspólnych dniach oba szeregi są identyczne (różnica ≤ 3e-6). Cała zmiana to dodatkowe 89 dni, od 8 lutego do 7 maja 2021. Dały one +16,45 pkt, a rok 2021 rośnie z +15,7 do +32,2 %.\n- Znalezisko oszacowało +10,5 pkt z TS1. To jest wynik TS1 tylko do 30 kwietnia (82 dni). Tymczasem szereg od maja zaczyna się dopiero 8 maja, bo potrzebuje wszystkich 7 faz. W pełnych 89 dniach TS1 zarobił +14,06 pkt. Przewidywanie „werdykt raczej bez zmiany” było więc błędne.\n\nZastrzeżenia do TR1:\n- Werdykt przechodzi o włos: t 1,99 przy progu 1,96. Bez 3 najlepszych dni dodanego okna t spada do 1,82, a bez 5 najlepszych dni całej próby wynik to +11,1 %/rok.\n- TR1 nie jest niezależne od TS1. Korelacja dzienna wynosi 0,87, a TS1 na tym samym pełnym oknie ma tylko t 1,43.\n- Przy około 35 odczytach próg rodzinny to t ≈ 2,9, więc TR1 go nie przekracza.\n- Pre-rejestracja RU2 mówi: zmiana na POZYTYWNY w korekcie „nie będzie cytowana jako potwierdzenie”.\n\nX2 — MECHANIZM OBALONY:\n- Dodatkowe 89 dni dały X2 −4,03 pkt, a nie zysk z „hossy altcoinów”.\n- Zmiana startu przesuwa jednak cały tygodniowy kalendarz rebalansu, bo rebalance_dates liczy co 7 dni od FIRST_MONTH (xs_momentum.py:52-60, run_xs_momentum_x2.py:63). 1 lutego 2021 to poniedziałek, a 1 maja to sobota.\n- Na tych samych dniach od maja kalendarz poniedziałkowy daje +219,6 pkt, a sobotni +119,5 pkt (korelacja 0,74).\n- Z tej różnicy +45 pkt to zdarzenie MYX z 7–8.09.2025. W kalendarzu poniedziałkowym dało ono +41,5 pkt, w sobotnim −3,5, a w środowym, czwartkowym i piątkowym około −50.\n- Dla 7 dni tygodnia X2 waha się od +8,0 do +42,1 %/rok (t od 0,47 do 2,65). Średnia 7 faz: +21,9 %/rok, t 1,59 (start luty) albo +21,7 %, t 1,58 (start maj). To praktycznie dzisiejszy wynik (+23,1 %, t 1,60).\n- Uczciwie poprawiony X2 nic więc nie odkrywa. Proste przeliczenie z samą zmianą daty wydrukowałoby POZYTYWNY (t 2,52), ale byłby to fałszywy alarm z fazy tygodnia, czyli dokładnie pułapka opisana we wniosku 68.\n- Kierunek dla X2: neutralne. Przy naiwnej rundzie RU3 byłoby wręcz zawyżenie.\n\nUwaga metodyczna:\n- Wbrew ostrożności autora znaleziska policzyłem te wyniki. Okno nie jest wybierane pod wynik, bo wyznacza je mechanicznie reguła z pre-rejestracji.\n- Teraz jednak wynik jest znany. Jeśli powstanie runda RU3, trzeba to zapisać w jej README, a dla X2 z góry przyjąć średnią 7 faz (jak w TS1), a nie jedną fazę.\n\nSkrypty (tylko odczyt danych): C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt\\adv_start_cand.py, adv_start_impact.py, adv_start_impact2.py, adv_start_impact3.py.\n\nProstym językiem: w dwóch testach zostawiliśmy datę startu, która wynikała z dziury w danych.\n- W teście trendu na mniejszych monetach (TR1) poprawna data dokłada 3 dobre miesiące. Wynik przekracza wtedy próg własnego testu, ale tylko o włos, i nadal za mało, żeby odróżnić go od szczęścia przy tylu przeprowadzonych próbach.\n- W teście momentum (X2) dodatkowe miesiące nic nie dają. Wynik skacze tylko dlatego, że zmienia się dzień tygodnia, w którym przestawiamy portfel. To przypadek, a nie przewaga.",
+  "quantified_impact": "TR1 ze startem 2021-02-01 na pełnym uniwersum:\n- +13,0 → +15,5 %/rok; CI [−2,6; +28,7] → [+0,2; +30,8].\n- t_neff 1,63 → 1,99; q97,5 H0 +11,2 %/rok.\n- Formalnie POZYTYWNY według własnego kryterium (zapas: 0,03 t).\n- Dodane 89 dni to +16,45 pkt (znalezisko szacowało +10,5 pkt i „bez zmiany werdyktu”).\n- Bez 3 najlepszych dni okna t = 1,82. Próg rodzinny ≈ 2,9 pozostaje nieosiągnięty. Korelacja z TS1 0,87 (TS1 t 1,43).\n\nX2:\n- Dodane 89 dni dały −4,03 pkt.\n- Formalny skok do +39,9 %/rok, t 2,52 wynika wyłącznie z przesunięcia dnia rebalansu (sobota → poniedziałek; z tego +45 pkt to MYX 7–8.09.2025).\n- Średnia 7 faz: +21,9 %/rok, t 1,59, czyli brak zmiany."
+ },
+ {
+  "title": "Moc testu: przy prawdziwej przewadze 10 %/rok TS1 wykrywa ją tylko w ok. 25 % przypadków. Rachunek się zgadza, ale znalezisko mówi więcej, niż pokazują liczby.",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "Wszystko przeliczyłem sam: zbudowałem od nowa dzienny szereg TS1 i TR1 na pełnym uniwersum (data/raw/universe_full) tym samym kodem co RU1/RU2. Skrypty są w scratchpadzie: audyt/moc_ts1.py i audyt/nw_ts1.py.\n\nCO SIĘ POTWIERDZA (arytmetyka jest poprawna):\n1. TS1 zarabia średnio +11,09 %/rok przy wahaniach 18,1 %/rok na 1 969 dniach. Błąd standardowy (typowy rozrzut średniej wynikający z przypadku) wynosi 18,1/√5,39 = 7,78 %/rok, dokładnie jak w znalezisku. Zgadza się też surowy wydruk RU1 (raw_output_ts1.txt: t +1,43, CI [−4,2; +26,3]).\n2. Moc to szansa, że test zauważy przewagę, która naprawdę istnieje. Warunek: t > 1,96. Przy prawdziwym efekcie 10/15/20/25 %/rok moc wynosi 25/49/73/90 %. Drugi warunek („ponad 97,5 % portfeli losowych”, próg +12,0 %/rok) jest łagodniejszy niż 1,96 × 7,78 = 15,2, więc niczego nie zmienia.\n3. Przekrój monet rzeczywiście nie zwiększa próby. Po RU2 korelacja dzienna TS1–TR1 wynosi 0,872, a tygodniowa 0,846. Połączenie obu koszyków zmniejsza błąd tylko o 3,3 % (7,74 zamiast 8,00 na wspólnym okresie).\n4. Ta sama granica jest zapisana w projekcie z góry. Pre-rejestracja TS1 mówi: „efekty 6–11 %/rok są niewidoczne”, „NIEROZSTRZYGNIĘTY najbardziej prawdopodobny”. Mówią to też wniosek 81 i ADR-09 (docs/rag/09, sekcja Kontekst).\n\nCO JEST PRZESADZONE:\n(a) „Główny powód, że nic nie znaleźliśmy” i „ta sama zasada działa na każdą rundę” to nieprawda dla dużej części projektu. Modele kierunku na świecach miały ogromną moc i dały dowód braku, a nie brak dowodu:\n- Y1 1h: n = 23 334, t_neff −11,7.\n- WF1: n ≈ 4 500.\n- O1/L1/V1/G1: CI trafności ok. ±1,2 pp wokół 50 %, a próg opłacalności to 53–54 %.\nTam „nic” znaczy „nie działa”.\n(b) Lista rund w znalezisku jest niespójna:\n- CP1 wyszedł POZYTYWNY (t 2,09), więc mała moc niczego w nim nie ukryła.\n- LQ1 mierzy koszt likwidacji, a nie przewagę.\n- TF1 to różnica dwóch prawie identycznych portfeli. Jest precyzyjna: CI [−6,6; +3,8] wyklucza poprawę większą niż ok. 4 %/rok.\n- TL1 dał punktowo −10,5 %/rok, więc nie ma tam ukrytego plusa.\n(c) Formalnie test niczego fałszywie nie „obalił”. TS1, TR1 i X1 mają werdykt NIEROZSTRZYGNIĘTY i są na liście „Kandydaci”, nie „Zamknięte”. Fałszywy obraz powstaje dopiero wtedy, gdy werdykt „nierozstrzygnięty” przeczyta się jako „nic”.\n(d) Zdanie „rozstrzygnąć może tylko dziennik” jest zbyt optymistyczne. Żeby mieć 80 % szansy na wykrycie efektu 10 %/rok, potrzeba ok. 25,6 roku danych. Po korekcie z punktu niżej to ok. 18–21 lat. Dla efektu 15 %/rok potrzeba ok. 11,4 roku (po korekcie 8–9). Dziennik działa więc jako sprawdzian obalający (szczebel 3 ADR-09), a nie jako dowód. Przy 10 %/rok o decyzji i tak zadecyduje wiara w mechanizm. A tę osłabia TX1: po 2013 trend na innych rynkach dał −0,2 %/rok.\n(e) Współczynnik k_eff = 2,0 pochodzi z P2. Opisuje korelację samych cen monet (0,47) w carry, a nie strategii TS1. Właściwą miarą jest korelacja TS1–TR1 z punktu 3.\n\nDODATKOWE ZNALEZISKO (kierunek: ukrywa przewagę, słabo):\nFunkcja summarize_pnl ucina N_eff do n (backtest/carry_hedged.py:130). Tymczasem dzienne zwroty TS1 mają ujemną autokorelację w skali tygodni i miesięcy. Po dobrych tygodniach częściej przychodzą słabsze.\n- Współczynnik wariancji: 0,88 dla okna 7 dni, 0,70 dla 28, 0,55 dla 91.\n- Suma autokorelacji z lagów 1–91 wynosi −0,31.\n- N_eff bez ucięcia to 4 172, a użyte n to 1 969.\n- Wzór występuje w obu połowach próby (VR(28): 0,74 w 2021–23 i 0,67 w 2024–26).\n\nPrzez to oficjalny błąd jest trochę zawyżony:\n- Błąd liczony metodą odporną na autokorelację (Newey-West) wynosi 7,0 przy oknie 14 dni i 6,5 przy oknie 28 dni.\n- Bootstrap blokowy z blokami 28 dni daje 6,7.\n- t rośnie wtedy z 1,43 do ok. 1,6–1,7.\n- 1,96 przekracza dopiero przy nierozsądnie długim oknie (182 dni: t 2,04).\nWerdykt się nie zmienia, ale przyrząd jest nieco surowszy, niż się wydaje.\n\nPODSUMOWANIE: Rachunek mocy jest prawdziwy. Dla strategii tygodniowych na koszykach to rzeczywiście główny powód braku rozstrzygnięcia. To jednak nie jest błąd testu, tylko jego wrodzona granica, którą projekt zapisał z góry. Nie tłumaczy też porażki modeli kierunku, które zmierzono dokładnie i zamknięto uczciwie.",
+  "quantified_impact": "TS1 po RU1: błąd standardowy 7,78 %/rok (potwierdzony co do setnych). Moc przy t > 1,96 wynosi 25/49/73/90 % dla efektu 10/15/20/25 %/rok. Przy rodzinnym progu t > 2,9 (korekta za ok. 30 odczytów) spada do 5/17/37/62 %. Korelacja TS1–TR1 po RU2 wynosi 0,872 (dzienna) i 0,846 (tygodniowa); połączenie obu koszyków zmniejsza błąd tylko o 3,3 %. Do 80 % mocy potrzeba ok. 25,6 roku danych przy 10 %/rok i 11,4 roku przy 15 %/rok (po korekcie Newey-West ok. 18–21 i 8–9 lat), a mamy 5,4 roku. Dodatkowo ucięcie N_eff do n (carry_hedged.py:130) przy ujemnej autokorelacji zwrotów TS1 (VR(28) = 0,70; N_eff bez ucięcia 4 172 zamiast 1 969) zawyża błąd o ok. 10–16 %: t = 1,59–1,70 zamiast 1,43. Nie przekracza 1,96 przy rozsądnych oknach. Zmienionych werdyktów: 0. Dla rodziny „model kierunku na świecach” (Y1 n = 23 334, t_neff −11,7; WF1; O1/L1/V1/G1) znalezisko nie ma zastosowania: tam moc była wysoka, a wynik to dowód braku."
+ },
+ {
+  "title": "TX1: fakty o przewadze walut się zgadzają, ale teza „słabnięcie po 2013 to głównie sprawa walut” wynika tylko z ich wagi",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "Przeliczyłem wszystko sam, na tym samym silniku i danych. Skrypty są w scratchpad/audyt: tx1_sklad.py, tx1_klasy.py i tx1_full_noacc.py.\n\nCO SIĘ POTWIERDZA (fakty):\n1. Skład próby. W data/tradfi_panel.py:27-48 jest 13 walut, 1 ropa, 2 indeksy akcji i 3 obligacje. W pracy Moskowitz–Ooi–Pedersen było 58 rynków, w tym 24 surowce i 12 par walutowych. Nasza próba jest więc mocno przechylona w stronę walut.\n2. Waluty dominują w ryzyku portfela. Mój przelicz: udział w samodzielnym ryzyku to 63,1% przed 2013 i 65,4% po 2013. Udział w wahaniach całego portfela (z korelacją) to 72–74%.\n3. Średnia korelacja dzienna 13 walut po 2013 wynosi 0,460. Przed 2013 było to 0,338. Te 13 walut to w praktyce tylko ok. 2 niezależne zakłady na dolara.\n4. „Sufit 3× aktywny w 89%” jest prawdą, ale dla czegoś innego, niż sugeruje opis. Chodzi o 88,5% dni-pozycji WALUTOWYCH, a nie o 89% dni. Sufit działa w backtest/ts_momentum.py:61. Nie jest to błąd: sufit obcina ryzyko walut, więc bez niego waluty ważyłyby jeszcze więcej.\n5. Liczby per klasa po 2013 i przedział [−5,97; +5,57] zgadzają się z raw_output.txt.\n\nCO SIĘ NIE POTWIERDZA (interpretacja):\nA. Teza „zanik po 2013 to głównie zanik trendu na walutach” to złudzenie wynikające ze składu portfela. Porównałem każdą klasę osobno, mierząc zysk na jednostkę ryzyka (Sharpe), przed i po 2013:\n- waluty: 0,40 → −0,26\n- akcje: 0,59 → 0,28 (spadek o połowę)\n- obligacje: 0,58 → 0,01\n- ropa (jedna seria): 0,36 → 0,61, jedyny wzrost\n\nSłabnięcie widać więc w 3 z 4 klas. W obligacjach jest nawet silniejsze niż w walutach. Walutom przypada ok. 63–74% całego spadku, bo tyle samo wynosi ich udział w ryzyku portfela. Spadek jest proporcjonalny do wagi, a nie szczególny dla walut. Koszyk bez walut też słabnie: Sharpe 0,85 → 0,44. Bez walut i bez ropy: 0,79 → 0,21.\n\nB. Teza, że tytuł wniosku 84 („zanika”) nie ma pokrycia, jest trafna tylko w połowie.\n- Wynik po samym 2013 roku był już przy pre-rejestracji oznaczony jako „tylko opisowo”: niepewność ±5,1%/rok (README:54). Ten wycinek sam w sobie nie dowodzi, że efekt spadł do zera. Słowo „zanika” jest za mocne.\n- Jest jednak mocniejszy test: porównanie okresu przed 2013 z okresem po 2013. Przed 2013 było +8,21%/rok [+3,28; +13,15], po 2013 −0,20%/rok. Różnica to +8,41%/rok, błąd standardowy 3,87, czyli z = 2,17. Punkt podziału ustalono z góry. Uczciwe sformułowanie to więc „wyraźnie słabnie; czy do zera — nie wiadomo”, a nie „brak pokrycia”.\n\nC. Kierunek „ukrywa przewagę” jest słuszny tylko dla znaku liczby po 2013, nie dla słabnięcia.\n- Przy innym składzie wynik po 2013 byłby dodatni: bez walut +6,66 [−2,06; +15,37], bez walut i ropy +3,33 [−4,94; +11,60]. Żaden z tych wyników nie jest istotny, a oba są dobrane po obejrzeniu wyniku, czego README (Rekomendacja 2) słusznie zakazuje.\n- Warto odnotować jedną rzecz. Reguła „średnia po 2013 > 0 → SPEŁNIONY” rozstrzyga znak liczby, której niepewność to ±5,8. Wystarczy zmienić skład, żeby etykieta zmieniła się z NIEROZSTRZYGNIĘTY na SPEŁNIONY. To bardziej słabość samej reguły mapowania niż dowód ukrytej przewagi.\n\nD. Nie jest to nowe odkrycie. README TX1 już o tym pisze: „znika na koszyku zdominowanym przez waluty” (README:89) oraz „Caveat: przewaga walut (13/19) steruje wynikiem po 2013” (README:98). Wniosek 84 podaje liczby per klasa.\n\nUWAGA POBOCZNA (spoza tego znaleziska, kierunek przeciwny, czyli „zawyża”). Indeks obligacji w data/tradfi_panel.py:62 dolicza całe odsetki y/365, ale nie odejmuje kosztu finansowania pozycji. Przed 2013 aż ok. 7 z 11,2 pkt proc./rok zysku klasy obligacji to odsetki, a nie trend: bez odsetek zostaje +4,25%/rok (Sharpe 0,22). Po usunięciu całych odsetek wynik 1990–2026 spada z +5,08 do +4,34%/rok [+0,70; +7,99], a t z 2,73 do 2,34. Werdykt główny się nie zmienia, ale margines maleje. To górna granica efektu, bo część odsetek (premia za termin) jest uprawnionym zyskiem.\n\nWERDYKT: CZĘŚCIOWO. Fakty o składzie i o dominacji walut są prawdziwe i sprawdzone. Główna teza, że słabnięcie dotyczy „głównie walut”, jest nieprawdziwa na jednostkę ryzyka: słabną też akcje i obligacje, a trzyma się tylko jedna seria ropy.",
+  "quantified_impact": "Werdykt TX1 (POZYTYWNY, t 2,73) i etykieta szczebla 1(b) (NIEROZSTRZYGNIĘTY) przy składzie ustalonym w pre-rejestracji zostają bez zmian.\n\n1. Waluty i ryzyko:\n- udział walut w ryzyku portfela: 63–65% (w wahaniach portfela 72–74%);\n- korelacja walut po 2013: 0,46, czyli ok. 2 niezależne zakłady.\n\n2. Słabnięcie po 2013 dotyczy nie tylko walut (Sharpe przed 2013 → po 2013):\n- waluty: 0,40 → −0,26;\n- akcje: 0,59 → 0,28;\n- obligacje: 0,58 → 0,01;\n- ropa: 0,36 → 0,61, jedyny wzrost, jedna seria.\nKoszyk bez walut: 0,85 → 0,44. Waluty odpowiadają za ok. 63–74% spadku portfela, czyli tyle, ile wynosi ich udział w ryzyku.\n\n3. Różnica między okresami: przed 2013 +8,21%/rok, po 2013 −0,20%/rok. Różnica +8,41%/rok, z = 2,17. Słowo „słabnie” jest poparte liczbami, „zanika do zera” nie jest.\n\n4. Inny skład portfela zmienia znak wyniku po 2013:\n- bez walut: +6,66%/rok, przedział od −2,1 do +15,4;\n- bez walut i ropy: +3,33%/rok.\nOba wyniki są nieistotne i dobrane po fakcie. Taki skład przestawiłby etykietę na SPEŁNIONY, ale tylko dlatego, że reguła „średnia po 2013 > 0” jest krucha przy niepewności ±5,8.\n\n5. Poboczne, zawyża: doliczanie całych odsetek obligacji bez kosztu finansowania. Po ich usunięciu wynik 1990–2026 spada z +5,08 do +4,34%/rok, a t z 2,73 do 2,34. Werdykt bez zmian."
+ },
+ {
+  "title": "Moc testu trendu jest niska — liczby się zgadzają, ale to nie jest „główny powód”, że nic nie znaleźliśmy, i nic nie zostało ukryte",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "CO SIĘ POTWIERDZA (liczby są dobre):\n1. Uruchomiłem jeszcze raz skrypt pc_moc.py (scratchpad/audyt, wynik w adv_pc_moc_out.txt). Wyszło to samo co do sztuki. Przy zerowej przewadze fałszywy alarm pojawił się 1 raz na 100 losowań. Przy wbudowanych +10,4 %/rok przewagę wykryto w 20 na 100 losowań [12; 28]. Przy +22,5 %/rok w 88 na 100. Silnik nie zniekształca wyniku: jego zysk brutto różni się od wbudowanego o −0,3 pkt/rok, a sam szum pomiaru to ±1,4 pkt.\n2. Sprawdziłem to drugą drogą, na innych losowaniach (seedy 5000+, 150 losowań, adv_moc2.py). Wykrycie w 33 na 150, czyli 22 % [15; 29].\n3. Ze wzoru dla prawdziwego TS1 (+11,1 %/rok, wahania 18,1 %/rok, 1969 dni) spodziewane t wynosi 1,42. Szansa na t > 1,96 to wtedy 30 %. Żeby test wykrywał przewagę w 80 % przypadków, przewaga musiałaby wynosić ok. 21,8 %/rok.\nTest jest więc naprawdę mało czuły na przewagę rzędu 10 %/rok.\n\nCO NIE WYTRZYMUJE SPRAWDZENIA:\n(a) To nie jest „główny powód, że nic nie znaleźliśmy”. Większość odczytów w projekcie miała dużą próbę i wyszła wyraźnie ujemna. To dowód braku przewagi, a nie jej niewykrycie. Przykłady z runs/INDEX.md:\n- Z10: n = 7 687, cały przedział trafności poniżej progu opłacalności.\n- M1: próba 1,9 raza większa niż potrzebna, górny kraniec 2,14 pkt proc. pod progiem.\n- F1: próba 1,81 raza większa niż potrzebna.\n- Y1: próba 41 razy większa niż potrzebna.\n- O1, L1, V1, G1: t_neff od −2,6 do −4,2.\n- N1: t −4,08. A1a: t −5,11. A2: 3 wyniki ujemne. WF1: t −2,59 i −3,53. Do tego W1a i W1c.\nTo razem ok. 18 odczytów, w których słaba moc testu nic nie tłumaczy. Niska moc dotyczy tylko rodziny strategii tygodniowych na koszykach monet: TS1, TR1, X1 i X2.\n\n(b) Lista „dotkniętych rund” jest błędna:\n- CP1 przeszedł kryterium (t_neff 2,09).\n- SC1 w ogóle nie wystartował. Z góry uznano go za niemierzalny (zasada 18) — ta ochrona zadziałała.\n- TF1 ma ujemny wynik punktowy (−1,41 %/rok, t −0,53), więc nie ma tam dodatniej przewagi, którą test mógłby przeoczyć.\n- LQ1 mierzy koszt likwidacji, który wyszedł istotny (t −3,16).\n\n(c) To nie jest nowe odkrycie ani ukryta wada. Pre-rejestracja TS1 (runs/2026-09-24_ts1-trend-koszyk/README.md:112-119) mówi wprost i przed wynikiem: „efekty 0,3–0,5 SR (6–11 %/rok) są niewidoczne — zapisane z góry. Moc 80 % wymaga SR ≥ ~1,2” oraz „NIEROZSTRZYGNIĘTY najbardziej prawdopodobny”. Wniosek 81 i ADR-09 (docs/rag/09) opisują to samo. Właśnie dlatego zmieniono kryterium decyzji o kapitale na drabinę dowodów. „Stan wiedzy” w INDEX.md wymienia TS1 i X1 jako kandydatów („ślady, nie dowody”).\n\n(d) Kierunek „ukrywa przewagę” jest przesadzony:\n- Niska moc nie przesuwa oszacowania. +11,1 %/rok jest raportowane razem z przedziałem [−4,2; +26,3].\n- Werdykt „NIEROZSTRZYGNIĘTY” to poprawna etykieta, a nie fałszywy negatyw. Szansa na werdykt NEGATYWNY przy prawdziwych +10 %/rok wynosi tylko 0,06 %.\n- Zdanie „gdyby trend zarabiał 10 %/rok, w 3 na 4 przypadkach dostalibyśmy NIEROZSTRZYGNIĘTY” to moc liczona po fakcie z tego samego wyniku, więc nie dodaje nowej informacji. Przy zerowej przewadze NIEROZSTRZYGNIĘTY wypada w 95 % przypadków. Wynik t = 1,42 jest tylko ok. 2,7 raza bardziej prawdopodobny przy +10 %/rok niż przy 0 — to słabe rozróżnienie.\n- Samo „szacujemy ~10 %/rok” to wynik najlepszego z ok. 30 odczytów na tej samej historii. Takie wybieranie zwycięzcy zawyża oszacowanie. Do tego TX1 po 2013 roku daje −0,2 %/rok.\n\n(e) Drobiazgi w symulacji:\n- Symulacja ma 2062 dni wobec 1969 prawdziwych i wahania 16,4 %/rok wobec 18,1 %, więc lekko zawyża moc testu.\n- W symulacji t_neff > 1,96 wyszło 20 razy na 100, a zwykłe t > 1,96 23 razy. Mój pomiar na białym szumie: estymator N_eff (agents/labeling.py:207, suma 50 autokorelacji bez wag, obcięta do n) obniża t średnio o 3,5 %.\n- W prawdziwym TS1 N_eff = n, więc to go nie dotyczy.\n- W X1 obniżka t z 2,07 do 1,86 jest uzasadniona. Autokorelacja z dnia na dzień wynosi 0,089, czyli ok. 3,9 błędu standardowego. Metoda Newey–West daje podobnie: t 1,88.\n\nWERDYKT: rachunek się zgadza, ale teza główna, lista rund i kierunek są przesadzone. Znalezisko powtarza to, co projekt zapisał z góry, i nie wskazuje żadnej przewagi, którą testy by schowały.",
+  "quantified_impact": "Moc kryterium t > 1,96 dla przewagi ok. +10 %/rok przy wahaniach 16–18 %/rok na 5,4 roku: 20 % (pc_moc powtórzone co do sztuki), 22 % [15; 29] na nowych losowaniach, 27–30 % ze wzoru. Żeby test wykrywał przewagę w 80 % przypadków, trzeba ok. +21,8 %/rok (przy 50 %: 15,3 %/rok). Dotyczy 4 odczytów (TS1, TR1, X1, X2) z ok. 33, a nie „każdej rundy tygodniowej”: CP1 przeszedł, SC1 nie wystartował, TF1 i TL1 mają ujemny wynik punktowy. Ok. 18 odczytów to dobrze zasilone wyniki ujemne, których niska moc nie tłumaczy. Werdykty zmienione: 0. Szansa na błędny werdykt NEGATYWNY przy prawdziwych +10 %/rok: 0,06 %, więc etykiety werdyktów nie ukrywają przewagi. Zawężają tylko rozdzielczość. Skutek był znany z góry (pre-rejestracja TS1, wniosek 81, ADR-09) i już zmienił kryterium decyzji o kapitale. Pliki: C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt\\adv_pc_moc_out.txt, adv_moc2_out.txt, adv_neff.py, adv_neff2.py."
+ },
+ {
+  "title": "N_eff z limitem ≤ n: zaniżanie t jest prawdziwe, ale małe. Wielkość „ukrytej przewagi” zależy od długości okna wybranej po fakcie",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "Wszystko przeliczyłem sam, własnymi skryptami. Leżą w scratchpad\\audyt\\adw: neff_check.py, neff_check2.py, neff_sim2.py i neff_tr1_x2.py.\n\nCO SIĘ POTWIERDZA\n1. Kod jest taki, jak opisano. W agents/labeling.py:225-227 N_eff to n/(1+2·Σρ_k). Suma obejmuje 50 opóźnień i nie ma wag. W backtest/carry_hedged.py:130 wynik jest ucinany do n. Dlatego t_neff nigdy nie przekracza zwykłego t.\n2. Liczby ze znaleziska się zgadzają.\n   - TS1 na pełnym uniwersum: t = t_neff = 1,43. N_eff bez limitu wynosi 4 172, Σρ = −0,264, ρ1 = −0,065.\n   - Newey-West daje t = 1,51 przy L = 7 i 1,70 przy L = 28. Bootstrap blokowy daje 1,75.\n   - X1: t spada z 2,07 do t_neff 1,86. Newey-West daje 1,85–1,89, więc ta obniżka jest uzasadniona.\n   - X1 bez dnia MYX: t = t_neff = 1,83, a Newey-West(28) daje 2,07.\n3. Metoda naprawdę jest trochę zbyt ostrożna. Sprawdziłem to na danych, w których z definicji nie ma autokorelacji (trzy generatory, po 500 losowań). Wyniki:\n   - t_neff/t wynosi średnio 0,950–0,962.\n   - W 27–35 % losowań t zostaje obcięte o ponad 5 %.\n   - Gdy prawdziwa przewaga leży dokładnie na progu, test łapie ją rzadziej: w 47–48 % przypadków zamiast 50–53 %.\n   - Przyczyna: przypadkowo dodatnia suma 50 autokorelacji obniża t, a limit usuwa tylko drugą stronę tej losowości.\n   Kierunek: ukrywa przewagę.\n\nCO JEST PRZESADZONE\na) „Dwie inne standardowe metody dają więcej” to w praktyce jedna metoda. Newey-West z L = 28 i bootstrap z blokami 28 dni liczą to samo, tym samym 28-dniowym oknem. L = 28 nie jest standardowym wyborem. Reguła automatyczna Newey-West daje L = 7, reguła Andrewsa L = 4. Przy obu TS1 ma t 1,51, a nie 1,70. Wielkość „ukrytej przewagi” zależy więc od długości okna, a tę wybrano po obejrzeniu wyniku:\n   - L = 4–7: 1,51;\n   - L = 28: 1,70;\n   - L = 50: 1,76.\nb) Tytuł obwinia limit. Tymczasem w TS1 limit niczego nie obniża, bo t_neff jest równe t. Limit tylko odmawia premii za ujemną autokorelację. To była świadoma decyzja, zapisana we wniosku 50 (runs/INDEX.md:539). Bez limitu wzór bardzo zawyża wyniki:\n   - TS1: 2,07;\n   - TS1 na starym cache: 2,69;\n   - TR1: 2,77;\n   - X2: 2,59.\n   Naprawą byłby więc Newey-West z automatycznym oknem, a nie zdjęcie limitu.\nc) Waga „średnia” jest za wysoka. Przy standardowym oknie t rośnie o około 0,05–0,12.\n\nCZEGO ZNALEZISKO NIE ZAUWAŻYŁO\nPrzy oknie L = 28, które samo proponuje, zmieniłyby się dwa werdykty:\n- TR1 na pełnym uniwersum: t_neff 1,63, przy L = 7 jest 1,74, przy L = 28 jest 2,04. Drugi warunek (ponad 99 % H0) jest spełniony, więc formalnie byłby POZYTYWNY.\n- Pierwotny TS1 na starym, obciętym cache: 1,76, przy L = 7 jest 1,86, przy L = 28 jest 2,07.\n\nObie zmiany istnieją tylko przy oknie wybranym po fakcie. Poza tym:\n- TR1 jest skorelowany z TS1 na poziomie 0,86, więc to nie są dwa niezależne sygnały.\n- Pierwotna runda TS1 jawnie podała bootstrap z blokami 28 dni jako odczyt opisowy (README TS1, wiersze 219–220). Nic nie zostało ukryte.\n- Ujemna autokorelacja w TS1 jest umiarkowanie istotna: w teście z losowymi znakami, który zachowuje grupowanie zmienności, taki wynik trafia się w 2,7 % przypadków. Wszystkie serie trendowe (TS1, TR1, X2) mają ją podobną, bo są ze sobą skorelowane.\n- Przy CP1 limit nic nie zmienia (2,09 wobec Newey-West 2,07–2,13).",
+  "quantified_impact": "Bez autokorelacji t_neff wynosi średnio 0,95–0,96 zwykłego t. Szansa wykrycia przewagi leżącej na progu spada o 3–5 punktów procentowych (z 50–53 % do 47–48 %). Przy E[t] = 2,8 spadek to 1–3 pkt. Test jest za ostrożny: fałszywy alarm zdarza się w 1,6–2,6 % zamiast nominalnych 2,5 %.\n\nRealne serie, t_neff → Newey-West z automatycznym oknem L = 7 → Newey-West z oknem L = 28:\n- TS1 pełne: 1,43 → 1,51 → 1,70;\n- TS1 stary cache: 1,76 → 1,86 → 2,07;\n- TR1: 1,63 → 1,74 → 2,04;\n- X2: 1,60 → 1,72 → 1,85;\n- X1: 1,86 → 1,88 → 1,86;\n- X1 bez MYX: 1,83 → 1,91 → 2,07;\n- CP1: 2,09 → 2,07 → 2,13.\n\nWerdykty:\n- Przy standardowym, automatycznym oknie żaden werdykt się nie zmienia.\n- Przy oknie 28 dni, wybranym po fakcie, dwa przekraczają 1,96: TR1 i pierwotny TS1 na wadliwych danych.\n- Żaden wynik przy żadnej metodzie nie zbliża się do progu dla całej rodziny testów (~2,9). Maksimum to 2,13."
+ },
+ {
+  "title": "Funding w X1 (dopłaty między longami i shortami): liczby się zgadzają, ale nie pochodzi „głównie” z dwóch skrajnych przypadków, a wpływ na wynik jest mały",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "Funding to okresowa dopłata na kontraktach perpetual: przy stawce dodatniej long płaci shortowi, przy ujemnej short płaci longowi.\n\nCo się POTWIERDZA (przeliczyłem sam):\n- Skrypt d4_x1fund.py daje dokładnie to, co w znalezisku: suma fundingu netto +49,06 % (tyle samo liczy silnik, raw_output_x1.txt:15), noga long +27,54 pkt, noga short +21,52 pkt, LAB (long, 2026) +10,64 pkt, MYX (long, 2025) +8,33 pkt.\n- Niezależna druga droga to silnik z wyzerowanym fundingiem tylko dla LAB i MYX. Suma spada z 49,06 do 29,95 (różnica −19,11 pkt), czyli wynik się zgadza.\n- Znak liczony jest dobrze: backtest/xs_momentum.py:165 `funding_net = w_short*f_s − w_long*f_l`, test w tests/test_xs_momentum.py:101.\n- Dane nie są błędem pobierania. MYX i LAB nie mają zdublowanych znaczników czasu. Mają 24 rozliczenia na dobę i minimalną stawkę −2,0 % na rozliczenie, co odpowiada mechanice Binance (rozliczenie co godzinę, limit ±2 %). Dla TRB limit wynosi −3 %, rozliczenia są co 8h lub 4h.\n\nCo jest NIEPRAWDĄ albo przesadą:\n1) Tytuł mówi „głównie z dwóch przypadków”. LAB i MYX to 38,9 % fundingu netto i 27,3 % sumy dodatnich wkładów. 14 monet dało każda ponad +1 pkt (TRB +6,45, BLZ +4,0, SIREN +3,16, LAYER +2,47, LINA, TNSR, REEF, UNFI…). Bez LAB i MYX funding nadal wynosi +29,95 pkt. Dla porównania 20 losowych rankingów na tych samych danych dało średnio +0,63 pkt przy rozrzucie (sd) 9,77. Nadwyżka jest więc systematyczna, około 3 sd ponad losowe. „Głównie” pasuje tylko do samej nogi long: bez tych dwóch monet zostaje w niej +8,57 z 27,54. Noga short (+21,38 bez nich) jest szeroka i to ona niesie typowy przypadek, co zgadza się z opisem w README RU1.\n2) Dowód „MYX miał dni do −38,5 %” jest mylący. Ten dzień to 2025-08-05, a MYX był w portfelu dopiero od 2025-09-02 do 2025-11-03, więc tamten dzień nic nie wniósł. Wkład MYX pochodzi z 9–18.09.2025, przy stawkach od −10 do −17 % na dobę.\n3) Etykieta „short squeeze” (wyciśnięcie shortów) nie pasuje do LAB. W najlepsze dni fundingu (3–4.06, 27–30.06.2026) cena LAB SPADAŁA: −21,6 %, −0,4 %, −15,9 %, −6,3 %. Long zbierał dopłatę i jednocześnie tracił na cenie. Do MYX etykieta pasuje częściowo, bo cena rosła po +298 % z 08.09.\n4) Kierunek „zawyża przewagę” jest słaby. To prawdziwe pieniądze, które zgodnie z danymi Binance trafiłyby do trzymającego pozycję, a nie błąd pomiaru. Problemem jest skupienie w ogonie: 20 najlepszych dni to 46,7 % sumy fundingu, mediana dzienna wynosi +0,003 %. Ogon jest jednak rozłożony na wiele epizodów, nie na dwa.\n\nOcena „średnia” jest zawyżona, właściwa jest „niska”: wpływ na wynik to ułamek ogona cenowego (MYX w dniach 7–8.09 to ~83 pkt z 226). Część „nie przestawia werdyktu” jest prawdziwa.\n\nPliki: scratchpad/audyt/v_d4_przeciwnik.py i v_d4b.py.",
+  "quantified_impact": "X1 na pełnym uniwersum (liczone silnikiem):\n- baza: +41,70 %/rok, t_neff 1,861 (t_neff to miara istotności po uwzględnieniu, że kolejne dni nie są niezależne);\n- bez fundingu LAB i MYX: +38,17 %/rok (−3,5 pkt proc./rok), t_neff 1,817;\n- bez całego fundingu: +32,64 %/rok, t_neff 1,528.\n\nFunding dokłada średnio ~9,1 pkt proc. rocznie, z czego LAB i MYX to ~3,5. Werdykt się nie zmienia: X1 zostaje NIEROZSTRZYGNIĘTY, a przedział 95 % i tak obejmuje zero.\n\nSkala udziałów:\n- LAB i MYX to 38,9 % fundingu netto, a nie „większość”;\n- bez nich funding wynosi +29,95 pkt przy losowym tle +0,6 ± 9,8 pkt.\n\nNajbardziej skrajny dzień MYX (−38,5 % stawki, 2025-08-05) nie był w portfelu."
+ },
+ {
+  "title": "Okno 60 dni + 4 cechy bazowe gubią większość przewagi 5. cechy: mechanizm potwierdzony, zasięg i wpływ na werdykty zawyżone",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "Sprawdziłem kod i sam przeliczyłem wyniki. Najpierw to, co się potwierdziło.\n\n**Co się potwierdza (przeliczone, nie przepisane z opisu)**\n1. **Konfiguracja się zgadza.** `TRAIN_DAYS = 60` jest w 15 skryptach rund 4h, między innymi w `run_momentum_m1.py:46`, `run_funding_measured_f1.py:52`, `run_positioning_o1.py:51` i `run_external_features_lvg.py:56`. Na walidację idzie 20 % danych (`DEFAULT_VALIDATION_FRACTION = 0.2`), a T4 zmierzyło 68–71 wierszy walidacji. Drobna nieścisłość: stała stoi w `agents/labeling.py:41`, nie w linii 31.\n2. **Liczby znaleziska odtwarzają się co do cyfry.** Skrypt: `scratchpad/audyt/adw/adv_e1.py`. Dla q=0,2 (wyrocznia, czyli sztuczna cecha, która w 20 % świec zna prawdziwy wynik):\n   - 4 cechy + wyrocznia, okno 60 dni: trafność 51,05 %. Tyle samo zmierzyło K2 w ramieniu A1.\n   - Górne krańce przedziału ufności w trzech losowaniach: 52,69 / 51,53 / 52,27 %. Wszystkie leżą pod progiem opłacalności ok. 52,84 %, więc według reguły M1/F1 werdykt brzmi NEGATYWNY.\n   - Early stopping zatrzymuje się w medianie na 3 drzewach.\n   - Sama wyrocznia w oknie 60 dni: 54,99 % i 27–37 drzew.\n   - 4 cechy + wyrocznia w oknie 365 dni: 52,93 %, a w oknie 730 dni: 54,16 %.\n3. **Skutek widać też przy kryterium późniejszych rund**, a nie tylko przy regule trafności z M1/F1. Skrypt `adv_o1.py` to odtworzenie przyrządu z O1/L1/V1/G1: dane od 2021, wypełnienie zleceń po ścieżce cen, kryterium zwrotu netto t_neff (miara istotności, która uwzględnia nakładanie się transakcji) i porównanie parowe z kontrolą. Kontrola wyszła identycznie jak w repo: n 6 789, trafność 49,58 %, zwrot −0,1069 % na transakcję.\n   - Wyrocznia q=0,2 jako 5. cecha: werdykt NEGATYWNY w 2 z 3 losowań, raz NIEROZSTRZYGNIĘTY.\n   - Porównanie parowe z kontrolą: +0,016 / +0,038 / +0,064 % na transakcję.\n   - Ta sama wyrocznia jako jedyna cecha: POZYTYWNY 3 na 3, zwrot +0,14 do +0,17 %, t_neff od +5,1 do +7,0.\n   - Realne odczyty O1 (+0,024 % [−0,019; +0,067]) i V1 (+0,018 % [−0,037; +0,074]) nie dają się odróżnić od takiej cechy.\n\nWniosek z tej części: przyrząd „5. cecha w modelu 60 dni\" jest ślepy na cechę, która sama zarabiałaby około +0,15 % na transakcję. Tak działa to na realnych ustawieniach rund, nie tylko w teorii.\n\n**Co obala albo osłabia znalezisko**\n1. **Słabość częściowo znana.** K1 zapisało, że istnieje „luka 5,5 pp, w której sygnał byłby opłacalny i NIEWIDZIALNY\". K2 w swojej tabeli ma q=0,20 → 51,05 %, „nie wykryte\", i ostrzega, że wyniku z wyroczni nie wolno przenosić na realne cechy. F1 w linii 78 README powtarza ograniczenie „wykrywalność od ≈54 %\". Nowe w znalezisku są dwie rzeczy: przyczyna (rozcieńczenie przez 4 cechy bazowe w małym oknie; sama wyrocznia przechodzi prawie bez strat) i to, że rundy 5. cechy nazywały wynik „dowodem braku\".\n2. **Lista dotkniętych rund jest za szeroka.**\n   - S1, S1b, H2.1, K3, W1, N1, T4 dotyczą cech bazowych. WF1 sprawdziło okna 365 i 730 dni wprost i oba wyszły NEGATYWNE (trafność 49,6 % i 48,5 %).\n   - A1b i A2.5 mają niezależne ramiona regułowe bez modelu (A1a, A2.1–A2.4), których ten problem nie dotyczy. A1a ma trafność 46,35 %, a cały przedział ufności leży poniżej 50 %.\n   - F1 i O1 są częściowo pokryte przez TF1 i TL1 (pozycjonowanie jako reguła, na innym horyzoncie).\n   - Y2 już jest NIEROZSTRZYGNIĘTY.\n3. **„80–95 %\" dotyczy rzadkiej, silnej wyroczni.** Sprawdziłem też gęstą, ciągłą cechę syntetyczną o tej samej sile: 55,0–55,7 % trafności przy prostej regule „podążaj za cechą\".\n   - Jako 5. cecha w oknie 60 dni daje trafność 52,17 %, czyli traci ok. 60–70 %, a nie 80–95 %.\n   - Przy kryterium O1 daje NIEROZSTRZYGNIĘTY 3 na 3, nigdy NEGATYWNY.\n   - Porównanie parowe +0,049 do +0,052 %, z przedziałem wykluczającym zero 3 na 3.\n   - Taka cecha wyglądałaby więc inaczej niż realne L1 (+0,003 %) i G1 (+0,002 %). Te rundy są rzeczywistym argumentem przeciw gęstej cesze tej siły. Ślepa plamka w całości dotyczy rzadkich, silnych sygnałów.\n4. **Dolny kraniec „+0,07 %\" nie obciąża okna.** Przy q=0,1 reguła trafia w 52,87 %. Przy n≈9 000 dolny kraniec przedziału wynosi ok. 51,8 %, czyli poniżej progu, więc nawet idealny przyrząd byłby tu nierozstrzygnięty. U mnie sama wyrocznia q=0,1 w oknie 60 dni też dała NIEROZSTRZYGNIĘTY lub NEGATYWNY.\n5. **Realne cechy są daleko od strefy ślepoty.** Uruchomiłem ponownie `e4_ceiling_ext.py`. Najlepszy kwintyl in-sample, wybrany po fakcie z 25 komórek, daje dla funding, OI, podaży na giełdach, VRP i F&G trafność 52,5–53,2 % i +0,08 do +0,107 % brutto na transakcję. Koszt wynosi ok. 0,08 %, więc netto zostaje ok. 0 do +0,03 %. Wyrocznia q=0,2 to ok. +0,28 % brutto i +0,20 % netto, czyli około 3 razy więcej niż najlepszy wynik wybrany z wiedzą po fakcie.\n\n**Kierunek:** ukrywa przewagę, ale tylko w strefie, do której żadna z mierzonych cech nie dochodzi. Istotność powinna być „średnia\", nie „wysoka\".",
+  "quantified_impact": "**Werdykty cech bazowych:** zero zmian. WF1 z oknami 365/730 dni dało NEGATYWNY (zwrot −0,061 % i −0,084 % na transakcję).\n\n**Werdykty A1b i A2.5:** bez zmian co do samej cechy, bo potwierdzają je ramiona regułowe A1a/A2.x.\n\n**Werdykty F1, O1, L1, V1 i G1:** etykieta „NEGATYWNY / dowód braku\" jest poprawna dla pary model + cecha. Dla samej cechy trzeba ją zmienić na „cecha bez modelu niezmierzona\".\n- Przyrząd daje NEGATYWNY w 2 z 3 losowań cesze typu wyrocznia q=0,2, która sama zarabia +0,14 do +0,17 % (t_neff od +5 do +7).\n- Rozdzielczość porównania parowego to ok. ±0,045 % na transakcję. Odczyty O1 (+0,024 %) i V1 (+0,018 %) są zgodne z taką cechą.\n- L1 (+0,003 %) i G1 (+0,002 %) wykluczają, na granicy, gęstą cechę tej siły (+0,05 %). Nie wykluczają rzadkiej.\n\n**Wpływ na pytanie „czy coś przegapiliśmy\":** praktycznie żaden. Najlepszy kwintyl in-sample tych cech daje brutto +0,08 do +0,107 % przy koszcie ok. 0,08 %, czyli netto ok. 0 do +0,03 %. Wyrocznia q=0,2 daje +0,20 % netto, więc strefa ślepoty zaczyna się mniej więcej 3 razy wyżej, niż sięgają realne cechy nawet przy wyborze po fakcie.\n\n**Sprostowanie:** stała `TRAIN_WINDOW_DAYS` stoi w `agents/labeling.py:41`, nie :31.\n\n**Skrypty i wyniki** (w `C:\\Users\\pitge\\AppData\\Local\\Temp\\claude\\C--Users-pitge-GIT-alpha\\7ee5f53c-ce47-4102-8d02-500d380e6198\\scratchpad\\audyt\\adw\\`):\n- `adv_e1.py` (wyniki w `outA.txt`, `outC.txt`)\n- `adv_o1.py` (wyniki w `outO1.txt`)"
+ },
+ {
+  "title": "Model XGBoost z oknem uczenia 60 dni gubi większość słabej przewagi cechy. Mechanizm potwierdzony, ale liczba „58 % jak w K1” to zbieg okoliczności, a lista dotkniętych rund jest za szeroka",
+  "verdict": "CZĘŚCIOWO",
+  "reasoning": "CO SPRAWDZIŁEM SAM (skrypty w scratchpad/audyt: k2_follow.py, k2_window.py; w repo nic nie zmieniłem)\nOdtworzyłem ramię A1 z K2 na tych samych losowaniach wyroczni (ziarna _oracle_seed, cecha z backtest/run_positive_control_k1.py:77-87). Wynik zgadza się z raw_output K2 co do sztuki: n = 24 158 / 23 456 / 21 900 i trafność 50,79 / 51,05 / 53,57 % dla q = 0,1 / 0,2 / 0,3. Na tych samych świecach policzyłem regułę „graj w kierunku, który wskazuje cecha”. Wyjścia i koszty pochodzą z kodu silnika (_resolve_exit_price, execution_legs maker_limit, total_round_trip_cost).\n\nPOTWIERDZONE (liczby ze znaleziska są prawdziwe)\n- Reguła bez modelu (q = 0,1 / 0,2 / 0,3): trafność 52,87 / 55,28 / 58,45 %, zysk netto +0,065 / +0,200 / +0,348 % na transakcję. Test t na jednym losowaniu: +2,5 do +3,9 / +8,5 do +10,2 / około +15.\n- Model A1 na tej samej cesze: zysk netto −0,044 / −0,017 / +0,090 %. Test t na jednym losowaniu: −2,31, −1,60, −2,34 przy q = 0,1 oraz −0,10, −1,63, −0,63 przy q = 0,2. Czyli cecha, która jako prosta reguła zarabia +0,065 % na transakcję, po przejściu przez model daje wynik ujemny. Przy q = 0,1 wypada nawet w pobliżu progu werdyktu NEGATYWNY. To liczyłem zwykłym t. Projekt liczy t_neff, które poprawia na zależność transakcji i daje mniejsze wartości.\n- Model przenosi tylko około 15–17 % przewagi cechy przy q = 0,1–0,2 i około 36 % przy q = 0,3.\n- metrics.py:675-727: measurability_report przyjmuje „zakładaną trafność” i porównuje ją z wald_half_width(n). Nie ma w niej członu „ile przewagi cechy gubi model”. W O1, L1, V1 i G1 podano 0,56 jako trafność MODELU (O1 README:121). „MIERZALNA” znaczyła więc „wynik modelu da się zmierzyć”.\n- Wniosek 67 (runs/INDEX.md:690-694) mówi, że informacja OI i DVOL jest „o rząd wielkości za słaba”. Poprawa modelu o +0,02 pp (O1 +0,024 [−0,019; +0,067], V1 +0,018) jest tak duża, jak poprawa, którą w modelu dała wyrocznia przy q = 0,1–0,2: od +0,022 do +0,049 pp. Ta sama wyrocznia jako reguła zarabiała +0,065 do +0,20 %. Teza „o rząd wielkości za słaba” nie wynika więc z tych pomiarów.\n\nNOWE, WAŻNE DLA WERDYKTU: przyczyną jest okno uczenia 60 dni\nUruchomiłem ten sam test z oknem uczenia 365 dni. Przy q = 0,2 model już widzi sygnał: zysk netto +0,100 %, t na losowaniach +4,8 / +3,5 / +4,3. Przy 60 dniach były to −0,008 % i t = +0,20 / −1,21 / 0,00. Rundy F1, O1, L1, V1 i G1 używały TRAIN_DAYS = 60 (run_funding_measured_f1.py:52, run_positioning_o1.py:51, run_external_features_lvg.py:56). WF1 sprawdziło dłuższe okna tylko dla 4 cech kontrolnych z wykresu, nie dla cech spoza wykresu. Wniosek 85 („nie wynikała z krótkiego okna”) dotyczy więc tylko cech z wykresu.\n\nOBALONE LUB PRZESADZONE CZĘŚCI ZNALEZISKA\n1. „~58 %, dokładnie jak w pierwotnym K1” to zbieg liczb. W K1 58,20 % to trafność MODELU A0 przy q = 0,4. Reguła przy q = 0,4 ma 62,46 %. 58,45 % ze znaleziska to trafność REGUŁY przy q = 0,3 w A1. Do tego znalezisko powtarza błąd siatki, który samo krytykuje. Próg wykrycia leży gdzieś między 55,3 % (q = 0,2, niewidoczne) a 58,45 % (q = 0,3, widoczne), a przy oknie 365 dni już 55,3 % jest widoczne.\n2. „Sprostowano w złą stronę” to za mocne słowa. Sprostowanie K2 jest matematycznie poprawne dla trafności modelu: szerokość pasma zależy tylko od n. Brakowało drugiej warstwy, czyli tego, ile przewagi cechy model przenosi. K2 README:324-326 jawnie zapisało, że „A1 wykrywa q = 0,30” nie przenosi się na realne cechy.\n3. „Wyrocznia to najłatwiejszy możliwy sygnał, a realna cecha będzie trudniejsza” to przypuszczenie bez pomiaru.\n4. Lista rund jest za szeroka. Te rundy mierzyły reguły bezpośrednio, bez modelu, więc strata w modelu ich nie dotyczy: A1a (formacje: 46,35 %, cały przedział ufności poniżej 50 %) oraz A2.1–A2.4. W1 i N1 dotyczą wykonania i wyjścia z pozycji, nie wykrywania cechy. Y1 ma trafność 48,34 % z przedziałem ufności całkowicie poniżej 50 % przy n = 23 334, więc strata modelu nie zmienia tego werdyktu. Dotknięte są rundy, w których cecha była tylko piątą cechą modelu z oknem 60 dni: F1, O1, L1, V1, G1, M1 oraz ramiona modelowe A1b i A2.5. Pozycjonowanie ma dodatkowo testy regułami (TL1: IC +0,008; TF1). Mierzą one jednak inny horyzont i inną formułę.\n5. Pasmo „opłacalne, ale niewidoczne” przy oknie 60 dni to trafność reguły od około 52,9 % (q = 0,1, +0,065 %) do co najmniej 55,3 % (q = 0,2, +0,20 %), a maksymalnie do poniżej 58,45 %. Przy oknie 365 dni pasmo zwęża się do około 53–55 %.\n\nKierunek: ukrywa przewagę, potwierdzone liczbami. Nie dotyczy to jednak wszystkich wymienionych rund.",
+  "quantified_impact": "Dosłowne werdykty F1, O1, L1, V1 i G1 („model z tą cechą traci po kosztach”) zostają w mocy. Upada ich odczyt „informacji w cesze nie ma albo jest o rząd wielkości za słaba” (wniosek 67, „Stan wiedzy” linia 14). Dowód z kalibracji wyroczni: przy oknie uczenia 60 dni cecha, która jako prosta reguła zarabia +0,065 % na transakcję (trafność 52,9 %), daje w modelu t od −1,6 do −2,3, czyli wynik ujemny. Cecha zarabiająca jako reguła +0,20 % (trafność 55,3 %) daje w modelu t od −1,6 do +0,2, czyli wynik nierozstrzygnięty. Model przenosi tylko 15–17 % przewagi cechy. Poprawa modelu o +0,02 do +0,05 pp w O1 i V1 jest dokładnie tej wielkości, więc te rundy nie wykluczają przewagi rzędu +0,07 do +0,20 % na transakcję, jeśli użyć cechy wprost jako reguły. Okno 365 dni wykrywa przypadek +0,20 % (t od +3,5 do +4,8 na losowanie), ale żadna runda z cechą spoza wykresu nie była na nim liczona. Werdyktów A1a, A2.1–A2.4, W1, N1 i Y1 to znalezisko nie zmienia. Tanie sprawdzenie: dla funding, OI, DVOL, podaży na giełdach i F&G policzyć regułę „znak cechy” albo IC bezpośrednio, ewentualnie powtórzyć model z oknem 365 dni. Każdy taki test to nowy wariant w liczniku."
+ }
+]

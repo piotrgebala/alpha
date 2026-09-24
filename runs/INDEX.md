@@ -7,11 +7,12 @@ i „Wnioski skumulowane” (numery w nawiasach). Aktualizuj, gdy runda zmienia 
 każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 
 **Zamknięte — nie wracać bez NOWEJ informacji:**
-- Przewidywanie kierunku BTC modelem na świecach 5m / 1h / 4h / 1d: trafność ~50 % na dużych
-  próbach — dowód braku, nie brak dowodu (Faza 0, M1, F1, Y1/Y2; wnioski 12, 39, 69).
+- Przewidywanie kierunku BTC z cech wykresu na świecach 5m / 1h / 4h: trafność ~50 % na dużych
+  próbach — dowód braku (Faza 0, M1, Y1, WF1; wnioski 12, 39, 69, 85). 1d (Y2) niezmierzony.
 - Klasyczna analiza techniczna na BTC 4h — 7 rodzin (48–53). Wykonanie i zarządzanie pozycją nie
   tworzą przewagi (42–45).
-- Pozycjonowanie (OI, funding, L/S) jako zapowiedź kierunku — 4 formy bez skutku (O1, F1, TF1, TL1; 66, 73, 75).
+- Pozycjonowanie i dane spoza wykresu jako cechy modelu 60-dniowego — bez skutku, ALE przyrząd nie widzi
+  słabej cechy (AU1, 87): cechy niezmierzone jako takie; TF1/TL1 bez skutku (TL1 na obciętych danych).
 - Carry przekrojowy (niemierzalny), przełączanie carry po znaku, premia rebalansowa, short nowych
   listingów (40, 55, 57, 71). Carry z hedgem działa (COIN-M ~+9 %/rok, 61), ale to nie cel
   użytkownika (zwroty rzędu zakładu o kierunek).
@@ -30,6 +31,8 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
   kapitału; hamulec „pół pozycji po −15 %” szkodzi (77, 82). Dziennik na żywo od 2026-09-24.
 
 **Przyrząd — dlaczego ufamy liczbom:**
+- „Nierozstrzygnięty” = za mało lat: przy prawdziwym +10 %/rok test na 5,4 roku wykrywa go w ~25 %
+  przypadków, przy +20 % w ~73 % (AU1, 87). Obliczenia sprawdzone niezależnie (AU1).
 - Kontrola pozytywna K1 (przyrząd widzi znany sygnał) i negatywna NC1 (silniki TS1 / X1 / CP1
   nie wymyślają zysku z szumu o grubych ogonach) (79).
 - Werdykt ma dwa warunki: zwrot netto t_neff > 1,96 i — przy regułach z trafnością — dolny
@@ -132,6 +135,7 @@ podsumowanie pod tabelą.
 | **RU2** | 2026-09-24 | [ru2-korekta-pozostalych](2026-09-24_ru2-korekta-pozostalych/README.md) | Korekta danych dla TR1, X2, LQ1, TF1, R1 (pełne uniwersum, reguły zamrożone); pre-rejestracja `1d00e7a` | **0 — korekta danych** | Wszystkie odporne, werdykty bez zmian: **TR1 +13,0 %/rok t 1,63; X2 +23,1 % t 1,60; koszt likwidacji 3× −2,4 %/rok; TF1 −1,3 pkt; R1 −10,6 %/rok.** TL1 nieprzeliczony (OI). Walidacja: **READY (Caveats)** |
 | **TX1** | 2026-09-24 | [tx1-trend-inne-rynki](2026-09-24_tx1-trend-inne-rynki/README.md) | **ADR-09 szczebel 1(b):** reguła TS1 bez zmian na 19 rynkach FRED (13 walut, Brent, Nasdaq, Nikkei, obligacje USA) 1990–2026; pre-rejestracja `6532994`; moc 0,33 SR | **1 — seria TX 1/1, STOP** | **Kryterium POZYTYWNE: +5,1 %/rok [+1,4; +8,7], t 2,73; po 2013 −0,2 %/rok [−6,0; +5,6] (4/14 lat)** — wynik z lat 1990–2012; po 2013 ropa +23 %, akcje +8 %, waluty −3 %. Szczebel 1(b) NIEROZSTRZYGNIĘTY. Walidacja: **READY (Caveats)**, numpy 0,9996 |
 | **WF1** | 2026-09-24 | [wf1-okno-uczenia](2026-09-24_wf1-okno-uczenia/README.md) | Okno uczenia modelu 4h: 60 (kontrola) / 365 / 730 dni, wspólne świece od 2023; decyzja użytkownika; pre-rejestracja `eb56d55` | **2 — seria WF 2/2, STOP** | **Oba NEGATYWNE:** 365 dni p 49,6 %, −0,061 %/tr., t −2,59; 730 dni p 48,5 %, −0,084 %, t −3,53 (kontrola 50,1 %). Dłuższa historia nie pomaga. Walidacja: **READY** |
+| **AU1** | 2026-09-24 | [au1-audyt-metodologii](2026-09-24_au1-audyt-metodologii/README.md) | Audyt wieloagentowy: czy testy mogły ukryć przewagę (koszty, kryteria, dane, silnik, przyrząd Fazy 0), 12 weryfikacji przeciwniczych | **0 — przegląd** | **CZĘŚCIOWO:** obliczenia poprawne; model 60 dni gubi ~85 % słabej 5. cechy (F1/O1/L1/V1/G1 niezmierzone); TR1 od 2021-02 t 1,99 (po fakcie); „nierozstrzygnięty” = za mało lat (moc ~25 % przy +10 %/rok). Naprawiony `max(1, N_eff)`. Walidacja: **Caveats** |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -465,7 +469,7 @@ podsumowanie pod tabelą.
    ⇒ 18 monet ≈ 2 niezalezne. Czwarty wariant bledu z wnioskow 19/26/38 — **liczba instrumentow
    to nie liczba niezaleznych obserwacji.** Jedyna droga do mierzalnosci tego mechanizmu to usuniecie
    ryzyka cenowego (zabezpieczenie spot: cash-and-carry) — inny produkt, decyzja bramkowa.
-41. **EARLY STOPPING DZIALA — A MODEL NIE MA CZEGO SIE NAUCZYC (T4).** W konfiguracji kanonicznej
+41. **EARLY STOPPING DZIALA — A MODEL NIE MA CZEGO SIE NAUCZYC (T4).** W konfiguracji kanonicznej **[korekta AU1: wniosek 87]**
    (4h, okno 60 dni, `balanced`) ES chroni przed przeuczeniem w 86/86 oknach, a `MIN_VALIDATION_ROWS`
    jest bezczynny (walidacja ~70 wierszy) — ryzyko z Z17b tu nie wystepuje. Ale na danych, ktorych wybor
    nie widzial, nawet idealnie dobrana liczba drzew poprawia strate tylko o 0,7% wobec zgadywania po rowno,
@@ -676,7 +680,7 @@ podsumowanie pod tabelą.
     i kosztem 0,08 %. Wzorzec dopięcia snapshotu z wnętrza świecy (trzy testy lookaheadu)
     gotowy dla DVOL/on-chain/F&G. Seria O 1/1 STOP; kolejne kolumny archiwum = decyzja
     użytkownika (jedna na rundę).
-67. **PIĘĆ ŹRÓDEŁ SPOZA WYKRESU JAKO CECHY MODELU 4H — ŻADNE NIE PRZEKRACZA PROGU, DWA LEKKO
+67. **PIĘĆ ŹRÓDEŁ SPOZA WYKRESU JAKO CECHY MODELU 4H — ŻADNE NIE PRZEKRACZA PROGU, DWA LEKKO **[korekta AU1: wniosek 87]**
     PORUSZAJĄ MODEL (F1, O1, L1, V1, G1):** ten sam przyrząd (kontrola 4 cechy REVERSION vs
     kontrola + 1 cecha, parowo, próg p* ≈ 53,1–53,9 %):
 
@@ -727,7 +731,7 @@ podsumowanie pod tabelą.
     na każdym; dalsze badanie horyzontu dziennego wymaga INNEGO zbioru informacyjnego lub
     INNEJ formuły (przekrojowej), nie tego modelu. Odwrócenie znaku na 1h (~51,7 % ex ante,
     pod progiem 54 %) zapisane jako hipoteza post hoc — nie wariant.
-70. **TREND TYGODNIOWY NA KOSZYKU TO NAJSILNIEJSZY ŚLAD PROJEKTU — I NADAL NIE DOWÓD (TS1,
+70. **TREND TYGODNIOWY NA KOSZYKU TO NAJSILNIEJSZY ŚLAD PROJEKTU — I NADAL NIE DOWÓD (TS1, **[korekta AU1: wniosek 87]**
     2026-09-24).** Momentum w czasie (znak zwrotu 28 dni per moneta, skalowanie zmiennością,
     7 faz) na top-20: +14,8 %/rok netto [−1,7; +31,3], t_neff 1,76 — kryterium niespełnione;
     ponad wszystkimi 100 portfelami H0 (znaki przesunięte w czasie), bootstrap blokowy CI > 0,
@@ -821,7 +825,7 @@ podsumowanie pod tabelą.
 83. **KOREKTA DANYCH NIE ZMIENIŁA ŻADNEGO WERDYKTU (RU2, 2026-09-24).** TR1 +13,0 %/rok (dodatni 6/6
     lat), X2 +23,1 % (2026 głównie z fundingu), koszt likwidacji 3× −2,4 %/rok, TF1 −1,3 pkt, R1
     −10,6 %/rok — znaki bez zmian. Liczby we wnioskach 57, 64, 68, 70, 73, 74, 76 zastępują RU1/RU2.
-84. **TREND DZIAŁA NA ZWYKŁYCH RYNKACH, ALE ZANIKA PO PUBLIKACJI (TX1, 2026-09-24).** Reguła TS1 bez zmian
+84. **TREND DZIAŁA NA ZWYKŁYCH RYNKACH, ALE ZANIKA PO PUBLIKACJI (TX1, 2026-09-24).** Reguła TS1 bez zmian **[korekta AU1: wniosek 87]**
     na 19 rynkach FRED: 1990–2026 +5,1 %/rok, t 2,73 (POZYTYWNY); po 2013 −0,2 %/rok (4/14 lat) — na
     walutach −3,4 %, na ropie +22,9 %, akcjach +7,6 %. Mechanizm istnieje, ale jest „wyjadany” na dojrzałych
     rynkach. ADR-09 szczebel 1(b) dla trendu krypto: NIEROZSTRZYGNIĘTY.
@@ -831,6 +835,19 @@ podsumowanie pod tabelą.
 86. **CYKL HALVINGOWY: WZÓR POWTARZALNY, ALE TO 3 OBSERWACJE (HC1, 2026-09-24).** 0–18 mies. po halvingu
     BTC rósł w 9/9 faz, 18–24 mies. spadał 3/3, w 24–30 mies. trend TS1 tracił 4/4. Opis, nie dowód;
     możliwy użytek jako zasada ryzyka (mniejsza dźwignia 18–30 mies.) — tylko decyzją użytkownika.
+87. **AUDYT AU1 — CO BYŁO ZA MOCNO POWIEDZIANE (2026-09-24).** (a) Cechy spoza wykresu (funding, OI,
+    DVOL, podaż on-chain, F&G — F1, O1, L1, V1, G1, też M1, A1b, A2.5) dokładane jako 5. cecha do modelu
+    60-dniowego NIE zostały zmierzone: ten przyrząd przenosi ~15–17 % przewagi słabej cechy (wyrocznia
+    +0,20 %/tr. → 51 % trafności); poprawnie „model z cechą nie zarabia, cecha niezmierzona” (koryguje 67;
+    wniosek 85 dotyczy tylko cech z wykresu; 41 nie jest niezależnym potwierdzeniem). (b) Y2 (1d) —
+    niezmierzony, nie dowód braku. (c) TL1 liczony na obciętym uniwersum — nie „czwarty dowód”. (d) TS1:
+    „bootstrap powyżej zera” (70) nieaktualne po RU1 — przedział ok. −3…+26 %/rok. (e) TX1 (84): po 2013
+    „wyraźnie słabnie” (różnica przed/po +8,4 pkt, z 2,17), zera nie da się ani potwierdzić, ani wykluczyć;
+    z kosztem finansowania obligacji +4,3–4,5 %/rok, t 2,34–2,40. (f) M1: realny zapas próby ~1,3–1,4×, nie
+    1,9×. (g) CP1P = brak informacji, nie informacja przeciw. (h) TR1 od 2021-02 (start z obciętych danych
+    był błędny): +15,5 %/rok, t 1,99 — oglądane po fakcie, poniżej progu rodzinnego ~2,9. (i) X1: bez dnia
+    MYX t 1,83, bez 5 najlepszych 1,30; funding +49 pkt z +226. „Nierozstrzygnięty” w strategiach
+    tygodniowych = za mało lat: moc przy +10 %/rok 25 % (z 1,96).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
