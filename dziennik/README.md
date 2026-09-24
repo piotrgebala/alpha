@@ -83,18 +83,20 @@ pliki dziennika trafiają do gita (szczegóły w „Codziennie”). Reguły hand
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
 Opis commita zawiera nazwę maszyny („Dziennik: przebieg RRRR-MM-DD (host)”), więc `git log --grep='^Dziennik:'`
-pokazuje, gdzie dziennik faktycznie liczy. **Nigdy w dwóch miejscach naraz** (te same dni dopisywane
-dwa razy, konflikt w `przebiegi.log`). Kolejność przejścia:
-1. Serwer (bez crona): `git clone https://github.com/piotrgebala/alpha.git ~/alpha-dziennik`,
-   `cd ~/alpha-dziennik && bash tools/setup_serwer.sh` (bez paczki danych — dziennik pobiera własne),
-   logowanie do GitHuba z prawem zapisu (`gh auth login` albo klucz SSH), test: `git push --dry-run origin master`.
-2. Komputer: zadanie „CLAS5 dziennik” wyłączone (`schtasks /change /tn "CLAS5 dziennik" /disable`) —
-   dopiero po kroku 1, tak by nie przepadł żaden dzień.
-3. Serwer: próbny przebieg `bash ~/alpha-dziennik/dziennik/uruchom.sh` (~12 min); w
-   `dziennik/ostatni_wydruk.txt` ma być „kod 0” i „zapis do gita: wypchnięte” albo „brak zmian”.
-4. Serwer: `crontab -e` → `30 2 * * * bash $HOME/alpha-dziennik/dziennik/uruchom.sh`.
-5. Kontrola następnego dnia: `git log -1 --format='%cs %s' --grep='^Dziennik:'` — nazwa serwera w nawiasie.
-Powrót na komputer: odwrotnie (usunąć wpis crona, `schtasks /change /tn "CLAS5 dziennik" /enable`).
+pokazuje, gdzie dziennik faktycznie liczy. **Nigdy w dwóch miejscach naraz.**
+
+**Przekazanie jest automatyczne (decyzja użytkownika: „praca dzieje się już na serwerze”):** komputer liczy
+dalej jako zabezpieczenie, dopóki serwer nic nie zapisał. Przed każdym przebiegiem `uruchom.bat` woła
+`dziennik/przejete.sh`: jeśli w ostatnich 3 dniach na `origin/master` jest zapis dziennika z nazwą INNEJ
+maszyny, komputer wyłącza swoje zadanie (`schtasks /change /disable`) i nie liczy
+(„===== dziennik przejęty przez inną maszynę” w `ostatni_wydruk.txt` klonu dziennika). Testy:
+`tests/test_zapis_dziennika.py`.
+
+Na serwerze (jednorazowo; kopia `~/alpha-dziennik` z `setup_serwer.sh` i dostępem SSH do GitHuba — gotowe
+2026-09-24): `crontab -e` → `30 2 * * * bash $HOME/alpha-dziennik/dziennik/uruchom.sh`. Pierwszej nocy
+mogą policzyć obie maszyny naraz (wygra pierwszy push, drugi zostawi commit lokalnie — dane te same);
+od następnej nocy liczy tylko serwer. Kontrola: `git log -1 --format='%cs %s' --grep='^Dziennik:'` —
+w nawiasie nazwa serwera. Powrót na komputer: usunąć wpis crona i `schtasks /change /tn "CLAS5 dziennik" /enable`.
 
 ## Codziennie
 

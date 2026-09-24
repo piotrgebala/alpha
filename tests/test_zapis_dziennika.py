@@ -145,3 +145,48 @@ def test_origin_moved_clean_copy_rebases_and_pushes(repos):
     log = git(origin, "log", "--format=%s", "master").splitlines()
     assert log[0].startswith("Dziennik: przebieg") and log[1] == "praca z serwera"
     assert (journal / "kod.py").read_text(encoding="utf-8") == "A = 3\n"
+
+
+# ------------------------------------------------------------------ przekazanie na serwer
+PRZEJETE = ROOT / "dziennik" / "przejete.sh"
+
+
+def _journal_commit(clone: Path, msg: str, when: str | None = None) -> None:
+    append(clone / "dziennik" / "przebiegi.log", msg + "\n")
+    env = dict(ENV)
+    if when:
+        env["GIT_COMMITTER_DATE"] = env["GIT_AUTHOR_DATE"] = when
+    subprocess.run(
+        ["git", "commit", "-q", "-am", msg], cwd=clone, env=env, check=True, capture_output=True
+    )
+    git(clone, "push", "-q", "origin", "master")
+
+
+def _przejete(clone: Path) -> int:
+    shutil.copy(PRZEJETE, clone / "dziennik" / "przejete.sh")
+    git(clone, "fetch", "-q", "origin")
+    return subprocess.run(
+        [BASH, "dziennik/przejete.sh"], cwd=clone, env=ENV, capture_output=True
+    ).returncode
+
+
+def _host(clone: Path) -> str:
+    return subprocess.run(
+        [BASH, "-c", "hostname"], cwd=clone, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+def test_handover_detects_other_machine(repos):
+    _, journal, other = repos
+    _journal_commit(other, "Dziennik: przebieg 2026-09-25 (dantey1)")
+    assert _przejete(journal) == 0
+
+
+def test_handover_ignores_own_machine_old_format_and_old_commits(repos):
+    _, journal, other = repos
+    _journal_commit(other, f"Dziennik: przebieg 2026-09-25 ({_host(journal)})")
+    _journal_commit(other, "Dziennik: przebieg 2026-09-24")
+    _journal_commit(
+        other, "Dziennik: przebieg 2026-09-01 (dantey1)", when="2026-09-01T02:30:00+0000"
+    )
+    assert _przejete(journal) == 1

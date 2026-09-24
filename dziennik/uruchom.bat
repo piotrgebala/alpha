@@ -12,6 +12,16 @@ set LOG=dziennik\ostatni_wydruk.txt
 if exist %BASH% (
   %BASH% -c "export GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never; git pull -q --rebase --no-autostash origin master || { git rebase --abort 2>/dev/null; echo '===== aktualizacja kodu nieudana - przebieg na dotychczasowym kodzie'; }" >> %LOG% 2>&1
 )
+REM Przekazanie na serwer (2026-09-24): jesli inna maszyna zapisala dziennik w ostatnich 3 dniach,
+REM komputer wylacza swoje zadanie i nie liczy - dziennik nigdy w dwoch miejscach naraz.
+if exist %BASH% (
+  %BASH% dziennik/przejete.sh
+  if not errorlevel 1 (
+    echo ===== dziennik przejety przez inna maszyne - wylaczam zadanie na komputerze >> %LOG%
+    schtasks /change /tn "CLAS5 dziennik" /disable >> %LOG% 2>&1
+    exit /b 0
+  )
+)
 set N=0
 :proba
 set /a N+=1
