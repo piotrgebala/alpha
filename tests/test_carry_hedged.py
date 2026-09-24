@@ -128,3 +128,15 @@ def test_pnl_is_additive_in_state_and_costs_count_transitions(seed: int, n: int)
     final_close = int(state.iloc[-1] == 1.0)
     assert out["cost"].sum() == pytest.approx(COSTS.switch_cost * (transitions + final_close))
     assert (out.loc[out["state"] == 0.0, "funding_received"] == 0.0).all()
+
+
+def test_summarize_pnl_neff_floor_is_one(monkeypatch):
+    """Audyt AU1: N_eff z autokorelacji może wyjść < 1 (lub 0) — wtedy t_neff ma być skończone."""
+    import pandas as pd
+
+    from backtest import carry_hedged as ch
+
+    monkeypatch.setattr(ch, "effective_sample_size", lambda x: {"n_eff": 0.0})
+    w = ch.summarize_pnl(pd.Series([0.01, 0.02, -0.01, 0.03]))
+    assert w["n_eff"] == 1.0
+    assert np.isfinite(w["t_neff"])
