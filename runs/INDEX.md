@@ -20,14 +20,14 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 **Kandydaci — ślady, nie dowody (każdy wybrany spośród ~30 odczytów na tej samej historii):**
 - Premia Coinbase → BTC na tydzień (CP1): jedyny POZYTYWNY, ~+32 %/rok, t 2,09; poza próbą
   (lip–wrz 2026) bez potwierdzenia (72). Na ETH/SOL niesprawdzalna — ten sam sygnał (CP2, 80).
-- Trend tygodniowy na koszyku top-20 (TS1): ~+15 %/rok [−2; +31], przetrwał dwa sprawdziany poza
-  próbą, nadal nieistotny (70, 74). Momentum przekrojowe top-20 (X1): ~+22 %/rok,
-  nierozstrzygnięte, wrażliwe na dzień rebalansu (64, 68).
+- Trend tygodniowy na koszyku top-20 (TS1): po korekcie danych ~+11 %/rok [−4; +26], nadal
+  nieistotny (70, 74, 82). Momentum przekrojowe top-20 (X1): po korekcie ~+42 %/rok, ale ~⅓ z jednego
+  wystrzału (MYX); bez niego ~+26 %; nierozstrzygnięte, wrażliwe na dzień rebalansu (64, 68, 82).
 
 **Ryzyko i wielkość pozycji (opisowo, na historii):**
 - Dźwignia 3× na altach kosztuje trend ~3,6 pkt/rok w likwidacjach, 2× ~1,6 pkt (76).
-- Trend + premia Coinbase razem: ~+19 %/rok, największy spadek ~19 %, depozyt ~23 % kapitału;
-  hamulec „pół pozycji po −15 %” szkodzi (77).
+- Trend + premia Coinbase razem (po RU1): ~+17 %/rok, największy spadek ~18 %, depozyt ~23 %
+  kapitału; hamulec „pół pozycji po −15 %” szkodzi (77, 82). Dziennik na żywo od 2026-09-24.
 
 **Przyrząd — dlaczego ufamy liczbom:**
 - Kontrola pozytywna K1 (przyrząd widzi znany sygnał) i negatywna NC1 (silniki TS1 / X1 / CP1
@@ -36,6 +36,9 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
   kraniec trafności nad progiem (43); N_eff ≤ n (50); rachunek mocy przed rundą (zasada 18).
 - Większość serii zamknięta regułą STOP: kolejne odczyty na tej samej historii tylko zwiększają
   szansę przypadkowego sukcesu. Rozstrzygnąć może test prospektywny (dziennik na żywo).
+
+**Uwaga danych (RU1):** `data/raw/universe` jest obcięty (287/685) — nowe rundy tylko na `universe_full`;
+X2, R1, TF1, TL1, LQ1, NL1, P2, TR1 czekają na przeliczenie.
 
 **Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1); nowe
 źródła popytu (premia koreańska, emisja stablecoinów, przepływy ETF) — każde z rachunkiem mocy.
@@ -121,6 +124,8 @@ podsumowanie pod tabelą.
 | **SC1** | 2026-09-24 | [sc1-sila-sygnalu](2026-09-24_sc1-sila-sygnalu/README.md) | Wielkość pozycji ∝ sile sygnału (trend, premia Coinbase), ekspozycja wyrównana stałą z sygnałów; kryterium różnica parowana z wersją znakową (m = 2) | **NIEMIERZALNA — nie wystartowała (zasada 18):** half-width różnicy ±13,2 %/rok (trend), ±16,7 %/rok (Coinbase) wobec oczekiwanego efektu kilku %/rok. 0 wariantów |
 | **NC1** | 2026-09-24 | [nc1-kontrola-negatywna](2026-09-24_nc1-kontrola-negatywna/README.md) | **Kontrola NEGATYWNA silników dziennych** (wytyczna SIGMA 2): TS1, X1, reguła znaku CP1 na 40 losowaniach danych bez informacji o przyszłości (t-Student df 3, GARCH, ρ 0,5, 20 monet × 2 000 dni) + kontrola czułości (celowe zajrzenie w przyszły tydzień); pre-rejestracja `433505a` | **0 — POZA licznikami** (kalibracja przyrządu) | **ZALICZONA:** brutto średnie t −0,12 / +0,17 / −0,20, fałszywe alarmy 4/120 = 3,3 % [1,3; 8,3]; netto ≤ brutto; czułość t +13…+30 w 40/40. Ogon X1 (dopisane po przebiegu): 20/400 = 5,00 % przy \|t\| > 1,96 — kalibracja poprawna. Walidacja: **READY** (niezależne przeliczenie X1, korelacja 0,998) |
 | **CP2** | 2026-09-24 | [cp2-premia-coinbase-eth-sol](2026-09-24_cp2-premia-coinbase-eth-sol/README.md) | Replikacja CP1 na ETH i SOL (zasada 9: ta sama reguła, bez retuningu), m = 2, z 2,241; tylko rachunek mocy i profil danych | **0 — NIEMIERZALNA, nie wystartowała** | Half-width ±36,2 (ETH) / ±37,2 %/rok (SOL) > efekt CP1 (+32 %); moc 34–39 % przy efekcie CP1. Sygnał ETH = sygnał BTC w **94,4 %** dni, SOL w **89,3 %** (premia ETH/BTC skorelowana 0,95) — inne monety nie są niezależnym potwierdzeniem. Walidacja: **READY** (zgodność przeliczona niezależnie) |
+| **SH1** | 2026-09-24 | [sh1-sonda-hipotez](2026-09-24_sh1-sonda-hipotez/README.md) | Sonda 15 nowych hipotez (popyt spoza Binance, makro, kalendarz, on-chain/uwaga), 10 zweryfikowanych przeciwniczo z pobraniem danych | **0 — POZA licznikami** | **0 kandydatów: 9 NIEMIERZALNYCH, 1 słaby mechanizm** (niepewność 2–5× większa od realistycznego efektu). Znalezisko: uniwersum obcięte → RU1. Walidacja: **Caveats** |
+| **RU1** | 2026-09-24 | [ru1-pelne-uniwersum](2026-09-24_ru1-pelne-uniwersum/README.md) | **Korekta danych:** `data/raw/universe` miał 287 z 685 kontraktów (A–G + 12); pełne `universe_full`, reguły TS1/X1/SZ1 zamrożone co do bajtu; pre-rejestracja `d2316cc` | **0 — korekta danych** | Skład top-20 inny na 5,1/20 miejsc. **TS1 +11,1 %/rok [−4,2; +26,3] t 1,43 (było +14,8); X1 +41,7 %/rok t_neff 1,86 (było +22), z tego ~83 pkt z jednego zdarzenia (MYX), bez niego +26,3 %; SZ1 R1 +17,1 % / obs. 18,4 %.** Oba ślady odporne, oba NIEROZSTRZYGNIĘTE. Walidacja: **READY (Caveats)** — dziennik vs pełny backtest kor. 0,9990 |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -155,7 +160,7 @@ podsumowanie pod tabelą.
 - **Analiza produktu carry (D1, 2026-09-23) — POZA licznikami: 0 wariantów reguł.** Siatka depozytu = zakres inżynierski (raportowany w całości); COIN-M i basis kwartalny = ta sama reguła „zawsze w pozycji" na innym instrumencie (generalizacja C1a, jak zasada 9), nie warianty serii C (STOP dla reguł bez zmian).
 - **Sonda źródeł II + podłączenie (P3, 2026-09-23) — POZA licznikami: 0 wariantów.** Pobranie i profil 13 zbiorów, zero korelacji ze zwrotem. Każda hipoteza na nowych danych (O1 pozycjonowanie, VRP z DVOL, on-chain, F&G, premia Coinbase, basis/COIN-M) = NOWA SERIA z własnym licznikiem.
 - **Sonda wykonalnosci carry przekrojowego (P2) — POZA licznikami: 0 wariantow.** Liczy tylko mechanizm (funding − koszt) i rozrzut do rachunku mocy; srednia zwrotu z cen i P&L NIE policzone. Werdykt NIEMIERZALNA ⇒ hipoteza C (carry przekrojowy na perpetualach) NIE dostaje licznika.
-- **Kalibracja przyrzadu (Z9, Z19, K1, K2, K3, T4, NC1) — POZA licznikami hipotez: 0 wariantow.** Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
+- **Kalibracja przyrzadu (Z9, Z19, K1, K2, K3, T4, NC1) — POZA licznikami hipotez: 0 wariantow.** Korekta danych RU1 (2026-09-24) i sonda SH1 — również 0 wariantów. Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
 - **Model kosztow / wykonanie — POZA licznikami hipotez: 0 wariantow.** C2.12 policzono jako **1 wariant**, bo raportowal werdykt klasyfikacyjny na tych samych danych. H3 **nie** — pre-rejestracja (regula D5) zakazala raportowania trafnosci, CI, z_stat, marginesu i klasyfikacji jako wyniku; liczby te sa w `raw_output.txt` z jawna adnotacja, ze nie uczestnicza w decyzji. Uzasadnienie mechaniczne: koszt moze ruszyc trafnosc WYLACZNIE przez selekcje (inny moment kill-switcha), czyli bylby to szum selekcyjny.
 - **NOWA SERIA W — wykonanie po konkretnej cenie (od W1, 2026-09-23): 3/3 ZUŻYTE — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Licznik od zera (decyzja użytkownika: zasada obowiązująca też na żywo). Trzy reguły wejścia z werdyktem na tych samych danych = 3 warianty (precedens C2.12). Kontrola w trybie `label` za **0** (odtworzyła ramię A z M1/F1 co do sztuki), część kalibracyjna 5m vs 4h i wrażliwość na czas ważności k = 2, 3 za **0** (bez werdyktów, reguła H3/D5). Wynik: W1a NEGATYWNY, W1b NIEROZSTRZYGNIĘTY wg kryterium trafności przy istotnie ujemnym zwrocie netto (t = −3,90), W1c NEGATYWNY. Żadnej kolejnej reguły wejścia, cofnięcia ani czasu ważności.
 - **NOWA BAZA DANYCH od N1 (2026-09-23): 2021-01-01 → 2026-06-30 (CLAUDE.md zasada 20).** Wszystkie liczniki poniżej i wyżej dotyczą baz WCZEŚNIEJSZYCH; wyniki na nowej bazie (od N1) nie porównują się 1:1 z żadną wcześniejszą rundą. Kontrola N1 na nowej bazie: p 49,58 % [48,39; 50,77], zwrot netto −0,107 % — liczby odniesienia dla przyszłych rund (0 wariantów).
@@ -793,6 +798,17 @@ podsumowanie pod tabelą.
     czyli moc 34–39 % nawet przy efekcie jak w CP1. Replikacja „wszerz” jest tu pozorna; CP1
     rozstrzygnie tylko czas (dziennik prospektywny BTC). Ogólniej: przed replikacją na innym
     instrumencie zmierz zgodność SYGNAŁÓW — wysoka zgodność = brak nowej informacji.
+81. **NA 5,5 ROKU DANYCH DZIENNYCH NOWE ZAKŁADY KIERUNKOWE SĄ ZWYKLE NIEMIERZALNE (SH1, 2026-09-24).**
+    10 hipotez spoza OHLCV (Korea, stablecoiny, ETF, FOMC/CPI, odblokowania, Wikipedia, adresy,
+    funding, listingi): niepewność 2–5× większa niż realistyczny efekt. Wykrywalne są tylko efekty
+    ≥ 20–25 %/rok na koszyku albo kilku % na zdarzenie przy setkach zdarzeń. Filtr wstępny: efekt
+    z badań PO publikacji ≥ 1,4 × niepewność — przed kosztowną sondą.
+82. **UNIWERSUM BYŁO OBCIĘTE W POŁOWIE ALFABETU — OBA ŚLADY PRZETRWAŁY KOREKTĘ (RU1, 2026-09-24).**
+    `data/raw/universe` miał 287 z 685 kontraktów (A–G + 12 z H–Z); koszyk top-20 był inny na
+    ~5 z 20 miejsc (brak MATIC, SUI, WLD, OP…). Na pełnych danych: TS1 +11,1 %/rok (było +14,8), X1
+    +41,7 % (było +22; ~83 pkt z jednego wystrzału MYX, bez niego +26 %), SZ1 R1 +17 % / spadek 18 %.
+    Oba nadal NIEROZSTRZYGNIĘTE. Lekcja: przy każdym nowym uniwersum porównać listę plików z listą
+    źródła — błąd przeszedł przez ~10 rund, NC1 go nie łapie (dane syntetyczne).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

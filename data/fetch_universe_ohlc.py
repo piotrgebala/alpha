@@ -52,10 +52,11 @@ def _one(job: tuple[str, str]) -> pd.DataFrame | None:
     return df[["symbol", "open_time", "open", "high", "low", "close"]]
 
 
-def run(out: str = OUT) -> None:
+def run(out: str = OUT, universe_dir: str = "data/raw/universe") -> None:
+    """Świece OHLC członków top-20; `universe_dir` = skąd skład koszyka (RU1: `universe_full`)."""
     from backtest.rebalance_premium import load_universe, monthly_members
 
-    _, volume = load_universe("data/raw/universe")
+    _, volume = load_universe(universe_dir)
     lo, end = pd.Timestamp("2021-01-01", tz="UTC"), pd.Timestamp(END, tz="UTC")
     volume = volume[(volume.index >= lo) & (volume.index < end)]
     months = [m for m in pd.date_range(FIRST_MONTH, END, freq="MS", tz="UTC") if m < end]

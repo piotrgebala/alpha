@@ -1,0 +1,39 @@
+========================================================================================================
+TS1 — MOMENTUM W CZASIE (TSMOM) NA KOSZYKU TOP-20, long i short; konfiguracja ZAMROŻONA
+========================================================================================================
+dane   : uniwersum 675 symboli 1d (2021-01-01 → 2026-06-30, zasada 20), 65 koszyków miesięcznych top-20 po obrocie (195 różnych symboli)
+reguła : s = znak zwrotu 28 dni, σ̂ = √(365·EWMA(r², com=60)), w = s·min(3, 0.40/σ̂)/N; formowanie co 7 dni, 7 faz po 1/7 kapitału; koszt 0.070% × obrót; funding realny (long płaci)
+okres  : 2021-02-01 → 2026-07-01; trwałość sygnału p_flip = 0.222; H0 kanoniczne: znaki przesunięte cyklicznie o losową liczbę tygodni
+
+1. KRYTERIUM — dzienny zwrot netto portfela (średnia 7 faz, % kapitału), CI z N_eff
+       TS1 netto |  1969 |   +11.1%/rok [  -4.2;  +26.3] | mediana/dzień +0.013% | sd  18.1%/rok | t +1.43 | N_eff   1969 | t_neff +1.43
+      TS1 brutto |  1969 |   +13.3%/rok [  -2.0;  +28.6] | mediana/dzień +0.018% | sd  18.1%/rok | t +1.71 | N_eff   1969 | t_neff +1.71
+  H0 (100 portfeli ze znakami przesuniętymi w czasie): średnia -1.1%/rok, q2,5 -15.2%, q97,5 +12.0%/rok; TS1 powyżej 93% portfeli H0
+  >>> ODCZYT KRYTERIUM TS1: NIEROZSTRZYGNIĘTY — nie spełnia żadnego z warunków
+
+2. DEKOMPOZYCJA (sumy za próbę, % kapitału) i ekspozycja
+  Σ brutto +71.7% | Σ funding -7.4% | Σ koszt 4.5% | Σ netto +59.8% | obrót 11.9 kapitału/rok
+  nominał brutto: mediana 0.38× (p10 0.27, p90 0.48); nominał netto (long − short): średnia -0.04×, udział dni netto-long 43%
+  rozkład dzienny netto: p05 -1.42%, p50 +0.013%, p95 +1.49%, min -6.21%, max +6.45%; skośność +0.03
+     rok |  dni |  Σ netto | Σ funding |  sd/rok | nominał netto
+    2021 |  327 |   +19.5% |     -4.1% |   16.6% |        +0.02×
+    2022 |  365 |    +8.2% |     -1.4% |   19.5% |        -0.12×
+    2023 |  365 |   +12.4% |     +0.4% |   17.8% |        +0.00×
+    2024 |  366 |    +2.6% |     -1.9% |   17.3% |        +0.02×
+    2025 |  365 |   +16.6% |     -0.7% |   20.1% |        -0.08×
+    2026 |  181 |    +0.6% |     +0.3% |   15.2% |        -0.06×
+  7 faz osobno (%/rok): +10.2, +7.4, +11.8, +12.1, +11.9, +11.0, +14.8 — rozrzut 7.4 pp
+
+3. OPISOWO (0 wariantów) — zawsze long z tymi samymi wagami, różnica parowana, sam BTC
+     zawsze long |  1969 |    +0.8%/rok [ -22.3;  +24.0] | mediana/dzień +0.047% | sd  27.4%/rok | t +0.07 | N_eff   1969 | t_neff +0.07
+      TS1 − long |  1969 |   +10.3%/rok [ -19.8;  +40.4] | mediana/dzień +0.000% | sd  35.7%/rok | t +0.67 | N_eff   1969 | t_neff +0.67
+  korelacja TS1 z zawsze-long: -0.19
+  sam BTC (opis) |  1969 |   +21.4%/rok [  -7.7;  +50.5] | mediana/dzień -0.010% | sd  34.5%/rok | t +1.44 | N_eff   1969 | t_neff +1.44
+
+4. PRZEŁOŻENIE NA DŹWIGNIĘ (mnożnik k wag reguły; bez likwidacji, z kapitalizacją)
+                    k = 1 (reguła): CAGR +9.9%/rok, max obsunięcie 19.4%
+     k = 7.88 (brutto 3× kapitału): CAGR -14.6%/rok, max obsunięcie 94.3%
+                   k Kelly = +3.40: CAGR +20.7%/rok, max obsunięcie 55.3%
+========================================================================================================
+czas: 72s
+  OPISOWO od 2022 (TS1 netto): 1642 dni, +9.0%/rok [-8.0; +25.9], t_neff +1.03

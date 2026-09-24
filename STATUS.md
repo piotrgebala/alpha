@@ -112,7 +112,10 @@
 > CP2 (2026-09-24): premia Coinbase na ETH/SOL — **NIEMIERZALNA, nie wystartowała**: sygnał = BTC
 > w 94 % / 89 % dni, rozdzielczość ±36–37 %/rok. CP1 rozstrzygnie tylko dziennik na żywo. Wniosek 80.**
 > DZIENNIK NA ŻYWO (2026-09-24, decyzja użytkownika: 2–3 miesiące): trend 2× + premia Coinbase 3×, R1; wynik od
-> 2026-09-24 (poprawka 1); `py -m backtest.live_journal` codziennie; odczyt mechaniki ~2026-12-25. `dziennik/README.md`.**
+> 2026-09-24 (poprawka 1; progi 18,4 %/27,6 % — poprawka 2 po RU1); `py -m backtest.live_journal` codziennie; odczyt mechaniki ~2026-12-25. `dziennik/README.md`.**
+> SH1 + RU1 (2026-09-24): sonda 10 hipotez — **0 mierzalnych** (wniosek 81); **uniwersum było obcięte
+> (287/685)** — po korekcie TS1 +11 %/rok, X1 +42 % (1/3 z MYX), SZ1 R1 +17 %/18 %; oba ślady odporne,
+> nierozstrzygnięte (wniosek 82). BACKLOG: przeliczyć X2, R1, TF1, TL1, LQ1, NL1, P2, TR1 na `universe_full`.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
