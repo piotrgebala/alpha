@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **863/863** (2026-09-24).
+Stan testów: **865/865** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -358,7 +358,9 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **SC1 — pozycja według siły sygnału: nie da się zmierzyć** | 2026-09-24 | Rachunek mocy przed wynikiem: szum ±13–17 %/rok przy oczekiwanym efekcie kilku %/rok — test nie wystartował (zasada 18). Zostaje prosta reguła znaku. | [sc1-sila-sygnalu](runs/2026-09-24_sc1-sila-sygnalu/README.md) |
 | **NC1 — kontrola negatywna: narzędzia nie oszukują** | 2026-09-24 | Na sztucznych cenach bez żadnej przewidywalności trend, momentum i reguła premii Coinbase dały zero; ten sam silnik z celowym „podglądaniem przyszłości” od razu pokazał ogromny zysk. Dodatnie wyniki nie są błędem kodu (co nie czyni ich dowodem). | [nc1-kontrola-negatywna](runs/2026-09-24_nc1-kontrola-negatywna/README.md) |
 | **CP2 — premia Coinbase na ETH/SOL: nie da się sprawdzić** | 2026-09-24 | Sygnał na ETH i SOL jest prawie zawsze taki sam jak na BTC (94 % / 89 % dni), a test na jednej monecie jest za mało czuły. Inne monety nie potwierdzą premii Coinbase — rozstrzygnie tylko obserwacja na żywo. | [cp2-premia-coinbase-eth-sol](runs/2026-09-24_cp2-premia-coinbase-eth-sol/README.md) |
-| **Start dziennika na żywo (papierowo)** | 2026-09-24 | Trend tygodniowy (2×) + premia Coinbase (3×) wg reguły budżetu ryzyka z SZ1; codziennie pozycje zapisywane przed wynikiem, wynik od 2026-09-24, próg ostrzeżenia 17,7 % i STOP 26,5 % spadku. Po ~3 miesiącach odczyt mechaniki (nie przewagi). | [dziennik](dziennik/README.md) |
+| **Start dziennika na żywo (papierowo)** | 2026-09-24 | Trend tygodniowy (2×) + premia Coinbase (3×) wg reguły budżetu ryzyka z SZ1; codziennie pozycje zapisywane przed wynikiem, wynik od 2026-09-24, próg ostrzeżenia 18,4 % i STOP 27,6 % spadku (po RU1). Po ~3 miesiącach odczyt mechaniki (nie przewagi). | [dziennik](dziennik/README.md) |
+| **SH1 — sonda 15 hipotez: żadna nie do zmierzenia** | 2026-09-24 | 10 pomysłów (Korea, stablecoiny, ETF, stopy, odblokowania, Wikipedia…) sprawdzonych przez „adwokata diabła”: na 5 latach danych szum jest 2–5× większy niż spodziewany efekt. | [sh1-sonda-hipotez](runs/2026-09-24_sh1-sonda-hipotez/README.md) |
+| **RU1 — naprawa dziury w danych** | 2026-09-24 | Koszyk „20 największych monet” był liczony z 287 z 685 kontraktów. Po naprawie: trend ~+11 %/rok (było 15), momentum ~+42 % (w tym jeden wystrzał MYX), portfel trend+Coinbase ~+17 %/rok przy spadku 18 %. Nadal nic istotnego. | [ru1-pelne-uniwersum](runs/2026-09-24_ru1-pelne-uniwersum/README.md) |
 
 ## Hipoteza w skrócie
 

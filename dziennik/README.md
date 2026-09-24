@@ -38,6 +38,13 @@ dnia; sygnał nie zależy od cen z 24.09. Zastrzeżenie tylko dla pierwszego dni
 zamknięcia 23.09 (00:00 UTC), a realne wejście byłoby możliwe dopiero ok. 09:46 UTC — w odczycie
 dzień 24.09 pokazywany osobno.
 
+## Poprawka 2 (2026-09-24, ok. 11:40 UTC — przed pierwszym wynikiem)
+
+Runda RU1 wykryła, że backtest SZ1 liczono na obciętym uniwersum (287 z 685 kontraktów). Dziennik
+od początku ma pełne dane, więc **reguły się nie zmieniają**. Progi liczone tą samą, zapisaną z góry
+regułą (ostrzeżenie = największe obsunięcie R1 w historii, STOP = 1,5 × to) z poprawionego backtestu:
+**ostrzeżenie 18,4 % (było 17,7 %), STOP 27,6 % (było 26,5 %)**.
+
 ## Codziennie
 
 ```
@@ -60,8 +67,8 @@ składowej oraz zlecenia fazy formowanej dziś (kierunek i nominał jako % kapit
 
 ## Progi (zapisane z góry)
 
-- **OSTRZEŻENIE:** obsunięcie ≥ **17,7 %** (największe obsunięcie R1 w historii 2021–2026, SZ1).
-- **STOP:** obsunięcie ≥ **26,5 %** (1,5 × powyższe) — dziennik się nie wyłącza sam; decyzja
+- **OSTRZEŻENIE:** obsunięcie ≥ **18,4 %** (największe obsunięcie R1 w historii 2021–2026, SZ1 po RU1).
+- **STOP:** obsunięcie ≥ **27,6 %** (1,5 × powyższe) — dziennik się nie wyłącza sam; decyzja
   o przerwaniu należy do użytkownika, a sygnał STOP trafia do raportu.
 
 ## Odczyt po ~3 miesiącach (ok. 2026-12-25) — kryteria mechaniki
@@ -77,8 +84,9 @@ składowej oraz zlecenia fazy formowanej dziś (kierunek i nominał jako % kapit
 
 - **Zgodność z backtestem** na wspólnym okresie 2025-10-15 → 2026-06-29 (258 dni), dane świeże vs
   zamrożone cache rund: premia Coinbase — korelacja dzienna **1,0000**, suma +69,6 % vs +69,2 %;
-  trend — korelacja **0,981**, suma +10,5 % vs +12,8 % (różnica = uniwersum na żywo bez monet
-  wycofanych; patrz niżej). Skrypt: sprawdzenie jednorazowe w sesji, liczby tutaj.
+  trend — korelacja **0,981**, suma +10,5 % vs +12,8 %. **Sprostowanie (RU1):** różnica brała się
+  głównie z OBCIĘTEGO uniwersum backtestu, nie z monet wycofanych — wobec pełnego uniwersum
+  korelacja **0,9990**, suma +10,5 % vs +11,8 %. Skrypt: sprawdzenie jednorazowe w sesji, liczby tutaj.
 - **Idempotencja:** drugi przebieg tego samego dnia dopisał 0 wierszy, 0 zmian historii.
 - **Przegląd bezpieczeństwa** (`security-review`): brak podatności z realną drogą ataku; wdrożona
   jedna sugestia — nazwa symbolu z odpowiedzi giełdy musi pasować do `[A-Z0-9]{1,40}USDT`, zanim

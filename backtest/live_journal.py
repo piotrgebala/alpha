@@ -49,8 +49,8 @@ JOURNAL_DIR = Path("dziennik")
 ENGINE_START = pd.Timestamp("2025-09-01", tz="UTC")  # pierwszy miesiąc silnika (rozbieg R1 ≥ 1 rok)
 JOURNAL_START = pd.Timestamp("2026-09-24", tz="UTC")  # pierwszy dzień wyniku (poprawka 1, README)
 LEV_TREND, LEV_CB, MMR = 2.0, 3.0, 0.01
-WARN_DD = 0.177  # największe obsunięcie R1 w historii (SZ1)
-STOP_DD = 0.265  # 1,5 × powyższe — zapisane z góry
+WARN_DD = 0.184  # największe obsunięcie R1 w historii (SZ1 na pełnym uniwersum, RU1)
+STOP_DD = 0.276  # 1,5 × powyższe — reguła zapisana z góry (poprawka 2)
 BTC = "BTCUSDT"
 TOL = 1e-9
 

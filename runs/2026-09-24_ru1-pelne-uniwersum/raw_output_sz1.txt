@@ -1,0 +1,9 @@
+========================================================================================================
+RU1 — SZ1 NA PEŁNYM UNIWERSUM: trend (likwidacja 2×) + premia Coinbase (3×); opisowo
+========================================================================================================
+  okres 2021-05-08 → 2026-06-30 (1880 dni); korelacja +0.29
+  składowa    trend: CAGR   +7.1%, zmienność  18.2%, max obsunięcie  19.9%
+  składowa coinbase: CAGR  +28.2%, zmienność  35.1%, max obsunięcie  34.5%
+  R0: CAGR  +18.9%, zmienność  22.0%, max obsunięcie  19.5%, najgorszy miesiąc -7.2% | od 2022: CAGR +24.2%, obsunięcie 19.5%
+  R1: CAGR  +17.1%, zmienność  21.7%, max obsunięcie  18.4%, najgorszy miesiąc -7.2% | od 2022: CAGR +21.1%, obsunięcie 18.4%
+  R2: CAGR   +9.5%, zmienność  17.5%, max obsunięcie  17.8%, najgorszy miesiąc -7.2% | od 2022: CAGR +12.1%, obsunięcie 17.8%
