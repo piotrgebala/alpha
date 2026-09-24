@@ -2,8 +2,10 @@
 
 ## Projekt
 
-Badania nad strategiami na perpetualach Binance (BTC i koszyk top-20). Cel: udowodnić przewagę
-statystyczną minimalnym, audytowalnym systemem, zanim powstanie cokolwiek większego. Ten plik
+Badania nad strategiami na perpetualach Binance (BTC i koszyk top-20). Cel: minimalny, audytowalny
+system; o realnym kapitale decyduje **drabina dowodów** (`docs/rag/09_drabina_dowodow.md`, decyzja
+użytkownika 2026-09-24) — mechanizm poza naszymi danymi, spójność w wycinkach, dziennik papierowy,
+potem mała kwota; sposób mierzenia (zasady 1–20) bez zmian. Ten plik
 mówi, CO obowiązuje. **DLACZEGO** (uzasadnienia, historia, przykłady z rund) —
 `docs/rag/08_zasady_pelne_brzmienie.md`; numeracja zasad jest tam ta sama.
 Stan prac, decyzje, ryzyka → `STATUS.md`; wyniki rund → `runs/INDEX.md` (na górze „Stan wiedzy —

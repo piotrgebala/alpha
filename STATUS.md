@@ -118,6 +118,9 @@
 > nierozstrzygnięte (wniosek 82).**
 > RU2 (2026-09-24): TR1, X2, LQ1, TF1, R1 na pełnym uniwersum — **werdykty bez zmian** (wniosek 83).
 > BACKLOG: TL1 (wymaga OI nowych członków).**
+> **DECYZJA BRAMKOWA 2026-09-24 (użytkownik, droga B + C): ADR-09 — drabina dowodów** zamiast „dowodu na
+> historii”. Trend: szczebel 1(a) i 2 spełnione, 1(b) = TX1 w toku; premia Coinbase: tylko papierowo;
+> X1: poza dziennikiem. Szczebel 4 (≤ 5 % kapitału) — decyzja użytkownika po odczycie dziennika ~2026-12-25.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
