@@ -35,7 +35,7 @@ przychodzą kompletne, czy nic nie zmienia się wstecz), a nie to, czy strategia
 PYTHONUTF8=1 py -m backtest.live_journal
 ```
 
-Najlepiej zaraz po zamknięciu dnia UTC (01:00–02:00 czasu polskiego); pobranie trwa ~10 min.
+Najlepiej zaraz po zamknięciu dnia UTC (od 02:00 czasu polskiego latem, od 01:00 zimą); pobranie trwa ~10 min.
 Wydruk mówi: mnożniki R1, wynik od startu, obsunięcie i status progów, ekspozycję i depozyt każdej
 składowej oraz zlecenia fazy formowanej dziś (kierunek i nominał jako % kapitału).
 
@@ -63,6 +63,26 @@ składowej oraz zlecenia fazy formowanej dziś (kierunek i nominał jako % kapit
 4. **Zgodność z założeniami SZ1:** depozyt w medianie 15–35 % kapitału, mnożniki w granicach sufitu.
 5. **Wynik (opisowo, bez werdyktu):** zwrot z przedziałem, dopisany do wspólnego rachunku „poza
    próbą” razem z CP1P i TP1. Nie jest testem przewagi.
+
+## Sprawdzian przed startem (2026-09-24)
+
+- **Zgodność z backtestem** na wspólnym okresie 2025-10-15 → 2026-06-29 (258 dni), dane świeże vs
+  zamrożone cache rund: premia Coinbase — korelacja dzienna **1,0000**, suma +69,6 % vs +69,2 %;
+  trend — korelacja **0,981**, suma +10,5 % vs +12,8 % (różnica = uniwersum na żywo bez monet
+  wycofanych; patrz niżej). Skrypt: sprawdzenie jednorazowe w sesji, liczby tutaj.
+- **Idempotencja:** drugi przebieg tego samego dnia dopisał 0 wierszy, 0 zmian historii.
+- **Przegląd bezpieczeństwa** (`security-review`): brak podatności z realną drogą ataku; wdrożona
+  jedna sugestia — nazwa symbolu z odpowiedzi giełdy musi pasować do `[A-Z0-9]{1,40}USDT`, zanim
+  trafi do nazwy pliku (test `test_symbol_names_are_safe_for_file_paths`).
+- **Błąd znaleziony i poprawiony przed startem:** plik `coinbase_BTC-USD_1d.parquet` był wczytywany
+  jak kolejna „moneta” (bez wpływu na pozycje — brak obrotu, poza koszykiem), a świeca Coinbase
+  z bieżącego, niezamkniętego dnia trafiała do danych. Teraz: tylko pliki perpetuali i tylko
+  zamknięte dni (test `test_coinbase_file_is_not_a_symbol`).
+- Pobranie: świece wszystkich ~520 perpetuali, funding tylko dla członków koszyka od 2025-09
+  (~75 monet) + BTC — ~10 min.
+
+- **Przegląd kodu** (`engineering:code-review`): **Approve** — silnik bez kopii, zapis tylko dopisuje,
+  zmiana historii wykrywana; poprawka: dzień `as_of` liczony z ostatniej świecy BTC, nie z dowolnej monety.
 
 ## Znane przybliżenia
 

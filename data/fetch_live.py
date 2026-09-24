@@ -14,6 +14,7 @@ Tylko świece ZAMKNIĘTE (open_time + 1 dzień ≤ teraz). Testy bez sieci: `tes
 
 from __future__ import annotations
 
+import re
 import sys
 import time
 from pathlib import Path
@@ -29,7 +30,10 @@ from data.fetch_universe import (
     fetch_funding_raw,
 )
 
+ENGINE_START = pd.Timestamp("2025-09-01", tz="UTC")  # = backtest.live_journal.ENGINE_START (test)
+
 LIVE_DIR = Path("data/raw/live")
+SYMBOL_RE = re.compile(r"[A-Z0-9]{1,40}USDT")  # nazwa pliku z odpowiedzi giełdy — nic poza [A-Z0-9]
 LIVE_START = (
     "2025-06-01T00:00:00Z"  # rozbieg: składy miesięczne, sygnał 28 dni, σ̂ EWMA, budżet ryzyka
 )
@@ -44,7 +48,7 @@ def active_usdt_perpetuals(
         sym = s.get("symbol", "")
         if s.get("contractType") != "PERPETUAL" or s.get("status") != "TRADING":
             continue
-        if s.get("quoteAsset") != "USDT" or not sym.endswith("USDT"):
+        if s.get("quoteAsset") != "USDT" or not SYMBOL_RE.fullmatch(sym):
             continue
         base = sym[: -len("USDT")]
         if base and base not in stable_bases:
@@ -100,6 +104,32 @@ def fetch_klines_1d(
     return parse_klines_1d(rows, end_ms)
 
 
+def symbol_files(live_dir: Path) -> dict[str, Path]:
+    """Pliki świec perpetuali `<SYMBOL>_1d.parquet` — bez `coinbase_BTC-USD_1d.parquet` i innych."""
+    out = {}
+    for f in sorted(Path(live_dir).glob("*_1d.parquet")):
+        sym = f.name[: -len("_1d.parquet")]
+        if SYMBOL_RE.fullmatch(sym):
+            out[sym] = f
+    return out
+
+
+def funding_symbols(live_dir: Path, now: pd.Timestamp) -> list[str]:
+    """Funding potrzebny silnikowi: członkowie koszyka w każdym miesiącu od `ENGINE_START` + BTC."""
+    from backtest.rebalance_premium import monthly_members
+
+    volume = pd.concat(
+        {
+            s: d.set_index(pd.to_datetime(d["open_time"], utc=True))["quote_volume"]
+            for s, d in ((s, pd.read_parquet(f)) for s, f in symbol_files(live_dir).items())
+            if len(d)
+        },
+        axis=1,
+    ).sort_index()
+    members = monthly_members(volume, list(pd.date_range(ENGINE_START, now, freq="MS")))
+    return sorted({s for syms in members.values() for s in syms} | {"BTCUSDT"})
+
+
 def run(out_dir: Path = LIVE_DIR, start: str = LIVE_START) -> dict:
     import ccxt
 
@@ -116,12 +146,18 @@ def run(out_dir: Path = LIVE_DIR, start: str = LIVE_START) -> dict:
     for i, sym in enumerate(symbols, 1):
         kl = fetch_klines_1d(ex, sym, start_ms, end_ms)
         time.sleep(REQUEST_PACING_S)
+        kl.to_parquet(out_dir / f"{sym}_1d.parquet", index=False)
+        if i % 100 == 0:
+            print(f"[live] świece {i}/{len(symbols)}", flush=True)
+    need = funding_symbols(out_dir, now)
+    print(
+        f"[live] funding dla {len(need)} członków koszyka od {ENGINE_START.date()} + BTC",
+        flush=True,
+    )
+    for sym in need:
         fu = fetch_funding_raw(ex, sym, start_ms, end_ms)
         time.sleep(REQUEST_PACING_S)
-        kl.to_parquet(out_dir / f"{sym}_1d.parquet", index=False)
         fu.to_parquet(out_dir / f"{sym}_funding.parquet", index=False)
-        if i % 50 == 0:
-            print(f"[live] {i}/{len(symbols)}", flush=True)
     fetch_coinbase_daily("BTC-USD", start[:10], out_dir, force=True)
     spot = get_ohlcv("BTC/USDT", "8h", start, now.strftime("%Y-%m-%dT%H:%M:%SZ"), "binance")
     spot = spot[spot["timestamp"] + pd.Timedelta(hours=8) <= now]

@@ -211,3 +211,34 @@ def test_active_usdt_perpetuals_filters():
         ]
     }
     assert active_usdt_perpetuals(info) == ["BTCUSDT"]
+
+
+def test_symbol_names_are_safe_for_file_paths():
+    """Przegląd bezpieczeństwa: nazwa symbolu z odpowiedzi giełdy trafia do nazwy pliku."""
+    base = {"contractType": "PERPETUAL", "status": "TRADING", "quoteAsset": "USDT"}
+    info = {
+        "symbols": [
+            {**base, "symbol": s}
+            for s in ("1000PEPEUSDT", "../universe/BTCUSDT", "C:/x/aUSDT", "btcUSDT", "A-BUSDT")
+        ]
+    }
+    assert active_usdt_perpetuals(info) == ["1000PEPEUSDT"]
+
+
+def test_engine_start_is_shared():
+    from data import fetch_live
+
+    assert fetch_live.ENGINE_START == lj.ENGINE_START
+
+
+def test_coinbase_file_is_not_a_symbol(live, tmp_path):
+    """`coinbase_BTC-USD_1d.parquet` leży obok świec perpetuali — nie może stać się „monetą”."""
+    from data.fetch_live import funding_symbols, symbol_files
+
+    assert "coinbase_BTC-USD" not in live["close"].columns
+    src = tmp_path / "live2"
+    src.mkdir()
+    _write_live(src)
+    assert "coinbase_BTC-USD" not in symbol_files(src)
+    need = funding_symbols(src, pd.Timestamp("2026-09-20", tz="UTC"))
+    assert "BTCUSDT" in need and len(need) >= 20

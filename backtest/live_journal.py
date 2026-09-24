@@ -58,13 +58,14 @@ TOL = 1e-9
 # ------------------------------------------------------------------ dane
 def load_live(live_dir: Path = LIVE_DIR) -> dict:
     """Panele dzienne (close, high, low, obrót), funding dzienny i premia Coinbase z `live_dir`."""
+    from data.fetch_live import symbol_files
+
     frames = []
-    for p in sorted(Path(live_dir).glob("*_1d.parquet")):
+    for sym, p in symbol_files(live_dir).items():
         df = pd.read_parquet(p)
         if df.empty:
             continue
-        df = df.assign(symbol=p.name[: -len("_1d.parquet")])
-        frames.append(df)
+        frames.append(df.assign(symbol=sym))
     panel = pd.concat(frames, ignore_index=True)
     panel["open_time"] = pd.to_datetime(panel["open_time"], utc=True)
     piv = {
@@ -77,6 +78,8 @@ def load_live(live_dir: Path = LIVE_DIR) -> dict:
         )
     }
     cb = pd.read_parquet(Path(live_dir) / "coinbase_BTC-USD_1d.parquet")
+    cb_open = pd.to_datetime(cb["open_time"], utc=True)
+    cb = cb[cb_open + pd.Timedelta(days=1) <= pd.Timestamp.now(tz="UTC")]  # tylko zamknięte dni
     spot = pd.read_parquet(Path(live_dir) / "spot_BTC-USDT_8h.parquet")
     piv["premium"] = daily_premium(cb, spot)
     piv["funding"] = daily_funding_panel(live_dir)
@@ -282,7 +285,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     fee = cfg["costs"]["taker_fee_rate"] + cfg["costs"]["slippage_bps"] / 10_000.0
     data = load_live(live_dir)
     last = {
-        "binance": data["close"].index.max(),
+        "binance": data["close"][BTC].last_valid_index(),  # BTC: obie składowe go potrzebują
         "coinbase_premia": data["premium"].index.max(),
     }
     as_of = min(last.values())
@@ -349,7 +352,8 @@ def summarize(pos, k, as_of, eq, dd, status, late, changed, last) -> str:
         agg = p.groupby("symbol")["exposure"].sum().sort_values()
         lines.append(
             f"  {name}: ekspozycja netto {agg.sum():+.2f}× kapitału, brutto {agg.abs().sum():.2f}×, "
-            f"depozyt {100 * p['margin'].sum():.1f} % kapitału"
+            f"depozyt {100 * p['margin'].sum():.1f} % kapitału (fazy osobno, jak SZ1; "
+            f"po skompensowaniu faz {100 * agg.abs().sum() / (LEV_TREND if comp == 'trend' else LEV_CB):.1f} %)"
         )
         today = p[p["today"]]
         if len(today):
