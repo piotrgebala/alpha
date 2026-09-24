@@ -95,6 +95,8 @@
 > TR1/TP1 (2026-09-24): reguła TS1 poza próbą — **na monetach 21–50 +14,1 %/rok (t 1,62, kopia
 > TS1, ale korelacja 0,86); na nowych danych lip–wrz 2026 +0,7 % (brak obalenia)**. Wniosek 74;
 > seria TS zamknięta na historii, dalej dziennik prospektywny.**
+> CP1P (2026-09-24): premia Coinbase na nowych danych lip–wrz 2026 — **+0,1 % przy BTC +33 %**,
+> brak obalenia i brak wsparcia; dziennik CP co kwartał.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny

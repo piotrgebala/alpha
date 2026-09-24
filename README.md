@@ -351,6 +351,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **CP1 — premia Coinbase: pierwszy POZYTYWNY, jeszcze nie dowód** | 2026-09-24 | BTC long/short wg premii Coinbase (7 vs 90 dni): **+32 %/rok [+2; +62]**, t 2,09 — kryterium spełnione, przecieku brak; po korekcie na ~28 testów nieistotny, część zysku to trend. Następny krok: dane od 07.2026. | [cp1-premia-coinbase](runs/2026-09-24_cp1-premia-coinbase/README.md) |
 | **TF1 — trend z filtrem tłoku: filtr nie pomaga** | 2026-09-24 | Wyłączanie pozycji trendu, gdy ich strona płaci skrajny funding: **−1,4 %/rok [−6,6; +3,8]** względem trendu bez filtra — nierozstrzygnięte, punktowo gorzej. | [tf1-trend-filtr-tloku](runs/2026-09-24_tf1-trend-filtr-tloku/README.md) |
 | **TR1 / TP1 — trend tygodniowy poza próbą: przetrwał** | 2026-09-24 | Na innych monetach (miejsca 21–50) **+14 %/rok** — kopia TS1, ale te monety chodzą razem z top-20 (korelacja 0,86); na nowych danych lip–wrz 2026 **+0,7 %** — reguła nie została obalona. | [ts-poza-proba](runs/2026-09-24_ts-poza-proba/README.md) |
+| **CP1P — premia Coinbase na nowych danych: zero** | 2026-09-24 | Ta sama reguła na lip–wrz 2026: **+0,1 %**, gdy BTC urósł o 33 % — reguła nie obalona (za krótko), ale bez wsparcia. | [cp1-poza-proba](runs/2026-09-24_cp1-poza-proba/README.md) |
 
 ## Hipoteza w skrócie
 
