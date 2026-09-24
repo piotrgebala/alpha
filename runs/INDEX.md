@@ -40,6 +40,9 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 **Uwaga danych (RU1):** `data/raw/universe` jest obcięty (287/685) — nowe rundy tylko na `universe_full`;
 RU2 przeliczyła TR1, X2, LQ1, TF1, R1 (werdykty bez zmian, 83); TL1 czeka (dane OI); NL1 i P2 nie dotyczy.
 
+**Kryterium od 2026-09-24 (ADR-09):** o kapitale decyduje drabina dowodów (`docs/rag/09`); ten plik nadal
+księguje każdy odczyt. Trend: szczebel 2 spełniony (post hoc), TX1 = szczebel 1(b).
+
 **Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1); nowe
 źródła popytu (premia koreańska, emisja stablecoinów, przepływy ETF) — każde z rachunkiem mocy.
 

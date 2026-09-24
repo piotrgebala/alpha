@@ -15,6 +15,10 @@ Pełne uzasadnienie tej decyzji i wszystkich pozostałych: [`docs/rag/01_hipotez
 
 ## Status
 
+> **2026-09-24 — zmiana kryterium (ADR-09, decyzja użytkownika):** o kapitale decyduje drabina
+> dowodów ([docs/rag/09](docs/rag/09_drabina_dowodow.md)): mechanizm poza naszymi danymi → spójność
+> w wycinkach → dziennik papierowy ≥ 3 mies. → najwyżej 5 % kapitału → skalowanie. Poniżej historia Fazy 0.
+
 ### 🔴 FAZA 0 ZAMKNIĘTA WYNIKIEM NEGATYWNYM (decyzja użytkownika, 2026-09-22 — [Z10](runs/2026-09-22_z10-zamkniecie-fazy-0/README.md))
 
 Hipoteza, dla której Faza 0 powstała — **regime-gated momentum/mean-reversion na cechach
@@ -362,6 +366,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **SH1 — sonda 15 hipotez: żadna nie do zmierzenia** | 2026-09-24 | 10 pomysłów (Korea, stablecoiny, ETF, stopy, odblokowania, Wikipedia…) sprawdzonych przez „adwokata diabła”: na 5 latach danych szum jest 2–5× większy niż spodziewany efekt. | [sh1-sonda-hipotez](runs/2026-09-24_sh1-sonda-hipotez/README.md) |
 | **RU1 — naprawa dziury w danych** | 2026-09-24 | Koszyk „20 największych monet” był liczony z 287 z 685 kontraktów. Po naprawie: trend ~+11 %/rok (było 15), momentum ~+42 % (w tym jeden wystrzał MYX), portfel trend+Coinbase ~+17 %/rok przy spadku 18 %. Nadal nic istotnego. | [ru1-pelne-uniwersum](runs/2026-09-24_ru1-pelne-uniwersum/README.md) |
 | **RU2 — pozostałe rundy po naprawie danych** | 2026-09-24 | Trend na monetach 21–50 ~+13 %/rok (dodatni w każdym roku), momentum top-50 ~+23 %, dźwignia 3× kosztuje trend ~2,4 %/rok w likwidacjach; żaden werdykt się nie zmienił. | [ru2-korekta-pozostalych](runs/2026-09-24_ru2-korekta-pozostalych/README.md) |
+| **ADR-09 — drabina dowodów zamiast dowodu na historii** | 2026-09-24 | Decyzja użytkownika: przewagi strategii tygodniowych nie da się udowodnić na 5 latach danych, więc o kapitale decydują kolejne szczeble dowodów, zakończone małą kwotą i twardym STOP. | [docs/rag/09](docs/rag/09_drabina_dowodow.md) |
 
 ## Hipoteza w skrócie
 
