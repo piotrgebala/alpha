@@ -67,7 +67,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **877/877** (2026-09-24).
+Stan testów: **884/884** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -372,6 +372,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **HC1 — cykl halvingowy (opis)** | 2026-09-24 | We wszystkich 3 cyklach: 18 miesięcy wzrostów po halvingu, potem spadki; trend traci w fazie dołka (24–30 mies.). Jesteśmy teraz w 29. miesiącu. Opis, nie dowód — kandydat na zasadę ryzyka. | [hc1-cykl-halvingowy](runs/2026-09-24_hc1-cykl-halvingowy/README.md) |
 | **AU1 — audyt: czy testy nie ukryły przewagi** | 2026-09-24 | Obliczenia poprawne; „nie działa” jest pewne dla kierunku BTC z wykresu. Ale dane spoza wykresu sprawdzaliśmy zbyt grubym przyrządem (niezmierzone), a „nierozstrzygnięty” przy trendzie znaczy „za mało lat”. Opisy poprawione. | [au1-audyt-metodologii](runs/2026-09-24_au1-audyt-metodologii/README.md) |
 | **RU3 — poprawna data startu trendu i momentum** | 2026-09-24 | Po naprawie daty trend na monetach 21–50 formalnie przechodzi próg (t 1,99), ale liczbę znaliśmy z góry, a poprawę dały 3 miesiące hossy z 2021 r.; od 2022 r. nierozstrzygnięty. Momentum top-50 bez zmian. | [ru3-data-startu](runs/2026-09-24_ru3-data-startu/README.md) |
+| **X1F — momentum przekrojowe liczone uczciwie** | 2026-09-24 | Reguła X1 dawała +42 % rocznie tylko przy przebudowie w poniedziałek; średnia ze wszystkich dni tygodnia to +9,5 % (nie do odróżnienia od zera). X1 zostaje tylko w dzienniku papierowym; poprawiony błąd dziennika z monetami o chińskich nazwach. | [x1f-siedem-faz](runs/2026-09-24_x1f-siedem-faz/README.md) |
 
 ## Hipoteza w skrócie
 

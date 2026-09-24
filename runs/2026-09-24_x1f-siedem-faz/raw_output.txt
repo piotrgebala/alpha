@@ -1,0 +1,22 @@
+========================================================================================================
+X1F — X1 (top-20, sygnał 28 dni, nogi po 5, trzymanie 7 dni) jako średnia 7 faz; reguła bez zmian
+========================================================================================================
+1. Każda faza osobno (pełny zakres fazy)
+  faza 0 (start Monday)          |  1975 dni |  +41.7%/rok [  -2.2;  +85.6] | mediana/dzień +0.117% | t_neff +1.86
+  faza 1 (start Tuesday)         |  1974 dni |   +4.9%/rok [ -34.6;  +44.5] | mediana/dzień +0.055% | t_neff +0.24
+  faza 2 (start Wednesday)       |  1973 dni |   +0.7%/rok [ -41.5;  +42.9] | mediana/dzień +0.071% | t_neff +0.03
+  faza 3 (start Thursday)        |  1972 dni |   +4.4%/rok [ -35.6;  +44.3] | mediana/dzień +0.097% | t_neff +0.21
+  faza 4 (start Friday)          |  1971 dni |   +2.1%/rok [ -39.1;  +43.2] | mediana/dzień +0.064% | t_neff +0.10
+  faza 5 (start Saturday)        |  1970 dni |   -1.3%/rok [ -40.1;  +37.5] | mediana/dzień +0.060% | t_neff -0.07
+  faza 6 (start Sunday)          |  1969 dni |  +21.6%/rok [ -10.6;  +53.7] | mediana/dzień +0.059% | t_neff +1.32
+
+2. Średnia 7 faz (wspólne okno)
+  X1 średnia 7 faz               |  1969 dni |   +9.5%/rok [ -21.1;  +40.1] | mediana/dzień +0.091% | t_neff +0.61
+    bez dni MYX 7–8.09.2025      |  1967 dni |  +17.6%/rok [ -10.4;  +45.5] | mediana/dzień +0.093% | t_neff +1.23
+    od 2022 (opisowo)            |  1642 dni |   +7.5%/rok [ -26.3;  +41.3] | mediana/dzień +0.076% | t_neff +0.44
+  per rok (Σ): 2021: +17.4%; 2022: -14.5%; 2023: +29.0%; 2024: +9.2%; 2025: +4.2%; 2026: +5.9%
+  lat dodatnich: 5/6
+
+3. Progi dla dziennika: największe obsunięcie 55.0% (2025-04-22 → 2026-03-09)
+  OSTRZEŻENIE od 55.0%, STOP od 82.4% (1,5 ×)
+========================================================================================================

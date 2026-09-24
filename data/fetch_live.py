@@ -33,7 +33,9 @@ from data.fetch_universe import (
 ENGINE_START = pd.Timestamp("2025-09-01", tz="UTC")  # = backtest.live_journal.ENGINE_START (test)
 
 LIVE_DIR = Path("data/raw/live")
-SYMBOL_RE = re.compile(r"[A-Z0-9]{1,40}USDT")  # nazwa pliku z odpowiedzi giełdy — nic poza [A-Z0-9]
+# nazwa pliku z odpowiedzi giełdy: A–Z, 0–9 albo litery spoza ASCII (np. 币安人生USDT — był w top-20
+# w 2026-05, X1F); żadnych kropek, ukośników, dwukropków, spacji ani małych liter ASCII
+SYMBOL_RE = re.compile(r"(?:[A-Z0-9]|(?![\x00-\x7f])\w){1,40}USDT")
 LIVE_START = (
     "2025-06-01T00:00:00Z"  # rozbieg: składy miesięczne, sygnał 28 dni, σ̂ EWMA, budżet ryzyka
 )

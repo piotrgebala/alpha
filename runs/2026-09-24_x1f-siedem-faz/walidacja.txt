@@ -1,0 +1,36 @@
+== X1F walidacja (bramka 16a), 2026-09-24
+
+-- 1. Faza poniedzialkowa = X1/RU1; rebalance_dates vs formation_dates:
+faza 0: rebalance_dates vs formation_dates max|roznica| 0.0
+faza 0 (Mon), pelny zakres: n 1975, +41.7%/rok, t_neff +1.86
+
+-- 2. Niezalezna implementacja brutto fazy 3 (petla na slownikach, bez long_short_returns):
+faza 3: dni 1972, max|roznica| 1.11e-16, suma niezal. +13.70% vs silnik +13.70%
+
+-- 3. MYX 7-8.09.2025: strona nogi w kazdej fazie
+MYX close 09-05..09-09: [1.156, 1.308, 3.488, 13.889, 14.478]
+0 2025-09-01 Mon LONG
+1 2025-09-02 Tue SHORT
+2 2025-09-03 Wed SHORT
+3 2025-09-04 Thu SHORT
+4 2025-09-05 Fri SHORT
+5 2025-09-06 Sat SHORT
+6 2025-08-31 Sun -
+
+-- 4. Dziennik vs backtest X1 (2025-10-15 -> 2026-06-29) PRZED poprawka 4:
+X1 dziennik vs backtest X1F, 2025-10-15 -> 2026-06-29, 258 dni: korelacja 0.9875, suma -1.2% vs +8.7%
+dni z |roznica| > 0,1 pkt: 64; max 2.61 pkt (2026-06-02)
+as_of 2026-09-23 fazy: [np.int64(0), np.int64(1), np.int64(2), np.int64(3), np.int64(4), np.int64(5), np.int64(6)] wierszy 70
+
+-- 5. Rozbicie roznicy: sklad top-20 (dziennik vs backtest) i ceny:
+2026-02-01 tylko live: LINKUSDT, tylko backtest: IPUSDT (nieaktywny dzis)
+2026-05-01 tylko live: RIVERUSDT, tylko backtest: 币安人生USDT (odrzucany przez filtr nazw)
+2026-06-01 tylko live: FILUSDT, tylko backtest: TONUSDT (nieaktywny dzis)
+ceny wspolnych symboli: 0 rozjazdow > 1e-9
+ceny pelnego uniwersum + sklad backtestu: suma +8.7%; + sklad dziennika: -1.2%
+
+-- 6. PO poprawce 4 (filtr nazw) i swiezym pobraniu:
+k trend: zapis [0.57085276] -> teraz 0.569987
+k coinbase: zapis [0.34262673] -> teraz 0.342615
+wierszy wspolnych 147 znak rozny: 0 waga max|roznica| 9.974659986866641e-17
+X1 dziennik (po poprawce 4) vs backtest, 258 dni: korelacja 0.9986, suma +5.3% vs +8.7%
