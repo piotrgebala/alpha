@@ -1,0 +1,35 @@
+==============================================================================================================
+SW ETAP 1 — 8 reguł bez modelu; kryterium z* = 2.773 (Bonferroni m = 9); konfiguracja ZAMROŻONA
+==============================================================================================================
+  potok kontrolny: 69 aktywnych foldów; trening 4 s
+                   ramię |     n |  r̄ netto |                CI 95% |  mediana | t_neff |  N_eff |       p |            CI*(p) |     p*
+           kontrola (N1) |  6789 |  -0.1069% | [ -0.1487;  -0.0650] | -0.1036% |  -4.26 |   4919 |  49.58% | [ 47.90;  51.26] | 53.64%  regresja: ZGODNA
+       funding_rate (-1) |  8460 |  -0.0577% | [ -0.0910;  -0.0244] | -0.0692% |  -2.91 |   6231 |  50.85% | [ 49.34;  52.36] | 53.30%
+      oi_change_24h (-1) | 10220 |  -0.0420% | [ -0.0734;  -0.0106] | -0.0619% |  -1.82 |   4911 |  51.23% | [ 49.86;  52.60] | 52.95%
+   toptrader_ls_log (+1) |  7255 |  -0.1081% | [ -0.1444;  -0.0718] | -0.1147% |  -4.24 |   3823 |  49.15% | [ 47.52;  50.78] | 53.65%
+      global_ls_log (-1) | 10277 |  -0.0277% | [ -0.0591;  +0.0038] | -0.0780% |  -1.22 |   5145 |  50.44% | [ 49.08;  51.81] | 51.57%
+  taker_imbalance_24h (+1) |  9432 |  -0.0568% | [ -0.0889;  -0.0247] | -0.0773% |  -2.59 |   5243 |  50.33% | [ 48.90;  51.76] | 52.69%
+            vrp_30d (+1) |  9692 |  -0.0692% | [ -0.1016;  -0.0367] | -0.0812% |  -3.42 |   6469 |  50.21% | [ 48.80;  51.61] | 53.02%
+  ex_supply_change_7d (-1) | 10139 |  -0.0618% | [ -0.0938;  -0.0299] | -0.0832% |  -2.75 |   5325 |  50.28% | [ 48.90;  51.66] | 52.77%
+          fng_level (-1) |  9772 |  -0.1095% | [ -0.1412;  -0.0779] | -0.0836% |  -3.86 |   3171 |  50.26% | [ 48.85;  51.66] | 54.78%
+
+  lejek reguł (świece w oknach OOS / bez kierunku / bez etykiety / bramka kosztowa / sygnały):
+            funding_rate: 11592 / 2596 / 0 / 0 / 8996 (long 5638, short 3358)
+           oi_change_24h: 11592 / 735 / 0 / 0 / 10857 (long 5539, short 5318)
+        toptrader_ls_log: 11592 / 3548 / 0 / 0 / 8044 (long 4739, short 3305)
+           global_ls_log: 11592 / 843 / 0 / 0 / 10749 (long 5658, short 5091)
+     taker_imbalance_24h: 11592 / 1528 / 0 / 0 / 10064 (long 5009, short 5055)
+                 vrp_30d: 11592 / 1217 / 0 / 0 / 10375 (long 4550, short 5825)
+     ex_supply_change_7d: 11592 / 731 / 0 / 0 / 10861 (long 5860, short 5001)
+               fng_level: 11592 / 940 / 0 / 0 / 10652 (long 5525, short 5127)
+
+  >>> ODCZYT KRYTERIUM (z* dla serii):
+            funding_rate: NEGATYWNY — t_neff < −2.773 (reguła/model traci istotnie; odwrócenie znaku = nowa hipoteza)
+           oi_change_24h: NIEROZSTRZYGNIĘTY — |t_neff| < 2.773 albo ci_low*(p) <= p*
+        toptrader_ls_log: NEGATYWNY — t_neff < −2.773 (reguła/model traci istotnie; odwrócenie znaku = nowa hipoteza)
+           global_ls_log: NIEROZSTRZYGNIĘTY — |t_neff| < 2.773 albo ci_low*(p) <= p*
+     taker_imbalance_24h: NIEROZSTRZYGNIĘTY — |t_neff| < 2.773 albo ci_low*(p) <= p*
+                 vrp_30d: NEGATYWNY — t_neff < −2.773 (reguła/model traci istotnie; odwrócenie znaku = nowa hipoteza)
+     ex_supply_change_7d: NIEROZSTRZYGNIĘTY — |t_neff| < 2.773 albo ci_low*(p) <= p*
+               fng_level: NEGATYWNY — t_neff < −2.773 (reguła/model traci istotnie; odwrócenie znaku = nowa hipoteza)
+==============================================================================================================

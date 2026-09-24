@@ -67,7 +67,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **884/884** (2026-09-24).
+Stan testów: **891/891** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -373,6 +373,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **AU1 — audyt: czy testy nie ukryły przewagi** | 2026-09-24 | Obliczenia poprawne; „nie działa” jest pewne dla kierunku BTC z wykresu. Ale dane spoza wykresu sprawdzaliśmy zbyt grubym przyrządem (niezmierzone), a „nierozstrzygnięty” przy trendzie znaczy „za mało lat”. Opisy poprawione. | [au1-audyt-metodologii](runs/2026-09-24_au1-audyt-metodologii/README.md) |
 | **RU3 — poprawna data startu trendu i momentum** | 2026-09-24 | Po naprawie daty trend na monetach 21–50 formalnie przechodzi próg (t 1,99), ale liczbę znaliśmy z góry, a poprawę dały 3 miesiące hossy z 2021 r.; od 2022 r. nierozstrzygnięty. Momentum top-50 bez zmian. | [ru3-data-startu](runs/2026-09-24_ru3-data-startu/README.md) |
 | **X1F — momentum przekrojowe liczone uczciwie** | 2026-09-24 | Reguła X1 dawała +42 % rocznie tylko przy przebudowie w poniedziałek; średnia ze wszystkich dni tygodnia to +9,5 % (nie do odróżnienia od zera). X1 zostaje tylko w dzienniku papierowym; poprawiony błąd dziennika z monetami o chińskich nazwach. | [x1f-siedem-faz](runs/2026-09-24_x1f-siedem-faz/README.md) |
+| **SW — dane spoza wykresu zmierzone** | 2026-09-24 | Osiem rodzajów danych spoza wykresu (funding, pozycjonowanie graczy, opcje, blockchain, strach i chciwość) — osobno jako reguły i razem w jednym modelu: żaden sposób nie zarabia po kosztach. Ślad informacji jest, ale 2–3× mniejszy niż koszt handlu co 4 godziny; dużej ukrytej przewagi nie ma. | [sw-cechy-spoza-wykresu](runs/2026-09-24_sw-cechy-spoza-wykresu/README.md) |
 
 ## Hipoteza w skrócie
 
