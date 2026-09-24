@@ -74,6 +74,7 @@ podsumowanie pod tabelą.
 | **TR1 / TP1** | 2026-09-24 | [ts-poza-proba](2026-09-24_ts-poza-proba/README.md) | **Reguła TS1 poza próbą** (decyzja użytkownika „sprawdź na innych przedziałach”): TR1 = monety z miejsc 21–50 (inne aktywa, 2021-05 → 2026-06, werdykt), TP1 = top-20 na nowych danych 2026-07 → 09 (opisowo, próg obalenia z góry); pre-rejestracja `40d604a` (seria TS 2/2) | **TR1 NIEROZSTRZYGNIĘTY, powtarza TS1:** +14,1 %/rok [−3,0; +31,2], t 1,62, ponad 99 % H0, 6/6 lat, 7/7 faz; korelacja z TS1 0,86. **TP1:** 78 dni, +0,69 % (+4,6 %/rok) — brak obalenia. Walidacja: **READY (Caveats)** |
 | **CP1P** | 2026-09-24 | [cp1-poza-proba](2026-09-24_cp1-poza-proba/README.md) | Odczyt prospektywny CP1 (reguła zamrożona) na danych 2026-07 → 09, 0 wariantów, próg obalenia z góry | **Brak obalenia, brak potwierdzenia:** 78 dni, +0,13 % przy BTC +33 %; fazy ±30 %. Walidacja: **READY** |
 | **TL1** | 2026-09-24 | [tl1-tlok-przekrojowy](2026-09-24_tl1-tlok-przekrojowy/README.md) | **NOWA SERIA TL — tłok lewara na przekroju top-20** (nowe źródło: dzienny OI z archiwum, `data/fetch_oi_panel.py`): crowd = Δlog OI 7 dni × znak zwrotu 7 dni, long 5 najniższych / short 5 najwyższych, 7 faz; pre-rejestracja `3983e3a` (1/1) | **NIEROZSTRZYGNIĘTY, punktowo ujemny:** −10,5 %/rok [−25,2; +4,2], t_neff −1,39; IC +0,008 [−0,024; +0,040] — brak informacji, koszty 23,6 %. Walidacja: **Caveats** |
+| **LQ1** | 2026-09-24 | [lq1-likwidacje](2026-09-24_lq1-likwidacje/README.md) | **POPRAWKA TS1: likwidacja izolowana przy 3×** (depozyt = ekspozycja/3, próg 1/3 − 1 %, dzienne high/low z archiwum — nowy kolektor `data/fetch_universe_ohlc.py`); 0 wariantów | **Koszt likwidacji −3,6 %/rok [−5,8; −1,4], t −3,16;** TS1 z likwidacją +11,3 %/rok [−5,3; +27,8], t 1,34 — NIEROZSTRZYGNIĘTY; 4,75 % pozycji-tygodni likwidowanych; opisowo 2× +13,2 %/rok. Walidacja: **READY** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -717,6 +718,12 @@ podsumowanie pod tabelą.
     informacji kierunkowej w żadnej z czterech zmierzonych form. Uwaga metodologiczna: H0 z
     sygnałem przesuniętym w czasie może mieć niższą zmienność niż portfel realny (inna
     dywersyfikacja faz) — przy rozbieżności zmienności rozstrzyga t_neff, nie pozycja wobec H0.
+76. **DŹWIGNIA 3× NA POZYCJI ALTCOINA KOSZTUJE TREND ~3,6 PKT/ROK W LIKWIDACJACH (LQ1, 2026-09-24).**
+    Przy izolowanym depozycie = ekspozycja/3 ok. 4,75 % pozycji-tygodni w top-20 kończy się
+    likwidacją (ruch > 32 % przeciw pozycji w tygodniu); TS1 spada z +14,8 do +11,3 %/rok.
+    Przy 2× (ta sama ekspozycja, depozyt połowa pozycji) koszt ~1,6 pkt. Wniosek dla przełożeń:
+    „ta sama ekspozycja” nie znaczy „ten sam wynik” — dźwignia na pozycji zmienia rozkład
+    przez likwidacje, zwłaszcza na altcoinach; backtesty na zamknięciach zawyżają wynik.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

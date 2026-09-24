@@ -182,3 +182,66 @@ def test_signs_override_replaces_signal_and_default_unchanged():
         close, fund, members, start, end, fee=0.0, signs_override=-tm.signal_sign(close)
     )
     assert (flipped["net_notional"] * base["net_notional"] <= 1e-12).all()
+
+
+def _liq_setup(n=20, k=2, seed=3):
+    rng = np.random.default_rng(seed)
+    rets = rng.normal(0, 0.05, size=(n, k))
+    fund = rng.normal(0, 0.0005, size=(n, k))
+    idx = pd.date_range("2021-01-01", periods=n, freq="D", tz="UTC")
+    forms = [(2, np.array([0.3, -0.2])), (9, np.array([-0.1, 0.4]))]
+    return rets, fund, idx, forms
+
+
+def test_phase_returns_liq_equals_plain_without_liquidation():
+    rets, fund, idx, forms = _liq_setup()
+    ones = np.ones_like(rets)
+    a = tm.phase_returns(rets, fund, idx, forms, 0.001)
+    b = tm.phase_returns_liq(rets, fund, idx, forms, 0.001, ones, ones, lev=3.0, mmr=-10.0)
+    for col in ("gross", "funding", "cost", "net", "gross_notional", "turnover"):
+        assert b[col].to_numpy() == pytest.approx(a[col].to_numpy(), abs=1e-12), col
+
+
+def test_liquidation_long_loses_margin_and_stays_out():
+    n = 12
+    idx = pd.date_range("2021-01-01", periods=n, freq="D", tz="UTC")
+    rets = np.zeros((n, 1))
+    low = np.ones((n, 1))
+    low[4, 0] = 0.6  # minimum -40 % -> likwidacja longa 3x (prog 32,3 %)
+    rets[6, 0] = 0.5  # po likwidacji zysk nie moze juz wejsc
+    out = tm.phase_returns_liq(
+        rets, np.zeros((n, 1)), idx, [(1, np.array([0.3]))], 0.0, low, np.ones((n, 1)), lev=3.0
+    )
+    assert out["liquidations"].sum() == 1
+    assert out["gross"].sum() == pytest.approx(-0.1)
+    assert out.loc[out["date"] == idx[6], "gross"].iloc[0] == 0.0
+
+
+def test_liquidation_short_on_high():
+    n = 8
+    idx = pd.date_range("2021-01-01", periods=n, freq="D", tz="UTC")
+    z = np.zeros((n, 1))
+    high = np.ones((n, 1))
+    high[3, 0] = 1.4
+    out = tm.phase_returns_liq(z, z, idx, [(1, np.array([-0.3]))], 0.0, np.ones((n, 1)), high, 3.0)
+    assert out["liquidations"].sum() == 1
+    assert out["gross"].sum() == pytest.approx(-0.1)
+
+
+@given(st.floats(min_value=0.5, max_value=3.0), st.floats(min_value=0.0, max_value=0.9))
+@settings(max_examples=50, deadline=None)
+def test_liquidated_position_loses_exactly_margin(up, drop):
+    n = 6
+    idx = pd.date_range("2021-01-01", periods=n, freq="D", tz="UTC")
+    rets = np.zeros((n, 1))
+    rets[2, 0] = up - 1.0
+    low = np.ones((n, 1))
+    low[3, 0] = 1.0 - drop
+    out = tm.phase_returns_liq(
+        rets, np.zeros((n, 1)), idx, [(1, np.array([0.3]))], 0.0, low, np.ones((n, 1)), 3.0
+    )
+    if out["liquidations"].sum() > 0:
+        # skumulowany wynik pozycji po likwidacji = -depozyt (w jednostkach kapitalu z formowania)
+        assert np.prod(1 + out["gross"]) - 1 == pytest.approx(-0.1, abs=1e-9)
+    else:
+        assert np.prod(1 + out["gross"]) - 1 >= -0.1 - 1e-9 or up < 1

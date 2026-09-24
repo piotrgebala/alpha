@@ -135,6 +135,91 @@ def phase_returns(
     )
 
 
+def phase_returns_liq(
+    returns: np.ndarray,
+    funding: np.ndarray,
+    index: pd.DatetimeIndex,
+    formations: list[tuple[int, np.ndarray]],
+    fee: float,
+    low_rel: np.ndarray,
+    high_rel: np.ndarray,
+    lev: float = 3.0,
+    mmr: float = 0.01,
+) -> pd.DataFrame:
+    """
+    Jak `phase_returns`, ale z LIKWIDACJĄ IZOLOWANĄ (runda LQ1): każda pozycja ma depozyt
+    |w|/`lev` (w = nominał w jednostkach kapitału z dnia formowania). Gdy dzienne ekstremum
+    odsuwa cenę od ceny wejścia o >= 1/lev - mmr PRZECIW pozycji (long: minimum, short: maksimum),
+    pozycja traci cały depozyt (skumulowany P&L = -|w|/lev) i jest wyłączona do następnego
+    formowania. `low_rel`/`high_rel` = minimum/maksimum dnia / zamknięcie dnia poprzedniego
+    (NaN -> 1: brak informacji o ekstremum, bez likwidacji). Bez likwidacji wynik = `phase_returns`.
+    """
+    n_days, n_sym = returns.shape
+    thr = 1.0 / lev - mmr
+    w_cur = np.zeros(n_sym)
+    rows = []
+    for k, (t_pos, w_new) in enumerate(formations):
+        t_next = formations[k + 1][0] if k + 1 < len(formations) else n_days - 1
+        turnover = float(np.abs(w_new - w_cur).sum())
+        w_entry = w_new.astype(float).copy()
+        cum = np.zeros(n_sym)
+        alive = w_entry != 0
+        equity = 1.0
+        w_cur = w_entry.copy()
+        cost_today = fee * turnover
+        for d in range(t_pos + 1, t_next + 1):
+            r = np.nan_to_num(returns[d], nan=0.0)
+            f = np.nan_to_num(funding[d], nan=0.0)
+            lr = np.nan_to_num(low_rel[d], nan=1.0)
+            hr = np.nan_to_num(high_rel[d], nan=1.0)
+            pf = 1.0 + cum
+            w_start = w_cur.copy()
+            liq = alive & (
+                ((w_entry > 0) & (1.0 - pf * lr >= thr)) | ((w_entry < 0) & (pf * hr - 1.0 >= thr))
+            )
+            normal = alive & ~liq
+            pnl = np.zeros(n_sym)
+            pnl[normal] = w_entry[normal] * pf[normal] * r[normal]
+            pnl[liq] = -np.abs(w_entry[liq]) / lev - w_entry[liq] * cum[liq]
+            fund = -float((w_entry * pf * f)[alive].sum()) / equity
+            gross = float(pnl.sum()) / equity
+            c = cost_today if d == t_pos + 1 else 0.0
+            cum[normal] = pf[normal] * (1.0 + r[normal]) - 1.0
+            alive = alive & ~liq
+            equity += float(pnl.sum())
+            if equity > 0:
+                w_cur = np.where(alive, w_entry * (1.0 + cum), 0.0) / equity
+            else:
+                w_cur = np.zeros(n_sym)
+            rows.append(
+                (
+                    index[d],
+                    gross,
+                    fund,
+                    c,
+                    gross + fund - c,
+                    float(np.abs(w_start).sum()),
+                    float(w_start.sum()),
+                    turnover if d == t_pos + 1 else 0.0,
+                    int(liq.sum()),
+                )
+            )
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "date",
+            "gross",
+            "funding",
+            "cost",
+            "net",
+            "gross_notional",
+            "net_notional",
+            "turnover",
+            "liquidations",
+        ],
+    )
+
+
 def build_formations(
     signs: pd.DataFrame,
     vols: pd.DataFrame,
@@ -222,6 +307,7 @@ def portfolio(
     sign_shift_days: int | None = None,
     signs_override: pd.DataFrame | None = None,
     keep_fn=None,
+    liq: dict | None = None,
 ) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
     """
     Średnia `phases` pod-portfeli (każdy 1/phases kapitału) — dzienny szereg w dniach, w których
@@ -230,7 +316,8 @@ def portfolio(
     `sign_shift_days` — H0 kanoniczne TS1: prawdziwe znaki przesunięte cyklicznie w czasie
     (`shift_signs`), wagi i σ̂ z właściwego dnia.
     `signs_override` — panel znaków z innego sygnału (np. premia Coinbase, CP1) zamiast znaku
-    zwrotu; `keep_fn` — filtr pozycji (TF1). Domyślnie oba None = reguła TS1 bez zmian.
+    zwrotu; `keep_fn` — filtr pozycji (TF1); `liq` — {low, high: panele dziennych ekstremów,
+    lev, mmr} → likwidacja izolowana (LQ1). Domyślnie None = reguła TS1 bez zmian.
     """
     close = close[close.index < end]
     signs = signal_sign(close, lookback)
@@ -242,14 +329,36 @@ def portfolio(
     rets = close.pct_change(fill_method=None).to_numpy(dtype=float)
     fund = funding_daily.reindex(index=close.index, columns=close.columns).fillna(0.0)
     fund = fund.to_numpy(dtype=float)
+    if liq is not None:
+        prev = close.shift(1)
+        lo_df = liq["low"].reindex(index=close.index, columns=close.columns)
+        hi_df = liq["high"].reindex(index=close.index, columns=close.columns)
+        lo_rel = (lo_df / prev).to_numpy(dtype=float)
+        hi_rel = (hi_df / prev).to_numpy(dtype=float)
     per_phase = []
     for ph in range(phases):
         dates = formation_dates(close.index, start, end, ph)
         fn = sign_fn_factory() if sign_fn_factory is not None else None
         forms = build_formations(signs, vols, members, dates, sign_fn=fn, rng=rng, keep_fn=keep_fn)
-        per_phase.append(phase_returns(rets, fund, close.index, forms, fee).set_index("date"))
+        if liq is None:
+            ph = phase_returns(rets, fund, close.index, forms, fee)
+        else:
+            ph = phase_returns_liq(
+                rets,
+                fund,
+                close.index,
+                forms,
+                fee,
+                lo_rel,
+                hi_rel,
+                liq.get("lev", 3.0),
+                liq.get("mmr", 0.01),
+            )
+        per_phase.append(ph.set_index("date"))
     first_common = max(p.index.min() for p in per_phase)
     cols = ["gross", "funding", "cost", "net", "gross_notional", "net_notional", "turnover"]
+    if liq is not None:
+        cols = cols + ["liquidations"]
     stacked = [p.loc[p.index >= first_common, cols] for p in per_phase]
     avg = sum(stacked) / phases
     return avg.reset_index(), per_phase
