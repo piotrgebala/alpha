@@ -92,6 +92,9 @@
 > ta sama reguła na danych od 2026-07-01.**
 > TF1 (2026-09-24): trend TS1 z filtrem tłoku (funding) — **różnica −1,4 %/rok [−6,6; +3,8],
 > NIEROZSTRZYGNIĘTY**, filtr nie pomaga. Wniosek 73; seria TF 1/1 STOP.**
+> TR1/TP1 (2026-09-24): reguła TS1 poza próbą — **na monetach 21–50 +14,1 %/rok (t 1,62, kopia
+> TS1, ale korelacja 0,86); na nowych danych lip–wrz 2026 +0,7 % (brak obalenia)**. Wniosek 74;
+> seria TS zamknięta na historii, dalej dziennik prospektywny.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2595,6 +2598,12 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Seria TS — uzupełnienie poza próbą (TR1/TP1) ⚪ ZAMKNIĘTA 2026-09-24, 2/2
+
+Decyzja użytkownika („sprawdź na innych przedziałach”). TR1: monety 21–50, +14,1 %/rok
+[−3,0; +31,2], t 1,62, korelacja z TS1 0,86. TP1: 2026-07-08 → 09-23, +0,69 %. Wniosek 74. Nowy
+cache `data/raw/universe_2026q3`. Pełne wyniki: `runs/2026-09-24_ts-poza-proba/`.
 
 #### Seria TF — trend z filtrem tłoku ⚪ ZAMKNIĘTA 2026-09-24 (TF1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY
 

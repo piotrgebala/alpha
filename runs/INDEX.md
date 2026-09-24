@@ -71,6 +71,7 @@ podsumowanie pod tabelą.
 | **NL1** | 2026-09-24 | [nl1-nowe-listingi](2026-09-24_nl1-nowe-listingi/README.md) | **NOWA SERIA NL — short na nowych kontraktach USDT-M przez 14 dni** (rodzina G2, zdarzenia; nowe źródło: archiwum listingów `data/fetch_listings.py`): 569 pierwszych listingów krypto 2021–2026 (wycofane włącznie), wejście open d0+1, wyjście close d0+14, realny funding, likwidacja izolowana; kryterium t klastrowe (miesiąc); pre-rejestracja `47e196d` (1/1) | **NIEROZSTRZYGNIĘTY:** +2,12 % na zdarzenie [−2,68; +6,93], t 0,87; mediana +13,5 %, 66 % zyskownych, ale 11,8 % zdarzeń to podwojenie ceny w 14 dni (likwidacja przy 1×); funding −1,15 % średnio (short płaci w 41 %); 3× → 41,5 % likwidacji, +0,95 % na nominał. Walidacja: **READY** |
 | **CP1** | 2026-09-24 | [cp1-premia-coinbase](2026-09-24_cp1-premia-coinbase/README.md) | **NOWA SERIA CP — premia Coinbase → kierunek BTC na tydzień** (decyzja użytkownika „sprawdź 3 nowe hipotezy”): znak(średnia premii 7 dni − 90 dni), perpetual BTCUSDT silnikiem TS1 (σ̂, 40 %, 7 faz, realny funding); pre-rejestracja (1/1) | **POZYTYWNY wg pre-rejestracji (PIERWSZY w projekcie), nieistotny po korekcie rodzinnej:** +32,0 %/rok [+2,0; +62,1], t_neff 2,09, ponad 98 % H0; alfa ponad trend 28 dni +24,0 %/rok, t 1,67; test opóźnienia bez śladu przecieku (+27,5 / +20,9 %/rok przy 1/2 dniach); bez 10 najlepszych dni +16 %/rok; 3× kapitału → obsunięcie 94 %. Walidacja: **Caveats** |
 | **TF1** | 2026-09-24 | [tf1-trend-filtr-tloku](2026-09-24_tf1-trend-filtr-tloku/README.md) | **NOWA SERIA TF — trend TS1 z filtrem tłoku** (decyzja użytkownika „sprawdź 3 nowe hipotezy”): pozycja zerowana, gdy jej strona płaci Σ funding 7 dni > 0,63 %; kryterium różnica parowana z TS1; pre-rejestracja `4762d86` (1/1) | **NIEROZSTRZYGNIĘTY, punktowo gorzej:** TF1 − TS1 −1,41 %/rok [−6,58; +3,77], t_neff −0,53; 9,3 % pozycji wyzerowanych; 4/6 lat ujemnych. Walidacja: **READY** |
+| **TR1 / TP1** | 2026-09-24 | [ts-poza-proba](2026-09-24_ts-poza-proba/README.md) | **Reguła TS1 poza próbą** (decyzja użytkownika „sprawdź na innych przedziałach”): TR1 = monety z miejsc 21–50 (inne aktywa, 2021-05 → 2026-06, werdykt), TP1 = top-20 na nowych danych 2026-07 → 09 (opisowo, próg obalenia z góry); pre-rejestracja `40d604a` (seria TS 2/2) | **TR1 NIEROZSTRZYGNIĘTY, powtarza TS1:** +14,1 %/rok [−3,0; +31,2], t 1,62, ponad 99 % H0, 6/6 lat, 7/7 faz; korelacja z TS1 0,86. **TP1:** 78 dni, +0,69 % (+4,6 %/rok) — brak obalenia. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -91,6 +92,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
+- **SERIA TS — uzupełnienie (TR1/TP1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — zamknięta na historii.** Dalej tylko dziennik prospektywny tej samej reguły (0 wariantów).
 - **NOWA SERIA TF — trend z filtrem tłoku (od TF1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne progi/okna fundingu, OI jako filtr trendu bez nowego mechanizmu.
 - **NOWA SERIA CP — premia Coinbase (od CP1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna, progi, giełdy na tych samych danych. Dozwolone bez nowego licznika: ta sama reguła poza próbą (dane od 2026-07-01, prospektywnie).
 - **NOWA SERIA NL — nowe listingi (od NL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina G2, zbiór informacyjny: kalendarz zdarzeń). Zakazane bez decyzji użytkownika: inne okna/opóźnienia, filtry listingów, stop-loss na wystrzał (inny rozkład wypłat = nowa hipoteza), long po listingu (post hoc).
@@ -699,6 +701,12 @@ podsumowanie pod tabelą.
     TF1 − TS1 −1,41 %/rok [−6,58; +3,77] — bez poprawy, punktowo gorzej. Razem z F1 (funding jako
     cecha 4h ≈ 0): funding nie niesie informacji o kierunku ani o końcu ruchu na horyzontach
     4h–tydzień w tych danych.
+74. **TREND TYGODNIOWY PRZETRWAŁ OBA SPRAWDZIANY POZA PRÓBĄ, ALE NIEZALEŻNOŚĆ JEST MAŁA (TR1/TP1,
+    2026-09-24).** Ta sama reguła na monetach z miejsc 21–50: +14,1 %/rok [−3,0; +31,2], t 1,62 —
+    niemal kopia TS1 (+14,8 %), lecz korelacja dzienna 0,86: w krypto „inne monety” to prawie ten
+    sam czynnik rynku, więc replikacja przekrojowa daje mało nowej informacji. Na nowych danych
+    (78 dni) +0,7 % — brak obalenia. Metodologicznie: replikację w krypto trzeba mierzyć
+    korelacją szeregów, nie liczbą monet; jedynym naprawdę niezależnym sprawdzianem jest czas.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
