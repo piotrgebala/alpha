@@ -132,6 +132,8 @@
 > AU1 (2026-09-24): audyt — obliczenia poprawne; cechy spoza wykresu niezmierzone (model 60 dni za gruby);
 > TR1 od 2021-02 t 1,99 (po fakcie); opisy skorygowane (wniosek 87). DO DECYZJI: pomiar cech jako reguł,
 > RU3 (start TR1/X2), X1 w dzienniku.**
+> RU3 (2026-09-24, decyzja użytkownika): start TR1/X2 od 2021-02 — TR1 +15,5 %/rok, t 1,99 (formalnie ponad 1,96,
+> znany z AU1, niesiony przez 02–04.2021; od 2022 t 1,32), X2 t 1,59 — obraz bez zmian (wniosek 88).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
