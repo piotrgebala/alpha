@@ -1,0 +1,12 @@
+========================================================================================================
+TF1 — TREND TS1 Z FILTREM TŁOKU (funding 7 dni); konfiguracja ZAMROŻONA
+========================================================================================================
+  filtr: long zerowany przy Σ funding 7 dni > 0.63%, short przy < −0.63%; udział pozycji (członek×dzień) wyzerowanych: 10.0%
+   TF1 netto |  +9.79%/rok [ -4.02; +23.60] | sd  16.4%/rok | t_neff +1.39
+   TS1 netto | +11.09%/rok [ -4.16; +26.33] | sd  18.1%/rok | t_neff +1.43
+   TF1 − TS1 |  -1.30%/rok [ -6.31;  +3.71] | sd   5.9%/rok | t_neff -0.51
+  >>> ODCZYT KRYTERIUM TF1: NIEROZSTRZYGNIĘTY — różnica nieodróżnialna od zera
+  różnica per rok (Σ): 2021: -3.44%; 2022: -1.40%; 2023: +1.35%; 2024: -0.73%; 2025: -2.62%; 2026: -0.18%
+  nominał brutto TF1 mediana 0.37× (TS1 ~0,41×)
+========================================================================================================
+czas: 6s
