@@ -148,3 +148,37 @@ def test_members_rank_band_excludes_top():
     m = pd.Timestamp("2021-02-15", tz="UTC")
     band = members_rank_band(vol, [m], lo=5, hi=12)[m]
     assert band == sorted(f"C{i}USDT" for i in range(5, 12))
+
+
+def test_keep_fn_zeroes_positions_without_renormalising():
+    close = _panel(200)
+    members = {pd.Timestamp("2021-02-01", tz="UTC"): ["A", "B", "C"]}
+    signs = tm.signal_sign(close)
+    vols = tm.ewma_vol(close)
+    t = close.index[60]
+    full = tm.build_formations(signs, vols, members, [t])[0][1]
+    kept = tm.build_formations(
+        signs,
+        vols,
+        members,
+        [t],
+        keep_fn=lambda t, syms, s: [1.0 if x != "A" else 0.0 for x in syms],
+    )[0][1]
+    assert kept[0] == 0.0
+    assert kept[1:] == pytest.approx(full[1:])
+
+
+def test_signs_override_replaces_signal_and_default_unchanged():
+    close = _panel(200)
+    members = {pd.Timestamp("2021-02-01", tz="UTC"): ["A", "B", "C"]}
+    fund = pd.DataFrame(0.0, index=close.index, columns=close.columns)
+    start, end = pd.Timestamp("2021-02-01", tz="UTC"), close.index[-1]
+    base, _ = tm.portfolio(close, fund, members, start, end, fee=0.0)
+    same, _ = tm.portfolio(
+        close, fund, members, start, end, fee=0.0, signs_override=tm.signal_sign(close)
+    )
+    pd.testing.assert_frame_equal(base, same)
+    flipped, _ = tm.portfolio(
+        close, fund, members, start, end, fee=0.0, signs_override=-tm.signal_sign(close)
+    )
+    assert (flipped["net_notional"] * base["net_notional"] <= 1e-12).all()
