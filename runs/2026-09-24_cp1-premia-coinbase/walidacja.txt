@@ -1,0 +1,13 @@
+(1) korelacja zmian Coinbase(d) z perp(d+k): k=-1: -0.044, k=0: +1.000, k=1: -0.041
+(2) sygnał opóźniony o 1 d: +27.5%/rok, t_neff +1.75
+(2) sygnał opóźniony o 2 d: +20.9%/rok, t_neff +1.31
+(3) faza 0 niezależnie: +39.10%/rok; silnik: +39.10%/rok
+(4) beta wobec trendu-28 BTC +0.36; alfa (reszta) +24.0%/rok [-4.1; +52.0], t_neff +1.67
+    przed ETF: 978 dni, +43.1%/rok [-5.0; +91.2]
+    po ETF: 902 dni, +20.0%/rok [-23.7; +63.8]
+(5) bez 10 najlepszych dni: +16.2%/rok; mediana dnia +0.016% vs średnia +0.088%; dni > 0: 50.4%
+(6) dźwignia (opisowo, bez likwidacji): nominał brutto mediana 0.76× kapitału
+    k=1 (reguła): CAGR +29.7%/rok, max obsunięcie 34.3%
+    brutto 3× kapitału (k=3.92): CAGR +38.8%/rok, max obsunięcie 93.7%
+    Kelly in-sample k=2.65: CAGR +53.2%/rok, max obsunięcie 77.8%
+    ½ Kelly k=1.33: CAGR +37.6%/rok, max obsunięcie 44.0%

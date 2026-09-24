@@ -1,6 +1,12 @@
 # CP1 — premia Coinbase jako sygnał kierunku BTC na tydzień (2026-09-24)
 
-> **STATUS: PRE-REJESTRACJA (przed pomiarem).** Decyzja użytkownika 2026-09-24: „sprawdź 3 nowe
+> **STATUS: ZAMKNIĘTA — POZYTYWNY wg kryterium pre-rejestrowanego (PIERWSZY w projekcie), ale
+> NIE przechodzi korekty na liczbę testów:** +32,0 %/rok netto [+2,0; +62,1], t_neff 2,09,
+> ponad 98 % portfeli H0 (q97,5 +28,1 %/rok). Przy ~28 odczytach w dwa dni próg rodzinny
+> (Bonferroni) to t ≈ 2,9. Po odjęciu udziału trendu 28 dni zostaje +24 %/rok, t 1,67.
+> Pre-rejestracja `3871a83` → przebieg → wynik w commicie scalającym. **Seria CP: 1/1, STOP.**
+> Walidacja (16a): **Caveats**; przegląd diffu (16c): **Approve**.
+> Decyzja użytkownika 2026-09-24: „sprawdź 3 nowe
 > hipotezy”. **NOWA SERIA CP (zbiór informacyjny: cena na innej giełdzie — popyt z USA),
 > licznik 1/1, STOP.** Pierwsza z trzech nowych hipotez tej sesji (CP1, TF1, TL1).
 
@@ -59,34 +65,123 @@ sam trend w przebraniu — to sprawdzimy.
 - **Kontekst multiple testing:** ~28 odczytów w dwa dni.
 - **Czego runda NIE robi:** nie stroi okien, nie dodaje progu martwej strefy, nie łączy z TS1.
 
+## Wynik w skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+**Pierwszy raz w projekcie strategia przeszła własne, zapisane z góry kryterium sukcesu.**
+Granie BTC long albo short według tego, czy Amerykanie na Coinbase przepłacają ostatnio bardziej
+niż zwykle, zarabiało po kosztach ok. **+32 % rocznie** (niepewność od +2 % do +62 %). Wszystkie
+kontrole błędów przeszły: daty się zgadzają, a spóźniony sygnał traci powoli, co oznacza, że
+wynik nie bierze się z zaglądania w przyszłość. **Ale:** w dwa dni sprawdziliśmy ~28 pomysłów,
+a przy tylu próbach jeden taki wynik może wyjść przypadkiem. Część zysku to zwykły trend. Bez 10
+najlepszych dni zostaje +16 % rocznie. To mocny kandydat do testu na nowych danych, a nie jeszcze
+dowód. **Dźwignia:** rozsądnie ok. 1× kapitału na BTC; pełne 3× kapitału to obsunięcie 94 %.
+
 ---
 
 _(sekcje poniżej po przebiegu)_
 
 ## Wynik
 
-_(po przebiegu)_
+Pełny stdout: `raw_output.txt` (53 s). Dzienny zwrot netto, średnia 7 faz, % kapitału,
+1 880 dni (2021-05 → 2026-06).
+
+| miara | wartość |
+|---|---|
+| **średni zwrot netto [CI 95 %, N_eff]** | **+32,0 %/rok [+2,0; +62,1]** |
+| t_neff | **+2,09** (próg 1,96) |
+| H0 (100 portfeli, sygnał przesunięty w czasie) | q97,5 +28,1 %/rok; CP1 ponad **98 %** portfeli H0 |
+| zmienność | 34,8 %/rok |
+| **werdykt pre-rejestrowany** | **POZYTYWNY** (oba warunki) |
+| próg rodzinny (~28 odczytów, Bonferroni jednostronny) | t ≈ 2,9 — **niespełniony** |
+
+**Per rok (Σ netto):** 2021 −11,6 % · 2022 +35,1 % · 2023 +84,0 % · 2024 −8,9 % · 2025 +8,1 % ·
+2026 (do 06) +58,3 %. **7 faz (%/rok):** +39,1 / +39,9 / +14,3 / +22,1 / +19,6 / +39,6 / +50,2 —
+wszystkie dodatnie.
+
+**Czy to trend w przebraniu (walidacja):** znak CP1 zgadza się z trendem 28 dni w 63,7 % dni;
+korelacja dzienna 0,36; beta 0,36; **alfa po odjęciu trendu +24,0 %/rok [−4,1; +52,0], t 1,67**.
+Przed ETF (do 2024-01-11): +43,1 %/rok [−5,0; +91,2]; po ETF: +20,0 %/rok [−23,7; +63,8].
+
+**Przełożenie na dźwignię (opisowo, bez likwidacji):** reguła trzyma medianowo 0,76× kapitału
+w BTC.
+
+| dźwignia | CAGR | max obsunięcie |
+|---|---|---|
+| reguła (k = 1) | +29,7 %/rok | 34,3 % |
+| ½ Kelly (k = 1,33, in-sample) | +37,6 %/rok | 44,0 % |
+| Kelly (k = 2,65, in-sample) | +53,2 %/rok | 77,8 % |
+| brutto 3× kapitału (k = 3,92) | +38,8 %/rok | **93,7 %** |
 
 ## Co na plus (+) / Co na minus (−)
 
-_(po przebiegu)_
+**(+)**
+- **Pierwszy wynik projektu spełniający oba pre-rejestrowane warunki** (t_neff > 1,96 i ponad
+  q97,5 H0); wszystkie 7 faz dodatnie; dodatni przed i po ETF.
+- **Brak śladu przecieku:** znaczniki zgodne (korelacja zmian Coinbase–perp 1,000 w tym samym
+  dniu, ≈ 0 z przesunięciem); sygnał spóźniony o 1/2 dni daje +27,5 / +20,9 %/rok — łagodny
+  spadek, a nie zapaść, której wymagałby przeciek.
+- Nowy zbiór informacji (cena na innej giełdzie w innej walucie), mechanizm spójny (popyt USA).
+- Niezależne przeliczenie fazy 0 identyczne (+39,10 %/rok).
+
+**(−)**
+- **Multiple testing:** ~28 odczytów w dwa dni; przy globalnej hipotezie zerowej jeden wynik
+  t ≈ 2,1 jest spodziewany. Próg rodzinny (t ≈ 2,9) nie jest spełniony.
+- **Część zysku to trend:** beta 0,36 wobec trendu 28 dni; sama alfa ma t 1,67.
+- **Koncentracja:** bez 10 najlepszych dni +16 %/rok; 2 z 6 lat ujemne; 2023 niesie dużą część.
+- **Jeden instrument:** szum ±31 %/rok; mediana dnia +0,016 % wobec średniej +0,088 %.
+- **Kogo nie ma:** styczeń–kwiecień 2021 (rozbieg 90 dni); dni bez świecy Coinbase lub spot
+  (0 braków w sygnale od startu). Wybór okien 7/90 z góry, bez siatki.
 
 ## Walidacja (zasada 16a)
 
-_(po przebiegu)_
+Skill `data:validate-data` wczytany PRZED walidacją. Werdykt: **Caveats** — liczby poprawne,
+przecieku brak; wymagane zastrzeżenia: multiple testing (~28), udział trendu, koncentracja.
+Szczegóły: `walidacja.py` → `walidacja.txt` (czas, test opóźnienia, faza 0 niezależnie, trend,
+koncentracja, dźwignia). **Bramka 16b** (`data:statistical-analysis`): efekt z CI, próg rodzinny
+jawnie, mediana obok średniej, lata i fazy opisowo, Kelly oznaczony jako in-sample.
 
 ## Przegląd diffu (zasada 16c)
 
-_(po przebiegu)_
+Skill `engineering:code-review` wczytany PRZED przeglądem. Diff względem master obejmuje też
+commity bazowej gałęzi `ts-poza-proba` (pre-rejestracja TR1/TP1, `run_ts_momentum_oos.py`,
+haki silnika) — przejrzane razem.
+- Haki `signs_override` / `keep_fn` w `ts_momentum.portfolio`: domyślnie None → TS1 odtworzone
+  co do liczby (+14,8 %/rok, t 1,76); testy: filtr zeruje pozycję bez renormalizacji, override
+  równy sygnałowi daje identyczny wynik.
+- `daily_premium`: zamknięcie spot = świeca 8h z 16:00 (zamyka się o 24:00, jak świeca dzienna
+  Coinbase) — test; `premium_signal` bez przyszłości — test na dwóch cięciach.
+- H0: przesunięcie cykliczne sygnału o wielokrotność 7 dni ≥ 8 tygodni.
+- Testy 812/812, ruff/black czyste.
+
+**Werdykt jednym zdaniem: Approve** — zmiana silnika jest wstecznie zgodna i przetestowana,
+skrypt CP1 cienki, a moment czasowy sygnału sprawdzony testem i walidacją.
 
 ## Wniosek
 
-_(po przebiegu)_
+**Prostym językiem:** premia Coinbase to **pierwszy sygnał, który przeszedł nasz z góry zapisany
+test**: ok. +32 % rocznie po kosztach, bez śladu błędu w danych. Nie ogłaszamy jednak sukcesu,
+bo w ciągu dwóch dni sprawdziliśmy prawie 30 pomysłów. Przy tylu próbach jeden taki wynik może
+być szczęściem. Rozstrzygnie to dopiero test na danych, których jeszcze nie widzieliśmy.
+
+**Technicznie:** POZYTYWNY wg pre-rejestracji (t_neff 2,09; > q97,5 H0); po korekcie rodzinnej
+nieistotny; alfa ponad trend t 1,67; brak przecieku (test opóźnienia).
 
 ## Rekomendacja
 
-_(po przebiegu)_
+1. **Seria CP: 1/1, STOP.** Żadnych wariantów okien/progów na tych samych danych.
+2. **Test poza próbą (następny krok, bez decyzji bramkowej — ta sama reguła):** CP1 na
+   danych 2026-07-01 → 2026-09-23 (Coinbase do 09-23 jest w cache; spot i perp dociągnąć) jako
+   odczyt prospektywny z progiem obalenia z góry, jak TP1; potem dziennik na żywo.
+3. Jeśli użytkownik chce grać tę regułę przed rozstrzygnięciem: najwyżej ~1× kapitału w BTC
+   (½ Kelly in-sample to 1,33× wag reguły ≈ 1× kapitału), nigdy 3× kapitału (obsunięcie 94 %).
 
 ## Użyte skille
 
-_(po przebiegu — z `py tools/skill_audit.py raport --galaz cp1-premia-coinbase`)_
+Rejestr `runs/skille/cp1-premia-coinbase.jsonl` (`py tools/skill_audit.py raport --galaz
+cp1-premia-coinbase`): **5 wczytań, 5 różnych skilli** — `clas5-runda` (procedura),
+`clas5-quant` (pułapki: składnik USDT/USD, zgodność zamknięć, trend w przebraniu),
+`data:validate-data` (test opóźnienia jako test przecieku, alfa ponad trend),
+`data:statistical-analysis` (próg rodzinny, zakres zamiast punktu), `engineering:code-review`
+(przegląd razem z bazową gałęzią). **Pominięte:** `engineering:testing-strategy` — nowe testy to
+3 pomocniki skryptu według planu z TS1 (ten sam wzorzec, wczytany w TS1); `quant-strategy-catalog`
+— wczytany przy wyborze hipotez na master (2026-09-24); `dataviz` — bez wykresu.
