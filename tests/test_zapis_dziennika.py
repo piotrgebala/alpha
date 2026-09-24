@@ -60,6 +60,8 @@ def repos(tmp_path: Path):
     git(tmp_path, "clone", "-q", origin.as_posix(), str(seed))
     (seed / "dziennik").mkdir()
     shutil.copy(SCRIPT, seed / "dziennik" / "zapisz_do_gita.sh")
+    shutil.copy(ROOT / "dziennik" / "aktualizuj.sh", seed / "dziennik" / "aktualizuj.sh")
+    (seed / ".gitattributes").write_text("dziennik/przebiegi.log merge=union\n", encoding="utf-8")
     (seed / "dziennik" / "sygnaly.csv").write_text("as_of,x\n2026-09-23,1\n", encoding="utf-8")
     (seed / "dziennik" / "przebiegi.log").write_text("przebieg 1\n", encoding="utf-8")
     (seed / "kod.py").write_text("A = 1\n", encoding="utf-8")
@@ -145,3 +147,101 @@ def test_origin_moved_clean_copy_rebases_and_pushes(repos):
     log = git(origin, "log", "--format=%s", "master").splitlines()
     assert log[0].startswith("Dziennik: przebieg") and log[1] == "praca z serwera"
     assert (journal / "kod.py").read_text(encoding="utf-8") == "A = 3\n"
+
+
+# ------------------------------------------------------------------ przekazanie na serwer
+PRZEJETE = ROOT / "dziennik" / "przejete.sh"
+
+
+def _journal_commit(clone: Path, msg: str, when: str | None = None) -> None:
+    append(clone / "dziennik" / "przebiegi.log", msg + "\n")
+    env = dict(ENV)
+    if when:
+        env["GIT_COMMITTER_DATE"] = env["GIT_AUTHOR_DATE"] = when
+    subprocess.run(
+        ["git", "commit", "-q", "-am", msg], cwd=clone, env=env, check=True, capture_output=True
+    )
+    git(clone, "push", "-q", "origin", "master")
+
+
+def _przejete(clone: Path) -> int:
+    shutil.copy(PRZEJETE, clone / "dziennik" / "przejete.sh")
+    git(clone, "fetch", "-q", "origin")
+    return subprocess.run(
+        [BASH, "dziennik/przejete.sh"], cwd=clone, env=ENV, capture_output=True
+    ).returncode
+
+
+def _host(clone: Path) -> str:
+    return subprocess.run(
+        [BASH, "-c", "hostname"], cwd=clone, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+def test_handover_detects_other_machine(repos):
+    _, journal, other = repos
+    _journal_commit(other, "Dziennik: przebieg 2026-09-25 (dantey1)")
+    assert _przejete(journal) == 0
+
+
+def test_handover_ignores_own_machine_old_format_and_old_commits(repos):
+    _, journal, other = repos
+    _journal_commit(other, f"Dziennik: przebieg 2026-09-25 ({_host(journal)})")
+    _journal_commit(other, "Dziennik: przebieg 2026-09-24")
+    _journal_commit(
+        other, "Dziennik: przebieg 2026-09-01 (dantey1)", when="2026-09-01T02:30:00+0000"
+    )
+    assert _przejete(journal) == 1
+
+
+# ------------------------------------------------------------------ dwie maszyny tej samej nocy
+def _run(clone: Path, script: str) -> str:
+    out = subprocess.run(
+        [BASH, f"dziennik/{script}"],
+        cwd=clone,
+        env=ENV,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    return out.stdout + out.stderr
+
+
+def test_run_log_from_two_machines_merges_without_conflict(repos):
+    origin, journal, other = repos
+    append(other / "dziennik" / "przebiegi.log", "serwer 02:41\n")
+    git(other, "commit", "-q", "-am", "Dziennik: przebieg 2026-09-25 (serwer)")
+    git(other, "push", "-q", "origin", "master")
+    append(journal / "dziennik" / "przebiegi.log", "komputer 02:43\n")
+    out = _run(journal, "zapisz_do_gita.sh")
+    assert "wypchnięte po pull --rebase" in out
+    log = git(origin, "show", "master:dziennik/przebiegi.log")
+    assert "serwer 02:41" in log and "komputer 02:43" in log
+
+
+def test_update_self_heals_journal_only_divergence(repos):
+    origin, journal, other = repos
+    append(other / "dziennik" / "sygnaly.csv", "2026-09-24,2\n")
+    git(other, "commit", "-q", "-am", "Dziennik: przebieg 2026-09-25 (serwer)")
+    git(other, "push", "-q", "origin", "master")
+    append(journal / "dziennik" / "sygnaly.csv", "2026-09-24,3\n")  # ta sama noc, inna wartość
+    git(journal, "commit", "-q", "-am", "Dziennik: przebieg 2026-09-25 (komputer)")
+    out = _run(journal, "aktualizuj.sh")
+    assert "samonaprawa" in out
+    assert git(journal, "rev-parse", "HEAD") == git(origin, "rev-parse", "master")
+    assert git(journal, "status", "--porcelain") == ""
+
+
+def test_update_never_resets_foreign_work(repos):
+    origin, journal, other = repos
+    append(other / "dziennik" / "sygnaly.csv", "2026-09-24,2\n")
+    git(other, "commit", "-q", "-am", "Dziennik: przebieg 2026-09-25 (serwer)")
+    git(other, "push", "-q", "origin", "master")
+    (journal / "kod.py").write_text("A = 5\n", encoding="utf-8")
+    append(journal / "dziennik" / "sygnaly.csv", "2026-09-24,3\n")
+    git(journal, "commit", "-q", "-am", "praca + dziennik")
+    head = git(journal, "rev-parse", "HEAD")
+    out = _run(journal, "aktualizuj.sh")
+    assert "aktualizacja kodu nieudana" in out and "samonaprawa" not in out
+    assert git(journal, "rev-parse", "HEAD") == head
+    assert (journal / "kod.py").read_text(encoding="utf-8") == "A = 5\n"
