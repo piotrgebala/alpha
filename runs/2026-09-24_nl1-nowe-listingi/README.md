@@ -228,7 +228,7 @@ istnieje, jest < ~7 % na zdarzenie — poniżej rozdzielczości przyrządu.
 ## Użyte skille
 
 Rejestr `runs/skille/nl1-nowe-listingi.jsonl` (`py tools/skill_audit.py raport --galaz
-nl1-nowe-listingi`): **8 wczytań, 8 różnych skilli**, wszystkie przez Claude'a, przed pracą.
+nl1-nowe-listingi`): **7 wczytań, 7 różnych skilli**, wszystkie przez Claude'a, przed pracą.
 
 | skill | co wniósł |
 |---|---|
