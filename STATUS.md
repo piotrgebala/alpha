@@ -109,6 +109,8 @@
 > negatywna zaliczona** — TS1/X1/CP1 na szumie t ≈ 0, zajrzenie w przyszłość t ≥ 13 (wniosek 79);
 > bramki A6/B6a/C1 z wytycznych SIGMA; strażnik `tests/test_runs_index_guard.py`; skrót stanu wiedzy
 > na górze `runs/INDEX.md`; `CLAUDE.md` 340 → ~170 linii (pełne brzmienie: `docs/rag/08`).**
+> CP2 (2026-09-24): premia Coinbase na ETH/SOL — **NIEMIERZALNA, nie wystartowała**: sygnał = BTC
+> w 94 % / 89 % dni, rozdzielczość ±36–37 %/rok. CP1 rozstrzygnie tylko dziennik na żywo. Wniosek 80.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny

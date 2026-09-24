@@ -55,4 +55,5 @@ backtest/run_ts_liq_lq1.py                   # LQ1
 backtest/run_sizing_sz1.py                   # SZ1
 backtest/run_signal_strength_sc1.py          # SC1 (tylko --moc)
 backtest/run_negative_control_nc1.py         # NC1
+backtest/run_coinbase_cp2.py                 # CP2 (tylko --moc)
 backtest/screen_feature_candidates.py        # C2.7

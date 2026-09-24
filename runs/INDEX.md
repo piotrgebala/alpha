@@ -19,7 +19,7 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 
 **Kandydaci — ślady, nie dowody (każdy wybrany spośród ~30 odczytów na tej samej historii):**
 - Premia Coinbase → BTC na tydzień (CP1): jedyny POZYTYWNY, ~+32 %/rok, t 2,09; poza próbą
-  (lip–wrz 2026) bez potwierdzenia (72). Replikacja na ETH/SOL: CP2.
+  (lip–wrz 2026) bez potwierdzenia (72). Na ETH/SOL niesprawdzalna — ten sam sygnał (CP2, 80).
 - Trend tygodniowy na koszyku top-20 (TS1): ~+15 %/rok [−2; +31], przetrwał dwa sprawdziany poza
   próbą, nadal nieistotny (70, 74). Momentum przekrojowe top-20 (X1): ~+22 %/rok,
   nierozstrzygnięte, wrażliwe na dzień rebalansu (64, 68).
@@ -37,7 +37,7 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 - Większość serii zamknięta regułą STOP: kolejne odczyty na tej samej historii tylko zwiększają
   szansę przypadkowego sukcesu. Rozstrzygnąć może test prospektywny (dziennik na żywo).
 
-**Otwarte:** CP2 (premia Coinbase na ETH/SOL); dziennik prospektywny trend + Coinbase; nowe
+**Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1); nowe
 źródła popytu (premia koreańska, emisja stablecoinów, przepływy ETF) — każde z rachunkiem mocy.
 
 ## Konwencja katalogów
@@ -120,6 +120,7 @@ podsumowanie pod tabelą.
 | **SZ1** | 2026-09-24 | [sz1-wielkosc-pozycji](2026-09-24_sz1-wielkosc-pozycji/README.md) | **Reguły wielkości pozycji (opisowo, 0 wariantów przewagi)** dla portfela trend (likwidacja 2×) + premia Coinbase (3×): R0 po połowie, R1 budżet ryzyka (1/σ, cel 20 %, sufit 2), R2 = R1 + hamulec 15 %/7,5 %; pre-rejestracja `a635c8c` | Korelacja składowych 0,30; **R0 +19,9 %/rok, obsunięcie 18,9 %; R1 +18,6 % / 17,7 %; R2 +10,3 % / 17,7 % (hamulec 36 % czasu — szkodzi)**; depozyt ~23 % kapitału. Składowe in-sample. Walidacja: **READY (Caveats)** |
 | **SC1** | 2026-09-24 | [sc1-sila-sygnalu](2026-09-24_sc1-sila-sygnalu/README.md) | Wielkość pozycji ∝ sile sygnału (trend, premia Coinbase), ekspozycja wyrównana stałą z sygnałów; kryterium różnica parowana z wersją znakową (m = 2) | **NIEMIERZALNA — nie wystartowała (zasada 18):** half-width różnicy ±13,2 %/rok (trend), ±16,7 %/rok (Coinbase) wobec oczekiwanego efektu kilku %/rok. 0 wariantów |
 | **NC1** | 2026-09-24 | [nc1-kontrola-negatywna](2026-09-24_nc1-kontrola-negatywna/README.md) | **Kontrola NEGATYWNA silników dziennych** (wytyczna SIGMA 2): TS1, X1, reguła znaku CP1 na 40 losowaniach danych bez informacji o przyszłości (t-Student df 3, GARCH, ρ 0,5, 20 monet × 2 000 dni) + kontrola czułości (celowe zajrzenie w przyszły tydzień); pre-rejestracja `433505a` | **0 — POZA licznikami** (kalibracja przyrządu) | **ZALICZONA:** brutto średnie t −0,12 / +0,17 / −0,20, fałszywe alarmy 4/120 = 3,3 % [1,3; 8,3]; netto ≤ brutto; czułość t +13…+30 w 40/40. Ogon X1 (dopisane po przebiegu): 20/400 = 5,00 % przy \|t\| > 1,96 — kalibracja poprawna. Walidacja: **READY** (niezależne przeliczenie X1, korelacja 0,998) |
+| **CP2** | 2026-09-24 | [cp2-premia-coinbase-eth-sol](2026-09-24_cp2-premia-coinbase-eth-sol/README.md) | Replikacja CP1 na ETH i SOL (zasada 9: ta sama reguła, bez retuningu), m = 2, z 2,241; tylko rachunek mocy i profil danych | **0 — NIEMIERZALNA, nie wystartowała** | Half-width ±36,2 (ETH) / ±37,2 %/rok (SOL) > efekt CP1 (+32 %); moc 34–39 % przy efekcie CP1. Sygnał ETH = sygnał BTC w **94,4 %** dni, SOL w **89,3 %** (premia ETH/BTC skorelowana 0,95) — inne monety nie są niezależnym potwierdzeniem. Walidacja: **READY** (zgodność przeliczona niezależnie) |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -143,7 +144,7 @@ podsumowanie pod tabelą.
 - **NOWA SERIA TL — tłok przekrojowy (od TL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna/nogi, odwrócenie znaku (post hoc).
 - **SERIA TS — uzupełnienie (TR1/TP1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — zamknięta na historii.** Dalej tylko dziennik prospektywny tej samej reguły (0 wariantów).
 - **NOWA SERIA TF — trend z filtrem tłoku (od TF1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne progi/okna fundingu, OI jako filtr trendu bez nowego mechanizmu.
-- **NOWA SERIA CP — premia Coinbase (od CP1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna, progi, giełdy na tych samych danych. Dozwolone bez nowego licznika: ta sama reguła poza próbą (dane od 2026-07-01, prospektywnie).
+- **NOWA SERIA CP — premia Coinbase (od CP1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna, progi, giełdy na tych samych danych. Dozwolone bez nowego licznika: ta sama reguła poza próbą (dane od 2026-07-01, prospektywnie). CP2 (ETH/SOL, 2026-09-24): NIEMIERZALNA, 0 wariantów, 0 odczytów wyniku.
 - **NOWA SERIA NL — nowe listingi (od NL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina G2, zbiór informacyjny: kalendarz zdarzeń). Zakazane bez decyzji użytkownika: inne okna/opóźnienia, filtry listingów, stop-loss na wystrzał (inny rozkład wypłat = nowa hipoteza), long po listingu (post hoc).
 - **NOWA SERIA TS — momentum w czasie na koszyku (od TS1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina A1 katalogu na horyzoncie tygodniowym, uniwersum wielu monet; nie B1). Zakazane bez decyzji użytkownika: inne okna, cele zmienności, uniwersa (top-50), sam BTC, łączenie z X1 — każdy kolejny odczyt na tej samej historii zwiększa szansę przypadkowego sukcesu. Rozstrzygnąć może tylko test prospektywny.
 - **NOWE BAZY Y1 (1h) / Y2 (1d) — model kontrolny na innych interwałach (od Y1/Y2, 2026-09-23, decyzja użytkownika): każda 1/1 ZUŻYTE — OBIE ZAMKNIĘTE REGUŁĄ STOP.** Osobne liczniki per baza (wytyczna o bazach); wyników nie porównuje się 1:1 z 4h. Y1 NEGATYWNY (48,3 %, n 23 334), Y2 NIEROZSTRZYGNIĘTY (50,2 %, n 978). Zakazane bez decyzji użytkownika: inne V/bariery/okna na 1h i 1d, filtry godzin/dni, odwrócenie znaku na 1h (hipoteza post hoc, wniosek 49).
@@ -786,6 +787,12 @@ podsumowanie pod tabelą.
     zajrzeniem w przyszłość: t ≥ 13 w 40/40. Dodatnie wyniki TS1/CP1 nie są artefaktem kodu (co nie
     czyni ich dowodem). Ogon X1 na 400 losowaniach: dokładnie 5,00 % |t| > 1,96, ale jedno t = 3,62
     — pojedyncze t ≈ 3 na 5,5 roku bywa przypadkiem (~1 na 300–400 przebiegów szumu).
+80. **PREMIA COINBASE TO JEDEN CZYNNIK DLA CAŁEGO RYNKU — INNE MONETY JEJ NIE POTWIERDZĄ (CP2,
+    2026-09-24).** Premia ETH koreluje z premią BTC 0,95 (poziom), a znak sygnału ETH = BTC w 94 %
+    dni (SOL 89 %). Przy korekcie na 2 ramiona test na jednej monecie ma rozdzielczość ±36–37 %/rok,
+    czyli moc 34–39 % nawet przy efekcie jak w CP1. Replikacja „wszerz” jest tu pozorna; CP1
+    rozstrzygnie tylko czas (dziennik prospektywny BTC). Ogólniej: przed replikacją na innym
+    instrumencie zmierz zgodność SYGNAŁÓW — wysoka zgodność = brak nowej informacji.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
