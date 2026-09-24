@@ -74,8 +74,9 @@ Różnica per rok (Σ): 2021 −4,8 % · 2022 −1,2 % · 2023 +2,2 % · 2024 �
 
 **(+)** Filtr obniża zmienność proporcjonalnie do zysku (ten sam t_neff) — nie szkodzi jakości
 sygnału; test czysty (parowany, ten sam silnik, próg z góry).
-**(−)** Brak poprawy: punktowo −1,4 %/rok, 4 z 6 lat ujemne. Zerowane pozycje średnio zarabiały
-tyle co reszta — wysoki funding NIE wskazywał końca trendu na horyzoncie tygodnia. Efekt
+**(−)** Brak poprawy: punktowo −1,4 %/rok, 4 z 6 lat ujemne. Usunięcie wyzerowanych pozycji
+obniżyło wynik, więc średnio one zarabiały — wysoki funding NIE wskazywał końca trendu na
+horyzoncie tygodnia. Efekt
 < 5 %/rok byłby niewidoczny (rozdzielczość ±5,2 %/rok). **Kogo nie ma:** pierwsze 7 dni
 fundingu (rozbieg) — filtr nieaktywny; członkowie bez znaku/σ̂ jak w TS1.
 
