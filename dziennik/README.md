@@ -1,6 +1,6 @@
 # Dziennik na żywo (papierowo) — trend tygodniowy + premia Coinbase
 
-> **STATUS: PRE-REJESTRACJA (2026-09-24), start wyniku 2026-09-25.** Reguły poniżej są zamrożone —
+> **STATUS: DZIAŁA od 2026-09-24 (poprawka 1: start przesunięty z 25.09 na 24.09).** Reguły poniżej są zamrożone —
 > każda zmiana = nowy dziennik od zera (inaczej wynik przestaje być „na danych, których nie
 > oglądaliśmy”).
 
@@ -25,9 +25,18 @@ przychodzą kompletne, czy nic nie zmienia się wstecz), a nie to, czy strategia
 - Silnik identyczny z rundami: `backtest/live_journal.py` woła `ts_momentum.portfolio`,
   `run_coinbase_cp1.daily_premium/premium_signal`, `sizing.apply_rules` (bez kopii).
 - Silnik startuje 2025-09-01 (rozbieg budżetu ryzyka ≥ 1 rok); **wynik papierowy liczy się od
-  2026-09-25**, kapitał początkowy = 1.
+  2026-09-24** (poprawka 1), kapitał początkowy = 1.
 - Dane: `data/raw/live/` (poza gitem), pobierane od nowa przy każdym przebiegu z publicznych API
   Binance (perpetuale, spot BTC 8h) i Coinbase (BTC-USD 1d); tylko świece zamknięte.
+
+## Poprawka 1 (2026-09-24, ok. 10:00 UTC — przed zamknięciem dnia, wynik nieznany)
+
+Decyzja użytkownika: „dziennik niech działa już dzisiaj, a nie od jutra”. Start wyniku papierowego
+przesunięty z 2026-09-25 na **2026-09-24**. Uczciwość zapisu: pozycje na 24.09 zostały policzone
+z danych do zamknięcia 23.09 i zapisane w `sygnaly.csv` o 09:46 UTC 24.09 — przed poznaniem wyniku
+dnia; sygnał nie zależy od cen z 24.09. Zastrzeżenie tylko dla pierwszego dnia: wynik liczony od
+zamknięcia 23.09 (00:00 UTC), a realne wejście byłoby możliwe dopiero ok. 09:46 UTC — w odczycie
+dzień 24.09 pokazywany osobno.
 
 ## Codziennie
 
