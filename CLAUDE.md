@@ -132,7 +132,7 @@ handlu, cel zwrotów, rynek przed 2022) → `docs/rag/10_preferencje_uzytkownika
   wersji nie nadpisuj — zmerguj. Wersje bibliotek: `requirements-lock.txt` (inne wersje = inne liczby).
 - **Dziennik papierowy:** działa w osobnym klonie (`alpha-dziennik`, zawsze `master`); pliki
   `dziennik/*.csv` i `przebiegi.log` zapisuje wyłącznie automat (commit i push po każdym przebiegu,
-  poprawka 5). Świeżość: `git log -1 --format=%cs --grep='^Dziennik:'` — starsze niż 2 dni = alarm.
+  poprawka 5). Świeżość: `git log -1 --format=%cs --grep='^Dziennik: przebieg'` — starsze niż 2 dni = alarm.
   Zmiana kodu lub konfiguracji, z których dziennik korzysta (`backtest/live_journal.py` i jego importy:
   `ts_momentum`, `xs_momentum`, `sizing`, `rebalance_premium`, `run_coinbase_cp1`, `checkpoint_lib.load_config`;
   `data/fetch_live.py` i jego importy: `fetch_universe`, `fetch_ohlcv`, `fetch_external`; koszty

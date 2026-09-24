@@ -82,7 +82,7 @@ pliki dziennika trafiają do gita (szczegóły w „Codziennie”). Reguły hand
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
-Opis commita zawiera nazwę maszyny („Dziennik: przebieg RRRR-MM-DD (host)”), więc `git log --grep='^Dziennik:'`
+Opis commita zawiera nazwę maszyny („Dziennik: przebieg RRRR-MM-DD (host)”), więc `git log --grep='^Dziennik: przebieg'`
 pokazuje, gdzie dziennik faktycznie liczy. **Nigdy w dwóch miejscach naraz.**
 
 **Przekazanie jest automatyczne (decyzja użytkownika: „praca dzieje się już na serwerze”):** komputer liczy
@@ -95,7 +95,7 @@ maszyny, komputer wyłącza swoje zadanie (`schtasks /change /disable`) i nie li
 Na serwerze (jednorazowo; kopia `~/alpha-dziennik` z `setup_serwer.sh` i dostępem SSH do GitHuba — gotowe
 2026-09-24): `crontab -e` → `30 2 * * * bash $HOME/alpha-dziennik/dziennik/uruchom.sh`. Pierwszej nocy
 mogą policzyć obie maszyny naraz (wygra pierwszy push, drugi zostawi commit lokalnie — dane te same);
-od następnej nocy liczy tylko serwer. Kontrola: `git log -1 --format='%cs %s' --grep='^Dziennik:'` —
+od następnej nocy liczy tylko serwer. Kontrola: `git log -1 --format='%cs %s' --grep='^Dziennik: przebieg'` —
 w nawiasie nazwa serwera. Powrót na komputer: usunąć wpis crona i `schtasks /change /tn "CLAS5 dziennik" /enable`.
 
 ## Codziennie
@@ -120,7 +120,7 @@ uruchamia `dziennik/uruchom.bat` w **osobnym klonie `C:\Users\pitge\GIT\alpha-dz
 Wydruk i każdy wynik zapisu („===== zapis do gita: …”) → `dziennik/ostatni_wydruk.txt` klonu dziennika.
 Ustawienia zadania: start przy najbliższej okazji po przegapionym terminie, budzenie komputera, praca na
 baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowienie tego samego dnia nic nie dubluje.
-- **Czy zapis działa — sprawdzenie z dowolnej maszyny:** `git log -1 --format=%cs --grep='^Dziennik:'` po
+- **Czy zapis działa — sprawdzenie z dowolnej maszyny:** `git log -1 --format=%cs --grep='^Dziennik: przebieg'` po
   `git pull`. Data starsza niż 2 dni = dziennik nie zapisuje (komputer wyłączony, wygasłe logowanie do GitHuba,
   konflikt) — zajrzyj do `ostatni_wydruk.txt` w klonie dziennika.
 - **Pierwszy próbny start (24.09, 18:36)** otwierał czarne okno konsoli i skończył się po minucie kodem
