@@ -1,0 +1,23 @@
+2021-02-01: pasmo 21-50 = 30 monet, top-50 = 50 monet
+2021-03-01: pasmo 21-50 = 30 monet, top-50 = 50 monet
+2021-04-01: pasmo 21-50 = 30 monet, top-50 = 50 monet
+2021-05-01: pasmo 21-50 = 30 monet, top-50 = 50 monet
+
+TR1 od 2021-05 (odtworzenie RU2): n 1880, +13.0%/rok, t (numpy) +1.63   [RU2: 1880, +13,0, t_neff 1,63]
+TR1: max |różnica dzienna| RU3 vs RU2 na wspólnych dniach po tygodniu rozruchu = 1.39e-17 (1873 dni)
+TR1 od 2021-02: n 1969, +15.5%/rok, t (numpy) +1.99, mediana/dzień +0.013%
+TR1 dodane dni 02-04.2021: n 82, Σ +14.0%
+
+X2: NaN w panelu na wspólnym oknie: 0; dni 1969
+X2 średnia 7 faz: +21.95%/rok; średnia średnich faz (wspólne okno): +21.95%/rok
+X2 t (numpy) +1.59; mediana/dzień +0.047%
+X2 fazy na wspólnym oknie (%/rok): +38.8, +22.8, +13.0, +24.8, +12.2, +16.9, +25.2
+dzień tygodnia startu fazy: Mon, Tue, Wed, Thu, Fri, Sat, Sun
+X2 jedna faza od 2021-05 (odtworzenie RU2): n 1886, +23.1%/rok, t (numpy) +1.60   [RU2: 1886, +23,1, t 1,60]
+X2 faza 5 (ta sama siatka co RU2): max |różnica| vs RU2 po rozruchu = 0.00e+00 (1851 dni)
+TR1 caly    : n 1969, +15.5%/rok [+0.2; +30.8], t_neff +1.99, mediana/dzien +0.013%
+TR1 od 2022 : n 1642, +11.4%/rok [-5.5; +28.4], t_neff +1.32, mediana/dzien +0.008%
+X2 caly    : n 1969, +21.9%/rok [-5.1; +48.9], t_neff +1.59, mediana/dzien +0.047%
+X2 od 2022 : n 1642, +17.2%/rok [-10.9; +45.2], t_neff +1.20, mediana/dzien +0.047%
+
+Funding: miesiące z członkiem top-50 bez pliku *_funding.parquet (2021-02 → 2026-06): 0

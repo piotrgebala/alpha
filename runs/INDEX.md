@@ -24,6 +24,8 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 - Trend tygodniowy na koszyku top-20 (TS1): po korekcie danych ~+11 %/rok [−4; +26], nadal
   nieistotny (70, 74, 82). Momentum przekrojowe top-20 (X1): po korekcie ~+42 %/rok, ale ~⅓ z jednego
   wystrzału (MYX); bez niego ~+26 %; nierozstrzygnięte, wrażliwe na dzień rebalansu (64, 68, 82).
+  Trend na miejscach 21–50 (TR1) od 2021-02: +15,5 %/rok, t 1,99 — formalnie ponad 1,96, ale znany z góry
+  i niesiony przez hossę 02–04.2021; od 2022 t 1,32 (88).
 
 **Ryzyko i wielkość pozycji (opisowo, na historii):**
 - Dźwignia 3× na altach kosztuje trend ~3,6 pkt/rok w likwidacjach, 2× ~1,6 pkt (76).
@@ -41,7 +43,8 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
   szansę przypadkowego sukcesu. Rozstrzygnąć może test prospektywny (dziennik na żywo).
 
 **Uwaga danych (RU1):** `data/raw/universe` jest obcięty (287/685) — nowe rundy tylko na `universe_full`;
-RU2 przeliczyła TR1, X2, LQ1, TF1, R1 (werdykty bez zmian, 83); TL1 czeka (dane OI); NL1 i P2 nie dotyczy.
+RU2 przeliczyła TR1, X2, LQ1, TF1, R1 (werdykty bez zmian, 83), RU3 poprawiła start TR1/X2 na 2021-02 (88);
+TL1 czeka (dane OI); NL1 i P2 nie dotyczy.
 
 **Kryterium od 2026-09-24 (ADR-09):** o kapitale decyduje drabina dowodów (`docs/rag/09`); ten plik nadal
 księguje każdy odczyt. Trend: szczebel 2 spełniony (post hoc); szczebel 1(b) TX1 NIEROZSTRZYGNIĘTY — działa 1990–2012, zanika po 2013 (84).
@@ -136,6 +139,7 @@ podsumowanie pod tabelą.
 | **TX1** | 2026-09-24 | [tx1-trend-inne-rynki](2026-09-24_tx1-trend-inne-rynki/README.md) | **ADR-09 szczebel 1(b):** reguła TS1 bez zmian na 19 rynkach FRED (13 walut, Brent, Nasdaq, Nikkei, obligacje USA) 1990–2026; pre-rejestracja `6532994`; moc 0,33 SR | **1 — seria TX 1/1, STOP** | **Kryterium POZYTYWNE: +5,1 %/rok [+1,4; +8,7], t 2,73; po 2013 −0,2 %/rok [−6,0; +5,6] (4/14 lat)** — wynik z lat 1990–2012; po 2013 ropa +23 %, akcje +8 %, waluty −3 %. Szczebel 1(b) NIEROZSTRZYGNIĘTY. Walidacja: **READY (Caveats)**, numpy 0,9996 |
 | **WF1** | 2026-09-24 | [wf1-okno-uczenia](2026-09-24_wf1-okno-uczenia/README.md) | Okno uczenia modelu 4h: 60 (kontrola) / 365 / 730 dni, wspólne świece od 2023; decyzja użytkownika; pre-rejestracja `eb56d55` | **2 — seria WF 2/2, STOP** | **Oba NEGATYWNE:** 365 dni p 49,6 %, −0,061 %/tr., t −2,59; 730 dni p 48,5 %, −0,084 %, t −3,53 (kontrola 50,1 %). Dłuższa historia nie pomaga. Walidacja: **READY** |
 | **AU1** | 2026-09-24 | [au1-audyt-metodologii](2026-09-24_au1-audyt-metodologii/README.md) | Audyt wieloagentowy: czy testy mogły ukryć przewagę (koszty, kryteria, dane, silnik, przyrząd Fazy 0), 12 weryfikacji przeciwniczych | **0 — przegląd** | **CZĘŚCIOWO:** obliczenia poprawne; model 60 dni gubi ~85 % słabej 5. cechy (F1/O1/L1/V1/G1 niezmierzone); TR1 od 2021-02 t 1,99 (po fakcie); „nierozstrzygnięty” = za mało lat (moc ~25 % przy +10 %/rok). Naprawiony `max(1, N_eff)`. Walidacja: **Caveats** |
+| **RU3** | 2026-09-24 | [ru3-data-startu](2026-09-24_ru3-data-startu/README.md) | Korekta daty startu TR1 i X2 (2021-05 → 2021-02, pełne uniwersum; X2 jako średnia 7 faz); pre-rejestracja `e4c2350`; wynik znany z AU1 | **0 — korekta danych** | **TR1 +15,5 %/rok [+0,2; +30,8], t 1,99 — formalnie POZYTYWNY, ale znany z góry, poniżej progu rodzinnego ~2,9, a cały przyrost to 82 dni hossy 02–04.2021 (od 2022: +11,4 %, t 1,32). X2 +21,9 % t 1,59 — NIEROZSTRZYGNIĘTY** (fazy 12–39 %/rok). Walidacja: **Caveats** (RU2 odtworzone co do 1e-17) |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -173,7 +177,7 @@ podsumowanie pod tabelą.
 - **Analiza produktu carry (D1, 2026-09-23) — POZA licznikami: 0 wariantów reguł.** Siatka depozytu = zakres inżynierski (raportowany w całości); COIN-M i basis kwartalny = ta sama reguła „zawsze w pozycji" na innym instrumencie (generalizacja C1a, jak zasada 9), nie warianty serii C (STOP dla reguł bez zmian).
 - **Sonda źródeł II + podłączenie (P3, 2026-09-23) — POZA licznikami: 0 wariantów.** Pobranie i profil 13 zbiorów, zero korelacji ze zwrotem. Każda hipoteza na nowych danych (O1 pozycjonowanie, VRP z DVOL, on-chain, F&G, premia Coinbase, basis/COIN-M) = NOWA SERIA z własnym licznikiem.
 - **Sonda wykonalnosci carry przekrojowego (P2) — POZA licznikami: 0 wariantow.** Liczy tylko mechanizm (funding − koszt) i rozrzut do rachunku mocy; srednia zwrotu z cen i P&L NIE policzone. Werdykt NIEMIERZALNA ⇒ hipoteza C (carry przekrojowy na perpetualach) NIE dostaje licznika.
-- **Kalibracja przyrzadu (Z9, Z19, K1, K2, K3, T4, NC1) — POZA licznikami hipotez: 0 wariantow.** Korekta danych RU1 (2026-09-24) i sonda SH1 — również 0 wariantów. Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
+- **Kalibracja przyrzadu (Z9, Z19, K1, K2, K3, T4, NC1) — POZA licznikami hipotez: 0 wariantow.** Korekta danych RU1/RU2/RU3 (2026-09-24) i sonda SH1 — również 0 wariantów. Te rundy nie testuja zadnej hipotezy rynkowej: mierza, czy aparat pomiarowy dziala. `oracle` ma sile sygnalu ZNANA Z KONSTRUKCJI, wiec nie ma czego p-hackowac. **Warunek utrzymania zera, zapisany w pre-rejestracji K2: zadna liczba z K1/K2 nie moze byc cytowana jako wynik hipotezy tradingowej.**
 - **Model kosztow / wykonanie — POZA licznikami hipotez: 0 wariantow.** C2.12 policzono jako **1 wariant**, bo raportowal werdykt klasyfikacyjny na tych samych danych. H3 **nie** — pre-rejestracja (regula D5) zakazala raportowania trafnosci, CI, z_stat, marginesu i klasyfikacji jako wyniku; liczby te sa w `raw_output.txt` z jawna adnotacja, ze nie uczestnicza w decyzji. Uzasadnienie mechaniczne: koszt moze ruszyc trafnosc WYLACZNIE przez selekcje (inny moment kill-switcha), czyli bylby to szum selekcyjny.
 - **NOWA SERIA W — wykonanie po konkretnej cenie (od W1, 2026-09-23): 3/3 ZUŻYTE — SERIA ZAMKNIĘTA REGUŁĄ STOP.** Licznik od zera (decyzja użytkownika: zasada obowiązująca też na żywo). Trzy reguły wejścia z werdyktem na tych samych danych = 3 warianty (precedens C2.12). Kontrola w trybie `label` za **0** (odtworzyła ramię A z M1/F1 co do sztuki), część kalibracyjna 5m vs 4h i wrażliwość na czas ważności k = 2, 3 za **0** (bez werdyktów, reguła H3/D5). Wynik: W1a NEGATYWNY, W1b NIEROZSTRZYGNIĘTY wg kryterium trafności przy istotnie ujemnym zwrocie netto (t = −3,90), W1c NEGATYWNY. Żadnej kolejnej reguły wejścia, cofnięcia ani czasu ważności.
 - **NOWA BAZA DANYCH od N1 (2026-09-23): 2021-01-01 → 2026-06-30 (CLAUDE.md zasada 20).** Wszystkie liczniki poniżej i wyżej dotyczą baz WCZEŚNIEJSZYCH; wyniki na nowej bazie (od N1) nie porównują się 1:1 z żadną wcześniejszą rundą. Kontrola N1 na nowej bazie: p 49,58 % [48,39; 50,77], zwrot netto −0,107 % — liczby odniesienia dla przyszłych rund (0 wariantów).
@@ -848,6 +852,13 @@ podsumowanie pod tabelą.
     był błędny): +15,5 %/rok, t 1,99 — oglądane po fakcie, poniżej progu rodzinnego ~2,9. (i) X1: bez dnia
     MYX t 1,83, bez 5 najlepszych 1,30; funding +49 pkt z +226. „Nierozstrzygnięty” w strategiach
     tygodniowych = za mało lat: moc przy +10 %/rok 25 % (z 1,96).
+88. **POPRAWNA DATA STARTU NIE ZMIENIA OBRAZU (RU3, 2026-09-24).** TR1 (trend na miejscach 21–50) od
+    2021-02: +15,5 %/rok [+0,2; +30,8], t 1,99, ponad 100 % losowań H0 — kryterium TR1 formalnie spełnione,
+    ale: wynik znany z AU1 przed rundą, poniżej progu rodzinnego ~2,9 (~30 odczytów), a cały przyrost
+    wobec RU2 (t 1,63) to 82 dni lutego–kwietnia 2021 (Σ +14,0 %); od 2022 opisowo +11,4 %/rok, t 1,32.
+    Dodatni 6/6 lat i 7/7 faz (spójność — szczebel 2 ADR-09). X2 jako średnia 7 faz: +21,9 %/rok, t 1,59,
+    fazy od +12 do +39 %/rok zależnie od dnia tygodnia — pojedynczej fazy nie cytować. Liczby TR1/X2
+    z 83 zastępuje RU3. Nie cytować TR1 jako potwierdzenia; rozstrzyga dziennik prospektywny.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
