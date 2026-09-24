@@ -103,6 +103,8 @@
 > (t 1,34)**; przy 2× koszt ~1,6 pkt. Wniosek 76.**
 > SZ1 (2026-09-24): reguły wielkości pozycji dla trend + Coinbase — **po połowie / budżet ryzyka
 > ~+19 %/rok, obsunięcie ~18–19 %, depozyt ~23 %; hamulec po stracie szkodzi** (opisowo). Wniosek 77.**
+> SC1 (2026-09-24): skalowanie pozycji siłą sygnału — **NIEMIERZALNE (szum ±13–17 %/rok), nie
+> wystartowało**. Wniosek 78.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
