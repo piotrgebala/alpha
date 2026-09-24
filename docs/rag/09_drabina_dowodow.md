@@ -51,7 +51,7 @@ o kapitale**. Nie zmienia się sposób mierzenia.
 
 | strategia | szczebel 1 | szczebel 2 (post hoc) | dalej |
 |---|---|---|---|
-| Trend tygodniowy (TS1/TR1) | (a) mocne: trend na wielu rynkach od dekad (Moskowitz–Ooi–Pedersen 2012, Hurst–Ooi–Pedersen 2017); (b) **TX1 w toku** | lata 2021–2025: 5/5 dodatnich; fazy 7/7; pasma 2/2 → spełniony | jeśli TX1 nie obali → szczebel 3 (dziennik trwa) |
+| Trend tygodniowy (TS1/TR1) | (a) mocne: trend na wielu rynkach od dekad (Moskowitz–Ooi–Pedersen 2012, Hurst–Ooi–Pedersen 2017); (b) **TX1: NIEROZSTRZYGNIĘTY** — +5,1 %/rok 1990–2026 (t 2,73), ale −0,2 % po 2013 (wniosek 84) | lata 2021–2025: 5/5 dodatnich; fazy 7/7; pasma 2/2 → spełniony | jeśli TX1 nie obali → szczebel 3 (dziennik trwa) |
 | Premia Coinbase (CP1) | (a) słabe: praktyka rynkowa, brak badań; (b) brak niezależnego testu (CP2: inne monety to ten sam sygnał) | lata 3/5 (2021 −11,6 %, 2024 −8,9 %) → **niespełniony** | zostaje w dzienniku papierowym, **bez realnego kapitału** do czasu nowego dowodu |
 | Momentum między monetami (X1/X2) | (a) umiarkowane (badania nad momentum w krypto, mieszane); (b) brak | X1: lata 5/5, ale X2 2022 −10 % i wrażliwość na dzień rebalansu (wniosek 68) | poza dziennikiem; kandydat na później |
 
@@ -86,6 +86,6 @@ o kapitale**. Nie zmienia się sposób mierzenia.
 ## Działania
 
 1. [x] Zapis ADR, cel projektu w `CLAUDE.md`, synteza w `STATUS.md`, `README.md`, `runs/INDEX.md`.
-2. [ ] TX1 — trend TS1 (parametry zamrożone) na innych rynkach, okres po publikacji; pre-rejestracja
-   z rachunkiem mocy.
+2. [x] TX1 — trend TS1 na 19 rynkach FRED: kryterium POZYTYWNE, po publikacji brak efektu → szczebel 1(b)
+   NIEROZSTRZYGNIĘTY (`runs/2026-09-24_tx1-trend-inne-rynki/`).
 3. [ ] Odczyt dziennika ~2026-12-25 (szczebel 3), potem decyzja użytkownika o szczeblu 4.
