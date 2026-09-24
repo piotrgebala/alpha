@@ -90,6 +90,8 @@
 > w projekcie): +32 %/rok [+2; +62], t_neff 2,09**, bez śladu przecieku; po korekcie na ~28
 > odczytów nieistotny, alfa ponad trend t 1,67. Wniosek 72; seria CP 1/1 STOP; następny krok:
 > ta sama reguła na danych od 2026-07-01.**
+> TF1 (2026-09-24): trend TS1 z filtrem tłoku (funding) — **różnica −1,4 %/rok [−6,6; +3,8],
+> NIEROZSTRZYGNIĘTY**, filtr nie pomaga. Wniosek 73; seria TF 1/1 STOP.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -2593,6 +2595,12 @@ przepływ — decyzja o produkcie po stronie użytkownika), inny cel (R1: nic), 
 (kolektor AKTYWNY — niżej). ~~Otwarte pozostają wyłącznie kierunki wymagające nowych danych
 (pozycjonowanie za ~3 lata, on-chain — brama danych)~~ → **P3 (niżej) podłączyło te dane
 od razu**; otwarta pozostaje decyzja o produkcie cash-and-carry.
+
+#### Seria TF — trend z filtrem tłoku ⚪ ZAMKNIĘTA 2026-09-24 (TF1), 1/1, reguła STOP, NIEROZSTRZYGNIĘTY
+
+Druga z trzech nowych hipotez sesji. Filtr: long zerowany przy Σ funding 7 dni > 0,63 %, short
+przy < −0,63 % (9,3 % pozycji). TF1 − TS1 −1,41 %/rok [−6,58; +3,77]. Wniosek 73. Pełne
+wyniki: `runs/2026-09-24_tf1-trend-filtr-tloku/`.
 
 #### Seria CP — premia Coinbase ⚪ ZAMKNIĘTA 2026-09-24 (CP1), 1/1, reguła STOP, POZYTYWNY (pre-rejestracja), nieistotny rodzinnie
 
