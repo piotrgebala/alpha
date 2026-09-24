@@ -1,0 +1,34 @@
+========================================================================================================
+R1 — PREMIA REBALANSOWA: koszyk top-20 po obrocie, rebalans dzienny (A) vs buy-and-hold w miesiącu (B); konfiguracja ZAMROŻONA
+========================================================================================================
+dane      : uniwersum 675 symboli, 2020-01-01 → 2026-06-30; koszyki 65 (od 2021-02-01 do 2026-06-01), po 20 członków, 195 różnych symboli; dni 1976: 2021-02-01 → 2026-06-30
+koszty    : opłata spot 0.10% × obrót dzienny A; obrót na starcie miesiąca wspólny (skrócony)
+kryterium : jedno ramię; POZYTYWNY t_neff > 1,96; NEGATYWNY górny kraniec CI < 0
+
+1. KRYTERIUM — średnia dzienna premia NETTO (ułamek wartości koszyka), CI z N_eff, rocznie ×365
+  netto : -0.02909%/dzień  CI [-0.06720; +0.00903]  mediana -0.00343%  t -1.53  N_eff 1895/1976  t_neff -1.50  → rocznie -10.62% [-24.53; +3.30]
+  brutto: -0.02636%/dzień  CI [-0.06443; +0.01171]  t_neff -1.36  → rocznie -9.62%; koszt obrotu 0.00273%/dzień = 1.00%/rok
+  >>> ODCZYT KRYTERIUM R1: NIEROZSTRZYGNIĘTY — CI obejmuje zero
+
+2. DEKOMPOZYCJA I KONTEKST (obserwacje)
+  Σ premia brutto -52.09%, Σ koszty 5.39%, Σ premia netto -57.47% (sumy dziennych ułamków)
+  obrót dzienny A: średnia 2.73%, mediana 2.37%, p95 5.42%
+  koszyk A skumulowany zwrot -89.2%, koszyk B -83.0% (beta rynku — poza pytaniem; wartość A względem B: -36.28%)
+  dni z premią netto > 0: 46.4%; miesiące z Σ premii netto > 0: 34/65
+  |premia brutto| p50/p95/max: 0.1066% / 0.8706% / 22.234%  (red flag: premia > ½·CSV 0,0785%/dzień średnio = błąd; średnia brutto -0.02636%)
+
+3. PER ROK (OPISOWO, bez werdyktów)
+   rok |  dni | netto/dzień |  rocznie | brutto/rok | koszt/rok | obrót/dzień |  koszyk A |  koszyk B
+  ----------------------------------------------------------------------------------------------------
+  2021 |  334 |   -0.03420% |  -12.48% |    -11.34% |     1.15% |       3.14% |   +127.4% |   +149.3%
+  2022 |  365 |   -0.01346% |   -4.91% |     -4.07% |     0.84% |       2.31% |    -87.5% |    -86.7%
+  2023 |  365 |   -0.01267% |   -4.62% |     -3.80% |     0.83% |       2.27% |   +124.9% |   +131.9%
+  2024 |  366 |   +0.00260% |   +0.95% |     +1.96% |     1.01% |       2.77% |     -1.0% |     -2.7%
+  2025 |  365 |   -0.10929% |  -39.89% |    -38.88% |     1.01% |       2.77% |    -66.3% |    -53.7%
+  2026 |  181 |   +0.01342% |   +4.90% |     +6.20% |     1.30% |       3.57% |    -49.4% |    -51.0%
+
+4. MIERZALNOŚĆ (zasada 18) — ex ante vs ex post
+  ex ante: n 1976, se ≈ 0.00271%/dzień → wykrywalny efekt 2.77%/rok; górna granica ½·CSV 28.7%/rok; koszt 0.88%/rok
+  ex post: sd premii netto 0.84652%/dzień, N_eff 1895/1976, se_neff 0.01945% → wykrywalny efekt 19.88%/rok
+
+  czas całkowity: 1 s

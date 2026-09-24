@@ -63,7 +63,7 @@ pokrywa koszty, ale ruchy cen są 57× większe od zarobku, więc uczciwy test w
 danych. Niemierzalne.** Jedyną drogą zostaje wariant z zabezpieczeniem na rynku spot
 (cash-and-carry) — inny produkt, decyzja użytkownika.
 
-Stan testów: **865/865** (2026-09-24).
+Stan testów: **866/866** (2026-09-24).
 
 ### ⚪ Wykonanie „po konkretnej cenie" — W1 (2026-09-23): backtest dopasowany do handlu na żywo
 
@@ -361,6 +361,7 @@ Pełny, aktualny status: [`STATUS.md`](STATUS.md).
 | **Start dziennika na żywo (papierowo)** | 2026-09-24 | Trend tygodniowy (2×) + premia Coinbase (3×) wg reguły budżetu ryzyka z SZ1; codziennie pozycje zapisywane przed wynikiem, wynik od 2026-09-24, próg ostrzeżenia 18,4 % i STOP 27,6 % spadku (po RU1). Po ~3 miesiącach odczyt mechaniki (nie przewagi). | [dziennik](dziennik/README.md) |
 | **SH1 — sonda 15 hipotez: żadna nie do zmierzenia** | 2026-09-24 | 10 pomysłów (Korea, stablecoiny, ETF, stopy, odblokowania, Wikipedia…) sprawdzonych przez „adwokata diabła”: na 5 latach danych szum jest 2–5× większy niż spodziewany efekt. | [sh1-sonda-hipotez](runs/2026-09-24_sh1-sonda-hipotez/README.md) |
 | **RU1 — naprawa dziury w danych** | 2026-09-24 | Koszyk „20 największych monet” był liczony z 287 z 685 kontraktów. Po naprawie: trend ~+11 %/rok (było 15), momentum ~+42 % (w tym jeden wystrzał MYX), portfel trend+Coinbase ~+17 %/rok przy spadku 18 %. Nadal nic istotnego. | [ru1-pelne-uniwersum](runs/2026-09-24_ru1-pelne-uniwersum/README.md) |
+| **RU2 — pozostałe rundy po naprawie danych** | 2026-09-24 | Trend na monetach 21–50 ~+13 %/rok (dodatni w każdym roku), momentum top-50 ~+23 %, dźwignia 3× kosztuje trend ~2,4 %/rok w likwidacjach; żaden werdykt się nie zmienił. | [ru2-korekta-pozostalych](runs/2026-09-24_ru2-korekta-pozostalych/README.md) |
 
 ## Hipoteza w skrócie
 

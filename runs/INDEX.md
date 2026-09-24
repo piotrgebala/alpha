@@ -38,7 +38,7 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
   szansę przypadkowego sukcesu. Rozstrzygnąć może test prospektywny (dziennik na żywo).
 
 **Uwaga danych (RU1):** `data/raw/universe` jest obcięty (287/685) — nowe rundy tylko na `universe_full`;
-X2, R1, TF1, TL1, LQ1, NL1, P2, TR1 czekają na przeliczenie.
+RU2 przeliczyła TR1, X2, LQ1, TF1, R1 (werdykty bez zmian, 83); TL1 czeka (dane OI); NL1 i P2 nie dotyczy.
 
 **Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1); nowe
 źródła popytu (premia koreańska, emisja stablecoinów, przepływy ETF) — każde z rachunkiem mocy.
@@ -126,6 +126,7 @@ podsumowanie pod tabelą.
 | **CP2** | 2026-09-24 | [cp2-premia-coinbase-eth-sol](2026-09-24_cp2-premia-coinbase-eth-sol/README.md) | Replikacja CP1 na ETH i SOL (zasada 9: ta sama reguła, bez retuningu), m = 2, z 2,241; tylko rachunek mocy i profil danych | **0 — NIEMIERZALNA, nie wystartowała** | Half-width ±36,2 (ETH) / ±37,2 %/rok (SOL) > efekt CP1 (+32 %); moc 34–39 % przy efekcie CP1. Sygnał ETH = sygnał BTC w **94,4 %** dni, SOL w **89,3 %** (premia ETH/BTC skorelowana 0,95) — inne monety nie są niezależnym potwierdzeniem. Walidacja: **READY** (zgodność przeliczona niezależnie) |
 | **SH1** | 2026-09-24 | [sh1-sonda-hipotez](2026-09-24_sh1-sonda-hipotez/README.md) | Sonda 15 nowych hipotez (popyt spoza Binance, makro, kalendarz, on-chain/uwaga), 10 zweryfikowanych przeciwniczo z pobraniem danych | **0 — POZA licznikami** | **0 kandydatów: 9 NIEMIERZALNYCH, 1 słaby mechanizm** (niepewność 2–5× większa od realistycznego efektu). Znalezisko: uniwersum obcięte → RU1. Walidacja: **Caveats** |
 | **RU1** | 2026-09-24 | [ru1-pelne-uniwersum](2026-09-24_ru1-pelne-uniwersum/README.md) | **Korekta danych:** `data/raw/universe` miał 287 z 685 kontraktów (A–G + 12); pełne `universe_full`, reguły TS1/X1/SZ1 zamrożone co do bajtu; pre-rejestracja `d2316cc` | **0 — korekta danych** | Skład top-20 inny na 5,1/20 miejsc. **TS1 +11,1 %/rok [−4,2; +26,3] t 1,43 (było +14,8); X1 +41,7 %/rok t_neff 1,86 (było +22), z tego ~83 pkt z jednego zdarzenia (MYX), bez niego +26,3 %; SZ1 R1 +17,1 % / obs. 18,4 %.** Oba ślady odporne, oba NIEROZSTRZYGNIĘTE. Walidacja: **READY (Caveats)** — dziennik vs pełny backtest kor. 0,9990 |
+| **RU2** | 2026-09-24 | [ru2-korekta-pozostalych](2026-09-24_ru2-korekta-pozostalych/README.md) | Korekta danych dla TR1, X2, LQ1, TF1, R1 (pełne uniwersum, reguły zamrożone); pre-rejestracja `1d00e7a` | **0 — korekta danych** | Wszystkie odporne, werdykty bez zmian: **TR1 +13,0 %/rok t 1,63; X2 +23,1 % t 1,60; koszt likwidacji 3× −2,4 %/rok; TF1 −1,3 pkt; R1 −10,6 %/rok.** TL1 nieprzeliczony (OI). Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -809,6 +810,9 @@ podsumowanie pod tabelą.
     +41,7 % (było +22; ~83 pkt z jednego wystrzału MYX, bez niego +26 %), SZ1 R1 +17 % / spadek 18 %.
     Oba nadal NIEROZSTRZYGNIĘTE. Lekcja: przy każdym nowym uniwersum porównać listę plików z listą
     źródła — błąd przeszedł przez ~10 rund, NC1 go nie łapie (dane syntetyczne).
+83. **KOREKTA DANYCH NIE ZMIENIŁA ŻADNEGO WERDYKTU (RU2, 2026-09-24).** TR1 +13,0 %/rok (dodatni 6/6
+    lat), X2 +23,1 % (2026 głównie z fundingu), koszt likwidacji 3× −2,4 %/rok, TF1 −1,3 pkt, R1
+    −10,6 %/rok — znaki bez zmian. Liczby we wnioskach 57, 64, 68, 70, 73, 74, 76 zastępują RU1/RU2.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

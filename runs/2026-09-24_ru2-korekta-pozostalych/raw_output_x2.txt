@@ -1,0 +1,31 @@
+========================================================================================================
+X2 — MOMENTUM PRZEKROJOWE (B1) NA TOP-50: long top-10 / short bottom-10 po zwrocie 28 dni, trzymanie 7 dni; konfiguracja ZAMROŻONA
+========================================================================================================
+dane   : uniwersum 675 symboli 1d (2020-01-01 → 2026-06-30), 62 koszyków miesięcznych TOP-50 po obrocie (376 różnych symboli), 270 formowań co 7 dni od 2021-05-01 do 2026-06-27
+reguła : sygnał = zwrot 28 dni (zamknięcia ≤ t), long top-10 / short bottom-10, kapitał 1 = 0,5 + 0,5, wagi dryfują 7 dni; koszt 0.07% × obrót obu nóg; funding: long płaci, short otrzymuje
+
+1. KRYTERIUM — średni dzienny zwrot netto portfela long-short (% kapitału), CI z N_eff, annualizacja ×365
+         |     n | średnia/dzień |          CI 95% (N_eff) |   mediana |      t |  N_eff |  t_neff |                rocznie
+  ------------------------------------------------------------------------------------------------------------------------
+   netto |  1886 |      +0.0633% | [ -0.0143;  +0.1410] |  +0.0222% |  +1.60 |   1886 |   +1.60 |  +23.1% [-5.2; +51.5]
+  brutto |  1886 |      +0.0489% | [ -0.0288;  +0.1267] |  +0.0197% |  +1.23 |   1886 |   +1.23 |  +17.9% [-10.5; +46.2]
+  >>> ODCZYT KRYTERIUM (netto): NIEROZSTRZYGNIĘTY — CI obejmuje zero
+
+2. DEKOMPOZYCJA — sumy za całą próbę (% kapitału) i obrót
+  Σ brutto +92.32% | Σ funding netto +44.93% | Σ koszty 17.77% | Σ netto +119.48% | obrót łączny 253.9 kapitału (0.94 na formowanie, 270 formowań z obrotem)
+  noga long: średnia dzienna -0.0280% | noga short: -0.1259% | dni bez pozycji: 0 | dni z zwrotem netto > 0: 50.4% | dni z nogą < 10 aktywnych: 212
+     rok |  dni |  Σ netto |  Σ brutto |  Σ funding |  Σ koszt | sd/dzień |     long |    short
+  --------------------------------------------------------------------------------------------
+    2021 |  244 |  +42.73% |   +44.42% |     +0.66% |    2.35% |   1.943% |  +108.6% |   +19.8%
+    2022 |  365 |  -10.27% |    -5.16% |     -1.77% |    3.34% |   1.421% |  -131.5% |  -121.2%
+    2023 |  365 |  +27.99% |   +16.46% |    +14.96% |    3.44% |   1.296% |  +104.0% |   +71.0%
+    2024 |  366 |   +5.27% |    +8.02% |     +0.75% |    3.49% |   1.670% |   +31.3% |   +15.3%
+    2025 |  365 |  +27.04% |   +27.83% |     +2.56% |    3.35% |   1.789% |  -112.8% |  -168.5%
+    2026 |  181 |  +26.71% |    +0.75% |    +27.77% |    1.81% |   2.500% |   -52.3% |   -53.8%
+
+3. WTÓRNIE — rank IC tygodniowe (Spearman: sygnał vs zwrot 7 dni wśród członków) i neutralność do BTC
+  IC: n = 269 tygodni, średnia +0.0009 [-0.0249; +0.0267], sd 0.216, ICIR +0.004, udział IC > 0: 51.7%, średnio 49.9 par
+  korelacja dziennego zwrotu netto z BTC: -0.092
+  rozkład dziennego zwrotu netto: p05 -2.76%, p50 +0.022%, p95 +2.78%, min -7.65%, max +10.54%
+========================================================================================================
+czas: 6.6s
