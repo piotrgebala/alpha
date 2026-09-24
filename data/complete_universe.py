@@ -60,13 +60,13 @@ def run(cache_dir: str) -> None:
     missing = [s for s in universe if not cache_paths(d, s)[1].exists()]
     print(f"[uzup] uniwersum {len(universe)}, brak świec: {len(missing)}", flush=True)
     with ThreadPoolExecutor(KLINE_THREADS) as pool:
-        for i, (sym, n) in enumerate(pool.map(lambda s: _klines_job(s, d), missing), 1):
+        for i, _ in enumerate(pool.map(lambda s: _klines_job(s, d), missing), 1):
             if i % 50 == 0:
                 print(f"[uzup] świece {i}/{len(missing)}", flush=True)
     _, volume = load_universe(d)
     lo, end = pd.Timestamp("2021-01-01", tz="UTC"), pd.Timestamp(END, tz="UTC")
     volume = volume[(volume.index >= lo) & (volume.index < end)]
-    months = [m for m in pd.date_range("2021-02-01", END, freq="MS", tz="UTC") if m < end]
+    months = [m for m in pd.date_range("2021-02-01", END[:10], freq="MS", tz="UTC") if m < end]
     members = monthly_members(volume, months)
     need = sorted({s for v in members.values() for s in v} | {"BTCUSDT"})
     todo = [s for s in need if not cache_paths(d, s)[0].exists()]
