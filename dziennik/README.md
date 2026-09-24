@@ -88,6 +88,10 @@ uruchamia `dziennik/uruchom.bat` (wydruk dopisywany do `dziennik/ostatni_wydruk.
 startu, końca i kodem wyjścia). Ustawienia (2026-09-24): start przy najbliższej okazji, gdy termin
 przepadł (komputer wyłączony); budzenie komputera; praca na baterii; limit 2 h; przy błędzie do 3 ponowień
 co 30 min; jedna instancja naraz. Przebieg jest idempotentny — ponowienie tego samego dnia nic nie dubluje.
+- **Bez widocznego okna:** akcja to `conhost.exe --headless cmd.exe /c <repo>/dziennik/uruchom.bat`.
+  Pierwszy próbny start (24.09, 18:36) otwierał czarne okno konsoli i skończył się po minucie kodem
+  0xC000013A (okno zamknięte / Ctrl+C) — zamknięcie takiego okna zabija przebieg. Od 18:48 zadanie
+  działa w tle.
 - **Ograniczenie:** zadanie działa, gdy użytkownik jest zalogowany (także przy zablokowanym ekranie).
   Po restarcie bez logowania ruszy dopiero po zalogowaniu. Tryb „bez logowania” wymaga administratora —
   jednorazowo w PowerShell uruchomionym jako administrator:

@@ -137,7 +137,8 @@
 > X1F (2026-09-24): X1 jako średnia 7 dni tygodnia +9,5 %/rok, t 0,61 — dawne +42 % to najlepszy dzień;
 > X1 w dzienniku papierowym od 25.09 (osobno, decyzja użytkownika); poprawka filtra nazw dziennika (wniosek 89).
 > HARMONOGRAM (2026-09-24, prośba użytkownika): zadanie „CLAS5 dziennik” 02:30 — dodane nadrabianie terminu,
-> budzenie, bateria, 3 ponowienia; tryb bez logowania wymaga administratora (polecenie w `dziennik/README.md`).
+> budzenie, bateria, 3 ponowienia, praca w tle bez okna (test 24.09 19:01: kod 0, pełny przebieg); tryb bez
+> logowania wymaga administratora (polecenie w `dziennik/README.md`).
 > SERIA SW (decyzja użytkownika 2026-09-24): cechy spoza wykresu — etap 1 pojedyncze reguły, etap 2 jeden model
 > XGBoost ze wszystkimi (okno 365 dni) jako JEDEN wariant = świadomy wyjątek od zasady 4.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
