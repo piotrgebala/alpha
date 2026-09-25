@@ -71,4 +71,5 @@ backtest/run_kr1_korelacje.py               # KR1
 backtest/run_au4_dsr.py                     # AU4
 backtest/run_tl1_full_ru4.py                # RU4
 backtest/run_p4_pokrycie_onchain.py         # P4
+backtest/run_ko1_koszty.py                  # KO1
 backtest/screen_feature_candidates.py        # C2.7

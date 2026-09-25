@@ -155,6 +155,7 @@ podsumowanie pod tabelą.
 | **AU4** | 2026-09-25 | [au4-dsr-cp1](2026-09-25_au4-dsr-cp1/README.md) | Deflated Sharpe CP1 (Bailey & LdP 2014): N odczytów zysku z liczników INDEX (28 w chwili CP1, 40 dziś), siatka N 5–40, poprawka na skośność/kurtozę; pre-rejestracja z regułą 0,95/0,80 | **0 — audyt** | **DSR 0,52 przy N = 28 (0,46 przy 40, 0,82 przy 5) → CP1 po korekcie nieodróżnialny od najlepszego z pustych pomysłów;** przy 28 pustych najlepszy ma t ≥ 2,09 w 40 % (symulacja = wzór). Walidacja: **Ready** |
 | **RU4** | 2026-09-25 | [ru4-tl1-pelne-oi](2026-09-25_ru4-tl1-pelne-oi/README.md) | Korekta danych TL1: pełne uniwersum (RU1) + pełny panel OI (`oi_daily_full`, 10 838 dni dociągniętych), zamrożony `run_crowding_tl1` z podmienionymi ścieżkami | **0 — korekta danych** | **TL1: +8,1 %/rok [−17,5; +33,7], t 0,62 (było −10,5 %, t −1,39) — NIEROZSTRZYGNIĘTY bez zmian;** znak odwrócony, 7 faz −44 … +35 %/rok. Zastrzeżenie: H0 TL1 ma 6× niższą zmienność niż strategia. Walidacja: **Caveats** |
 | **P4** | 2026-09-25 | [p4-pokrycie-onchain](2026-09-25_p4-pokrycie-onchain/README.md) | Brama danych on-chain: pokrycie katalogu CoinMetrics community (przepływy/podaż na giełdach, adresy, MVRV, transakcje) dla koszyków top-20/top-50 point-in-time | **0 — brama danych** | **Przepływy i podaż na giełdach: tylko BTC i ETH (4–10 % koszyka); adresy/MVRV/transakcje 34–46 % i spada — ranking on-chain na darmowych danych niewykonalny.** Brakuje SOL, AVAX, PEPE, SUI, MATIC… Płatni dostawcy — do sprawdzenia przez użytkownika. |
+| **KO1** | 2026-09-25 | [ko1-koszty-wykonania](2026-09-25_ko1-koszty-wykonania/README.md) | Koszty wykonania nóg dziennika (TS1, X1 7 faz, CP1): ten sam silnik, stawka taker 0,07 % vs maker 90 %/100 % wypełnień | **0 — opisowo** | **Koszt taker: TS1 0,8 %/rok, CP1 1,5 %, X1 3,3 %; limity oddałyby +0,5 / +1,0 / +2,2 pkt/rok (przed niekorzystną selekcją).** Koszty nie są wąskim gardłem trendu ani CP1. |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -937,6 +938,10 @@ podsumowanie pod tabelą.
     dla BTC i ETH (4–10 % koszyka top-20/50), aktywne adresy / MVRV / transakcje 34–46 % koszyka i maleje (2025–26: 30–43 %).
     Brakuje najczęstszych członków (SOL, AVAX, PEPE, SUI, MATIC). Ranking on-chain na darmowych danych — niewykonalny;
     płatny dostawca ma sens tylko przy ≥ ~70 % pokrycia 2021–2026 (sprawdzić przed zakupem).
+99. **KOSZTY NIE BLOKUJĄ STRATEGII TYGODNIOWYCH (KO1, 2026-09-25).** Przy zleceniach rynkowych koszt zjada trendowi 0,8 %/rok,
+    premii Coinbase 1,5 %, X1 3,3 % (większy obrót). Zlecenia limitowe (90 % wypełnień) oddałyby +0,5 / +1,0 / +2,2 pkt/rok,
+    realnie mniej (niekorzystna selekcja wypełnień, C2.12/W1). Obniżka kosztów ma znaczenie dla strategii o dużym obrocie
+    (4h — SW, TL1), nie dla nóg dziennika; limity stosować przy realnych pieniądzach, mierząc wypełnienia.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
