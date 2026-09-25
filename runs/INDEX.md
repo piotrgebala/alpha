@@ -1,6 +1,6 @@
 # runs/ — spis treści
 
-## Stan wiedzy — skrót (czytaj najpierw; stan na 2026-09-24)
+## Stan wiedzy — skrót (czytaj najpierw; stan na 2026-09-25)
 
 Krótka mapa dla kogoś, kto wchodzi do projektu. Pełne liczby i uzasadnienia: tabela niżej
 i „Wnioski skumulowane” (numery w nawiasach). Aktualizuj, gdy runda zmienia obraz — nie przy
@@ -50,8 +50,10 @@ TL1 czeka (dane OI); NL1 i P2 nie dotyczy.
 **Kryterium od 2026-09-24 (ADR-09):** o kapitale decyduje drabina dowodów (`docs/rag/09`); ten plik nadal
 księguje każdy odczyt. Trend: szczebel 2 spełniony (post hoc); szczebel 1(b) TX1 NIEROZSTRZYGNIĘTY — działa 1990–2012, zanika po 2013 (84).
 
-**Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1); nowe
-źródła popytu (premia koreańska, emisja stablecoinów, przepływy ETF) — każde z rachunkiem mocy.
+**Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1). Nowe źródła
+popytu: premia koreańska NIEMIERZALNA (KP1, 91; sygnał inny niż CP1, ale efekt z badań ~SR 0,15 wobec
+progu 0,86); stablecoiny i ETF — NIEMIERZALNE w SH1 (81). Kolejne sygnały kierunkowe na samym BTC
+wymagają priorytetu SR ≥ ~0,9 z badań po publikacji — inaczej nie startują (filtr przed pobraniem danych).
 
 ## Konwencja katalogów
 
@@ -143,6 +145,7 @@ podsumowanie pod tabelą.
 | **RU3** | 2026-09-24 | [ru3-data-startu](2026-09-24_ru3-data-startu/README.md) | Korekta daty startu TR1 i X2 (2021-05 → 2021-02, pełne uniwersum; X2 jako średnia 7 faz); pre-rejestracja `e4c2350`; wynik znany z AU1 | **0 — korekta danych** | **TR1 +15,5 %/rok [+0,2; +30,8], t 1,99 — formalnie POZYTYWNY, ale znany z góry, poniżej progu rodzinnego ~2,9, a cały przyrost to 82 dni hossy 02–04.2021 (od 2022: +11,4 %, t 1,32). X2 +21,9 % t 1,59 — NIEROZSTRZYGNIĘTY** (fazy 12–39 %/rok). Walidacja: **Caveats** (RU2 odtworzone co do 1e-17) |
 | **X1F** | 2026-09-24 | [x1f-siedem-faz](2026-09-24_x1f-siedem-faz/README.md) | X1 (momentum przekrojowe top-20) jako średnia 7 faz (dni startu tygodnia) + X1 w dzienniku papierowym od 2026-09-25 (poprawka 3) + poprawka filtra nazw dziennika (poprawka 4) | **0 — zapis porządkowy** | **X1 7 faz: +9,5 %/rok [−21,1; +40,1], t 0,61 — dawne +41,7 % (t 1,86) to najlepsza z 7 faz (poniedziałek); pozostałe od −1,3 do +21,6. Kandydat skreślony na historii.** MYX: long w 1 fazie, short w 5 (−44 pkt średniej). Dziennik vs backtest X1: kor. 0,9875 → 0,9986 po poprawce filtra (币安人生USDT). Walidacja: **Caveats** |
 | **SW** | 2026-09-24 | [sw-cechy-spoza-wykresu](2026-09-24_sw-cechy-spoza-wykresu/README.md) | **NOWA SERIA SW:** 8 cech spoza wykresu (funding, OI, L/S dużych graczy i wszystkich kont, przewaga kupujących, VRP, podaż na giełdach, F&G) — etap 1: każda jako reguła „za/przeciw odchyleniu od mediany 365 dni” (kierunek z mechanizmu); etap 2: jeden XGBoost na 7 cechach, okno 365 dni (wyjątek od zasady 4, decyzja użytkownika); pre-rejestracja `e03cfa4` | **9/9 — seria zamknięta (STOP)**, z\* 2,773 | **Wszystkie 8 reguł tracą po kosztach (−0,03 … −0,11 %/tr; 4 NEGATYWNE, 4 NIEROZSTRZ.); model −0,050 % [−0,091; −0,010], t −1,78 — NIEROZSTRZ. Duża przewaga (≥ +0,06 %/tr) wykluczona.** Przed kosztami +0,02 … +0,05 %/tr (L/S kont +0,054 [+0,023; +0,085]) — 2–3× mniej niż koszt 0,08 %. Walidacja: **Ready** (IC niezależne od silnika zgodne) |
+| **KP1** | 2026-09-25 | [kp1-premia-koreanska](2026-09-25_kp1-premia-koreanska/README.md) | Premia koreańska (Upbit KRW-BTC ÷ spot Binance × USD/KRW `DEXKOUS`) w regule CP1 (7 vs 90 dni, silnik TS1) — wariant serii CP pod STOP-em, więc tylko profil, zgodność z CP1 i rachunek mocy; założony efekt SR 0,15 z przeglądu badań (30 źródeł zweryfikowanych); pre-rejestracja `d909076` | **0 — NIEMIERZALNA, nie wystartowała** | **Half-width ±30,9 %/rok (0,86 SR); moc 5 % przy SR 0,15, 53 % nawet przy efekcie CP1.** Zgodność znaku z CP1 52,8 % [~46; 60] (przypadek 50,1 %) — sygnał inny niż CP1, z trendem 28 dni 45,9 %. Od 2024-06 premia BTC ≈ premia USDT (napływ wonów). Kierunek odwrotny spalony (kontaminacja w przeglądzie badań). Walidacja: **Caveats** (liczby odtworzone niezależnie) |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -167,7 +170,7 @@ podsumowanie pod tabelą.
 - **NOWA SERIA TL — tłok przekrojowy (od TL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna/nogi, odwrócenie znaku (post hoc).
 - **SERIA TS — uzupełnienie (TR1/TP1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — zamknięta na historii.** Dalej tylko dziennik prospektywny tej samej reguły (0 wariantów).
 - **NOWA SERIA TF — trend z filtrem tłoku (od TF1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne progi/okna fundingu, OI jako filtr trendu bez nowego mechanizmu.
-- **NOWA SERIA CP — premia Coinbase (od CP1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna, progi, giełdy na tych samych danych. Dozwolone bez nowego licznika: ta sama reguła poza próbą (dane od 2026-07-01, prospektywnie). CP2 (ETH/SOL, 2026-09-24): NIEMIERZALNA, 0 wariantów, 0 odczytów wyniku.
+- **NOWA SERIA CP — premia Coinbase (od CP1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna, progi, giełdy na tych samych danych. Dozwolone bez nowego licznika: ta sama reguła poza próbą (dane od 2026-07-01, prospektywnie). CP2 (ETH/SOL, 2026-09-24): NIEMIERZALNA, 0 wariantów, 0 odczytów wyniku. KP1 (premia koreańska = „inna giełda”, 2026-09-25): NIEMIERZALNA, 0 wariantów, 0 odczytów wyniku; kierunek odwrotny spalony.
 - **NOWA SERIA NL — nowe listingi (od NL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Własny licznik (rodzina G2, zbiór informacyjny: kalendarz zdarzeń). Zakazane bez decyzji użytkownika: inne okna/opóźnienia, filtry listingów, stop-loss na wystrzał (inny rozkład wypłat = nowa hipoteza), long po listingu (post hoc).
 - **NOWA SERIA WF — okno uczenia modelu 4h (WF1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — STOP.** Oba NEGATYWNE.
 - **NOWA SERIA TX — trend TS1 na rynkach spoza krypto (TX1, 2026-09-24, ADR-09): 1/1 ZUŻYTE — STOP.** Zakazane: dobór rynków lub okresów po wyniku (np. „tylko ropa i akcje”).
@@ -881,6 +884,13 @@ podsumowanie pod tabelą.
     kont +0,054 [+0,023; +0,085]), IC niezależne od silnika +0,02 … +0,03 w 5/8 — koszt handlu co 4h ~0,08 %/tr
     zjada to 2–3×. Zastępuje „niezmierzone” z wniosku 87 dla tych cech. Odwrócenie kierunku nie ratuje (płaci ten
     sam koszt). Jedyna otwarta droga: wolniejszy horyzont (mniej transakcji) — NOWA hipoteza, decyzja użytkownika.
+91. **PREMIA KOREAŃSKA: INNY SYGNAŁ NIŻ CP1, ALE NIEMIERZALNY (KP1, 2026-09-25).** Upbit KRW-BTC ÷ (spot Binance
+    × `DEXKOUS`) w regule CP1: zgodność znaku z CP1 52,8 % [~46; 60] (bootstrap blokowy; przypadek 50,1 %),
+    z trendem 28 dni 45,9 % — nie kopia CP1 ani trendu. Przegląd badań (30 źródeł zweryfikowanych): nikt nie
+    zmierzył, czy premia przewiduje globalny BTC; kierunek nieznany; od 2024-06 premia BTC ≈ premia USDT
+    (mierzy napływ wonów). Założony efekt SR 0,15 wobec progu przyrządu 0,86 SR (±30,9 %/rok) → moc 5 %,
+    zysków nie liczono. Ogólnie: na samym BTC z 5 lat danych dziennych przyrząd widzi dopiero SR ≥ ~0,86 —
+    filtr „efekt z badań po publikacji ≥ próg” stosować PRZED pobieraniem danych (uzupełnia 81).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
