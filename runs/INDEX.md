@@ -154,6 +154,7 @@ podsumowanie pod tabelą.
 | **KR1** | 2026-09-25 | [kr1-korelacje-nog](2026-09-25_kr1-korelacje-nog/README.md) | Korelacje nóg portfela TS1 / X1 (7 faz) / CP1 na wspólnym oknie (te same funkcje co RU1/X1F/CP1), dziennie, tygodniowo, w złych dniach TS1; dywersyfikacja 1/σ; reguła 0,3/0,5 z góry | **0 — opisowo** | **TS1–X1 tyg. 0,35 (0,28–0,39) → częściowa; TS1–CP1 0,24, X1–CP1 0,16 → znaczna; w 10 % najgorszych dni TS1 korelacje spadają (0,24 / 0,09 / 0,04).** Dywersyfikacja portfela 0,80 → 0,71 z X1. Walidacja: **Ready** |
 | **AU4** | 2026-09-25 | [au4-dsr-cp1](2026-09-25_au4-dsr-cp1/README.md) | Deflated Sharpe CP1 (Bailey & LdP 2014): N odczytów zysku z liczników INDEX (28 w chwili CP1, 40 dziś), siatka N 5–40, poprawka na skośność/kurtozę; pre-rejestracja z regułą 0,95/0,80 | **0 — audyt** | **DSR 0,52 przy N = 28 (0,46 przy 40, 0,82 przy 5) → CP1 po korekcie nieodróżnialny od najlepszego z pustych pomysłów;** przy 28 pustych najlepszy ma t ≥ 2,09 w 40 % (symulacja = wzór). Walidacja: **Ready** |
 | **RU4** | 2026-09-25 | [ru4-tl1-pelne-oi](2026-09-25_ru4-tl1-pelne-oi/README.md) | Korekta danych TL1: pełne uniwersum (RU1) + pełny panel OI (`oi_daily_full`, 10 838 dni dociągniętych), zamrożony `run_crowding_tl1` z podmienionymi ścieżkami | **0 — korekta danych** | **TL1: +8,1 %/rok [−17,5; +33,7], t 0,62 (było −10,5 %, t −1,39) — NIEROZSTRZYGNIĘTY bez zmian;** znak odwrócony, 7 faz −44 … +35 %/rok. Zastrzeżenie: H0 TL1 ma 6× niższą zmienność niż strategia. Walidacja: **Caveats** |
+| **P4** | 2026-09-25 | [p4-pokrycie-onchain](2026-09-25_p4-pokrycie-onchain/README.md) | Brama danych on-chain: pokrycie katalogu CoinMetrics community (przepływy/podaż na giełdach, adresy, MVRV, transakcje) dla koszyków top-20/top-50 point-in-time | **0 — brama danych** | **Przepływy i podaż na giełdach: tylko BTC i ETH (4–10 % koszyka); adresy/MVRV/transakcje 34–46 % i spada — ranking on-chain na darmowych danych niewykonalny.** Brakuje SOL, AVAX, PEPE, SUI, MATIC… Płatni dostawcy — do sprawdzenia przez użytkownika. |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -932,6 +933,10 @@ podsumowanie pod tabelą.
     +8,1 %/rok [−17,5; +33,7], t 0,62 (na obciętych danych −10,5 %, t −1,39); 7 faz od −44 do +35 %/rok. Werdykt bez zmian
     (NIEROZSTRZYGNIĘTY), seria TL zamknięta. Uwaga przyrządu: H0 z przesunięciem sygnału miało tu 6× niższą zmienność niż
     strategia — porównanie z q97,5 H0 było mało warte; decyduje t_neff. Pełny panel OI (185 monet) gotowy w repo danych.
+98. **DARMOWE DANE ON-CHAIN NIE POKRYWAJĄ KOSZYKA (P4, 2026-09-25).** CoinMetrics community: przepływy i podaż na giełdach tylko
+    dla BTC i ETH (4–10 % koszyka top-20/50), aktywne adresy / MVRV / transakcje 34–46 % koszyka i maleje (2025–26: 30–43 %).
+    Brakuje najczęstszych członków (SOL, AVAX, PEPE, SUI, MATIC). Ranking on-chain na darmowych danych — niewykonalny;
+    płatny dostawca ma sens tylko przy ≥ ~70 % pokrycia 2021–2026 (sprawdzić przed zakupem).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
