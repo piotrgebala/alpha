@@ -1,0 +1,67 @@
+[
+ {
+  "round": "2026-09-23_g1-strach-chciwosc",
+  "module": "backtest.run_external_features_lvg",
+  "args": [
+   "G1"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 7,
+  "log": "run_external_features_lvg_G1_old.log",
+  "calls": 4,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_l1-onchain-podaz",
+  "module": "backtest.run_external_features_lvg",
+  "args": [
+   "L1"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 8,
+  "log": "run_external_features_lvg_L1_old.log",
+  "calls": 4,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_v1-premia-zmiennosci",
+  "module": "backtest.run_external_features_lvg",
+  "args": [
+   "V1"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 8,
+  "log": "run_external_features_lvg_V1_old.log",
+  "calls": 4,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_y1-horyzont-1h",
+  "module": "backtest.run_horizon_y",
+  "args": [
+   "1h"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 9,
+  "log": "run_horizon_y_1h_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_y2-horyzont-1d",
+  "module": "backtest.run_horizon_y",
+  "args": [
+   "1d"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 2,
+  "log": "run_horizon_y_1d_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ }
+]

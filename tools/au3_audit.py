@@ -27,7 +27,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 CMD_RE = re.compile(
-    r"\b(?:py|python3?) -m (backtest\.[A-Za-z0-9_]+)((?: +--?[A-Za-z0-9_\-=.,]+| +[0-9][0-9.]*)*)"
+    r"\b(?:py|python3?) -m (backtest\.[A-Za-z0-9_]+)((?: +--?[A-Za-z0-9_\-=.,]+| +[0-9][0-9a-z.]*| +[A-Z][A-Z0-9]*[0-9])*)"
 )
 TRIGGERS = ("summarize_pnl", "summarize_trade_returns", "effective_sample_size", "t_neff")
 TIMEOUT_S = 45 * 60

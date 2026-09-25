@@ -1,0 +1,159 @@
+========================================================================================================
+W1 — WYKONANIE PO KONKRETNEJ CENIE: uczciwy model wypełnień (konfiguracja ZAMROŻONA)
+========================================================================================================
+dane      : 14916 świec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+pipeline  : BEZ bramki reżimu, V=3, wagi klas `balanced`, cechy ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20'],
+            walk-forward 60/28/28, seed 42, model kosztów `maker_limit`, bramka kosztowa 0.0009
+JEDNA zmienna: mechanika wypełnień i wyjść (fill_model), reszta jak ramię A z M1/F1.
+
+========================================================================================================
+CZĘŚĆ A — pełna historia, jeden trening, kontrola + 3 warianty (k = 1)
+========================================================================================================
+  trening zakończony po 3 s
+  foldy: 86 aktywne / 86 łącznie
+           ocenione świece:    14448
+    odpadło na abstynencji:     6334
+           bramka pewności:        0
+           bramka kosztowa:        0
+       sygnały kandydujące:     8114
+               abstynencja:   43.84%
+
+0. KONTROLA — tryb `label` musi odtworzyć ramię A z M1/F1 co do sztuki
+  n = 8033 (ref 8033), trafień = 4046 (ref 4046), p = 50.3672%  ->  ZGODNE
+  próg BE = 52.93%, B = 1.3824%, C = 0.0811%, CI [49.27%; 51.46%]
+
+1. WYNIK — trafność wobec progu opłacalności (warianty z werdyktem)
+  wariant |      n | niewyp. |  trafność |               CI 95% |  próg BE |   margines | werdykt
+  ----------------------------------------------------------------------------------------------------------------------
+  kontrola |   8033 |       0 |    50.37% | [  49.27%;   51.46%] |   52.93% |     -2.57 pp | (odniesienie, 0 wariantów)
+     W1a |   7978 |      52 |    50.11% | [  49.02%;   51.21%] |   52.96% |     -2.84 pp | NEGATYWNY — ci_high < próg przy n >= wymaganym (wymagane n = 2,922)
+     W1b |   2858 |    5233 |    53.15% | [  51.32%;   54.98%] |   52.81% |     +0.34 pp | NIEROZSTRZYGNIĘTY — CI przecina próg albo n poniżej wymaganego (wymagane n = 3,276)
+     W1c |   3800 |    4260 |    46.13% | [  44.55%;   47.72%] |   54.83% |     -8.70 pp | NEGATYWNY — ci_high < próg przy n >= wymaganym (wymagane n = 980)
+
+2. WYPEŁNIENIA I SELEKCJA — kogo NIE ma w zbiorze
+  wariant | wypełn. ogółem |    long |   short |  popr. kier. wypełnione |  niewypełnione |       różnica (pp), CI 95% | z
+  --------------------------------------------------------------------------------------------------------------------------
+     W1a |         99.36% |   99.2% |   99.6% |   50.83% (n= 2784) |  92.00% (n=  25) | -41.17 [-51.97; -30.38] | -7.48
+     W1b |         35.51% |   34.5% |   36.5% |   21.29% (n= 1254) |  75.10% (n=1570) | -53.80 [-56.92; -50.69] | -33.84
+     W1c |         47.50% |   48.9% |   46.2% |   72.57% (n= 1469) |  28.19% (n=1341) | +44.38 [+41.06; +47.70] | +26.22
+  (poprawność kierunku wg ETYKIETY na sygnałach z label != 0; diagnostyka, nie kryterium)
+
+3. GEOMETRIA WYPŁATY I KOSZT (k = 1)
+                     wariant |      n | wypełn. |   tp/sl/timeout % | bariera B |  koszt C | próg BE | świec
+  --------------------------------------------------------------------------------------------------------
+            kontrola (label) |   8033 |  100.0% |  17.9/ 17.0/ 65.1 |  1.3824% |  0.0811% |  52.93% | 3.66
+  W1a limit po close świecy  |   7978 |   99.4% |  17.5/ 17.2/ 65.3 |  1.3745% |  0.0812% |  52.96% | 2.68
+  W1b limit na cofnięciu 0,5 |   2858 |   35.5% |  16.2/ 21.2/ 62.6 |  1.4463% |  0.0813% |  52.81% | 2.68
+  W1c stop na wybiciu ponad  |   3800 |   47.5% |  18.1/ 17.1/ 64.8 |  1.3590% |  0.1312% |  54.83% | 2.72
+  (świec = średnia liczba świec od wypełnienia do wyjścia włącznie; koszt = średni % nominału)
+  W1a: koszt mediana 0.0750%, zwrot netto per trade średnia -0.0821% / mediana -0.0898%, wypełnienie średnio po 1.00 świecy
+  W1b: koszt mediana 0.0750%, zwrot netto per trade średnia -0.0962% / mediana +0.0172%, wypełnienie średnio po 1.00 świecy
+  W1c: koszt mediana 0.1250%, zwrot netto per trade średnia -0.2040% / mediana -0.2702%, wypełnienie średnio po 1.00 świecy
+  W1c: transakcji, które NIE przeszłyby bramki kosztowej z nogą taker (2 x 0.0014): 0 z 3800 (diagnostyka; lejek liczony bramką maker 0.0009, wspólną)
+
+3b. ZWROT NETTO PER TRADE — pooled t-stat / N_eff (zasada 12: statystyka nośna obok trafności)
+   wariant |      n |  średnia % |  mediana % |    std % |  t_stat |   N_eff |  t_neff
+  --------------------------------------------------------------------------------------
+  kontrola |   8033 |   -0.0056% |   -0.0067% |  0.1221% |   -4.09 |    3859 |   -2.83
+       W1a |   7978 |   -0.0066% |   -0.0073% |  0.1217% |   -4.84 |    4092 |   -3.46
+       W1b |   2858 |   -0.0092% |   +0.0016% |  0.1259% |   -3.90 |    2450 |   -3.61
+       W1c |   3800 |   -0.0150% |   -0.0219% |  0.1228% |   -7.55 |    2439 |   -6.05
+  (zwrot = net_pnl / equity_before, jak w `summarize_pooled_by_regime`; zwrot w % NOMINAŁU jest
+   w sekcji 3. |t| < ~2 => średni zwrot netto per trade nieodróżnialny od zera; trafność > próg NIE
+   wystarcza, gdy wypłaty nie są symetryczne ±B — np. małe wygrane na timeoutach i pełne straty na SL)
+
+4. WRAŻLIWOŚĆ NA CZAS WAŻNOŚCI k = 2, 3 — TYLKO OPISOWO (bez trafności i werdyktu, H3/D5)
+                     wariant |      n | wypełn. |   tp/sl/timeout % | bariera B |  koszt C | próg BE | świec
+  --------------------------------------------------------------------------------------------------------
+                     W1a k=2 |   7992 |   99.5% |  17.5/ 17.2/ 65.4 |  1.3738% |  0.0812% |  52.96% | 2.68
+                     W1b k=2 |   4129 |   51.5% |  13.6/ 18.8/ 67.6 |  1.3295% |  0.0828% |  53.11% | 2.46
+                     W1c k=2 |   4713 |   59.6% |  16.2/ 16.7/ 67.1 |  1.3262% |  0.1322% |  54.98% | 2.56
+                     W1a k=3 |   8007 |   99.6% |  17.4/ 17.2/ 65.4 |  1.3748% |  0.0812% |  52.95% | 2.68
+                     W1b k=3 |   4840 |   60.3% |  11.6/ 16.9/ 71.4 |  1.2504% |  0.0838% |  53.35% | 2.24
+                     W1c k=3 |   5218 |   66.1% |  14.6/ 16.0/ 69.4 |  1.2843% |  0.1330% |  55.18% | 2.40
+
+5. MIERZALNOŚĆ ex post (zasada 18) — warianty z werdyktem
+  W1a: n z expected_trades(abstynencja, wypełnienia) = 8,062 vs journal 7,978 | pasmo 1.10 pp | próg wykrywalności 54.05% -> NIEMIERZALNA | required_trades(50.37% vs 52.96%) = 2,922
+  W1b: n z expected_trades(abstynencja, wypełnienia) = 2,881 vs journal 2,858 | pasmo 1.83 pp | próg wykrywalności 54.64% -> NIEMIERZALNA | required_trades(50.37% vs 52.81%) = 3,276
+  W1c: n z expected_trades(abstynencja, wypełnienia) = 3,854 vs journal 3,800 | pasmo 1.59 pp | próg wykrywalności 56.42% -> NIEMIERZALNA | required_trades(50.37% vs 54.83%) = 980
+
+========================================================================================================
+CZĘŚĆ B — KALIBRACJA: tryb 4h vs tryb 5m na oknie 2023-07 → 2026-07 (bez werdyktu)
+========================================================================================================
+  4h: 6576 świec, 5m: 315648 świec, 2023-07-01 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+  świec 4h niezgodnych z agregatem 5m: 2 -> ['2023-11-10 12:00:00+00:00', '2024-10-28 20:00:00+00:00']
+  trening (okno kalibracyjne) zakończony po 7 s
+  foldy: 36 aktywne / 36 łącznie
+           ocenione świece:     6048
+    odpadło na abstynencji:     2776
+           bramka pewności:        0
+           bramka kosztowa:        0
+       sygnały kandydujące:     3272
+               abstynencja:   45.90%
+
+  wariant |     tryb |     n | niewyp. |   tp/sl/timeout % | bariera B |  koszt C | próg BE | zgodność z trybem 4h
+  ----------------------------------------------------------------------------------------------------------------------
+     W1a |       4h |  3230 |      20 |  18.1/ 18.2/ 63.7 |   1.1743% |  0.0805% |  53.43% | 
+     W1a |       5m |  3234 |      19 |  18.4/ 18.2/ 63.4 |   1.1768% |  0.0804% |  53.41% | powód wyjścia zgodny 99.7%, cena wyjścia 99.6%, cena wejścia 100.0%; tylko 4h 18, tylko 5m 22
+  macierz powodów wyjścia (wiersze: tryb 4h, kolumny: tryb 5m):
+  exit_reason_5m   sl  timeout   tp
+  exit_reason_4h                   
+  sl              584        0    2
+  timeout           0     2036    8
+  tp                0        0  582
+     W1b |       4h |  1266 |    2006 |  18.9/ 20.6/ 60.5 |   1.2048% |  0.0802% |  53.33% | 
+     W1b |       5m |  1266 |    2006 |  19.4/ 20.5/ 60.0 |   1.2101% |  0.0800% |  53.30% | powód wyjścia zgodny 99.4%, cena wyjścia 99.4%, cena wejścia 100.0%; tylko 4h 0, tylko 5m 0
+  macierz powodów wyjścia (wiersze: tryb 4h, kolumny: tryb 5m):
+  exit_reason_5m   sl  timeout   tp
+  exit_reason_4h                   
+  sl              260        0    1
+  timeout           0      760    6
+  tp                0        0  239
+     W1c |       4h |  1397 |    1857 |  18.8/ 18.5/ 62.7 |   1.1555% |  0.1306% |  55.65% | 
+     W1c |       5m |  1404 |    1868 |  20.3/ 16.7/ 63.0 |   1.1476% |  0.1300% |  55.66% | powód wyjścia zgodny 97.3%, cena wyjścia 97.3%, cena wejścia 100.0%; tylko 4h 0, tylko 5m 7
+  macierz powodów wyjścia (wiersze: tryb 4h, kolumny: tryb 5m):
+  exit_reason_5m   sl  timeout   tp
+  exit_reason_4h                   
+  sl              235       16    7
+  timeout           0      861   15
+  tp                0        0  263
+
+========================================================================================================
+6. POZA DECYZJĄ (H3/D5) — trafność w części kalibracyjnej i przy k = 2, 3; pełne tabele
+========================================================================================================
+  Liczby poniżej NIE uczestniczą w werdykcie rundy (pre-rejestracja: „Czego runda NIE raportuje”).
+  kalibracja W1a 4h: n=3230, p=50.87% [49.14; 52.59], BE=53.43%
+  kalibracja W1a 5m: n=3234, p=51.11% [49.39; 52.84], BE=53.41%
+  kalibracja W1b 4h: n=1266, p=53.08% [50.33; 55.83], BE=53.33%
+  kalibracja W1b 5m: n=1266, p=53.40% [50.65; 56.14], BE=53.30%
+  kalibracja W1c 4h: n=1397, p=47.60% [44.98; 50.22], BE=55.65%
+  kalibracja W1c 5m: n=1404, p=49.00% [46.39; 51.62], BE=55.66%
+  k=2 W1a: n=7992, p=50.15% [49.05; 51.25], BE=52.96%
+  k=2 W1b: n=4129, p=53.02% [51.49; 54.54], BE=53.11%
+  k=2 W1c: n=4713, p=45.26% [43.84; 46.68], BE=54.98%
+  k=3 W1a: n=8007, p=50.04% [48.95; 51.14], BE=52.95%
+  k=3 W1b: n=4840, p=53.80% [52.40; 55.21], BE=53.35%
+  k=3 W1c: n=5218, p=45.02% [43.67; 46.37], BE=55.18%
+
+  --- kontrola ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      8033  0.503672 0.658284 0.492739 0.514606       0.651064          0.512665          0.498853     0.013824  0.000811      0.529325 -0.025653
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.36046511627906974, 'fraction_le_zero': 0.6395348837209303, 'fraction_positive_sign': 0.36046511627906974, 'mean_sharpe': -1.7663058585916511}
+  UWAGA: `classification` NIE jest kryterium (wniosek skumulowany 24).
+  --- W1a ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      7978  0.501128 0.201523 0.490157   0.5121       0.653422          0.504159           0.49952     0.013745  0.000812      0.529557 -0.028428
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.3488372093023256, 'fraction_le_zero': 0.6395348837209303, 'fraction_positive_sign': 0.36046511627906974, 'mean_sharpe': -2.0329370365699417}
+  UWAGA: `classification` NIE jest kryterium (wniosek skumulowany 24).
+  --- W1b ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p   margin
+  __all__      2858  0.531491 3.366987 0.513196 0.549785       0.625612           0.43271          0.590604     0.014463  0.000813      0.528117 0.003373
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.36046511627906974, 'fraction_le_zero': 0.6162790697674418, 'fraction_positive_sign': 0.38372093023255816, 'mean_sharpe': -1.5179658578869277}
+  UWAGA: `classification` NIE jest kryterium (wniosek skumulowany 24).
+  --- W1c ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      3800  0.461316 -4.76931 0.445466 0.477166       0.648158          0.515333          0.431994      0.01359  0.001312      0.548282 -0.086966
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.23255813953488372, 'fraction_le_zero': 0.7093023255813954, 'fraction_positive_sign': 0.29069767441860467, 'mean_sharpe': -3.1769974627218738}
+  UWAGA: `classification` NIE jest kryterium (wniosek skumulowany 24).
+
+  czas całkowity: 9 s

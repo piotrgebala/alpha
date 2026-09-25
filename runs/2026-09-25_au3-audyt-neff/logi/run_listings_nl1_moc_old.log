@@ -1,0 +1,12 @@
+========================================================================================================
+NL1 — RACHUNEK MOCY: tylko ROZRZUT P&L (średnia i znak nie są drukowane)
+========================================================================================================
+dane   : 569 zdarzeń (pierwsze listingi krypto USDT-M z archiwum data.binance.vision, d0 2021-01-19 → 2026-06-04, wycofane włącznie)
+         dodatkowe wykluczenia (przed przebiegiem): {'archiwum spóźnione względem onboardDate (> 1 dzień)': 17, 'brak fundingu w archiwum': 3}
+reguła : short po open d0+1, wyjście po close d0+14; koszt 0.070% × 2; funding realny (short dostaje dodatni); likwidacja izolowana przy wzroście ≥ 1/L − 0.025 (dzienne maksima)
+klastry: miesiąc listingu (zdarzenia nakładają się i są skorelowane)
+
+  1×: n 569 (nierozliczalne 0), klastrów 62, sd na zdarzenie 47.0%, se klastrowe 2.45% (iid 1.97%, efekt klastrów ×1.55) → half-width 95% ±4.8% nominału; MDE (80% mocy) ≈ 6.9%
+  2×: n 569 (nierozliczalne 0), klastrów 62, sd na zdarzenie 38.9%, se klastrowe 2.23% (iid 1.63%, efekt klastrów ×1.86) → half-width 95% ±4.4% nominału; MDE (80% mocy) ≈ 6.2%
+  3×: n 569 (nierozliczalne 0), klastrów 62, sd na zdarzenie 34.0%, se klastrowe 1.62% (iid 1.42%, efekt klastrów ×1.30) → half-width 95% ±3.2% nominału; MDE (80% mocy) ≈ 4.5%
+  czas: 2s

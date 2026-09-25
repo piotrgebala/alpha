@@ -1,0 +1,12 @@
+========================================================================================================
+X1 — RACHUNEK MOCY Z SYMULACJI: 100 losowych rankingów na realnym panelu (bez patrzenia na sygnał)
+========================================================================================================
+dane   : uniwersum 281 symboli 1d (2020-01-01 → 2026-06-30), 65 koszyków miesięcznych po obrocie (119 różnych symboli), 283 formowań co 7 dni od 2021-02-01 do 2026-06-29
+reguła : sygnał = zwrot 28 dni (zamknięcia ≤ t), long top-5 / short bottom-5, kapitał 1 = 0,5 + 0,5, wagi dryfują 7 dni; koszt 0.07% × obrót obu nóg; funding: long płaci, short otrzymuje
+
+  dni w szeregu: 1975; symulacji: 100
+  pod H0 (losowy ranking): średnia dzienna netto -0.0142% (brutto +0.0010%, funding +0.0002%, koszt 0.0154% = 5.62%/rok)
+  sd dzienna netto (typowa): 1.302% ; acf1: -0.020
+  EMPIRYCZNE se średniej dziennej pod H0 = sd(średnich między symulacjami) = 0.0296%/dzień → half-width 95% = 0.0580%/dzień = 21.2%/rok
+  se analityczne (sd/√n): 0.0293%/dzień → half-width 21.0%/rok
+  czas: 287s

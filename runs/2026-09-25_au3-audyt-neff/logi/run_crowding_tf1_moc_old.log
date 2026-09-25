@@ -1,0 +1,6 @@
+========================================================================================================
+TF1 — RACHUNEK MOCY; konfiguracja ZAMROŻONA
+========================================================================================================
+  filtr: long zerowany przy Σ funding 7 dni > 0.63%, short przy < −0.63%; udział pozycji (członek×dzień) wyzerowanych: 9.3%
+  dni 1969; sd różnicy 6.13%/rok; se (N_eff) 2.64%/rok → half-width 95% ±5.17%/rok
+  czas: 6s

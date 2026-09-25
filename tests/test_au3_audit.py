@@ -19,13 +19,15 @@ def test_round_commands_parses_module_and_args(tmp_path):
     d.mkdir(parents=True)
     (d / "README.md").write_text(
         "`PYTHONUTF8=1 py -m backtest.run_x --moc 100` → moc.txt\n`py -m backtest.run_x --moc 100`\n"
-        "`python3 -m backtest.run_y`\n",
+        "`python3 -m backtest.run_y`\n`py -m backtest.run_z G1` oraz `py -m backtest.run_z 1h > raw.txt`\n",
         encoding="utf-8",
     )
     cmds = au.round_commands(tmp_path)
     assert cmds == [
         ("2026-01-01_x1-test", "backtest.run_x", ("--moc", "100")),
         ("2026-01-01_x1-test", "backtest.run_y", ()),
+        ("2026-01-01_x1-test", "backtest.run_z", ("G1",)),
+        ("2026-01-01_x1-test", "backtest.run_z", ("1h",)),
     ]
 
 

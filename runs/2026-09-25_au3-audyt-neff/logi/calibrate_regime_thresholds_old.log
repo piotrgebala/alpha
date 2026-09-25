@@ -1,0 +1,761 @@
+[data] 315648 świec: 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+
+[rejestr] 4 kandydatów (z góry ustalonych, patrz docstring modułu):
+  - trend_threshold=0.7, range_threshold=0.3
+  - trend_threshold=0.6, range_threshold=0.4
+  - trend_threshold=0.5, range_threshold=0.3
+  - trend_threshold=0.5, range_threshold=0.5
+
+========================================================================================
+KANDYDAT: trend_threshold=0.7, range_threshold=0.3
+========================================================================================
+[populacja] trend=0.52%  range=21.22%  ambiguous=78.26%  (n=315648)
+
+[seed=42] uruchamiam run_backtest...
+=== Sharpe per fold (seed=42) ===
+regime  fold_idx                test_start                  test_end  n_trades  mean_return  std_return      sharpe     t_stat                                            skip_reason
+ trend         0 2023-09-21 19:10:00+00:00 2023-10-05 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=73, n_test_valid=28 < min_train_rows=30
+ trend         1 2023-10-05 19:10:00+00:00 2023-10-19 19:10:00+00:00         0          NaN         NaN         NaN        NaN   n_train_valid=89, n_test_valid=8 < min_train_rows=30
+ trend         2 2023-10-19 19:10:00+00:00 2023-11-02 19:10:00+00:00        41    -0.000078    0.001578   -1.617912  -0.316755                                                    NaN
+ trend         3 2023-11-02 19:10:00+00:00 2023-11-16 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=97, n_test_valid=24 < min_train_rows=30
+ trend         4 2023-11-16 19:10:00+00:00 2023-11-30 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=113, n_test_valid=8 < min_train_rows=30
+ trend         5 2023-11-30 19:10:00+00:00 2023-12-14 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=93, n_test_valid=25 < min_train_rows=30
+ trend         6 2023-12-14 19:10:00+00:00 2023-12-28 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=104, n_test_valid=9 < min_train_rows=30
+ trend         7 2023-12-28 19:10:00+00:00 2024-01-11 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=76, n_test_valid=13 < min_train_rows=30
+ trend         8 2024-01-11 19:10:00+00:00 2024-01-25 19:10:00+00:00         0          NaN         NaN         NaN        NaN   n_train_valid=65, n_test_valid=9 < min_train_rows=30
+ trend         9 2024-01-25 19:10:00+00:00 2024-02-08 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=56, n_test_valid=16 < min_train_rows=30
+ trend        10 2024-02-08 19:10:00+00:00 2024-02-22 19:10:00+00:00        48    -0.000352    0.004436   -2.805292  -0.549221                                                    NaN
+ trend        11 2024-02-22 19:10:00+00:00 2024-03-07 19:10:00+00:00        36    -0.000405    0.001762   -7.036336  -1.377576                                                    NaN
+ trend        12 2024-03-07 19:10:00+00:00 2024-03-21 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=127, n_test_valid=19 < min_train_rows=30
+ trend        13 2024-03-21 19:10:00+00:00 2024-04-04 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=132, n_test_valid=9 < min_train_rows=30
+ trend        14 2024-04-04 19:10:00+00:00 2024-04-18 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=127, n_test_valid=16 < min_train_rows=30
+ trend        15 2024-04-18 19:10:00+00:00 2024-05-02 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=91, n_test_valid=11 < min_train_rows=30
+ trend        16 2024-05-02 19:10:00+00:00 2024-05-16 19:10:00+00:00         0          NaN         NaN         NaN        NaN   n_train_valid=66, n_test_valid=8 < min_train_rows=30
+ trend        17 2024-05-16 19:10:00+00:00 2024-05-30 19:10:00+00:00         0          NaN         NaN         NaN        NaN   n_train_valid=49, n_test_valid=8 < min_train_rows=30
+ trend        18 2024-05-30 19:10:00+00:00 2024-06-13 19:10:00+00:00        16    -0.000874    0.003500   -5.101022  -0.998679                                                    NaN
+ trend        19 2024-06-13 19:10:00+00:00 2024-06-27 19:10:00+00:00         0          NaN         NaN         NaN        NaN   n_train_valid=64, n_test_valid=2 < min_train_rows=30
+ trend        20 2024-06-27 19:10:00+00:00 2024-07-11 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=62, n_test_valid=26 < min_train_rows=30
+ trend        21 2024-07-11 19:10:00+00:00 2024-07-25 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=70, n_test_valid=29 < min_train_rows=30
+ trend        22 2024-07-25 19:10:00+00:00 2024-08-08 19:10:00+00:00        27    -0.000665    0.001936   -9.112138  -1.783977                                                    NaN
+ trend        23 2024-08-08 19:10:00+00:00 2024-08-22 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=117, n_test_valid=27 < min_train_rows=30
+ trend        24 2024-08-22 19:10:00+00:00 2024-09-05 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=125, n_test_valid=11 < min_train_rows=30
+ trend        25 2024-09-05 19:10:00+00:00 2024-09-19 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=125, n_test_valid=24 < min_train_rows=30
+ trend        26 2024-09-19 19:10:00+00:00 2024-10-03 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=110, n_test_valid=25 < min_train_rows=30
+ trend        27 2024-10-03 19:10:00+00:00 2024-10-17 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=115, n_test_valid=28 < min_train_rows=30
+ trend        28 2024-10-17 19:10:00+00:00 2024-10-31 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=94, n_test_valid=18 < min_train_rows=30
+ trend        29 2024-10-31 19:10:00+00:00 2024-11-14 19:10:00+00:00        55    -0.000270    0.001871   -5.459810  -1.068923                                                    NaN
+ trend        30 2024-11-14 19:10:00+00:00 2024-11-28 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=157, n_test_valid=9 < min_train_rows=30
+ trend        31 2024-11-28 19:10:00+00:00 2024-12-12 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=135, n_test_valid=25 < min_train_rows=30
+ trend        32 2024-12-12 19:10:00+00:00 2024-12-26 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=141, n_test_valid=21 < min_train_rows=30
+ trend        33 2024-12-26 19:10:00+00:00 2025-01-09 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=137, n_test_valid=19 < min_train_rows=30
+ trend        34 2025-01-09 19:10:00+00:00 2025-01-23 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=111, n_test_valid=25 < min_train_rows=30
+ trend        35 2025-01-23 19:10:00+00:00 2025-02-06 19:10:00+00:00        35     0.000138    0.001940    2.149548   0.420839                                                    NaN
+ trend        36 2025-02-06 19:10:00+00:00 2025-02-20 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=111, n_test_valid=6 < min_train_rows=30
+ trend        37 2025-02-20 19:10:00+00:00 2025-03-06 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=92, n_test_valid=25 < min_train_rows=30
+ trend        38 2025-03-06 19:10:00+00:00 2025-03-20 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=105, n_test_valid=5 < min_train_rows=30
+ trend        39 2025-03-20 19:10:00+00:00 2025-04-03 19:10:00+00:00         0          NaN         NaN         NaN        NaN   n_train_valid=80, n_test_valid=7 < min_train_rows=30
+ trend        40 2025-04-03 19:10:00+00:00 2025-04-17 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=60, n_test_valid=24 < min_train_rows=30
+ trend        41 2025-04-17 19:10:00+00:00 2025-05-01 19:10:00+00:00         0          NaN         NaN         NaN        NaN   n_train_valid=62, n_test_valid=9 < min_train_rows=30
+ trend        42 2025-05-01 19:10:00+00:00 2025-05-15 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=56, n_test_valid=25 < min_train_rows=30
+ trend        43 2025-05-15 19:10:00+00:00 2025-05-29 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=65, n_test_valid=16 < min_train_rows=30
+ trend        44 2025-05-29 19:10:00+00:00 2025-06-12 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=80, n_test_valid=16 < min_train_rows=30
+ trend        45 2025-06-12 19:10:00+00:00 2025-06-26 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=71, n_test_valid=28 < min_train_rows=30
+ trend        46 2025-06-26 19:10:00+00:00 2025-07-10 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=85, n_test_valid=27 < min_train_rows=30
+ trend        47 2025-07-10 19:10:00+00:00 2025-07-24 19:10:00+00:00        34    -0.000292    0.001905   -4.556609  -0.892094                                                    NaN
+ trend        48 2025-07-24 19:10:00+00:00 2025-08-07 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=110, n_test_valid=19 < min_train_rows=30
+ trend        49 2025-08-07 19:10:00+00:00 2025-08-21 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=123, n_test_valid=18 < min_train_rows=30
+ trend        50 2025-08-21 19:10:00+00:00 2025-09-04 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=109, n_test_valid=21 < min_train_rows=30
+ trend        51 2025-09-04 19:10:00+00:00 2025-09-18 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=110, n_test_valid=16 < min_train_rows=30
+ trend        52 2025-09-18 19:10:00+00:00 2025-10-02 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=81, n_test_valid=25 < min_train_rows=30
+ trend        53 2025-10-02 19:10:00+00:00 2025-10-16 19:10:00+00:00        34    -0.000530    0.001745   -9.050180  -1.771847                                                    NaN
+ trend        54 2025-10-16 19:10:00+00:00 2025-10-30 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=106, n_test_valid=16 < min_train_rows=30
+ trend        55 2025-10-30 19:10:00+00:00 2025-11-13 19:10:00+00:00        32    -0.000095    0.001822   -1.507108  -0.295062                                                    NaN
+ trend        56 2025-11-13 19:10:00+00:00 2025-11-27 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=133, n_test_valid=16 < min_train_rows=30
+ trend        57 2025-11-27 19:10:00+00:00 2025-12-11 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=116, n_test_valid=28 < min_train_rows=30
+ trend        58 2025-12-11 19:10:00+00:00 2025-12-25 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=124, n_test_valid=11 < min_train_rows=30
+ trend        59 2025-12-25 19:10:00+00:00 2026-01-08 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=101, n_test_valid=22 < min_train_rows=30
+ trend        60 2026-01-08 19:10:00+00:00 2026-01-22 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=98, n_test_valid=29 < min_train_rows=30
+ trend        61 2026-01-22 19:10:00+00:00 2026-02-05 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=90, n_test_valid=26 < min_train_rows=30
+ trend        62 2026-02-05 19:10:00+00:00 2026-02-19 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=95, n_test_valid=28 < min_train_rows=30
+ trend        63 2026-02-19 19:10:00+00:00 2026-03-05 19:10:00+00:00        16    -0.000130    0.001816   -1.457962  -0.285440                                                    NaN
+ trend        64 2026-03-05 19:10:00+00:00 2026-03-19 19:10:00+00:00         0          NaN         NaN         NaN        NaN n_train_valid=133, n_test_valid=17 < min_train_rows=30
+ trend        65 2026-03-19 19:10:00+00:00 2026-04-02 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=119, n_test_valid=6 < min_train_rows=30
+ trend        66 2026-04-02 19:10:00+00:00 2026-04-16 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=92, n_test_valid=16 < min_train_rows=30
+ trend        67 2026-04-16 19:10:00+00:00 2026-04-30 19:10:00+00:00         0          NaN         NaN         NaN        NaN   n_train_valid=73, n_test_valid=7 < min_train_rows=30
+ trend        68 2026-04-30 19:10:00+00:00 2026-05-14 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=65, n_test_valid=13 < min_train_rows=30
+ trend        69 2026-05-14 19:10:00+00:00 2026-05-28 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=47, n_test_valid=13 < min_train_rows=30
+ trend        70 2026-05-28 19:10:00+00:00 2026-06-11 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=49, n_test_valid=26 < min_train_rows=30
+ trend        71 2026-06-11 19:10:00+00:00 2026-06-25 19:10:00+00:00         0          NaN         NaN         NaN        NaN  n_train_valid=62, n_test_valid=16 < min_train_rows=30
+ range         0 2023-09-19 04:15:00+00:00 2023-10-03 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range         1 2023-10-03 04:15:00+00:00 2023-10-17 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range         2 2023-10-17 04:15:00+00:00 2023-10-31 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range         3 2023-10-31 04:15:00+00:00 2023-11-14 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range         4 2023-11-14 04:15:00+00:00 2023-11-28 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range         5 2023-11-28 04:15:00+00:00 2023-12-12 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range         6 2023-12-12 04:15:00+00:00 2023-12-26 04:15:00+00:00        56    -0.000280    0.001766   -6.068955  -1.188182                                                    NaN
+ range         7 2023-12-26 04:15:00+00:00 2024-01-09 04:15:00+00:00       209    -0.000683    0.001852  -27.227772  -5.330660                                                    NaN
+ range         8 2024-01-09 04:15:00+00:00 2024-01-23 04:15:00+00:00       325    -0.000491    0.001791  -25.255238  -4.944477                                                    NaN
+ range         9 2024-01-23 04:15:00+00:00 2024-02-06 04:15:00+00:00        36    -0.000086    0.001968   -1.340557  -0.262455                                                    NaN
+ range        10 2024-02-06 04:15:00+00:00 2024-02-20 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        11 2024-02-20 04:15:00+00:00 2024-03-05 04:15:00+00:00         3     0.001306    0.000004 2767.610308 541.843471                                                    NaN
+ range        12 2024-03-05 04:15:00+00:00 2024-03-19 04:15:00+00:00        19     0.000257    0.001873    3.052409   0.597601                                                    NaN
+ range        13 2024-03-19 04:15:00+00:00 2024-04-02 04:15:00+00:00       323    -0.000386    0.002086  -16.971351  -3.322656                                                    NaN
+ range        14 2024-04-02 04:15:00+00:00 2024-04-16 04:15:00+00:00       342    -0.000456    0.001825  -23.600760  -4.620563                                                    NaN
+ range        15 2024-04-16 04:15:00+00:00 2024-04-30 04:15:00+00:00       160    -0.000788    0.002141  -23.779386  -4.655534                                                    NaN
+ range        16 2024-04-30 04:15:00+00:00 2024-05-14 04:15:00+00:00       307    -0.000525    0.001805  -26.011459  -5.092530                                                    NaN
+ range        17 2024-05-14 04:15:00+00:00 2024-05-28 04:15:00+00:00       104    -0.000517    0.002286  -11.783103  -2.306899                                                    NaN
+ range        18 2024-05-28 04:15:00+00:00 2024-06-11 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        19 2024-06-11 04:15:00+00:00 2024-06-25 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        20 2024-06-25 04:15:00+00:00 2024-07-09 04:15:00+00:00         4    -0.000687    0.002443   -2.872890  -0.562455                                                    NaN
+ range        21 2024-07-09 04:15:00+00:00 2024-07-23 04:15:00+00:00       149    -0.000462    0.001883  -15.303179  -2.996060                                                    NaN
+ range        22 2024-07-23 04:15:00+00:00 2024-08-06 04:15:00+00:00       138    -0.001017    0.002035  -29.995222  -5.872472                                                    NaN
+ range        23 2024-08-06 04:15:00+00:00 2024-08-20 04:15:00+00:00       158    -0.000620    0.001784  -22.300753  -4.366047                                                    NaN
+ range        24 2024-08-20 04:15:00+00:00 2024-09-03 04:15:00+00:00       205    -0.000646    0.002206  -21.426220  -4.194831                                                    NaN
+ range        25 2024-09-03 04:15:00+00:00 2024-09-17 04:15:00+00:00       261    -0.000357    0.002040  -14.439466  -2.826962                                                    NaN
+ range        26 2024-09-17 04:15:00+00:00 2024-10-01 04:15:00+00:00        74    -0.000299    0.001885   -6.977239  -1.366006                                                    NaN
+ range        27 2024-10-01 04:15:00+00:00 2024-10-15 04:15:00+00:00         3    -0.001237    0.002265   -4.829963  -0.945611                                                    NaN
+ range        28 2024-10-15 04:15:00+00:00 2024-10-29 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        29 2024-10-29 04:15:00+00:00 2024-11-12 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        30 2024-11-12 04:15:00+00:00 2024-11-26 04:15:00+00:00       135    -0.000527    0.001913  -16.362213  -3.203398                                                    NaN
+ range        31 2024-11-26 04:15:00+00:00 2024-12-10 04:15:00+00:00       273    -0.000581    0.001864  -26.318790  -5.152700                                                    NaN
+ range        32 2024-12-10 04:15:00+00:00 2024-12-24 04:15:00+00:00       129    -0.000580    0.002011  -16.729509  -3.275308                                                    NaN
+ range        33 2024-12-24 04:15:00+00:00 2025-01-07 04:15:00+00:00       342    -0.000451    0.001810  -23.518549  -4.604468                                                    NaN
+ range        34 2025-01-07 04:15:00+00:00 2025-01-21 04:15:00+00:00        13    -0.001314    0.001485  -16.299321  -3.191085                                                    NaN
+ range        35 2025-01-21 04:15:00+00:00 2025-02-04 04:15:00+00:00       167    -0.000835    0.001831  -30.096674  -5.892335                                                    NaN
+ range        36 2025-02-04 04:15:00+00:00 2025-02-18 04:15:00+00:00        43    -0.000910    0.001939  -15.719743  -3.077615                                                    NaN
+ range        37 2025-02-18 04:15:00+00:00 2025-03-04 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        38 2025-03-04 04:15:00+00:00 2025-03-18 04:15:00+00:00       282    -0.000377    0.001807  -17.917716  -3.507935                                                    NaN
+ range        39 2025-03-18 04:15:00+00:00 2025-04-01 04:15:00+00:00        95    -0.000369    0.001876   -9.783029  -1.915324                                                    NaN
+ range        40 2025-04-01 04:15:00+00:00 2025-04-15 04:15:00+00:00       122    -0.000342    0.001942   -9.939356  -1.945930                                                    NaN
+ range        41 2025-04-15 04:15:00+00:00 2025-04-29 04:15:00+00:00       144    -0.000677    0.001836  -22.592032  -4.423074                                                    NaN
+ range        42 2025-04-29 04:15:00+00:00 2025-05-13 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        43 2025-05-13 04:15:00+00:00 2025-05-27 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        44 2025-05-27 04:15:00+00:00 2025-06-10 04:15:00+00:00         4    -0.002634    0.000580  -46.434594  -9.090977                                                    NaN
+ range        45 2025-06-10 04:15:00+00:00 2025-06-24 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        46 2025-06-24 04:15:00+00:00 2025-07-08 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        47 2025-07-08 04:15:00+00:00 2025-07-22 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        48 2025-07-22 04:15:00+00:00 2025-08-05 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        49 2025-08-05 04:15:00+00:00 2025-08-19 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        50 2025-08-19 04:15:00+00:00 2025-09-02 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        51 2025-09-02 04:15:00+00:00 2025-09-16 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        52 2025-09-16 04:15:00+00:00 2025-09-30 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        53 2025-09-30 04:15:00+00:00 2025-10-14 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        54 2025-10-14 04:15:00+00:00 2025-10-28 04:15:00+00:00       102    -0.000607    0.001952  -16.040718  -3.140456                                                    NaN
+ range        55 2025-10-28 04:15:00+00:00 2025-11-11 04:15:00+00:00        57    -0.000924    0.002178  -16.351703  -3.201341                                                    NaN
+ range        56 2025-11-11 04:15:00+00:00 2025-11-25 04:15:00+00:00       128    -0.000572    0.001982  -16.691152  -3.267798                                                    NaN
+ range        57 2025-11-25 04:15:00+00:00 2025-12-09 04:15:00+00:00       269    -0.000378    0.002515  -12.592845  -2.465430                                                    NaN
+ range        58 2025-12-09 04:15:00+00:00 2025-12-23 04:15:00+00:00        55    -0.000918    0.002082  -16.708314  -3.271158                                                    NaN
+ range        59 2025-12-23 04:15:00+00:00 2026-01-06 04:15:00+00:00         2    -0.001033    0.004556   -1.638237  -0.320734                                                    NaN
+ range        60 2026-01-06 04:15:00+00:00 2026-01-20 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        61 2026-01-20 04:15:00+00:00 2026-02-03 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        62 2026-02-03 04:15:00+00:00 2026-02-17 04:15:00+00:00       236    -0.000450    0.002209  -16.000227  -3.132529                                                    NaN
+ range        63 2026-02-17 04:15:00+00:00 2026-03-03 04:15:00+00:00       129    -0.000860    0.001977  -25.242729  -4.942028                                                    NaN
+ range        64 2026-03-03 04:15:00+00:00 2026-03-17 04:15:00+00:00       166    -0.000500    0.002053  -16.038002  -3.139924                                                    NaN
+ range        65 2026-03-17 04:15:00+00:00 2026-03-31 04:15:00+00:00       179    -0.000868    0.002035  -29.128453  -5.702776                                                    NaN
+ range        66 2026-03-31 04:15:00+00:00 2026-04-14 04:15:00+00:00       184    -0.000460    0.001953  -16.316722  -3.194492                                                    NaN
+ range        67 2026-04-14 04:15:00+00:00 2026-04-28 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        68 2026-04-28 04:15:00+00:00 2026-05-12 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        69 2026-05-12 04:15:00+00:00 2026-05-26 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        70 2026-05-26 04:15:00+00:00 2026-06-09 04:15:00+00:00         0          NaN         NaN         NaN        NaN                                                    NaN
+ range        71 2026-06-09 04:15:00+00:00 2026-06-23 04:15:00+00:00       106    -0.000463    0.001883  -12.932792  -2.531985                                                    NaN
+
+=== Klasyfikacja (seed=42) ===
+{'classification': 'NO-GO', 'n_valid_folds': 54, 'n_total_folds': 144, 'fraction_above_threshold': 0.05555555555555555, 'fraction_le_zero': 0.9444444444444444, 'fraction_positive_sign': 0.05555555555555555, 'mean_sharpe': 36.99131410177545}
+
+=== Rozbicie per reżim (seed=42) ===
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             43             72                  0.046512          0.953488                0.046512    47.513623
+ trend          NO-GO             11             72                  0.090909          0.909091                0.090909    -4.141347
+
+[sweep] 10 seedów: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+  ... seed=43
+  ... seed=44
+  ... seed=45
+  ... seed=46
+  ... seed=47
+  ... seed=48
+  ... seed=49
+  ... seed=50
+  ... seed=51
+
+=== Stabilność między seedami (kandydat trend_threshold=0.7, range_threshold=0.3) ===
+  seed= 42  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 43  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 44  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 45  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 46  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 47  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 48  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 49  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 50  mean_sharpe=36.9913  klasyfikacja=NO-GO
+  seed= 51  mean_sharpe=36.9913  klasyfikacja=NO-GO
+std(mean_sharpe) między 10 seedami = 0.0000 (STABILNY, próg < 0.2)
+
+========================================================================================
+KANDYDAT: trend_threshold=0.6, range_threshold=0.4
+========================================================================================
+[populacja] trend=0.66%  range=27.99%  ambiguous=71.35%  (n=315648)
+
+[seed=42] uruchamiam run_backtest...
+=== Sharpe per fold (seed=42) ===
+regime  fold_idx                test_start                  test_end  n_trades  mean_return  std_return     sharpe    t_stat                                            skip_reason
+ trend         0 2023-09-21 19:10:00+00:00 2023-10-05 19:10:00+00:00        34    -0.000291    0.001596  -5.434844 -1.064035                                                    NaN
+ trend         1 2023-10-05 19:10:00+00:00 2023-10-19 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=118, n_test_valid=10 < min_train_rows=30
+ trend         2 2023-10-19 19:10:00+00:00 2023-11-02 19:10:00+00:00        41    -0.000978    0.001979 -16.152444 -3.162330                                                    NaN
+ trend         3 2023-11-02 19:10:00+00:00 2023-11-16 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=121, n_test_valid=27 < min_train_rows=30
+ trend         4 2023-11-16 19:10:00+00:00 2023-11-30 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=137, n_test_valid=12 < min_train_rows=30
+ trend         5 2023-11-30 19:10:00+00:00 2023-12-14 19:10:00+00:00        24    -0.000112    0.002258  -1.239312 -0.242633                                                    NaN
+ trend         6 2023-12-14 19:10:00+00:00 2023-12-28 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=128, n_test_valid=19 < min_train_rows=30
+ trend         7 2023-12-28 19:10:00+00:00 2024-01-11 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=104, n_test_valid=19 < min_train_rows=30
+ trend         8 2024-01-11 19:10:00+00:00 2024-01-25 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=97, n_test_valid=15 < min_train_rows=30
+ trend         9 2024-01-25 19:10:00+00:00 2024-02-08 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=89, n_test_valid=17 < min_train_rows=30
+ trend        10 2024-02-08 19:10:00+00:00 2024-02-22 19:10:00+00:00        34    -0.000130    0.001773  -2.176011 -0.426020                                                    NaN
+ trend        11 2024-02-22 19:10:00+00:00 2024-03-07 19:10:00+00:00        33    -0.000530    0.001777  -8.748354 -1.712755                                                    NaN
+ trend        12 2024-03-07 19:10:00+00:00 2024-03-21 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=146, n_test_valid=28 < min_train_rows=30
+ trend        13 2024-03-21 19:10:00+00:00 2024-04-04 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=153, n_test_valid=11 < min_train_rows=30
+ trend        14 2024-04-04 19:10:00+00:00 2024-04-18 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=146, n_test_valid=22 < min_train_rows=30
+ trend        15 2024-04-18 19:10:00+00:00 2024-05-02 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=112, n_test_valid=15 < min_train_rows=30
+ trend        16 2024-05-02 19:10:00+00:00 2024-05-16 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=88, n_test_valid=10 < min_train_rows=30
+ trend        17 2024-05-16 19:10:00+00:00 2024-05-30 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=67, n_test_valid=10 < min_train_rows=30
+ trend        18 2024-05-30 19:10:00+00:00 2024-06-13 19:10:00+00:00        31     0.000895    0.003334   7.630411  1.493884                                                    NaN
+ trend        19 2024-06-13 19:10:00+00:00 2024-06-27 19:10:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=73, n_test_valid=7 < min_train_rows=30
+ trend        20 2024-06-27 19:10:00+00:00 2024-07-11 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=73, n_test_valid=28 < min_train_rows=30
+ trend        21 2024-07-11 19:10:00+00:00 2024-07-25 19:10:00+00:00        15    -0.000618    0.002036  -6.005373 -1.175734                                                    NaN
+ trend        22 2024-07-25 19:10:00+00:00 2024-08-08 19:10:00+00:00        34    -0.000295    0.001718  -5.109362 -1.000312                                                    NaN
+ trend        23 2024-08-08 19:10:00+00:00 2024-08-22 19:10:00+00:00        18    -0.000248    0.001740  -3.086089 -0.604195                                                    NaN
+ trend        24 2024-08-22 19:10:00+00:00 2024-09-05 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=148, n_test_valid=14 < min_train_rows=30
+ trend        25 2024-09-05 19:10:00+00:00 2024-09-19 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=151, n_test_valid=26 < min_train_rows=30
+ trend        26 2024-09-19 19:10:00+00:00 2024-10-03 19:10:00+00:00        31    -0.000706    0.001863 -10.770860 -2.108722                                                    NaN
+ trend        27 2024-10-03 19:10:00+00:00 2024-10-17 19:10:00+00:00        16    -0.000444    0.002994  -3.027614 -0.592747                                                    NaN
+ trend        28 2024-10-17 19:10:00+00:00 2024-10-31 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=110, n_test_valid=29 < min_train_rows=30
+ trend        29 2024-10-31 19:10:00+00:00 2024-11-14 19:10:00+00:00        61    -0.000008    0.002394  -0.132419 -0.025925                                                    NaN
+ trend        30 2024-11-14 19:10:00+00:00 2024-11-28 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=186, n_test_valid=18 < min_train_rows=30
+ trend        31 2024-11-28 19:10:00+00:00 2024-12-12 19:10:00+00:00        22    -0.000289    0.001607  -4.310492 -0.843909                                                    NaN
+ trend        32 2024-12-12 19:10:00+00:00 2024-12-26 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=176, n_test_valid=27 < min_train_rows=30
+ trend        33 2024-12-26 19:10:00+00:00 2025-01-09 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=167, n_test_valid=21 < min_train_rows=30
+ trend        34 2025-01-09 19:10:00+00:00 2025-01-23 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=133, n_test_valid=27 < min_train_rows=30
+ trend        35 2025-01-23 19:10:00+00:00 2025-02-06 19:10:00+00:00        27    -0.000324    0.002152  -3.992490 -0.781651                                                    NaN
+ trend        36 2025-02-06 19:10:00+00:00 2025-02-20 19:10:00+00:00        23    -0.000043    0.002597  -0.403255 -0.078949                                                    NaN
+ trend        37 2025-02-20 19:10:00+00:00 2025-03-06 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=137, n_test_valid=29 < min_train_rows=30
+ trend        38 2025-03-06 19:10:00+00:00 2025-03-20 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=149, n_test_valid=6 < min_train_rows=30
+ trend        39 2025-03-20 19:10:00+00:00 2025-04-03 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=121, n_test_valid=17 < min_train_rows=30
+ trend        40 2025-04-03 19:10:00+00:00 2025-04-17 19:10:00+00:00        22     0.000079    0.002246   0.840833  0.164618                                                    NaN
+ trend        41 2025-04-17 19:10:00+00:00 2025-05-01 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=94, n_test_valid=20 < min_train_rows=30
+ trend        42 2025-05-01 19:10:00+00:00 2025-05-15 19:10:00+00:00        22    -0.000396    0.001804  -5.258059 -1.029424                                                    NaN
+ trend        43 2025-05-15 19:10:00+00:00 2025-05-29 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=105, n_test_valid=22 < min_train_rows=30
+ trend        44 2025-05-29 19:10:00+00:00 2025-06-12 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=120, n_test_valid=28 < min_train_rows=30
+ trend        45 2025-06-12 19:10:00+00:00 2025-06-26 19:10:00+00:00        29    -0.000243    0.001908  -3.501278 -0.685481                                                    NaN
+ trend        46 2025-06-26 19:10:00+00:00 2025-07-10 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=117, n_test_valid=28 < min_train_rows=30
+ trend        47 2025-07-10 19:10:00+00:00 2025-07-24 19:10:00+00:00        38    -0.000659    0.002572  -8.066143 -1.579192                                                    NaN
+ trend        48 2025-07-24 19:10:00+00:00 2025-08-07 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=140, n_test_valid=27 < min_train_rows=30
+ trend        49 2025-08-07 19:10:00+00:00 2025-08-21 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=151, n_test_valid=27 < min_train_rows=30
+ trend        50 2025-08-21 19:10:00+00:00 2025-09-04 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=137, n_test_valid=28 < min_train_rows=30
+ trend        51 2025-09-04 19:10:00+00:00 2025-09-18 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=142, n_test_valid=25 < min_train_rows=30
+ trend        52 2025-09-18 19:10:00+00:00 2025-10-02 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=117, n_test_valid=25 < min_train_rows=30
+ trend        53 2025-10-02 19:10:00+00:00 2025-10-16 19:10:00+00:00        31    -0.000353    0.001716  -5.847830 -1.144890                                                    NaN
+ trend        54 2025-10-16 19:10:00+00:00 2025-10-30 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=133, n_test_valid=20 < min_train_rows=30
+ trend        55 2025-10-30 19:10:00+00:00 2025-11-13 19:10:00+00:00        13     0.000278    0.001766   2.894589  0.566703                                                    NaN
+ trend        56 2025-11-13 19:10:00+00:00 2025-11-27 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=146, n_test_valid=25 < min_train_rows=30
+ trend        57 2025-11-27 19:10:00+00:00 2025-12-11 19:10:00+00:00         9    -0.003235    0.002372 -20.893383 -4.090512                                                    NaN
+ trend        58 2025-12-11 19:10:00+00:00 2025-12-25 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=145, n_test_valid=12 < min_train_rows=30
+ trend        59 2025-12-25 19:10:00+00:00 2026-01-08 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=115, n_test_valid=27 < min_train_rows=30
+ trend        60 2026-01-08 19:10:00+00:00 2026-01-22 19:10:00+00:00        36     0.000140    0.001644   2.611842  0.511347                                                    NaN
+ trend        61 2026-01-22 19:10:00+00:00 2026-02-05 19:10:00+00:00        28    -0.000702    0.002906  -6.531622 -1.278763                                                    NaN
+ trend        62 2026-02-05 19:10:00+00:00 2026-02-19 19:10:00+00:00        32    -0.000328    0.002010  -4.713424 -0.922795                                                    NaN
+ trend        63 2026-02-19 19:10:00+00:00 2026-03-05 19:10:00+00:00        22    -0.001076    0.002807  -9.186821 -1.798598                                                    NaN
+ trend        64 2026-03-05 19:10:00+00:00 2026-03-19 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=174, n_test_valid=24 < min_train_rows=30
+ trend        65 2026-03-19 19:10:00+00:00 2026-04-02 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=163, n_test_valid=10 < min_train_rows=30
+ trend        66 2026-04-02 19:10:00+00:00 2026-04-16 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=132, n_test_valid=20 < min_train_rows=30
+ trend        67 2026-04-16 19:10:00+00:00 2026-04-30 19:10:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=102, n_test_valid=13 < min_train_rows=30
+ trend        68 2026-04-30 19:10:00+00:00 2026-05-14 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=97, n_test_valid=18 < min_train_rows=30
+ trend        69 2026-05-14 19:10:00+00:00 2026-05-28 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=66, n_test_valid=14 < min_train_rows=30
+ trend        70 2026-05-28 19:10:00+00:00 2026-06-11 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=68, n_test_valid=29 < min_train_rows=30
+ trend        71 2026-06-11 19:10:00+00:00 2026-06-25 19:10:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=77, n_test_valid=18 < min_train_rows=30
+ range         0 2023-09-19 03:45:00+00:00 2023-10-03 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         1 2023-10-03 03:45:00+00:00 2023-10-17 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         2 2023-10-17 03:45:00+00:00 2023-10-31 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range         3 2023-10-31 03:45:00+00:00 2023-11-14 03:45:00+00:00        32    -0.001394    0.001917 -21.005397 -4.112442                                                    NaN
+ range         4 2023-11-14 03:45:00+00:00 2023-11-28 03:45:00+00:00        43    -0.000675    0.001856 -12.186057 -2.385789                                                    NaN
+ range         5 2023-11-28 03:45:00+00:00 2023-12-12 03:45:00+00:00         7     0.000215    0.001877   1.544893  0.302460                                                    NaN
+ range         6 2023-12-12 03:45:00+00:00 2023-12-26 03:45:00+00:00        92    -0.000409    0.001869 -10.717088 -2.098194                                                    NaN
+ range         7 2023-12-26 03:45:00+00:00 2024-01-09 03:45:00+00:00       252    -0.000642    0.002076 -25.076667 -4.909516                                                    NaN
+ range         8 2024-01-09 03:45:00+00:00 2024-01-23 03:45:00+00:00       317    -0.000504    0.001766 -25.953287 -5.081141                                                    NaN
+ range         9 2024-01-23 03:45:00+00:00 2024-02-06 03:45:00+00:00       314    -0.000514    0.001889 -24.631371 -4.822336                                                    NaN
+ range        10 2024-02-06 03:45:00+00:00 2024-02-20 03:45:00+00:00         9     0.000017    0.001947   0.131647  0.025774                                                    NaN
+ range        11 2024-02-20 03:45:00+00:00 2024-03-05 03:45:00+00:00        68    -0.000890    0.001912 -19.608105 -3.838880                                                    NaN
+ range        12 2024-03-05 03:45:00+00:00 2024-03-19 03:45:00+00:00        77    -0.000975    0.002097 -20.844826 -4.081005                                                    NaN
+ range        13 2024-03-19 03:45:00+00:00 2024-04-02 03:45:00+00:00       332    -0.000493    0.002212 -20.762054 -4.064800                                                    NaN
+ range        14 2024-04-02 03:45:00+00:00 2024-04-16 03:45:00+00:00       258    -0.000624    0.001850 -27.665817 -5.416421                                                    NaN
+ range        15 2024-04-16 03:45:00+00:00 2024-04-30 03:45:00+00:00       225    -0.000787    0.001733 -34.807166 -6.814556                                                    NaN
+ range        16 2024-04-30 03:45:00+00:00 2024-05-14 03:45:00+00:00       348    -0.000436    0.001845 -22.534200 -4.411751                                                    NaN
+ range        17 2024-05-14 03:45:00+00:00 2024-05-28 03:45:00+00:00       237    -0.000663    0.002126 -24.500713 -4.796756                                                    NaN
+ range        18 2024-05-28 03:45:00+00:00 2024-06-11 03:45:00+00:00        64    -0.000527    0.002166  -9.949635 -1.947942                                                    NaN
+ range        19 2024-06-11 03:45:00+00:00 2024-06-25 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        20 2024-06-25 03:45:00+00:00 2024-07-09 03:45:00+00:00        65    -0.000753    0.002015 -15.385422 -3.012162                                                    NaN
+ range        21 2024-07-09 03:45:00+00:00 2024-07-23 03:45:00+00:00       125    -0.000918    0.002173 -24.125721 -4.723340                                                    NaN
+ range        22 2024-07-23 03:45:00+00:00 2024-08-06 03:45:00+00:00       259    -0.000509    0.001784 -23.433127 -4.587744                                                    NaN
+ range        23 2024-08-06 03:45:00+00:00 2024-08-20 03:45:00+00:00       280    -0.000520    0.001785 -24.881111 -4.871231                                                    NaN
+ range        24 2024-08-20 03:45:00+00:00 2024-09-03 03:45:00+00:00       221    -0.000721    0.002180 -25.125487 -4.919074                                                    NaN
+ range        25 2024-09-03 03:45:00+00:00 2024-09-17 03:45:00+00:00       246    -0.000641    0.002057 -24.982632 -4.891106                                                    NaN
+ range        26 2024-09-17 03:45:00+00:00 2024-10-01 03:45:00+00:00       185    -0.000647    0.001948 -23.084125 -4.519416                                                    NaN
+ range        27 2024-10-01 03:45:00+00:00 2024-10-15 03:45:00+00:00        35    -0.000103    0.001787  -1.747232 -0.342074                                                    NaN
+ range        28 2024-10-15 03:45:00+00:00 2024-10-29 03:45:00+00:00         9    -0.000812    0.002014  -6.173984 -1.208744                                                    NaN
+ range        29 2024-10-29 03:45:00+00:00 2024-11-12 03:45:00+00:00         4     0.000355    0.001924   1.884836  0.369014                                                    NaN
+ range        30 2024-11-12 03:45:00+00:00 2024-11-26 03:45:00+00:00       188    -0.000784    0.002056 -26.713287 -5.229934                                                    NaN
+ range        31 2024-11-26 03:45:00+00:00 2024-12-10 03:45:00+00:00       377    -0.000353    0.001911 -18.320595 -3.586811                                                    NaN
+ range        32 2024-12-10 03:45:00+00:00 2024-12-24 03:45:00+00:00       126    -0.000469    0.002182 -12.319614 -2.411937                                                    NaN
+ range        33 2024-12-24 03:45:00+00:00 2025-01-07 03:45:00+00:00       339    -0.000358    0.001776 -18.942039 -3.708477                                                    NaN
+ range        34 2025-01-07 03:45:00+00:00 2025-01-21 03:45:00+00:00       142    -0.001021    0.001766 -35.197117 -6.890901                                                    NaN
+ range        35 2025-01-21 03:45:00+00:00 2025-02-04 03:45:00+00:00        79    -0.000397    0.001853  -9.730231 -1.904987                                                    NaN
+ range        36 2025-02-04 03:45:00+00:00 2025-02-18 03:45:00+00:00       317    -0.000420    0.002048 -18.671869 -3.655583                                                    NaN
+ range        37 2025-02-18 03:45:00+00:00 2025-03-04 03:45:00+00:00        44    -0.000890    0.001823 -16.529708 -3.236191                                                    NaN
+ range        38 2025-03-04 03:45:00+00:00 2025-03-18 03:45:00+00:00       212    -0.000561    0.001890 -22.087649 -4.324326                                                    NaN
+ range        39 2025-03-18 03:45:00+00:00 2025-04-01 03:45:00+00:00       292    -0.000420    0.001935 -18.924700 -3.705083                                                    NaN
+ range        40 2025-04-01 03:45:00+00:00 2025-04-15 03:45:00+00:00       192    -0.000211    0.001769  -8.445044 -1.653373                                                    NaN
+ range        41 2025-04-15 03:45:00+00:00 2025-04-29 03:45:00+00:00       155    -0.001046    0.001820 -36.555075 -7.156762                                                    NaN
+ range        42 2025-04-29 03:45:00+00:00 2025-05-13 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        43 2025-05-13 03:45:00+00:00 2025-05-27 03:45:00+00:00         7    -0.000351    0.002275  -2.083388 -0.407886                                                    NaN
+ range        44 2025-05-27 03:45:00+00:00 2025-06-10 03:45:00+00:00        86    -0.001152    0.001893 -28.828555 -5.644062                                                    NaN
+ range        45 2025-06-10 03:45:00+00:00 2025-06-24 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        46 2025-06-24 03:45:00+00:00 2025-07-08 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        47 2025-07-08 03:45:00+00:00 2025-07-22 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        48 2025-07-22 03:45:00+00:00 2025-08-05 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        49 2025-08-05 03:45:00+00:00 2025-08-19 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        50 2025-08-19 03:45:00+00:00 2025-09-02 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        51 2025-09-02 03:45:00+00:00 2025-09-16 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        52 2025-09-16 03:45:00+00:00 2025-09-30 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        53 2025-09-30 03:45:00+00:00 2025-10-14 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        54 2025-10-14 03:45:00+00:00 2025-10-28 03:45:00+00:00        94    -0.000732    0.001875 -19.328647 -3.784168                                                    NaN
+ range        55 2025-10-28 03:45:00+00:00 2025-11-11 03:45:00+00:00       125    -0.000811    0.002132 -21.707132 -4.249828                                                    NaN
+ range        56 2025-11-11 03:45:00+00:00 2025-11-25 03:45:00+00:00       350    -0.000469    0.001961 -22.874892 -4.478452                                                    NaN
+ range        57 2025-11-25 03:45:00+00:00 2025-12-09 03:45:00+00:00       235    -0.000556    0.002326 -18.711128 -3.663270                                                    NaN
+ range        58 2025-12-09 03:45:00+00:00 2025-12-23 03:45:00+00:00        91    -0.001053    0.002363 -21.719182 -4.252187                                                    NaN
+ range        59 2025-12-23 03:45:00+00:00 2026-01-06 03:45:00+00:00        28    -0.000749    0.002330  -8.686187 -1.700584                                                    NaN
+ range        60 2026-01-06 03:45:00+00:00 2026-01-20 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        61 2026-01-20 03:45:00+00:00 2026-02-03 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        62 2026-02-03 03:45:00+00:00 2026-02-17 03:45:00+00:00        42    -0.001226    0.001821 -22.290525 -4.364045                                                    NaN
+ range        63 2026-02-17 03:45:00+00:00 2026-03-03 03:45:00+00:00       318    -0.000473    0.001758 -24.505125 -4.797620                                                    NaN
+ range        64 2026-03-03 03:45:00+00:00 2026-03-17 03:45:00+00:00       312    -0.000354    0.002099 -15.198220 -2.975511                                                    NaN
+ range        65 2026-03-17 03:45:00+00:00 2026-03-31 03:45:00+00:00       342    -0.000454    0.001862 -23.055409 -4.513794                                                    NaN
+ range        66 2026-03-31 03:45:00+00:00 2026-04-14 03:45:00+00:00       167    -0.000598    0.002139 -18.452097 -3.612556                                                    NaN
+ range        67 2026-04-14 03:45:00+00:00 2026-04-28 03:45:00+00:00        81    -0.000720    0.002150 -15.404353 -3.015868                                                    NaN
+ range        68 2026-04-28 03:45:00+00:00 2026-05-12 03:45:00+00:00         6    -0.000473    0.002055  -2.880953 -0.564034                                                    NaN
+ range        69 2026-05-12 03:45:00+00:00 2026-05-26 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        70 2026-05-26 03:45:00+00:00 2026-06-09 03:45:00+00:00         0          NaN         NaN        NaN       NaN                                                    NaN
+ range        71 2026-06-09 03:45:00+00:00 2026-06-23 03:45:00+00:00       278    -0.000584    0.001822 -27.304565 -5.345695                                                    NaN
+
+=== Klasyfikacja (seed=42) ===
+{'classification': 'NO-GO', 'n_valid_folds': 80, 'n_total_folds': 144, 'fraction_above_threshold': 0.075, 'fraction_le_zero': 0.9125, 'fraction_positive_sign': 0.0875, 'mean_sharpe': -14.021211712611441}
+
+=== Rozbicie per reżim (seed=42) ===
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             54             72                  0.037037          0.944444                0.055556   -18.538651
+ trend          NO-GO             26             72                  0.153846          0.846154                0.153846    -4.638839
+
+[sweep] 10 seedów: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+  ... seed=43
+  ... seed=44
+  ... seed=45
+  ... seed=46
+  ... seed=47
+  ... seed=48
+  ... seed=49
+  ... seed=50
+  ... seed=51
+
+=== Stabilność między seedami (kandydat trend_threshold=0.6, range_threshold=0.4) ===
+  seed= 42  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 43  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 44  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 45  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 46  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 47  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 48  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 49  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 50  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+  seed= 51  mean_sharpe=-14.0212  klasyfikacja=NO-GO
+std(mean_sharpe) między 10 seedami = 0.0000 (STABILNY, próg < 0.2)
+
+========================================================================================
+KANDYDAT: trend_threshold=0.5, range_threshold=0.3
+========================================================================================
+[populacja] trend=4.58%  range=21.22%  ambiguous=74.19%  (n=315648)
+
+[seed=42] uruchamiam run_backtest...
+=== Sharpe per fold (seed=42) ===
+regime  fold_idx                test_start                  test_end  n_trades  mean_return  std_return      sharpe     t_stat skip_reason
+ trend         0 2023-09-21 19:00:00+00:00 2023-10-05 19:00:00+00:00       112    -0.000030    0.001928   -0.847738  -0.165970        None
+ trend         1 2023-10-05 19:00:00+00:00 2023-10-19 19:00:00+00:00        95    -0.000946    0.002256  -20.876099  -4.087128        None
+ trend         2 2023-10-19 19:00:00+00:00 2023-11-02 19:00:00+00:00       104    -0.000528    0.001975  -13.913944  -2.724076        None
+ trend         3 2023-11-02 19:00:00+00:00 2023-11-16 19:00:00+00:00       158    -0.000295    0.001758  -10.779333  -2.110381        None
+ trend         4 2023-11-16 19:00:00+00:00 2023-11-30 19:00:00+00:00       115    -0.000324    0.002137   -8.295400  -1.624076        None
+ trend         5 2023-11-30 19:00:00+00:00 2023-12-14 19:00:00+00:00       129    -0.000587    0.002463  -13.838282  -2.709262        None
+ trend         6 2023-12-14 19:00:00+00:00 2023-12-28 19:00:00+00:00       103    -0.000751    0.002046  -19.029889  -3.725677        None
+ trend         7 2023-12-28 19:00:00+00:00 2024-01-11 19:00:00+00:00        96     0.000055    0.002020    1.374078   0.269017        None
+ trend         8 2024-01-11 19:00:00+00:00 2024-01-25 19:00:00+00:00        80    -0.001009    0.002193  -21.020388  -4.115377        None
+ trend         9 2024-01-25 19:00:00+00:00 2024-02-08 19:00:00+00:00        96    -0.000278    0.002494   -5.570926  -1.090677        None
+ trend        10 2024-02-08 19:00:00+00:00 2024-02-22 19:00:00+00:00       133    -0.000350    0.001923  -10.721762  -2.099109        None
+ trend        11 2024-02-22 19:00:00+00:00 2024-03-07 19:00:00+00:00       189    -0.000329    0.001819  -12.717229  -2.489782        None
+ trend        12 2024-03-07 19:00:00+00:00 2024-03-21 19:00:00+00:00       191    -0.000108    0.001993   -3.829426  -0.749726        None
+ trend        13 2024-03-21 19:00:00+00:00 2024-04-04 19:00:00+00:00        30    -0.000629    0.001854   -9.493633  -1.858666        None
+ trend        14 2024-04-04 19:00:00+00:00 2024-04-18 19:00:00+00:00        51    -0.000626    0.001949  -11.715646  -2.293692        None
+ trend        15 2024-04-18 19:00:00+00:00 2024-05-02 19:00:00+00:00        79     0.000064    0.001668    1.734787   0.339637        None
+ trend        16 2024-05-02 19:00:00+00:00 2024-05-16 19:00:00+00:00        48    -0.000234    0.001829   -4.526371  -0.886174        None
+ trend        17 2024-05-16 19:00:00+00:00 2024-05-30 19:00:00+00:00        95    -0.000188    0.001751   -5.340035  -1.045473        None
+ trend        18 2024-05-30 19:00:00+00:00 2024-06-13 19:00:00+00:00       111     0.000249    0.002111    6.338462   1.240946        None
+ trend        19 2024-06-13 19:00:00+00:00 2024-06-27 19:00:00+00:00       102    -0.000283    0.002183   -6.688584  -1.309493        None
+ trend        20 2024-06-27 19:00:00+00:00 2024-07-11 19:00:00+00:00       158    -0.000053    0.002118   -1.617027  -0.316582        None
+ trend        21 2024-07-11 19:00:00+00:00 2024-07-25 19:00:00+00:00        86    -0.000256    0.002109   -5.756046  -1.126920        None
+ trend        22 2024-07-25 19:00:00+00:00 2024-08-08 19:00:00+00:00        82    -0.000236    0.001619   -6.752988  -1.322102        None
+ trend        23 2024-08-08 19:00:00+00:00 2024-08-22 19:00:00+00:00        73    -0.000146    0.001944   -3.282806  -0.642709        None
+ trend        24 2024-08-22 19:00:00+00:00 2024-09-05 19:00:00+00:00        73    -0.000207    0.001714   -5.266959  -1.031167        None
+ trend        25 2024-09-05 19:00:00+00:00 2024-09-19 19:00:00+00:00        45    -0.000928    0.002317  -13.719839  -2.686074        None
+ trend        26 2024-09-19 19:00:00+00:00 2024-10-03 19:00:00+00:00       147    -0.000488    0.002167  -13.932949  -2.727796        None
+ trend        27 2024-10-03 19:00:00+00:00 2024-10-17 19:00:00+00:00       100    -0.000288    0.001824   -8.072209  -1.580379        None
+ trend        28 2024-10-17 19:00:00+00:00 2024-10-31 19:00:00+00:00       145    -0.000340    0.001748  -11.952402  -2.340044        None
+ trend        29 2024-10-31 19:00:00+00:00 2024-11-14 19:00:00+00:00       254    -0.000278    0.001654  -13.698433  -2.681883        None
+ trend        30 2024-11-14 19:00:00+00:00 2024-11-28 19:00:00+00:00        86    -0.000300    0.002035   -6.980029  -1.366552        None
+ trend        31 2024-11-28 19:00:00+00:00 2024-12-12 19:00:00+00:00        52    -0.000561    0.002316   -8.912707  -1.744932        None
+ trend        32 2024-12-12 19:00:00+00:00 2024-12-26 19:00:00+00:00       135    -0.000091    0.001746   -3.106461  -0.608184        None
+ trend        33 2024-12-26 19:00:00+00:00 2025-01-09 19:00:00+00:00        70    -0.000667    0.002394  -11.908162  -2.331383        None
+ trend        34 2025-01-09 19:00:00+00:00 2025-01-23 19:00:00+00:00       173    -0.000081    0.002395   -2.265393  -0.443519        None
+ trend        35 2025-01-23 19:00:00+00:00 2025-02-06 19:00:00+00:00       113    -0.000464    0.001958  -12.874784  -2.520629        None
+ trend        36 2025-02-06 19:00:00+00:00 2025-02-20 19:00:00+00:00        42    -0.000408    0.001746   -7.741795  -1.515691        None
+ trend        37 2025-02-20 19:00:00+00:00 2025-03-06 19:00:00+00:00       195    -0.000320    0.002029  -11.248467  -2.202228        None
+ trend        38 2025-03-06 19:00:00+00:00 2025-03-20 19:00:00+00:00        98     0.000064    0.001645    1.973068   0.386288        None
+ trend        39 2025-03-20 19:00:00+00:00 2025-04-03 19:00:00+00:00        98    -0.000198    0.001729   -5.803517  -1.136214        None
+ trend        40 2025-04-03 19:00:00+00:00 2025-04-17 19:00:00+00:00       161    -0.000141    0.001686   -5.405005  -1.058193        None
+ trend        41 2025-04-17 19:00:00+00:00 2025-05-01 19:00:00+00:00        75    -0.000024    0.001938   -0.544704  -0.106642        None
+ trend        42 2025-05-01 19:00:00+00:00 2025-05-15 19:00:00+00:00       135    -0.000322    0.002253   -8.492283  -1.662621        None
+ trend        43 2025-05-15 19:00:00+00:00 2025-05-29 19:00:00+00:00       116    -0.000155    0.001997   -4.271345  -0.836245        None
+ trend        44 2025-05-29 19:00:00+00:00 2025-06-12 19:00:00+00:00        63    -0.000949    0.001824  -21.102227  -4.131399        None
+ trend        45 2025-06-12 19:00:00+00:00 2025-06-26 19:00:00+00:00        43    -0.000559    0.001876   -9.980789  -1.954042        None
+ trend        46 2025-06-26 19:00:00+00:00 2025-07-10 19:00:00+00:00        66    -0.000446    0.001819  -10.174636  -1.991993        None
+ trend        47 2025-07-10 19:00:00+00:00 2025-07-24 19:00:00+00:00       142    -0.000948    0.002479  -23.261636  -4.554169        None
+ trend        48 2025-07-24 19:00:00+00:00 2025-08-07 19:00:00+00:00       100    -0.000185    0.002039   -4.624795  -0.905443        None
+ trend        49 2025-08-07 19:00:00+00:00 2025-08-21 19:00:00+00:00       135    -0.000556    0.002205  -14.957075  -2.928300        None
+ trend        50 2025-08-21 19:00:00+00:00 2025-09-04 19:00:00+00:00        53    -0.000869    0.001973  -16.374721  -3.205847        None
+ trend        51 2025-09-04 19:00:00+00:00 2025-09-18 19:00:00+00:00        65    -0.000632    0.001744  -14.916264  -2.920310        None
+ trend        52 2025-09-18 19:00:00+00:00 2025-10-02 19:00:00+00:00        93    -0.000506    0.002055  -12.134205  -2.375638        None
+ trend        53 2025-10-02 19:00:00+00:00 2025-10-16 19:00:00+00:00       154    -0.000483    0.002317  -13.222051  -2.588617        None
+ trend        54 2025-10-16 19:00:00+00:00 2025-10-30 19:00:00+00:00        38     0.000086    0.001657    1.630450   0.319210        None
+ trend        55 2025-10-30 19:00:00+00:00 2025-11-13 19:00:00+00:00       121    -0.000242    0.001769   -7.697083  -1.506937        None
+ trend        56 2025-11-13 19:00:00+00:00 2025-11-27 19:00:00+00:00        93     0.000071    0.002005    1.750724   0.342757        None
+ trend        57 2025-11-27 19:00:00+00:00 2025-12-11 19:00:00+00:00        70    -0.000448    0.002088   -9.170753  -1.795452        None
+ trend        58 2025-12-11 19:00:00+00:00 2025-12-25 19:00:00+00:00        79    -0.000419    0.001709  -11.137900  -2.180581        None
+ trend        59 2025-12-25 19:00:00+00:00 2026-01-08 19:00:00+00:00        72    -0.000114    0.001725   -2.855101  -0.558972        None
+ trend        60 2026-01-08 19:00:00+00:00 2026-01-22 19:00:00+00:00       103    -0.000645    0.001977  -16.920091  -3.312620        None
+ trend        61 2026-01-22 19:00:00+00:00 2026-02-05 19:00:00+00:00       154    -0.000527    0.001693  -19.741673  -3.865030        None
+ trend        62 2026-02-05 19:00:00+00:00 2026-02-19 19:00:00+00:00       101    -0.000424    0.002031  -10.712312  -2.097259        None
+ trend        63 2026-02-19 19:00:00+00:00 2026-03-05 19:00:00+00:00        68    -0.000279    0.001731   -6.798820  -1.331075        None
+ trend        64 2026-03-05 19:00:00+00:00 2026-03-19 19:00:00+00:00        92    -0.000197    0.001557   -6.210377  -1.215869        None
+ trend        65 2026-03-19 19:00:00+00:00 2026-04-02 19:00:00+00:00        44    -0.000081    0.001701   -1.619023  -0.316973        None
+ trend        66 2026-04-02 19:00:00+00:00 2026-04-16 19:00:00+00:00        72    -0.000549    0.001720  -13.826505  -2.706957        None
+ trend        67 2026-04-16 19:00:00+00:00 2026-04-30 19:00:00+00:00       116    -0.000864    0.001958  -24.279490  -4.753445        None
+ trend        68 2026-04-30 19:00:00+00:00 2026-05-14 19:00:00+00:00        88    -0.000490    0.001812  -12.948825  -2.535124        None
+ trend        69 2026-05-14 19:00:00+00:00 2026-05-28 19:00:00+00:00       107    -0.000390    0.001722  -11.982543  -2.345946        None
+ trend        70 2026-05-28 19:00:00+00:00 2026-06-11 19:00:00+00:00       210    -0.000016    0.002013   -0.570373  -0.111668        None
+ trend        71 2026-06-11 19:00:00+00:00 2026-06-25 19:00:00+00:00        40    -0.000457    0.001801   -8.194728  -1.604366        None
+ range         0 2023-09-19 04:15:00+00:00 2023-10-03 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         1 2023-10-03 04:15:00+00:00 2023-10-17 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         2 2023-10-17 04:15:00+00:00 2023-10-31 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         3 2023-10-31 04:15:00+00:00 2023-11-14 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         4 2023-11-14 04:15:00+00:00 2023-11-28 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         5 2023-11-28 04:15:00+00:00 2023-12-12 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         6 2023-12-12 04:15:00+00:00 2023-12-26 04:15:00+00:00        56    -0.000280    0.001766   -6.068955  -1.188182        None
+ range         7 2023-12-26 04:15:00+00:00 2024-01-09 04:15:00+00:00       105    -0.001015    0.001813  -29.293609  -5.735110        None
+ range         8 2024-01-09 04:15:00+00:00 2024-01-23 04:15:00+00:00       146    -0.000464    0.001762  -16.243995  -3.180254        None
+ range         9 2024-01-23 04:15:00+00:00 2024-02-06 04:15:00+00:00       182    -0.000347    0.001872  -12.783987  -2.502852        None
+ range        10 2024-02-06 04:15:00+00:00 2024-02-20 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        11 2024-02-20 04:15:00+00:00 2024-03-05 04:15:00+00:00         3     0.001306    0.000004 2767.610308 541.843471        None
+ range        12 2024-03-05 04:15:00+00:00 2024-03-19 04:15:00+00:00        19     0.000257    0.001873    3.052409   0.597601        None
+ range        13 2024-03-19 04:15:00+00:00 2024-04-02 04:15:00+00:00       264    -0.000295    0.002092  -11.703219  -2.291259        None
+ range        14 2024-04-02 04:15:00+00:00 2024-04-16 04:15:00+00:00       234    -0.000464    0.001832  -19.790053  -3.874502        None
+ range        15 2024-04-16 04:15:00+00:00 2024-04-30 04:15:00+00:00       163    -0.000855    0.002146  -25.977554  -5.085892        None
+ range        16 2024-04-30 04:15:00+00:00 2024-05-14 04:15:00+00:00       292    -0.000508    0.001806  -24.534349  -4.803341        None
+ range        17 2024-05-14 04:15:00+00:00 2024-05-28 04:15:00+00:00       142    -0.000358    0.002262   -9.625749  -1.884532        None
+ range        18 2024-05-28 04:15:00+00:00 2024-06-11 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        19 2024-06-11 04:15:00+00:00 2024-06-25 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        20 2024-06-25 04:15:00+00:00 2024-07-09 04:15:00+00:00         4    -0.000687    0.002443   -2.872890  -0.562455        None
+ range        21 2024-07-09 04:15:00+00:00 2024-07-23 04:15:00+00:00        53    -0.000784    0.001926  -15.148609  -2.965799        None
+ range        22 2024-07-23 04:15:00+00:00 2024-08-06 04:15:00+00:00       177    -0.000738    0.002081  -24.111349  -4.720526        None
+ range        23 2024-08-06 04:15:00+00:00 2024-08-20 04:15:00+00:00       272    -0.000555    0.001826  -25.575278  -5.007135        None
+ range        24 2024-08-20 04:15:00+00:00 2024-09-03 04:15:00+00:00       144    -0.000890    0.002213  -24.642679  -4.824550        None
+ range        25 2024-09-03 04:15:00+00:00 2024-09-17 04:15:00+00:00       113    -0.000149    0.002010   -4.019564  -0.786951        None
+ range        26 2024-09-17 04:15:00+00:00 2024-10-01 04:15:00+00:00        99    -0.000465    0.001878  -12.596668  -2.466179        None
+ range        27 2024-10-01 04:15:00+00:00 2024-10-15 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        28 2024-10-15 04:15:00+00:00 2024-10-29 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        29 2024-10-29 04:15:00+00:00 2024-11-12 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        30 2024-11-12 04:15:00+00:00 2024-11-26 04:15:00+00:00        58    -0.000061    0.001852   -1.272373  -0.249105        None
+ range        31 2024-11-26 04:15:00+00:00 2024-12-10 04:15:00+00:00       260    -0.000544    0.001859  -24.100564  -4.718415        None
+ range        32 2024-12-10 04:15:00+00:00 2024-12-24 04:15:00+00:00       165    -0.000578    0.002028  -18.690367  -3.659205        None
+ range        33 2024-12-24 04:15:00+00:00 2025-01-07 04:15:00+00:00       155    -0.000289    0.001813  -10.127833  -1.982830        None
+ range        34 2025-01-07 04:15:00+00:00 2025-01-21 04:15:00+00:00        48    -0.001097    0.001760  -22.064414  -4.319777        None
+ range        35 2025-01-21 04:15:00+00:00 2025-02-04 04:15:00+00:00        22    -0.000818    0.001851  -10.591228  -2.073553        None
+ range        36 2025-02-04 04:15:00+00:00 2025-02-18 04:15:00+00:00       158    -0.000669    0.002052  -20.933298  -4.098327        None
+ range        37 2025-02-18 04:15:00+00:00 2025-03-04 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        38 2025-03-04 04:15:00+00:00 2025-03-18 04:15:00+00:00       255    -0.000395    0.001814  -17.764397  -3.477918        None
+ range        39 2025-03-18 04:15:00+00:00 2025-04-01 04:15:00+00:00        82    -0.000164    0.001861   -4.088357  -0.800420        None
+ range        40 2025-04-01 04:15:00+00:00 2025-04-15 04:15:00+00:00       122    -0.000342    0.001942   -9.939356  -1.945930        None
+ range        41 2025-04-15 04:15:00+00:00 2025-04-29 04:15:00+00:00        72    -0.000734    0.001849  -17.215913  -3.370536        None
+ range        42 2025-04-29 04:15:00+00:00 2025-05-13 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        43 2025-05-13 04:15:00+00:00 2025-05-27 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        44 2025-05-27 04:15:00+00:00 2025-06-10 04:15:00+00:00         4    -0.002634    0.000580  -46.434594  -9.090977        None
+ range        45 2025-06-10 04:15:00+00:00 2025-06-24 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        46 2025-06-24 04:15:00+00:00 2025-07-08 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        47 2025-07-08 04:15:00+00:00 2025-07-22 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        48 2025-07-22 04:15:00+00:00 2025-08-05 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        49 2025-08-05 04:15:00+00:00 2025-08-19 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        50 2025-08-19 04:15:00+00:00 2025-09-02 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        51 2025-09-02 04:15:00+00:00 2025-09-16 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        52 2025-09-16 04:15:00+00:00 2025-09-30 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        53 2025-09-30 04:15:00+00:00 2025-10-14 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        54 2025-10-14 04:15:00+00:00 2025-10-28 04:15:00+00:00        57    -0.000179    0.001917   -3.597767  -0.704372        None
+ range        55 2025-10-28 04:15:00+00:00 2025-11-11 04:15:00+00:00        57    -0.000924    0.002178  -16.351703  -3.201341        None
+ range        56 2025-11-11 04:15:00+00:00 2025-11-25 04:15:00+00:00       134    -0.000585    0.001948  -17.757109  -3.476491        None
+ range        57 2025-11-25 04:15:00+00:00 2025-12-09 04:15:00+00:00       170    -0.000664    0.002490  -17.750534  -3.475204        None
+ range        58 2025-12-09 04:15:00+00:00 2025-12-23 04:15:00+00:00        35    -0.001304    0.002072  -19.011411  -3.722059        None
+ range        59 2025-12-23 04:15:00+00:00 2026-01-06 04:15:00+00:00         2    -0.001033    0.004556   -1.638237  -0.320734        None
+ range        60 2026-01-06 04:15:00+00:00 2026-01-20 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        61 2026-01-20 04:15:00+00:00 2026-02-03 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        62 2026-02-03 04:15:00+00:00 2026-02-17 04:15:00+00:00        88    -0.000386    0.002182   -8.478338  -1.659891        None
+ range        63 2026-02-17 04:15:00+00:00 2026-03-03 04:15:00+00:00       176    -0.000876    0.001902  -31.201369  -6.108612        None
+ range        64 2026-03-03 04:15:00+00:00 2026-03-17 04:15:00+00:00       332    -0.000319    0.002027  -14.643648  -2.866937        None
+ range        65 2026-03-17 04:15:00+00:00 2026-03-31 04:15:00+00:00       192    -0.000551    0.002014  -19.368709  -3.792011        None
+ range        66 2026-03-31 04:15:00+00:00 2026-04-14 04:15:00+00:00        76    -0.000796    0.001961  -18.077545  -3.539227        None
+ range        67 2026-04-14 04:15:00+00:00 2026-04-28 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        68 2026-04-28 04:15:00+00:00 2026-05-12 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        69 2026-05-12 04:15:00+00:00 2026-05-26 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        70 2026-05-26 04:15:00+00:00 2026-06-09 04:15:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        71 2026-06-09 04:15:00+00:00 2026-06-23 04:15:00+00:00       134    -0.000520    0.001863  -16.516203  -3.233547        None
+
+=== Klasyfikacja (seed=42) ===
+{'classification': 'NO-GO', 'n_valid_folds': 114, 'n_total_folds': 144, 'fraction_above_threshold': 0.07017543859649122, 'fraction_le_zero': 0.9298245614035088, 'fraction_positive_sign': 0.07017543859649122, 'mean_sharpe': 12.935399339339144}
+
+=== Rozbicie per reżim (seed=42) ===
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             42             72                  0.047619          0.952381                0.047619    50.429975
+ trend          NO-GO             72             72                  0.083333          0.916667                0.083333    -8.936436
+
+[sweep] 10 seedów: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+  ... seed=43
+  ... seed=44
+  ... seed=45
+  ... seed=46
+  ... seed=47
+  ... seed=48
+  ... seed=49
+  ... seed=50
+  ... seed=51
+
+=== Stabilność między seedami (kandydat trend_threshold=0.5, range_threshold=0.3) ===
+  seed= 42  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 43  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 44  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 45  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 46  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 47  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 48  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 49  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 50  mean_sharpe=12.9354  klasyfikacja=NO-GO
+  seed= 51  mean_sharpe=12.9354  klasyfikacja=NO-GO
+std(mean_sharpe) między 10 seedami = 0.0000 (STABILNY, próg < 0.2)
+
+========================================================================================
+KANDYDAT: trend_threshold=0.5, range_threshold=0.5
+========================================================================================
+[populacja] trend=4.58%  range=44.83%  ambiguous=50.59%  (n=315648)
+
+[seed=42] uruchamiam run_backtest...
+=== Sharpe per fold (seed=42) ===
+regime  fold_idx                test_start                  test_end  n_trades  mean_return  std_return      sharpe     t_stat skip_reason
+ trend         0 2023-09-21 19:00:00+00:00 2023-10-05 19:00:00+00:00       112    -0.000030    0.001928   -0.847738  -0.165970        None
+ trend         1 2023-10-05 19:00:00+00:00 2023-10-19 19:00:00+00:00        95    -0.000946    0.002256  -20.876099  -4.087128        None
+ trend         2 2023-10-19 19:00:00+00:00 2023-11-02 19:00:00+00:00       104    -0.000528    0.001975  -13.913944  -2.724076        None
+ trend         3 2023-11-02 19:00:00+00:00 2023-11-16 19:00:00+00:00        71    -0.000477    0.001724  -11.905874  -2.330935        None
+ trend         4 2023-11-16 19:00:00+00:00 2023-11-30 19:00:00+00:00       105    -0.000397    0.002147   -9.671309  -1.893451        None
+ trend         5 2023-11-30 19:00:00+00:00 2023-12-14 19:00:00+00:00        85    -0.000718    0.002378  -14.227670  -2.785497        None
+ trend         6 2023-12-14 19:00:00+00:00 2023-12-28 19:00:00+00:00        45    -0.000179    0.001746   -3.508708  -0.686936        None
+ trend         7 2023-12-28 19:00:00+00:00 2024-01-11 19:00:00+00:00        92    -0.000017    0.002033   -0.421341  -0.082490        None
+ trend         8 2024-01-11 19:00:00+00:00 2024-01-25 19:00:00+00:00        72    -0.000789    0.002229  -15.335212  -3.002332        None
+ trend         9 2024-01-25 19:00:00+00:00 2024-02-08 19:00:00+00:00        50    -0.000329    0.002508   -4.735993  -0.927214        None
+ trend        10 2024-02-08 19:00:00+00:00 2024-02-22 19:00:00+00:00       105    -0.000557    0.001852  -15.734347  -3.080474        None
+ trend        11 2024-02-22 19:00:00+00:00 2024-03-07 19:00:00+00:00        82    -0.000565    0.001758  -14.870680  -2.911386        None
+ trend        12 2024-03-07 19:00:00+00:00 2024-03-21 19:00:00+00:00        72    -0.000602    0.001888  -13.822331  -2.706140        None
+ trend        13 2024-03-21 19:00:00+00:00 2024-04-04 19:00:00+00:00        21    -0.000747    0.001828   -9.560026  -1.871664        None
+ trend        14 2024-04-04 19:00:00+00:00 2024-04-18 19:00:00+00:00        79    -0.000305    0.001976   -7.012886  -1.372985        None
+ trend        15 2024-04-18 19:00:00+00:00 2024-05-02 19:00:00+00:00        40    -0.000084    0.001757   -1.548670  -0.303199        None
+ trend        16 2024-05-02 19:00:00+00:00 2024-05-16 19:00:00+00:00        30     0.000216    0.001777    3.401259   0.665899        None
+ trend        17 2024-05-16 19:00:00+00:00 2024-05-30 19:00:00+00:00        46    -0.000365    0.001718   -7.365183  -1.441957        None
+ trend        18 2024-05-30 19:00:00+00:00 2024-06-13 19:00:00+00:00       105     0.000323    0.002077    8.130046   1.591702        None
+ trend        19 2024-06-13 19:00:00+00:00 2024-06-27 19:00:00+00:00        53    -0.000390    0.002120   -6.840019  -1.339141        None
+ trend        20 2024-06-27 19:00:00+00:00 2024-07-11 19:00:00+00:00        88    -0.000209    0.002079   -4.819926  -0.943646        None
+ trend        21 2024-07-11 19:00:00+00:00 2024-07-25 19:00:00+00:00        80    -0.000358    0.002125   -7.703605  -1.508214        None
+ trend        22 2024-07-25 19:00:00+00:00 2024-08-08 19:00:00+00:00        94    -0.000330    0.001673   -9.777512  -1.914244        None
+ trend        23 2024-08-08 19:00:00+00:00 2024-08-22 19:00:00+00:00        58    -0.000338    0.001941   -6.766755  -1.324797        None
+ trend        24 2024-08-22 19:00:00+00:00 2024-09-05 19:00:00+00:00        41    -0.000203    0.001702   -3.900133  -0.763569        None
+ trend        25 2024-09-05 19:00:00+00:00 2024-09-19 19:00:00+00:00        58    -0.000547    0.002434   -8.748865  -1.712855        None
+ trend        26 2024-09-19 19:00:00+00:00 2024-10-03 19:00:00+00:00        75    -0.000541    0.002290  -10.449659  -2.045837        None
+ trend        27 2024-10-03 19:00:00+00:00 2024-10-17 19:00:00+00:00        70    -0.000014    0.001818   -0.340541  -0.066671        None
+ trend        28 2024-10-17 19:00:00+00:00 2024-10-31 19:00:00+00:00        55    -0.000295    0.001867   -5.985056  -1.171756        None
+ trend        29 2024-10-31 19:00:00+00:00 2024-11-14 19:00:00+00:00       254    -0.000278    0.001654  -13.698433  -2.681883        None
+ trend        30 2024-11-14 19:00:00+00:00 2024-11-28 19:00:00+00:00        76    -0.000225    0.002007   -4.998369  -0.978582        None
+ trend        31 2024-11-28 19:00:00+00:00 2024-12-12 19:00:00+00:00        91     0.000097    0.002373    1.986697   0.388956        None
+ trend        32 2024-12-12 19:00:00+00:00 2024-12-26 19:00:00+00:00       102    -0.000183    0.001751   -5.385411  -1.054357        None
+ trend        33 2024-12-26 19:00:00+00:00 2025-01-09 19:00:00+00:00        42    -0.000819    0.002499  -10.852201  -2.124647        None
+ trend        34 2025-01-09 19:00:00+00:00 2025-01-23 19:00:00+00:00       107    -0.000061    0.002352   -1.379930  -0.270163        None
+ trend        35 2025-01-23 19:00:00+00:00 2025-02-06 19:00:00+00:00        85    -0.000747    0.001938  -18.161925  -3.555746        None
+ trend        36 2025-02-06 19:00:00+00:00 2025-02-20 19:00:00+00:00        18     0.000288    0.001667    3.744886   0.733175        None
+ trend        37 2025-02-20 19:00:00+00:00 2025-03-06 19:00:00+00:00       114    -0.000538    0.002037  -14.409769  -2.821148        None
+ trend        38 2025-03-06 19:00:00+00:00 2025-03-20 19:00:00+00:00        65     0.000131    0.001660    3.259527   0.638151        None
+ trend        39 2025-03-20 19:00:00+00:00 2025-04-03 19:00:00+00:00        25     0.000013    0.001829    0.179995   0.035239        None
+ trend        40 2025-04-03 19:00:00+00:00 2025-04-17 19:00:00+00:00       131    -0.000137    0.001665   -4.807154  -0.941146        None
+ trend        41 2025-04-17 19:00:00+00:00 2025-05-01 19:00:00+00:00        54    -0.000058    0.001991   -1.100603  -0.215476        None
+ trend        42 2025-05-01 19:00:00+00:00 2025-05-15 19:00:00+00:00       135    -0.000322    0.002253   -8.492283  -1.662621        None
+ trend        43 2025-05-15 19:00:00+00:00 2025-05-29 19:00:00+00:00        87    -0.000240    0.002076   -5.516331  -1.079989        None
+ trend        44 2025-05-29 19:00:00+00:00 2025-06-12 19:00:00+00:00        58    -0.001033    0.001784  -22.516917  -4.408368        None
+ trend        45 2025-06-12 19:00:00+00:00 2025-06-26 19:00:00+00:00        27    -0.000234    0.001854   -3.352149  -0.656285        None
+ trend        46 2025-06-26 19:00:00+00:00 2025-07-10 19:00:00+00:00        71    -0.000421    0.001821   -9.941001  -1.946252        None
+ trend        47 2025-07-10 19:00:00+00:00 2025-07-24 19:00:00+00:00       133    -0.000864    0.002487  -20.477268  -4.009045        None
+ trend        48 2025-07-24 19:00:00+00:00 2025-08-07 19:00:00+00:00       107    -0.000272    0.002057   -6.996386  -1.369754        None
+ trend        49 2025-08-07 19:00:00+00:00 2025-08-21 19:00:00+00:00       113    -0.000706    0.002173  -17.641765  -3.453909        None
+ trend        50 2025-08-21 19:00:00+00:00 2025-09-04 19:00:00+00:00        86    -0.000857    0.002038  -19.917394  -3.899433        None
+ trend        51 2025-09-04 19:00:00+00:00 2025-09-18 19:00:00+00:00        69    -0.000617    0.001747  -14.994728  -2.935672        None
+ trend        52 2025-09-18 19:00:00+00:00 2025-10-02 19:00:00+00:00        79    -0.000437    0.002026   -9.794547  -1.917579        None
+ trend        53 2025-10-02 19:00:00+00:00 2025-10-16 19:00:00+00:00       120    -0.000276    0.002278   -6.791042  -1.329552        None
+ trend        54 2025-10-16 19:00:00+00:00 2025-10-30 19:00:00+00:00        86    -0.000203    0.001723   -5.571500  -1.090790        None
+ trend        55 2025-10-30 19:00:00+00:00 2025-11-13 19:00:00+00:00        53    -0.000183    0.001793   -3.798491  -0.743670        None
+ trend        56 2025-11-13 19:00:00+00:00 2025-11-27 19:00:00+00:00        26     0.000006    0.002052    0.078968   0.015460        None
+ trend        57 2025-11-27 19:00:00+00:00 2025-12-11 19:00:00+00:00        57    -0.000364    0.002136   -6.567929  -1.285871        None
+ trend        58 2025-12-11 19:00:00+00:00 2025-12-25 19:00:00+00:00        35    -0.000333    0.001688   -5.958432  -1.166543        None
+ trend        59 2025-12-25 19:00:00+00:00 2026-01-08 19:00:00+00:00        56     0.000149    0.001679    3.391379   0.663965        None
+ trend        60 2026-01-08 19:00:00+00:00 2026-01-22 19:00:00+00:00       127    -0.000863    0.001956  -25.398858  -4.972595        None
+ trend        61 2026-01-22 19:00:00+00:00 2026-02-05 19:00:00+00:00       113    -0.000389    0.001721  -12.257984  -2.399871        None
+ trend        62 2026-02-05 19:00:00+00:00 2026-02-19 19:00:00+00:00        31    -0.001102    0.001580  -19.836624  -3.883620        None
+ trend        63 2026-02-19 19:00:00+00:00 2026-03-05 19:00:00+00:00        71    -0.000151    0.001788   -3.627148  -0.710124        None
+ trend        64 2026-03-05 19:00:00+00:00 2026-03-19 19:00:00+00:00        35    -0.000228    0.001763   -3.905190  -0.764559        None
+ trend        65 2026-03-19 19:00:00+00:00 2026-04-02 19:00:00+00:00        27    -0.000054    0.001800   -0.793744  -0.155399        None
+ trend        66 2026-04-02 19:00:00+00:00 2026-04-16 19:00:00+00:00        80    -0.000398    0.001720  -10.577705  -2.070906        None
+ trend        67 2026-04-16 19:00:00+00:00 2026-04-30 19:00:00+00:00        49    -0.001193    0.001909  -22.355510  -4.376768        None
+ trend        68 2026-04-30 19:00:00+00:00 2026-05-14 19:00:00+00:00        93    -0.000472    0.001854  -12.544550  -2.455975        None
+ trend        69 2026-05-14 19:00:00+00:00 2026-05-28 19:00:00+00:00       107    -0.000390    0.001722  -11.982543  -2.345946        None
+ trend        70 2026-05-28 19:00:00+00:00 2026-06-11 19:00:00+00:00       204    -0.000042    0.002025   -1.515725  -0.296749        None
+ trend        71 2026-06-11 19:00:00+00:00 2026-06-25 19:00:00+00:00        32    -0.000489    0.001696   -8.326274  -1.630120        None
+ range         0 2023-09-19 03:00:00+00:00 2023-10-03 03:00:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         1 2023-10-03 03:00:00+00:00 2023-10-17 03:00:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         2 2023-10-17 03:00:00+00:00 2023-10-31 03:00:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range         3 2023-10-31 03:00:00+00:00 2023-11-14 03:00:00+00:00       154    -0.000816    0.001936  -26.712040  -5.229690        None
+ range         4 2023-11-14 03:00:00+00:00 2023-11-28 03:00:00+00:00       143    -0.000380    0.001800  -12.899492  -2.525466        None
+ range         5 2023-11-28 03:00:00+00:00 2023-12-12 03:00:00+00:00       110    -0.000647    0.001801  -19.250967  -3.768959        None
+ range         6 2023-12-12 03:00:00+00:00 2023-12-26 03:00:00+00:00       130    -0.000780    0.001844  -24.645075  -4.825019        None
+ range         7 2023-12-26 03:00:00+00:00 2024-01-09 03:00:00+00:00       313    -0.000724    0.001915  -34.155559  -6.686984        None
+ range         8 2024-01-09 03:00:00+00:00 2024-01-23 03:00:00+00:00       192    -0.000294    0.001767  -11.765698  -2.303491        None
+ range         9 2024-01-23 03:00:00+00:00 2024-02-06 03:00:00+00:00       454    -0.000273    0.001763  -16.829718  -3.294927        None
+ range        10 2024-02-06 03:00:00+00:00 2024-02-20 03:00:00+00:00       143    -0.000638    0.001922  -20.270484  -3.968561        None
+ range        11 2024-02-20 03:00:00+00:00 2024-03-05 03:00:00+00:00       161    -0.000823    0.001712  -31.159844  -6.100482        None
+ range        12 2024-03-05 03:00:00+00:00 2024-03-19 03:00:00+00:00       149    -0.000474    0.001915  -15.420726  -3.019074        None
+ range        13 2024-03-19 03:00:00+00:00 2024-04-02 03:00:00+00:00       525    -0.000489    0.002082  -27.477415  -5.379536        None
+ range        14 2024-04-02 03:00:00+00:00 2024-04-16 03:00:00+00:00       238    -0.000530    0.001867  -22.369730  -4.379552        None
+ range        15 2024-04-16 03:00:00+00:00 2024-04-30 03:00:00+00:00       364    -0.000574    0.001799  -31.109624  -6.090650        None
+ range        16 2024-04-30 03:00:00+00:00 2024-05-14 03:00:00+00:00       317    -0.000547    0.001888  -26.360072  -5.160782        None
+ range        17 2024-05-14 03:00:00+00:00 2024-05-28 03:00:00+00:00       302    -0.000483    0.002072  -20.711032  -4.054811        None
+ range        18 2024-05-28 03:00:00+00:00 2024-06-11 03:00:00+00:00       123    -0.000966    0.002171  -25.204933  -4.934628        None
+ range        19 2024-06-11 03:00:00+00:00 2024-06-25 03:00:00+00:00        95    -0.000559    0.002113  -13.159221  -2.576316        None
+ range        20 2024-06-25 03:00:00+00:00 2024-07-09 03:00:00+00:00       190    -0.000767    0.002188  -24.679243  -4.831709        None
+ range        21 2024-07-09 03:00:00+00:00 2024-07-23 03:00:00+00:00       247    -0.000542    0.002086  -20.841582  -4.080370        None
+ range        22 2024-07-23 03:00:00+00:00 2024-08-06 03:00:00+00:00       192    -0.000624    0.001872  -23.587716  -4.618009        None
+ range        23 2024-08-06 03:00:00+00:00 2024-08-20 03:00:00+00:00       257    -0.000512    0.001867  -22.450530  -4.395371        None
+ range        24 2024-08-20 03:00:00+00:00 2024-09-03 03:00:00+00:00       211    -0.000737    0.002042  -26.791300  -5.245208        None
+ range        25 2024-09-03 03:00:00+00:00 2024-09-17 03:00:00+00:00       317    -0.000556    0.002045  -24.747397  -4.845052        None
+ range        26 2024-09-17 03:00:00+00:00 2024-10-01 03:00:00+00:00       193    -0.000543    0.001963  -19.618041  -3.840825        None
+ range        27 2024-10-01 03:00:00+00:00 2024-10-15 03:00:00+00:00       180    -0.000584    0.001820  -22.003390  -4.307830        None
+ range        28 2024-10-15 03:00:00+00:00 2024-10-29 03:00:00+00:00       161    -0.000910    0.002129  -27.694822  -5.422099        None
+ range        29 2024-10-29 03:00:00+00:00 2024-11-12 03:00:00+00:00       118    -0.000579    0.001932  -16.619244  -3.253720        None
+ range        30 2024-11-12 03:00:00+00:00 2024-11-26 03:00:00+00:00       173    -0.000648    0.001828  -23.828751  -4.665199        None
+ range        31 2024-11-26 03:00:00+00:00 2024-12-10 03:00:00+00:00       406    -0.000418    0.001883  -22.858261  -4.475196        None
+ range        32 2024-12-10 03:00:00+00:00 2024-12-24 03:00:00+00:00       286    -0.000441    0.001922  -19.846493  -3.885552        None
+ range        33 2024-12-24 03:00:00+00:00 2025-01-07 03:00:00+00:00       394    -0.000400    0.002022  -20.066789  -3.928681        None
+ range        34 2025-01-07 03:00:00+00:00 2025-01-21 03:00:00+00:00       143    -0.000542    0.001937  -17.097669  -3.347386        None
+ range        35 2025-01-21 03:00:00+00:00 2025-02-04 03:00:00+00:00       130    -0.000496    0.001834  -15.754200  -3.084361        None
+ range        36 2025-02-04 03:00:00+00:00 2025-02-18 03:00:00+00:00       311    -0.000651    0.002149  -27.271311  -5.339184        None
+ range        37 2025-02-18 03:00:00+00:00 2025-03-04 03:00:00+00:00       149    -0.000331    0.002024  -10.182480  -1.993529        None
+ range        38 2025-03-04 03:00:00+00:00 2025-03-18 03:00:00+00:00       369    -0.000464    0.001878  -24.227878  -4.743340        None
+ range        39 2025-03-18 03:00:00+00:00 2025-04-01 03:00:00+00:00       324    -0.000501    0.001938  -23.756343  -4.651023        None
+ range        40 2025-04-01 03:00:00+00:00 2025-04-15 03:00:00+00:00       227    -0.000629    0.001845  -26.243277  -5.137916        None
+ range        41 2025-04-15 03:00:00+00:00 2025-04-29 03:00:00+00:00       179    -0.000876    0.002107  -28.399297  -5.560022        None
+ range        42 2025-04-29 03:00:00+00:00 2025-05-13 03:00:00+00:00        34    -0.001196    0.001736  -20.524528  -4.018297        None
+ range        43 2025-05-13 03:00:00+00:00 2025-05-27 03:00:00+00:00       119    -0.000432    0.002009  -11.993641  -2.348118        None
+ range        44 2025-05-27 03:00:00+00:00 2025-06-10 03:00:00+00:00       131    -0.000754    0.001970  -22.368010  -4.379215        None
+ range        45 2025-06-10 03:00:00+00:00 2025-06-24 03:00:00+00:00         4    -0.001255    0.001328   -9.654614  -1.890183        None
+ range        46 2025-06-24 03:00:00+00:00 2025-07-08 03:00:00+00:00         2    -0.002635    0.000189 -100.560937 -19.687847        None
+ range        47 2025-07-08 03:00:00+00:00 2025-07-22 03:00:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        48 2025-07-22 03:00:00+00:00 2025-08-05 03:00:00+00:00        58    -0.000558    0.001861  -11.656255  -2.282065        None
+ range        49 2025-08-05 03:00:00+00:00 2025-08-19 03:00:00+00:00        10    -0.001924    0.001823  -17.046565  -3.337381        None
+ range        50 2025-08-19 03:00:00+00:00 2025-09-02 03:00:00+00:00        15    -0.000208    0.001934   -2.122970  -0.415636        None
+ range        51 2025-09-02 03:00:00+00:00 2025-09-16 03:00:00+00:00         5    -0.001722    0.001828  -10.756824  -2.105974        None
+ range        52 2025-09-16 03:00:00+00:00 2025-09-30 03:00:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        53 2025-09-30 03:00:00+00:00 2025-10-14 03:00:00+00:00         2     0.001383    0.000041  244.052182  47.780600        None
+ range        54 2025-10-14 03:00:00+00:00 2025-10-28 03:00:00+00:00       175    -0.001088    0.001925  -38.206174  -7.480015        None
+ range        55 2025-10-28 03:00:00+00:00 2025-11-11 03:00:00+00:00       135    -0.000461    0.002152  -12.713135  -2.488981        None
+ range        56 2025-11-11 03:00:00+00:00 2025-11-25 03:00:00+00:00       406    -0.000735    0.002052  -36.847609  -7.214034        None
+ range        57 2025-11-25 03:00:00+00:00 2025-12-09 03:00:00+00:00       280    -0.000507    0.002089  -20.740633  -4.060607        None
+ range        58 2025-12-09 03:00:00+00:00 2025-12-23 03:00:00+00:00       192    -0.000791    0.002155  -25.993268  -5.088969        None
+ range        59 2025-12-23 03:00:00+00:00 2026-01-06 03:00:00+00:00        59    -0.000215    0.002181   -3.863627  -0.756422        None
+ range        60 2026-01-06 03:00:00+00:00 2026-01-20 03:00:00+00:00         0          NaN         NaN         NaN        NaN        None
+ range        61 2026-01-20 03:00:00+00:00 2026-02-03 03:00:00+00:00        22    -0.000199    0.002044   -2.331383  -0.456439        None
+ range        62 2026-02-03 03:00:00+00:00 2026-02-17 03:00:00+00:00       294    -0.000400    0.002265  -15.454429  -3.025672        None
+ range        63 2026-02-17 03:00:00+00:00 2026-03-03 03:00:00+00:00       280    -0.000610    0.001731  -30.103919  -5.893753        None
+ range        64 2026-03-03 03:00:00+00:00 2026-03-17 03:00:00+00:00       238    -0.000789    0.001943  -31.990422  -6.263093        None
+ range        65 2026-03-17 03:00:00+00:00 2026-03-31 03:00:00+00:00       403    -0.000461    0.001938  -24.377510  -4.772635        None
+ range        66 2026-03-31 03:00:00+00:00 2026-04-14 03:00:00+00:00       247    -0.000606    0.001862  -26.139651  -5.117628        None
+ range        67 2026-04-14 03:00:00+00:00 2026-04-28 03:00:00+00:00       190    -0.000483    0.002062  -16.479751  -3.226410        None
+ range        68 2026-04-28 03:00:00+00:00 2026-05-12 03:00:00+00:00        90    -0.000965    0.001974  -23.701083  -4.640204        None
+ range        69 2026-05-12 03:00:00+00:00 2026-05-26 03:00:00+00:00         5    -0.002104    0.001975  -12.170257  -2.382696        None
+ range        70 2026-05-26 03:00:00+00:00 2026-06-09 03:00:00+00:00        11     0.000086    0.002010    0.723721   0.141690        None
+ range        71 2026-06-09 03:00:00+00:00 2026-06-23 03:00:00+00:00       361    -0.000458    0.001834  -24.237176  -4.745161        None
+
+=== Klasyfikacja (seed=42) ===
+{'classification': 'NO-GO', 'n_valid_folds': 138, 'n_total_folds': 144, 'fraction_above_threshold': 0.057971014492753624, 'fraction_le_zero': 0.927536231884058, 'fraction_positive_sign': 0.07246376811594203, 'mean_sharpe': -12.739762689436652}
+
+=== Rozbicie per reżim (seed=42) ===
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             66             72                  0.030303          0.969697                0.030303   -17.807971
+ trend          NO-GO             72             72                  0.083333          0.888889                0.111111    -8.093905
+
+[sweep] 10 seedów: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+  ... seed=43
+  ... seed=44
+  ... seed=45
+  ... seed=46
+  ... seed=47
+  ... seed=48
+  ... seed=49
+  ... seed=50
+  ... seed=51
+
+=== Stabilność między seedami (kandydat trend_threshold=0.5, range_threshold=0.5) ===
+  seed= 42  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 43  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 44  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 45  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 46  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 47  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 48  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 49  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 50  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+  seed= 51  mean_sharpe=-12.7398  klasyfikacja=NO-GO
+std(mean_sharpe) między 10 seedami = 0.0000 (STABILNY, próg < 0.2)
+
+========================================================================================
+TABELA PORÓWNAWCZA — WSZYSCY KANDYDACI (bez automatycznego wyboru zwycięzcy)
+========================================================================================
+ trend_thr  range_thr  %trend  %range  mean_sharpe(seed=42) klasyfikacja(seed=42)  n_valid_folds  stability_std(10 seed)  stabilny
+       0.7        0.3    0.52   21.22               36.9913                 NO-GO             54                     0.0      True
+       0.6        0.4    0.66   27.99              -14.0212                 NO-GO             80                     0.0      True
+       0.5        0.3    4.58   21.22               12.9354                 NO-GO            114                     0.0      True
+       0.5        0.5    4.58   44.83              -12.7398                 NO-GO            138                     0.0      True
+
+[UWAGA] Ten skrypt CELOWO nie wybiera 'najlepszego' kandydata — decyzja, czy i który
+zestaw progów wpisać do config/settings.yaml, należy do użytkownika, po przeczytaniu
+pełnego rozkładu Sharpe/populacji/stabilności powyżej, nie tylko najwyższej liczby
+(CLAUDE.md zasada 1 — unikanie optymalizacji progów na wyniku PnL).

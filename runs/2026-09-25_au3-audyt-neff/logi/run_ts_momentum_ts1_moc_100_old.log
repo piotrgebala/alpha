@@ -1,0 +1,14 @@
+========================================================================================================
+TS1 — RACHUNEK MOCY: 100 portfeli H0 (bez patrzenia na wynik reguły)
+========================================================================================================
+dane   : uniwersum 281 symboli 1d (2021-01-01 → 2026-06-30, zasada 20), 65 koszyków miesięcznych top-20 po obrocie (119 różnych symboli)
+reguła : s = znak zwrotu 28 dni, σ̂ = √(365·EWMA(r², com=60)), w = s·min(3, 0.40/σ̂)/N; formowanie co 7 dni, 7 faz po 1/7 kapitału; koszt 0.070% × obrót; funding realny (long płaci)
+okres  : 2021-02-01 → 2026-07-01; trwałość sygnału p_flip = 0.214; H0 kanoniczne: znaki przesunięte cyklicznie o losową liczbę tygodni
+
+  H0 niezależne losowe znaki (odrzucone jako za wąskie):
+    dni 1969; sd dzienna netto (mediana) 3.2%/rok; średnia -0.70%/rok; se empiryczne 1.39%/rok (analityczne 1.38%/rok, ×1.00)
+    half-width 95% = 2.7%/rok = 0.85 SR; q2,5 -3.8%/rok, q97,5 +2.4%/rok
+  H0 KANONICZNE: znaki przesunięte w czasie:
+    dni 1969; sd dzienna netto (mediana) 21.3%/rok; średnia -1.31%/rok; se empiryczne 7.32%/rok (analityczne 9.16%/rok, ×0.80)
+    half-width 95% = 17.9%/rok = 0.84 SR; q2,5 -15.8%/rok, q97,5 +13.0%/rok
+  czas: 103s

@@ -1,0 +1,12 @@
+========================================================================================================
+KP1 — PROFIL DANYCH (bez sygnału i zwrotów); konfiguracja ZAMROŻONA
+========================================================================================================
+  Upbit KRW-BTC 1d: 2824 wierszy, 2019-01-01 → 2026-09-24, brakujące dni 0, duplikaty 0, close ≤ 0: 0, dni z wolumenem 0: 0
+  FRED DEXKOUS: 2013 dni roboczych, 2019-01-02 → 2026-09-18, braki (święta) 85, zakres 1081.6–1556.0 KRW/USD, max zmiana dzienna 3.64%
+  kurs dla dni 2021-01-01 → 2026-07-01: wiek obserwacji mediana 0 d, max 3 d, dni bez kursu (> 5 d) 0
+  premia koreańska: 2007 dni (2021-01-01 → 2026-06-30); p1 / p5 / mediana / p95 / p99: -2.27% / -1.10% / +1.66% / +6.82% / +12.48%
+  min -6.13% (2021-02-03), max +21.71% (2021-05-19); dni z |premią| > 10 %: 39; max |zmiana dzienna| 11.35 pp (2021-05-19)
+  mediana premii per rok: 2021: +3.33%; 2022: +1.54%; 2023: +1.47%; 2024: +2.17%; 2025: +1.42%; 2026: +0.16%
+  wobec premii Coinbase (CP1), 2007 wspólnych dni: korelacja poziomów +0.11, zmian dziennych -0.14
+========================================================================================================
+czas: 0s

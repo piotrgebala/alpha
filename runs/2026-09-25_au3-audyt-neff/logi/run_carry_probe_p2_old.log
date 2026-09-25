@@ -1,0 +1,84 @@
+P2 — sonda wykonalności carry przekrojowego (z POPRAWKĄ 1)
+zakres 2020-01-01T00:00:00Z -> 2026-07-01T00:00:00Z, okna 48h, decyle (min. 2), min. 10 zakwalifikowanych, c_rt bazowy 0.0767%
+
+=== Pomiar 1: uniwersum (POPRAWKA 1: 20 stałych symboli, błąd przeżywalności) ===
+  BTCUSDT    funding od 2020-01-01  stawek  7119  świec 1d  2373
+  ETHUSDT    funding od 2020-01-01  stawek  7119  świec 1d  2373
+  BNBUSDT    funding od 2020-02-10  stawek  6998  świec 1d  2333
+  XRPUSDT    funding od 2020-01-06  stawek  7103  świec 1d  2368
+  SOLUSDT    funding od 2020-09-13  stawek  6424  świec 1d  2116
+  TRXUSDT    funding od 2020-01-15  stawek  7076  świec 1d  2359
+  ZECUSDT    funding od 2020-02-04  stawek  7016  świec 1d  2338
+  HYPEUSDT   funding od 2025-05-30  stawek  2378  świec 1d   397
+  DOGEUSDT   funding od 2020-07-10  stawek  6545  świec 1d  2182
+  XMRUSDT    funding od 2020-01-19  stawek  7063  świec 1d  2340
+  LINKUSDT   funding od 2020-01-17  stawek  7070  świec 1d  2357
+  ADAUSDT    funding od 2020-01-19  stawek  7063  świec 1d  2343
+  XLMUSDT    funding od 2020-01-19  stawek  7063  świec 1d  2354
+  BCHUSDT    funding od 2020-01-01  stawek  7119  świec 1d  2373
+  UNIUSDT    funding od 2020-09-17  stawek  6338  świec 1d  2112
+  NEARUSDT   funding od 2020-10-14  stawek  6256  świec 1d  2085
+  AVAXUSDT   funding od 2020-09-22  stawek  6322  świec 1d  2107
+  LTCUSDT    funding od 2020-01-09  stawek  7094  świec 1d  2365
+  CCUSDT     funding od 2025-10-31  stawek  1455  świec 1d   243
+  HBARUSDT   funding od 2021-03-17  stawek  5795  świec 1d  1932
+  symboli z danymi: 20 / 20
+
+=== Pomiary 2–4 ===
+
+=== TOP20 kapitalizacji, koszt bazowy (PODSTAWOWY — D1/D2) ===
+  okna ważne / wszystkie        : 1161 / 1186
+  pierwsze ważne okno           : 2020-02-20
+  zakwalifikowanych (mediana)   : 18
+  koszyk (mediana n_short/long) : 2 / 2
+  obrót (średnio short/long)    : 0.525 / 0.456
+  trwałość rang (Spearman, śr.) : 0.563
+  F (funding otrzymany, 48h)    : śr. 0.1720%  mediana 0.1035%
+  C (koszt, 48h)                : śr. 0.0752%
+  mu_net = F − C                : śr. 0.0968%  mediana 0.0326%  CI95 [0.0511%; 0.1425%]  (n=1161, N_eff=246)
+  udział okien z F − C > 0      : 0.656
+  sigma(F − C + R)              : 5.5550%  (N_eff=1161 z n=1161)
+  n_req (moc 80%)               : 25,850 okien
+  N_eff dostępne / n_req        : 0.045
+
+=== TOP20, koszt taker 0,14% (wrażliwość) ===
+  okna ważne / wszystkie        : 1161 / 1186
+  pierwsze ważne okno           : 2020-02-20
+  zakwalifikowanych (mediana)   : 18
+  koszyk (mediana n_short/long) : 2 / 2
+  obrót (średnio short/long)    : 0.525 / 0.456
+  trwałość rang (Spearman, śr.) : 0.563
+  F (funding otrzymany, 48h)    : śr. 0.1720%  mediana 0.1035%
+  C (koszt, 48h)                : śr. 0.1373%
+  mu_net = F − C                : śr. 0.0347%  mediana -0.0207%  CI95 [-0.0096%; 0.0790%]  (n=1161, N_eff=267)
+  udział okien z F − C > 0      : 0.444
+  sigma(F − C + R)              : 5.5572%  (N_eff=1161 z n=1161)
+  n_req (moc 80%)               : 201,371 okien
+  N_eff dostępne / n_req        : 0.006
+
+=== TOP20, obrót = 1 (wrażliwość) ===
+  okna ważne / wszystkie        : 1161 / 1186
+  pierwsze ważne okno           : 2020-02-20
+  zakwalifikowanych (mediana)   : 18
+  koszyk (mediana n_short/long) : 2 / 2
+  obrót (średnio short/long)    : 0.525 / 0.456
+  trwałość rang (Spearman, śr.) : 0.563
+  F (funding otrzymany, 48h)    : śr. 0.1720%  mediana 0.1035%
+  C (koszt, 48h)                : śr. 0.1534%
+  mu_net = F − C                : śr. 0.0186%  mediana -0.0499%  CI95 [-0.0290%; 0.0663%]  (n=1161, N_eff=224)
+  udział okien z F − C > 0      : 0.337
+  sigma(F − C + R)              : 5.5524%  (N_eff=1161 z n=1161)
+  n_req (moc 80%)               : 696,308 okien
+  N_eff dostępne / n_req        : 0.002
+
+=== Pomiar 5: kontrola założenia z STATUS §17 (przekrój ≠ niezależne próby) ===
+  przeciętna korelacja parowa zwrotów 48h (TOP20): 0.470
+  k = 18 instrumentów -> k_eff = 2.0 niezależnych
+  koszyk 2 szt. -> k_eff = 1.36
+
+=== Kryteria (pre-rejestracja) ===
+  D1 (ci_low mu_net > 0)        : SPEŁNIONE  (ci_low = 0.0511%)
+  D2 (N_eff >= n_req)           : NIESPEŁNIONE  (N_eff = 1161, n_req = 25,850)
+  WERDYKT                       : NIEMIERZALNA
+
+(szereg okien TOP20 bez kolumny R zapisany: data/raw/universe/p2_windows_top20.parquet)

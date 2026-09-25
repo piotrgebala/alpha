@@ -1,0 +1,64 @@
+==================================================================================================
+H2.1c — funding jako 11. cecha, BEZ bramki rezimu (konfiguracja ZAMROZONA)
+==================================================================================================
+dane      : 14916 swiec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+funding   : 7457 rekordow, swiec ze stawka 14914, NaN 2 (sprzed 1. rozliczenia)
+bramka    : BRAK (REGIME_ALL)  |  V = 3  |  walk-forward 60/28/28  |  seed 42
+KRYTERIUM : ci_low > 52.69%   KLAUZULA: n < 1000
+
+--- uruchamiam: A baseline (4 cechy OHLCV) (4 cech) ---
+--- uruchamiam: B kandydat (4 + funding) (5 cech) ---
+
+==================================================================================================
+LEJEK SYGNALOW
+==================================================================================================
+                         licznik |   A baseline |   B kandydat
+  ------------------------------------------------------------
+                n_rows_evaluated |        14448 |        14448
+          n_signals_no_direction |         6334 |         6252
+            n_signals_cost_gated |            0 |            0
+                       n_signals |         8114 |         8196
+  A baseline (4 cechy OHLCV): foldy 86, pominiete 0, z early stoppingiem 86
+  B kandydat (4 + funding): foldy 86, pominiete 0, z early stoppingiem 86
+
+==================================================================================================
+ROZBICIE EDGE'U
+==================================================================================================
+
+--- A baseline (4 cechy OHLCV) ---
+ regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+__all__      8033  0.503672 0.658284 0.492739 0.514606       0.651064          0.512665          0.498853     0.013824  0.000811      0.529325 -0.025653
+ regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat       n_eff  t_stat_neff
+__all__      8033    -0.000056    0.001221         -0.045602 -4.087169 3858.523128    -2.832659
+{'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.36046511627906974, 'fraction_le_zero': 0.6395348837209303, 'fraction_positive_sign': 0.36046511627906974, 'mean_sharpe': -1.7663058585916511}
+
+--- B kandydat (4 + funding) ---
+ regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+__all__      8127  0.503384 0.610095 0.492513 0.514254       0.649809           0.51019          0.499716     0.013677  0.000804      0.529401 -0.026017
+ regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat       n_eff  t_stat_neff
+__all__      8127    -0.000059    0.001225         -0.048089 -4.335245 4763.387374    -3.318994
+{'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.37209302325581395, 'fraction_le_zero': 0.6046511627906976, 'fraction_positive_sign': 0.3953488372093023, 'mean_sharpe': -1.6835867942351885}
+
+==================================================================================================
+DELTA — czy cecha spoza OHLCV ruszyla trafnosc
+==================================================================================================
+                   miara |   A baseline |   B kandydat |      delta
+  ------------------------------------------------------------------
+            n transakcji |         8033 |         8127 |     +94.00
+              trafnosc % |        50.37 |        50.34 |      -0.03
+                ci_low % |        49.27 |        49.25 |      -0.02
+               ci_high % |        51.46 |        51.43 |      -0.04
+            break-even % |        52.93 |        52.94 |      +0.01
+             margines pp |        -2.57 |        -2.60 |      -0.04
+
+==================================================================================================
+WERDYKT wobec PRE-REJESTROWANEGO kryterium (ramie B)
+==================================================================================================
+  n                       = 8127
+  trafnosc zmierzona      = 50.34%
+  95% CI                  = [49.25%; 51.43%]
+  prog pre-rejestrowany   = 52.69%
+  trzeba bylo zmierzyc    = 53.78%
+  przyrost nad projektem  = +0.07 pp (zbiorcza trafnosc projektu: 50.27%, Z10)
+
+  >>> KRYTERIUM NIESPELNIONE: przepada o 3.44 pp.

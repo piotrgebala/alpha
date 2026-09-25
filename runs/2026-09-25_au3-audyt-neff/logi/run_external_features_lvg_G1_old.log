@@ -1,0 +1,73 @@
+========================================================================================================
+G1 — FEAR & GREED: poziom indeksu / 100 jako 5. cecha modelu 4h BTC vs kontrola; konfiguracja ZAMROŻONA
+========================================================================================================
+dane      : 12042 świec 4h od 2021-01-01 00:00:00+00:00 do 2026-06-30 20:00:00+00:00 (zasada 20: min_start = 2021-01-01T00:00:00Z); źródło `fng`, dostępność wartości dnia d od d + 0 days 04:00:00
+cecha     : fng_level; NaN 0 z 12042 świec, pierwsza wartość 2021-01-01 00:00:00+00:00
+            rozkład: p01 +0.0900, p05 +0.1200, p50 +0.4900, p95 +0.7900, p99 +0.9259; masa punktowa 3.24%; acf1 +0.994
+pipeline  : BEZ bramki reżimu, V=3, wagi klas `balanced`, walk-forward 60/28/28, seed 42, wejście limit_close k=1, pojedyncze wyjście
+kontrola  : cechy ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20']
+G1        : cechy ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20', 'fng_level']
+kryterium : jedno ramię (m = 1): POZYTYWNY t_neff > 1,96 i ci_low(p) > p*; NEGATYWNY t_neff < −1,96 przy n >= required
+
+0. LEJEK — kontrola i G1 (dwa treningi)
+  trening kontroli zakończony po 3 s
+  [kontrola] foldy: 69 aktywne / 69 łącznie
+               świece ocenione:    11592
+    bez kierunku (abstynencja):     4681
+               bramka pewności:        0
+               bramka kosztowa:        0
+           sygnały kandydujące:     6911
+                   abstynencja:   40.38%
+  trening G1 zakończony po 5 s
+  [G1] foldy: 69 aktywne / 69 łącznie
+               świece ocenione:    11592
+    bez kierunku (abstynencja):     5223
+               bramka pewności:        0
+               bramka kosztowa:        0
+           sygnały kandydujące:     6369
+                   abstynencja:   45.06%
+  korelacja cechy z kontrolą: return_lag_1 +0.012, volume_zscore_20 +0.005, rsi_14 +0.289, price_zscore_20 +0.142
+
+1. KRYTERIUM — zwrot netto per trade (t_neff) i trafność wobec p* (jedno ramię, z = 1,96)
+      ramię |     n |  r̄ netto |                CI 95% |  mediana |      t |  N_eff | t_neff |       p |         CI 95%(p) |     p* |  BE ±B
+  --------------------------------------------------------------------------------------------------------------------------------
+   kontrola |  6789 |  -0.1069% | [ -0.1487;  -0.0650] | -0.1036% |  -5.01 |   4919 |  -4.26 |  49.58% | [ 48.39;  50.77] | 53.64% | 53.07%
+         G1 |  6277 |  -0.1017% | [ -0.1443;  -0.0591] | -0.0967% |  -4.68 |   3482 |  -3.48 |  49.90% | [ 48.66;  51.13] | 53.86% | 53.21%
+  >>> ODCZYT KRYTERIUM G1: NEGATYWNY — t_neff < −1,96 przy n >= required_trades(0,50; BE) = 1,902
+  (kontrola: NEGATYWNY — t_neff < −1,96 przy n >= required_trades(0,50; BE) = 2,082 — odniesienie, 0 wariantów)
+  regresja kontroli wobec N1/A1/A2/O1 (n 6789, p 49.58%, r̄ -0.1069%): ZGODNA
+
+2. PORÓWNANIE PAROWANE G1 − kontrola (te same świece i wypełnienia) — obserwacja, nie kryterium
+  wspólnych transakcji 4956 (kontrola 6789, G1 6277); ten sam kierunek w 77.6%; średnia różnica netto +0.0022% [-0.0449; +0.0493], mediana +0.0000%, różnic ≠ 0: 3222
+  tylko w kontroli: 1833, tylko w G1: 1321; świece ocenione G1 11592 vs kontrola 11592, abstynencja G1 45.06%
+
+3. OPIS — powód wyjścia, kierunek, geometria wypłaty
+  kontrola — powód wyjścia
+                   grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  --------------------------------------------------------------------------------------------------------
+                cel (tp) |  1199 |   17.7% | 100.00% | [100.00; 100.00] |  +2.2689% |  +2.3080% | +2.0804%
+               stop (sl) |  1183 |   17.4% |   0.00% | [  0.00;   0.00] |  -2.4609% |  -2.3707% | -2.2427%
+                 timeout |  4407 |   64.9% |  49.17% | [ 47.70;  50.65] |  -0.1214% |  -0.0317% | -0.1058%
+  kontrola — kierunek
+                   grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  --------------------------------------------------------------------------------------------------------
+                    long |  3306 |   48.7% |  49.49% | [ 47.78;  51.19] |  -0.1377% |  -0.0427% | -0.1164%
+                   short |  3483 |   51.3% |  49.67% | [ 48.01;  51.33] |  -0.0776% |  -0.0103% | -0.0869%
+  kontrola: W̄ = 1.3029%, L̄ = 1.3329%, C = 0.0808%, std zwrotu 1.759%, p5/p95 [-2.973%; +2.748%], niewypełnione 43, stłumione 79
+  G1 — powód wyjścia
+                   grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  --------------------------------------------------------------------------------------------------------
+                cel (tp) |  1079 |   17.2% | 100.00% | [100.00; 100.00] |  +2.2190% |  +2.2592% | +2.0542%
+               stop (sl) |  1075 |   17.1% |   0.00% | [  0.00;   0.00] |  -2.4386% |  -2.3478% | -2.2123%
+                 timeout |  4123 |   65.7% |  49.79% | [ 48.27;  51.32] |  -0.0997% |  -0.0086% | -0.0970%
+  G1 — kierunek
+                   grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  --------------------------------------------------------------------------------------------------------
+                    long |  3316 |   52.8% |  50.24% | [ 48.54;  51.94] |  -0.1132% |  -0.0178% | -0.0972%
+                   short |  2961 |   47.2% |  49.51% | [ 47.71;  51.31] |  -0.0887% |  -0.0212% | -0.0962%
+  G1: W̄ = 1.2656%, L̄ = 1.2991%, C = 0.0823%, std zwrotu 1.722%, p5/p95 [-3.010%; +2.695%], niewypełnione 29, stłumione 63
+
+4. MIERZALNOŚĆ — ex ante (pre-rejestracja) vs ex post
+  G1: expected_trades ex ante = 6,870; ex post = 6,331; journal = 6,277; half-width ex ante 1.18 pp, ex post 1.24 pp; measurability_report(p=0.56, BE=0.5307, n=6,870) → MIERZALNA
+========================================================================================================
+czas: 6s

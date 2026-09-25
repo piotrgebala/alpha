@@ -1,0 +1,66 @@
+[data] 315648 świec: 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+[data] brak dziur.
+[data] seria ciągła, 315648 świec
+
+[regime] świec z policzalnymi cechami: 309875
+
+================================================================================================
+BLOK 1 — spójność OBECNEJ reguły reżimu z horyzontem etykiety
+================================================================================================
+VERTICAL_BARRIER_CANDLES = 12 świec = 60 min (horyzont, na którym liczona jest etykieta)
+
+-- długości nieprzerwanych epizodów reżimu (świece 5m) --
+trend      epizodów=   728  mediana=   2.0  p90=   5.0  max=   15 (    75 min)  świec=   1636
+range      epizodów=  9717  mediana=   5.0  p90=  16.0  max=   63 (   315 min)  świec=  66996
+ambiguous  epizodów= 10445  mediana=   3.0  p90=  67.0  max= 1167 (  5835 min)  świec= 241243
+
+-- tabela spójności: ile świec ma CAŁE okno etykiety wewnątrz epizodu --
+regime  horizon_candles  horizon_minutes  median_length  n_episodes_ge_horizon  n_episodes  n_windows_inside  share_windows_inside  coherent
+ trend               12               60            2.0                      4         728                 8              0.004890     False
+ trend               48              240            2.0                      0         728                 0              0.000000     False
+ trend              144              720            2.0                      0         728                 0              0.000000     False
+ trend              576             2880            2.0                      0         728                 0              0.000000     False
+ range               12               60            5.0                   1729        9717             14123              0.210804     False
+ range               48              240            5.0                     20        9717               105              0.001567     False
+ range              144              720            5.0                      0        9717                 0              0.000000     False
+ range              576             2880            5.0                      0        9717                 0              0.000000     False
+
+[interpretacja] coherent = mediana długości epizodu >= horyzont etykiety.
+share_windows_inside = ułamek świec reżimu, dla których etykieta opisuje ruch
+WYŁĄCZNIE wewnątrz reżimu, który zakwalifikował wejście. Niskie wartości znaczą,
+że bramka i target mierzą różne rzeczy — i że `p` nie jest interpretowalne.
+
+================================================================================================
+BLOK 2 — konsekwencja dla członu B (domknięcie Backlog Z8 bez wydawania wariantu)
+================================================================================================
+koszt round-trip C = 0.0900% nominału (model maker_limit, C2.12)
+
+reżim            p      2p-1   B_obecne  B_wymagane  krotność  implik. horyzont  max epizod
+range       0.5107   +0.0214    0.1372%     4.2088%     30.7x       11299 św.       63 św.
+trend       0.4986   -0.0028    0.4107%           —         —  ŻADEN nie pomaga       15 św.
+
+[interpretacja] B_wymagane = C/(2p-1) — szerokość bariery, przy której wartość
+oczekiwana transakcji przestaje być ujemna PRZY NIEZMIENIONEJ trafności. Implikowany
+horyzont z przeskalowania ~sqrt(t). Jeśli przekracza NAJDŁUŻSZY zmierzony epizod
+reżimu, to poszerzanie bariery jest niewykonalne przy tej definicji reżimu —
+bariera i tak byłaby testowana poza reżimem, który uzasadnił wejście.
+Gdy 2p-1 <= 0 (trend), ŻADNA szerokość nie pomaga: szersza bariera pogarsza wynik.
+
+================================================================================================
+BLOK 3 — przesiew kandydatów na regułę reżimu (kryterium dopuszczalności, 0 wariantów)
+================================================================================================
+Kryterium: mediana epizodu >= 12 świec (horyzont etykiety)
+ORAZ udział reżimu >= 5% świec. Oba warunki definicyjne, żaden nie oceniany PnL-em.
+
+reguła                           trend: med/udz     range: med/udz  dopuszczalna
+obecna (0.7/0.3)                  2.0 /  0.53%      5.0 / 21.62%           nie
+luźniejsza (0.5/0.5)              2.0 /  4.67%     10.0 / 45.67%           nie
+luźniejsza (0.4/0.4)              2.0 /  5.50%      5.0 / 28.51%           nie
+obecna + wygładzenie 12           7.0 /  0.08%     17.0 / 21.02%           nie
+0.5/0.5 + wygładzenie 12          7.0 /  1.52%     39.0 / 46.90%           nie
+0.5/0.5 + wygładzenie 48         10.0 /  0.05%     89.0 / 48.18%           nie
+
+[interpretacja] Reguła niedopuszczalna NIE jest 'zła' — jest niespójna z targetem
+o tym horyzoncie. Dopuszczalność to warunek KONIECZNY, by pomiar `p` cokolwiek
+znaczył; nie jest warunkiem wystarczającym istnienia edge'u. Wybór reguły do testu
+OOS to osobna runda i osobny wariant w księdze (Backlog Z7) — ten blok go NIE wybiera.

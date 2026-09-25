@@ -1,0 +1,87 @@
+==================================================================================================
+H3 — PASMO nogi `timeout` (konfiguracja ZAMROZONA = S1b)
+==================================================================================================
+dane: 14916 swiec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+rezim: range | V = 3 | walk-forward 60/28/28 dni | seed 42
+
+==================================================================================================
+0. KONTROLA: brak argumentu vs jawne timeout_leg=TAKER
+==================================================================================================
+  final_equity identyczne : True
+  journal identyczny      : True
+  >>> BASELINE ZACHOWANY
+
+==================================================================================================
+1. LEJEK SYGNALOW — musi byc IDENTYCZNY (bramka bierze max po powodach wyjscia)
+==================================================================================================
+                         licznik |      TAKER |      MAKER |  zgodne
+  ------------------------------------------------------------------
+                n_rows_evaluated |       3642 |       3642 |    True
+          n_signals_no_direction |       1687 |       1687 |    True
+      n_signals_confidence_gated |          0 |          0 |    True
+            n_signals_cost_gated |          0 |          0 |    True
+                       n_signals |       1955 |       1955 |    True
+
+  bramka kosztowa = 0.000900 (niewrazliwa na timeout_leg z konstrukcji)
+  >>> LEJEK IDENTYCZNY
+
+==================================================================================================
+2. KOSZT — glowny przedmiot rundy
+==================================================================================================
+                         miara |        TAKER |        MAKER |        delta
+  ------------------------------------------------------------------------
+     koszt sredni (% nominalu) |     0.07812% |     0.04784% |    -0.03028%
+    koszt mediana (% nominalu) |     0.07500% |     0.05000% |    -0.02500%
+            w tym fee+slippage |     0.07990% |     0.04962% |    -0.03028%
+                 w tym funding |    -0.00178% |    -0.00178% |    +0.00000%
+
+                 rozklad wyjsc |        TAKER |        MAKER
+  ----------------------------------------------------------
+                            tp |          395 |          395
+                            sl |          376 |          376
+                       timeout |         1184 |         1184
+                             n |         1955 |         1955
+
+  udzial timeoutow (TAKER) = 60.56% (95% CI [58.40%; 62.73%]) — to jest DZWIGNIA calego efektu
+
+==================================================================================================
+3. PROG OPLACALNOSCI
+==================================================================================================
+  barrier_pct (B): TAKER=0.011958  MAKER=0.011958  identyczne=True
+
+     wariant |    koszt C |  break-even p
+  ----------------------------------------
+       TAKER |   0.07812% |        53.27%
+       MAKER |   0.04784% |        52.00%
+
+  >>> PASMO PROGU: [52.00%; 53.27%], szerokosc 1.27 pp
+
+==================================================================================================
+4. WALIDACJA drugą drogą — koszt z journalu vs policzony z mieszanki wyjsc
+==================================================================================================
+  TAKER: analitycznie=0.00079898  z journalu(fee+slip)=0.00079898  zgodne=True
+  MAKER: analitycznie=0.00049616  z journalu(fee+slip)=0.00049616  zgodne=True
+
+==================================================================================================
+5. SPROSTOWANIE progu z H2.0 (liczonego kosztem BRAMKOWYM, nie realnym)
+==================================================================================================
+  H2.0 (koszt bramkowy 0.0900%)  -> prog 53.12%   <- ZAWYZONE
+  H3 TAKER (koszt realny 0.0781%) -> prog 52.71%
+  H3 MAKER (koszt realny 0.0478%) -> prog 51.66%
+
+==================================================================================================
+6. LICZBY OBJETE ZAKAZEM RAPORTOWANIA (regula D5) — tylko do raw_output
+==================================================================================================
+  Ponizsze NIE sa wynikiem tej rundy i nie uczestnicza w zadnej decyzji.
+  Koszt moze ruszyc trafnosc WYLACZNIE przez selekcje (inny moment kill-switcha).
+
+  --- TAKER ---
+  regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+   range      1955   0.51202 1.062978 0.489863 0.534178       0.605627          0.512322          0.511824     0.011958  0.000781      0.532662 -0.020642
+  {'classification': 'NO-GO', 'n_valid_folds': 63, 'n_total_folds': 85, 'fraction_above_threshold': 0.38095238095238093, 'fraction_le_zero': 0.5714285714285714, 'fraction_positive_sign': 0.42857142857142855, 'mean_sharpe': -1.041464806362297}
+
+  --- MAKER ---
+  regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+   range      1955   0.51202 1.062978 0.489863 0.534178       0.605627          0.512322          0.511824     0.011958  0.000478      0.520001 -0.007981
+  {'classification': 'WARUNKOWY', 'n_valid_folds': 63, 'n_total_folds': 85, 'fraction_above_threshold': 0.4126984126984127, 'fraction_le_zero': 0.49206349206349204, 'fraction_positive_sign': 0.5079365079365079, 'mean_sharpe': -0.5553179283624269}
+
