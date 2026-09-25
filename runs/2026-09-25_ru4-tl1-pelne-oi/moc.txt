@@ -1,0 +1,7 @@
+RU4: TL1 na data/raw/universe_full, panel OI data/raw/oi_panel/oi_daily_full.parquet (pokrycie wypisuje TL1)
+========================================================================================================
+TL1 — RACHUNEK MOCY (H0: crowd przesunięty w czasie); konfiguracja ZAMROŻONA
+========================================================================================================
+  OI: 185 symboli, 36357 dni-symboli; pokrycie crowd u członków od 2021-12-15: średnio 99.6% (min miesiąc 93.4%)
+  dni 1652; zmienność H0 4.6%/rok; half-width 95% 6.6%/rok = 1.43 SR; q97,5 H0 +5.6%/rok
+  czas: 301s

@@ -1,0 +1,12 @@
+RU4: TL1 na data/raw/universe_full, panel OI data/raw/oi_panel/oi_daily_full.parquet (pokrycie wypisuje TL1)
+========================================================================================================
+TL1 — TŁOK PRZEKROJOWY NA TOP-20 (OI × kierunek ruchu); konfiguracja ZAMROŻONA
+========================================================================================================
+  OI: 185 symboli, 36357 dni-symboli; pokrycie crowd u członków od 2021-12-15: średnio 99.6% (min miesiąc 93.4%)
+  TL1 netto | 1652 dni | +8.1%/rok [-17.5; +33.7] | sd 27.8%/rok | t_neff +0.62; H0 q97,5 +5.6%/rok, TL1 powyżej 100% H0
+  >>> ODCZYT KRYTERIUM TL1: NIEROZSTRZYGNIĘTY
+  Σ brutto +38.7% | funding +22.0% | koszt 24.0% | noga long -25.2%/rok, noga short (zwrot monet) -42.3%/rok
+  per rok (Σ netto): 2021: +0.6%; 2022: -37.3%; 2023: +35.8%; 2024: -12.7%; 2025: +43.0%; 2026: +7.1%
+  7 faz (%/rok): +22.9, +35.4, +22.2, -43.8, -28.1, +18.0, +27.7
+========================================================================================================
+czas: 315s
