@@ -180,7 +180,8 @@ def _host(clone: Path) -> str:
 
 def test_handover_detects_other_machine(repos):
     _, journal, other = repos
-    _journal_commit(other, "Dziennik: przebieg 2026-09-25 (dantey1)")
+    # nazwa zawsze różna od bieżącej maszyny (test chodzi i na komputerze, i na serwerze `dantey1`)
+    _journal_commit(other, f"Dziennik: przebieg 2026-09-25 (inna-{_host(journal)})")
     assert _przejete(journal) == 0
 
 
@@ -189,7 +190,9 @@ def test_handover_ignores_own_machine_old_format_and_old_commits(repos):
     _journal_commit(other, f"Dziennik: przebieg 2026-09-25 ({_host(journal)})")
     _journal_commit(other, "Dziennik: przebieg 2026-09-24")
     _journal_commit(
-        other, "Dziennik: przebieg 2026-09-01 (dantey1)", when="2026-09-01T02:30:00+0000"
+        other,
+        f"Dziennik: przebieg 2026-09-01 (inna-{_host(journal)})",
+        when="2026-09-01T02:30:00+0000",
     )
     assert _przejete(journal) == 1
 

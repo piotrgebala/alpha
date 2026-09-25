@@ -396,6 +396,12 @@ def main(argv: list[str]) -> None:
     workers = max(1, min(len(jobs), (os.cpu_count() or 2) - 8))  # zapas dla innych procesów serwera
     with ProcessPoolExecutor(max_workers=workers) as ex:
         res = list(ex.map(_job, jobs))
+    if not quick:  # surowe wyniki na dysk przed jakimkolwiek wydrukiem
+        pd.to_pickle(res, "runs/2026-09-25_au2-kroki-1-2/przebiegi_surowe.pkl")
+    report(res, workers, t0, quick)
+
+
+def report(res: list[dict], workers: int, t0: float, quick: bool = False) -> None:
     rows = []
     for r in res:
         for inst in ("ml", "simple"):
@@ -408,7 +414,16 @@ def main(argv: list[str]) -> None:
                     "instrument": inst,
                     **{
                         k: v[k]
-                        for k in ("net_annual", "t_neff", "ic_mean", "ic_ci_low", "positive")
+                        for k in (
+                            "net_annual",
+                            "t_neff",
+                            "ic_mean",
+                            "ic_ci_low",
+                            "positive",
+                            "t_fix",
+                            "ic_ci_low_fix",
+                            "positive_fix",
+                        )
                     },
                 }
             )
