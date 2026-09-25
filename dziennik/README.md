@@ -79,6 +79,13 @@ Decyzja użytkownika przy przenosinach pracy na serwer: „Tak, auto-commit i pu
 niczego nie commitował, więc wyniki leżały tylko na dysku komputera. Teraz po każdym udanym przebiegu
 pliki dziennika trafiają do gita (szczegóły w „Codziennie”). Reguły handlu i liczenia — bez zmian.
 
+## Poprawka 6 (2026-09-25 — AU3): naprawa kanonicznego N_eff, bez wpływu na dziennik
+
+Decyzja użytkownika: „tak” (naprawa w jednym miejscu + audyt AU3). `agents/labeling.py::effective_sample_size`
+przy mianowniku `1 + 2Σρ ≤ 0` zwraca teraz N_eff = n zamiast liczby ujemnej. Dziennik importuje ten moduł
+tylko pośrednio (`run_coinbase_cp1` → `carry_hedged`) i **nie liczy N_eff** — sygnały, wyniki i progi
+bez zmian. Wpis dla porządku (CLAUDE.md: zmiana modułu importowanego przez dziennik = decyzja + poprawka).
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).

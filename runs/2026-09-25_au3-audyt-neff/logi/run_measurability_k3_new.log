@@ -1,0 +1,117 @@
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+========================================================================================================
+K3 — MIERZALNOSC PO ADOPCJI A1 (konfiguracje i reguly odczytu ZAMROZONE)
+========================================================================================================
+dane      : 14916 swiec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+cechy     : ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20']  (bez `oracle` — to sa REALNE cechy)
+pipeline  : V=3, walk-forward 60/28/28, seed 42
+PODLOGA abstynencji (udzial klasy timeout w etykietach) = 66.51%
+KOTWICA ODCZYTU: luka = 52.69% (prog, H3) − 50.27% (trafnosc, Z10) = 2.42 pp
+
+  policzone: C1 / none     (bramka rezimu `range` (S1b), stan SPRZED adopcji A1)
+  policzone: C1 / balanced (bramka rezimu `range` (S1b), stan PO adopcji A1)
+  policzone: C2 / none     (BEZ bramki rezimu (H2.1 ramie A), stan SPRZED adopcji A1)
+  policzone: C2 / balanced (BEZ bramki rezimu (H2.1 ramie A), stan PO adopcji A1)
+
+========================================================================================================
+1. LEJEK — kogo NIE ma w zbiorze
+========================================================================================================
+
+  C1: bramka rezimu `range` (S1b)
+                          etap |         none |     balanced |       zmiana
+    ----------------------------------------------------------------------
+               ocenione swiece |         3642 |         3642 |           +0
+        odpadlo na abstynencji |         3297 |         1687 |        -1610
+               bramka pewnosci |            0 |            0 |           +0
+               bramka kosztowa |            0 |            0 |           +0
+                       sygnaly |          345 |         1955 |        +1610
+       stlumione kill-switchem |            0 |            0 |           +0
+                  W PROBIE (n) |          345 |         1955 |        +1610
+    foldy pominiete: none 22/85, balanced 22/85
+    bilans lejka domyka sie: True
+
+  C2: BEZ bramki rezimu (H2.1 ramie A)
+                          etap |         none |     balanced |       zmiana
+    ----------------------------------------------------------------------
+               ocenione swiece |        14448 |        14448 |           +0
+        odpadlo na abstynencji |        14413 |         6334 |        -8079
+               bramka pewnosci |            0 |            0 |           +0
+               bramka kosztowa |            0 |            0 |           +0
+                       sygnaly |           35 |         8114 |        +8079
+       stlumione kill-switchem |            0 |           81 |          +81
+                  W PROBIE (n) |           35 |         8033 |        +7998
+    foldy pominiete: none 0/86, balanced 0/86
+    bilans lejka domyka sie: True
+
+========================================================================================================
+2. ABSTYNENCJA wobec PODLOGI wyznaczonej rozkladem etykiet
+========================================================================================================
+  PODLOGA = 66.51%
+
+   konf. |  runda |  przed (zapis) |      none |  balanced |    zmiana
+  --------------------------------------------------------------------
+      C1 |    S1b |         90.50% |    90.53% |    46.32% |   -44.21 pp
+      C2 |   H2.1 |         99.32% |    99.76% |    43.84% |   -55.92 pp
+
+========================================================================================================
+3. MIERZALNOSC — pasmo 'oplacalne, ale NIEWIDZIALNE' i prog wykrywalnosci
+========================================================================================================
+   konf. |     ramie |        n |  prog BE |     pasmo |  min. wykrywalna trafnosc
+  ----------------------------------------------------------------------------------
+      C1 |      none |      345 |   52.69% |     5.28pp |                    57.96%
+      C1 |  balanced |     1955 |   53.27% |     2.22pp |                    55.48%
+  ----------------------------------------------------------------------------------
+      C2 |      none |       35 |   52.43% |    16.56pp |                    68.99%
+      C2 |  balanced |     8033 |   52.93% |     1.09pp |                    54.03%
+  ----------------------------------------------------------------------------------
+
+========================================================================================================
+4. ODCZYT — regula zapisana PRZED uruchomieniem
+========================================================================================================
+  Kotwica: luka do zamkniecia = 2.42 pp (52,69% H3 − 50,27% Z10).
+
+  C1 (bramka rezimu `range` (S1b)):
+      abstynencja 90.53% -> 46.32%, n 345 -> 1955, pasmo 5.28pp -> 2.22pp
+      >>> (a) MIERZALNE — pasmo wezsze niz luka; konfiguracja wraca do gry
+
+  C2 (BEZ bramki rezimu (H2.1 ramie A)):
+      abstynencja 99.76% -> 43.84%, n 35 -> 8033, pasmo 16.56pp -> 1.09pp
+      >>> (a) MIERZALNE — pasmo wezsze niz luka; konfiguracja wraca do gry
+
+  PRZYPOMNIENIE Z PRE-REJESTRACJI: wzrost `n` jest TAUTOLOGIA, nie odkryciem.
+  Ta runda nie moze stwierdzic, ze cokolwiek zarabia — najwyzej, ze pewne pytania
+  wolno znow zadac. Wezsze pasmo przy rozcienczonym sygnale to pulapka A2 z K2,
+  a ta runda NIE MA JAK jej wykryc, bo nie patrzy na trafnosc.
+
+========================================================================================================
+5. LICZBY OBJETE ZAKAZEM RAPORTOWANIA (regula D) — tylko do raw_output
+========================================================================================================
+  Ponizsze NIE sa wynikiem tej rundy i nie uczestnicza w zadnej decyzji.
+  Obie konfiguracje naleza do serii ZAMKNIETYCH — ich trafnosc jest poza zasiegiem
+  tej rundy, bo jej raportowanie wznowiloby seria tylnymi drzwiami.
+
+  --- C1 / none ---
+  regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+   range       345  0.475362 -0.915249 0.422666 0.528059            0.6          0.543478          0.429952     0.014276  0.000767      0.526862 -0.051499
+  {'classification': 'NO-GO', 'n_valid_folds': 18, 'n_total_folds': 85, 'fraction_above_threshold': 0.2777777777777778, 'fraction_le_zero': 0.6111111111111112, 'fraction_positive_sign': 0.3888888888888889, 'mean_sharpe': -0.811894939800959}
+
+  --- C1 / balanced ---
+  regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+   range      1955   0.51202 1.062978 0.489863 0.534178       0.605627          0.512322          0.511824     0.011958  0.000781      0.532662 -0.020642
+  {'classification': 'NO-GO', 'n_valid_folds': 63, 'n_total_folds': 85, 'fraction_above_threshold': 0.38095238095238093, 'fraction_le_zero': 0.5714285714285714, 'fraction_positive_sign': 0.42857142857142855, 'mean_sharpe': -1.041464806362297}
+
+  --- C2 / none ---
+   regime  n_trades  hit_rate   z_stat  ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p  margin
+  __all__        35  0.571429 0.845154 0.40748 0.735377       0.371429          0.636364          0.461538     0.015017  0.000729      0.524259 0.04717
+  {'classification': 'GO', 'n_valid_folds': 3, 'n_total_folds': 86, 'fraction_above_threshold': 0.6666666666666666, 'fraction_le_zero': 0.3333333333333333, 'fraction_positive_sign': 0.6666666666666666, 'mean_sharpe': 2.283637669189181}
+
+  --- C2 / balanced ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      8033  0.503672 0.658284 0.492739 0.514606       0.651064          0.512665          0.498853     0.013824  0.000811      0.529325 -0.025653
+  {'classification': 'NO-GO', 'n_valid_folds': 86, 'n_total_folds': 86, 'fraction_above_threshold': 0.36046511627906974, 'fraction_le_zero': 0.6395348837209303, 'fraction_positive_sign': 0.36046511627906974, 'mean_sharpe': -1.7663058585916511}
+

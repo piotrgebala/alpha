@@ -1,0 +1,379 @@
+[data] baza 5m: 315648 świec, 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+
+========================================================================================
+TIMEFRAME: 1h
+========================================================================================
+[data] 1h: 26304 świec (oczekiwane 8760), 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:00:00+00:00
+[data] UWAGA: liczba świec 1h (26304) różni się od oczekiwanej (8760) — sprawdź resample_ohlcv/wyrównanie granic.
+
+[seed=42] uruchamiam run_backtest (candles_per_day=24)...
+=== Sharpe per fold (seed=42) ===
+regime  fold_idx                test_start                  test_end  n_trades  mean_return  std_return     sharpe    t_stat                                            skip_reason
+ trend         0 2023-10-07 18:00:00+00:00 2023-10-21 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=0 < min_train_rows=30
+ trend         1 2023-10-21 18:00:00+00:00 2023-11-04 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend         2 2023-11-04 18:00:00+00:00 2023-11-18 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=2 < min_train_rows=30
+ trend         3 2023-11-18 18:00:00+00:00 2023-12-02 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=0 < min_train_rows=30
+ trend         4 2023-12-02 18:00:00+00:00 2023-12-16 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=4 < min_train_rows=30
+ trend         5 2023-12-16 18:00:00+00:00 2023-12-30 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend         6 2023-12-30 18:00:00+00:00 2024-01-13 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend         7 2024-01-13 18:00:00+00:00 2024-01-27 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend         8 2024-01-27 18:00:00+00:00 2024-02-10 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=0 < min_train_rows=30
+ trend         9 2024-02-10 18:00:00+00:00 2024-02-24 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=2 < min_train_rows=30
+ trend        10 2024-02-24 18:00:00+00:00 2024-03-09 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=4 < min_train_rows=30
+ trend        11 2024-03-09 18:00:00+00:00 2024-03-23 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=1 < min_train_rows=30
+ trend        12 2024-03-23 18:00:00+00:00 2024-04-06 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=7, n_test_valid=0 < min_train_rows=30
+ trend        13 2024-04-06 18:00:00+00:00 2024-04-20 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=7, n_test_valid=0 < min_train_rows=30
+ trend        14 2024-04-20 18:00:00+00:00 2024-05-04 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend        15 2024-05-04 18:00:00+00:00 2024-05-18 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=5, n_test_valid=2 < min_train_rows=30
+ trend        16 2024-05-18 18:00:00+00:00 2024-06-01 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=0 < min_train_rows=30
+ trend        17 2024-06-01 18:00:00+00:00 2024-06-15 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=4 < min_train_rows=30
+ trend        18 2024-06-15 18:00:00+00:00 2024-06-29 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend        19 2024-06-29 18:00:00+00:00 2024-07-13 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend        20 2024-07-13 18:00:00+00:00 2024-07-27 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=1 < min_train_rows=30
+ trend        21 2024-07-27 18:00:00+00:00 2024-08-10 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=5, n_test_valid=1 < min_train_rows=30
+ trend        22 2024-08-10 18:00:00+00:00 2024-08-24 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=0 < min_train_rows=30
+ trend        23 2024-08-24 18:00:00+00:00 2024-09-07 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=0 < min_train_rows=30
+ trend        24 2024-09-07 18:00:00+00:00 2024-09-21 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=0 < min_train_rows=30
+ trend        25 2024-09-21 18:00:00+00:00 2024-10-05 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=1 < min_train_rows=30
+ trend        26 2024-10-05 18:00:00+00:00 2024-10-19 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        27 2024-10-19 18:00:00+00:00 2024-11-02 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=4 < min_train_rows=30
+ trend        28 2024-11-02 18:00:00+00:00 2024-11-16 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=5, n_test_valid=11 < min_train_rows=30
+ trend        29 2024-11-16 18:00:00+00:00 2024-11-30 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=16, n_test_valid=0 < min_train_rows=30
+ trend        30 2024-11-30 18:00:00+00:00 2024-12-14 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=16, n_test_valid=0 < min_train_rows=30
+ trend        31 2024-12-14 18:00:00+00:00 2024-12-28 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=15, n_test_valid=0 < min_train_rows=30
+ trend        32 2024-12-28 18:00:00+00:00 2025-01-11 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=15, n_test_valid=4 < min_train_rows=30
+ trend        33 2025-01-11 18:00:00+00:00 2025-01-25 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=7 < min_train_rows=30
+ trend        34 2025-01-25 18:00:00+00:00 2025-02-08 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=11, n_test_valid=0 < min_train_rows=30
+ trend        35 2025-02-08 18:00:00+00:00 2025-02-22 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=11, n_test_valid=0 < min_train_rows=30
+ trend        36 2025-02-22 18:00:00+00:00 2025-03-08 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=11, n_test_valid=4 < min_train_rows=30
+ trend        37 2025-03-08 18:00:00+00:00 2025-03-22 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=15, n_test_valid=0 < min_train_rows=30
+ trend        38 2025-03-22 18:00:00+00:00 2025-04-05 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=8, n_test_valid=0 < min_train_rows=30
+ trend        39 2025-04-05 18:00:00+00:00 2025-04-19 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=0 < min_train_rows=30
+ trend        40 2025-04-19 18:00:00+00:00 2025-05-03 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=0 < min_train_rows=30
+ trend        41 2025-05-03 18:00:00+00:00 2025-05-17 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        42 2025-05-17 18:00:00+00:00 2025-05-31 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        43 2025-05-31 18:00:00+00:00 2025-06-14 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        44 2025-06-14 18:00:00+00:00 2025-06-28 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=4 < min_train_rows=30
+ trend        45 2025-06-28 18:00:00+00:00 2025-07-12 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=0 < min_train_rows=30
+ trend        46 2025-07-12 18:00:00+00:00 2025-07-26 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=4 < min_train_rows=30
+ trend        47 2025-07-26 18:00:00+00:00 2025-08-09 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=8, n_test_valid=0 < min_train_rows=30
+ trend        48 2025-08-09 18:00:00+00:00 2025-08-23 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=8, n_test_valid=2 < min_train_rows=30
+ trend        49 2025-08-23 18:00:00+00:00 2025-09-06 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=1 < min_train_rows=30
+ trend        50 2025-09-06 18:00:00+00:00 2025-09-20 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=7, n_test_valid=1 < min_train_rows=30
+ trend        51 2025-09-20 18:00:00+00:00 2025-10-04 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=2 < min_train_rows=30
+ trend        52 2025-10-04 18:00:00+00:00 2025-10-18 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=6, n_test_valid=10 < min_train_rows=30
+ trend        53 2025-10-18 18:00:00+00:00 2025-11-01 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=14, n_test_valid=0 < min_train_rows=30
+ trend        54 2025-11-01 18:00:00+00:00 2025-11-15 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=13, n_test_valid=2 < min_train_rows=30
+ trend        55 2025-11-15 18:00:00+00:00 2025-11-29 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=15, n_test_valid=2 < min_train_rows=30
+ trend        56 2025-11-29 18:00:00+00:00 2025-12-13 18:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=16, n_test_valid=0 < min_train_rows=30
+ trend        57 2025-12-13 18:00:00+00:00 2025-12-27 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=2 < min_train_rows=30
+ trend        58 2025-12-27 18:00:00+00:00 2026-01-10 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend        59 2026-01-10 18:00:00+00:00 2026-01-24 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=0 < min_train_rows=30
+ trend        60 2026-01-24 18:00:00+00:00 2026-02-07 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=4 < min_train_rows=30
+ trend        61 2026-02-07 18:00:00+00:00 2026-02-21 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend        62 2026-02-21 18:00:00+00:00 2026-03-07 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=2 < min_train_rows=30
+ trend        63 2026-03-07 18:00:00+00:00 2026-03-21 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend        64 2026-03-21 18:00:00+00:00 2026-04-04 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend        65 2026-04-04 18:00:00+00:00 2026-04-18 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=0 < min_train_rows=30
+ trend        66 2026-04-18 18:00:00+00:00 2026-05-02 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=0 < min_train_rows=30
+ trend        67 2026-05-02 18:00:00+00:00 2026-05-16 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        68 2026-05-16 18:00:00+00:00 2026-05-30 18:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ range         0 2023-09-19 15:00:00+00:00 2023-10-03 15:00:00+00:00        48    -0.000626    0.002063 -10.739681 -2.102618                                                    NaN
+ range         1 2023-10-03 15:00:00+00:00 2023-10-17 15:00:00+00:00        45    -0.000411    0.002642  -5.336857 -1.044851                                                    NaN
+ range         2 2023-10-17 15:00:00+00:00 2023-10-31 15:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=266, n_test_valid=12 < min_train_rows=30
+ range         3 2023-10-31 15:00:00+00:00 2023-11-14 15:00:00+00:00        68    -0.000155    0.001769  -3.698132 -0.724021                                                    NaN
+ range         4 2023-11-14 15:00:00+00:00 2023-11-28 15:00:00+00:00        62    -0.000161    0.001720  -3.754448 -0.735047                                                    NaN
+ range         5 2023-11-28 15:00:00+00:00 2023-12-12 15:00:00+00:00        46    -0.000975    0.001771 -19.077393 -3.734977                                                    NaN
+ range         6 2023-12-12 15:00:00+00:00 2023-12-26 15:00:00+00:00        54    -0.000425    0.001589 -10.025786 -1.962851                                                    NaN
+ range         7 2023-12-26 15:00:00+00:00 2024-01-09 15:00:00+00:00        16    -0.001227    0.001433 -17.493252 -3.424834                                                    NaN
+ range         8 2024-01-09 15:00:00+00:00 2024-01-23 15:00:00+00:00        46     0.000287    0.001727   5.752631  1.126252                                                    NaN
+ range         9 2024-01-23 15:00:00+00:00 2024-02-06 15:00:00+00:00        71    -0.000405    0.001741 -10.005755 -1.958929                                                    NaN
+ range        10 2024-02-06 15:00:00+00:00 2024-02-20 15:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=344, n_test_valid=23 < min_train_rows=30
+ range        11 2024-02-20 15:00:00+00:00 2024-03-05 15:00:00+00:00        29    -0.000956    0.001764 -14.908989 -2.918886                                                    NaN
+ range        12 2024-03-05 15:00:00+00:00 2024-03-19 15:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=282, n_test_valid=3 < min_train_rows=30
+ range        13 2024-03-19 15:00:00+00:00 2024-04-02 15:00:00+00:00        96    -0.000103    0.001720  -2.994036 -0.586173                                                    NaN
+ range        14 2024-04-02 15:00:00+00:00 2024-04-16 15:00:00+00:00        47    -0.000445    0.001670  -9.332281 -1.827076                                                    NaN
+ range        15 2024-04-16 15:00:00+00:00 2024-04-30 15:00:00+00:00       127    -0.000009    0.001705  -0.315536 -0.061776                                                    NaN
+ range        16 2024-04-30 15:00:00+00:00 2024-05-14 15:00:00+00:00        65    -0.000112    0.001689  -2.738681 -0.536180                                                    NaN
+ range        17 2024-05-14 15:00:00+00:00 2024-05-28 15:00:00+00:00       101    -0.000090    0.001685  -2.751511 -0.538692                                                    NaN
+ range        18 2024-05-28 15:00:00+00:00 2024-06-11 15:00:00+00:00        68    -0.000529    0.001608 -13.859884 -2.713492                                                    NaN
+ range        19 2024-06-11 15:00:00+00:00 2024-06-25 15:00:00+00:00        32    -0.001817    0.001898 -27.668545 -5.416955                                                    NaN
+ range        20 2024-06-25 15:00:00+00:00 2024-07-09 15:00:00+00:00        40    -0.001002    0.001380 -23.466389 -4.594256                                                    NaN
+ range        21 2024-07-09 15:00:00+00:00 2024-07-23 15:00:00+00:00        37     0.000117    0.001715   2.117284  0.414522                                                    NaN
+ range        22 2024-07-23 15:00:00+00:00 2024-08-06 15:00:00+00:00        36    -0.000019    0.002860  -0.204324 -0.040003                                                    NaN
+ range        23 2024-08-06 15:00:00+00:00 2024-08-20 15:00:00+00:00        93    -0.000573    0.002379 -11.871724 -2.324249                                                    NaN
+ range        24 2024-08-20 15:00:00+00:00 2024-09-03 15:00:00+00:00        98    -0.000116    0.001625  -3.608107 -0.706396                                                    NaN
+ range        25 2024-09-03 15:00:00+00:00 2024-09-17 15:00:00+00:00        28    -0.000369    0.001934  -5.155514 -1.009348                                                    NaN
+ range        26 2024-09-17 15:00:00+00:00 2024-10-01 15:00:00+00:00        72    -0.000566    0.001841 -13.327604 -2.609282                                                    NaN
+ range        27 2024-10-01 15:00:00+00:00 2024-10-15 15:00:00+00:00        65    -0.000087    0.001910  -1.874481 -0.366986                                                    NaN
+ range        28 2024-10-15 15:00:00+00:00 2024-10-29 15:00:00+00:00        50     0.000585    0.001673  12.630480  2.472799                                                    NaN
+ range        29 2024-10-29 15:00:00+00:00 2024-11-12 15:00:00+00:00        23     0.000579    0.002518   5.629119  1.102070                                                    NaN
+ range        30 2024-11-12 15:00:00+00:00 2024-11-26 15:00:00+00:00        20    -0.000387    0.002396  -3.686786 -0.721800                                                    NaN
+ range        31 2024-11-26 15:00:00+00:00 2024-12-10 15:00:00+00:00        74    -0.000128    0.001711  -3.290994 -0.644312                                                    NaN
+ range        32 2024-12-10 15:00:00+00:00 2024-12-24 15:00:00+00:00        18     0.000832    0.001516  11.900129  2.329810                                                    NaN
+ range        33 2024-12-24 15:00:00+00:00 2025-01-07 15:00:00+00:00       123    -0.000190    0.001767  -6.091131 -1.192523                                                    NaN
+ range        34 2025-01-07 15:00:00+00:00 2025-01-21 15:00:00+00:00        26    -0.000076    0.002515  -0.786689 -0.154018                                                    NaN
+ range        35 2025-01-21 15:00:00+00:00 2025-02-04 15:00:00+00:00        65     0.000002    0.001569   0.058659  0.011484                                                    NaN
+ range        36 2025-02-04 15:00:00+00:00 2025-02-18 15:00:00+00:00       121    -0.000541    0.002022 -15.030182 -2.942613                                                    NaN
+ range        37 2025-02-18 15:00:00+00:00 2025-03-04 15:00:00+00:00        39     0.000083    0.001534   1.720244  0.336790                                                    NaN
+ range        38 2025-03-04 15:00:00+00:00 2025-03-18 15:00:00+00:00        54     0.000332    0.001546   8.064407  1.578852                                                    NaN
+ range        39 2025-03-18 15:00:00+00:00 2025-04-01 15:00:00+00:00        81    -0.000209    0.001756  -5.479573 -1.072792                                                    NaN
+ range        40 2025-04-01 15:00:00+00:00 2025-04-15 15:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=487, n_test_valid=19 < min_train_rows=30
+ range        41 2025-04-15 15:00:00+00:00 2025-04-29 15:00:00+00:00        73    -0.000415    0.001662 -10.888316 -2.131717                                                    NaN
+ range        42 2025-04-29 15:00:00+00:00 2025-05-13 15:00:00+00:00        41    -0.000689    0.001597 -14.109278 -2.762318                                                    NaN
+ range        43 2025-05-13 15:00:00+00:00 2025-05-27 15:00:00+00:00        25     0.000450    0.001582   7.270304  1.423382                                                    NaN
+ range        44 2025-05-27 15:00:00+00:00 2025-06-10 15:00:00+00:00       103    -0.000295    0.002001  -7.634960 -1.494774                                                    NaN
+ range        45 2025-06-10 15:00:00+00:00 2025-06-24 15:00:00+00:00        46     0.000178    0.002404   2.566195  0.502410                                                    NaN
+ range        46 2025-06-24 15:00:00+00:00 2025-07-08 15:00:00+00:00       111    -0.000726    0.002338 -16.710459 -3.271578                                                    NaN
+ range        47 2025-07-08 15:00:00+00:00 2025-07-22 15:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=358, n_test_valid=29 < min_train_rows=30
+ range        48 2025-07-22 15:00:00+00:00 2025-08-05 15:00:00+00:00        65    -0.000554    0.001585 -14.380758 -2.815469                                                    NaN
+ range        49 2025-08-05 15:00:00+00:00 2025-08-19 15:00:00+00:00        31    -0.000837    0.002138 -11.140603 -2.181110                                                    NaN
+ range        50 2025-08-19 15:00:00+00:00 2025-09-02 15:00:00+00:00        36    -0.000025    0.002497  -0.303447 -0.059409                                                    NaN
+ range        51 2025-09-02 15:00:00+00:00 2025-09-16 15:00:00+00:00        91    -0.000039    0.001734  -1.099159 -0.215194                                                    NaN
+ range        52 2025-09-16 15:00:00+00:00 2025-09-30 15:00:00+00:00        70    -0.000068    0.001680  -1.724442 -0.337612                                                    NaN
+ range        53 2025-09-30 15:00:00+00:00 2025-10-14 15:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=369, n_test_valid=4 < min_train_rows=30
+ range        54 2025-10-14 15:00:00+00:00 2025-10-28 15:00:00+00:00        68    -0.000016    0.001539  -0.432943 -0.084762                                                    NaN
+ range        55 2025-10-28 15:00:00+00:00 2025-11-11 15:00:00+00:00        28     0.000355    0.001497   6.411679  1.255280                                                    NaN
+ range        56 2025-11-11 15:00:00+00:00 2025-11-25 15:00:00+00:00        27     0.000820    0.001448  15.019655  2.940552                                                    NaN
+ range        57 2025-11-25 15:00:00+00:00 2025-12-09 15:00:00+00:00        90    -0.000083    0.001568  -2.556815 -0.500574                                                    NaN
+ range        58 2025-12-09 15:00:00+00:00 2025-12-23 15:00:00+00:00        55     0.000045    0.001584   1.076804  0.210817                                                    NaN
+ range        59 2025-12-23 15:00:00+00:00 2026-01-06 15:00:00+00:00        96     0.000392    0.002208   8.885467  1.739599                                                    NaN
+ range        60 2026-01-06 15:00:00+00:00 2026-01-20 15:00:00+00:00        64    -0.000262    0.001992  -5.377631 -1.052834                                                    NaN
+ range        61 2026-01-20 15:00:00+00:00 2026-02-03 15:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=492, n_test_valid=28 < min_train_rows=30
+ range        62 2026-02-03 15:00:00+00:00 2026-02-17 15:00:00+00:00        58    -0.000498    0.002054  -9.430880 -1.846380                                                    NaN
+ range        63 2026-02-17 15:00:00+00:00 2026-03-03 15:00:00+00:00        76    -0.000227    0.002884  -3.506655 -0.686534                                                    NaN
+ range        64 2026-03-03 15:00:00+00:00 2026-03-17 15:00:00+00:00        51     0.000163    0.001930   3.077503  0.602514                                                    NaN
+ range        65 2026-03-17 15:00:00+00:00 2026-03-31 15:00:00+00:00        99    -0.000697    0.001739 -20.377410 -3.989495                                                    NaN
+ range        66 2026-03-31 15:00:00+00:00 2026-04-14 15:00:00+00:00        69     0.000231    0.002331   4.196171  0.821527                                                    NaN
+ range        67 2026-04-14 15:00:00+00:00 2026-04-28 15:00:00+00:00        56     0.000107    0.002436   1.673758  0.327689                                                    NaN
+ range        68 2026-04-28 15:00:00+00:00 2026-05-12 15:00:00+00:00        74     0.000143    0.001814   3.453509  0.676129                                                    NaN
+ range        69 2026-05-12 15:00:00+00:00 2026-05-26 15:00:00+00:00        71     0.000056    0.002167   1.108228  0.216969                                                    NaN
+ range        70 2026-05-26 15:00:00+00:00 2026-06-09 15:00:00+00:00        20    -0.000432    0.001731  -5.700798 -1.116104                                                    NaN
+ range        71 2026-06-09 15:00:00+00:00 2026-06-23 15:00:00+00:00        91    -0.000500    0.001595 -15.262160 -2.988030                                                    NaN
+
+=== Klasyfikacja (seed=42) ===
+{'classification': 'NO-GO', 'n_valid_folds': 65, 'n_total_folds': 141, 'fraction_above_threshold': 0.27692307692307694, 'fraction_le_zero': 0.7076923076923077, 'fraction_positive_sign': 0.2923076923076923, 'mean_sharpe': -4.409211548427698}
+
+=== Rozbicie per reżim (seed=42) ===
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             65             72                  0.276923          0.707692                0.292308    -4.409212
+ trend      WARUNKOWY              0             69                       NaN               NaN                     NaN          NaN
+
+[sweep] 10 seedów: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+  ... seed=43
+  ... seed=44
+  ... seed=45
+  ... seed=46
+  ... seed=47
+  ... seed=48
+  ... seed=49
+  ... seed=50
+  ... seed=51
+
+=== Stabilność między seedami (1h) ===
+  seed= 42  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 43  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 44  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 45  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 46  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 47  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 48  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 49  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 50  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+  seed= 51  mean_sharpe=-4.4092  klasyfikacja=NO-GO
+std(mean_sharpe) między 10 seedami = 0.0000 (STABILNY, próg < 0.2)
+
+========================================================================================
+TIMEFRAME: 4h
+========================================================================================
+[data] 4h: 6576 świec (oczekiwane 2190), 2023-07-01 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+[data] UWAGA: liczba świec 4h (6576) różni się od oczekiwanej (2190) — sprawdź resample_ohlcv/wyrównanie granic.
+
+[seed=42] uruchamiam run_backtest (candles_per_day=6)...
+=== Sharpe per fold (seed=42) ===
+regime  fold_idx                test_start                  test_end  n_trades  mean_return  std_return     sharpe    t_stat                                            skip_reason
+ trend         0 2023-10-16 16:00:00+00:00 2023-10-30 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend         1 2023-10-30 16:00:00+00:00 2023-11-13 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend         2 2023-11-13 16:00:00+00:00 2023-11-27 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend         3 2023-11-27 16:00:00+00:00 2023-12-11 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend         4 2023-12-11 16:00:00+00:00 2023-12-25 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend         5 2023-12-25 16:00:00+00:00 2024-01-08 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend         6 2024-01-08 16:00:00+00:00 2024-01-22 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=1 < min_train_rows=30
+ trend         7 2024-01-22 16:00:00+00:00 2024-02-05 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend         8 2024-02-05 16:00:00+00:00 2024-02-19 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend         9 2024-02-19 16:00:00+00:00 2024-03-04 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        10 2024-03-04 16:00:00+00:00 2024-03-18 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=3 < min_train_rows=30
+ trend        11 2024-03-18 16:00:00+00:00 2024-04-01 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        12 2024-04-01 16:00:00+00:00 2024-04-15 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        13 2024-04-15 16:00:00+00:00 2024-04-29 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        14 2024-04-29 16:00:00+00:00 2024-05-13 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        15 2024-05-13 16:00:00+00:00 2024-05-27 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        16 2024-05-27 16:00:00+00:00 2024-06-10 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        17 2024-06-10 16:00:00+00:00 2024-06-24 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        18 2024-06-24 16:00:00+00:00 2024-07-08 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        19 2024-07-08 16:00:00+00:00 2024-07-22 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=1 < min_train_rows=30
+ trend        20 2024-07-22 16:00:00+00:00 2024-08-05 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        21 2024-08-05 16:00:00+00:00 2024-08-19 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        22 2024-08-19 16:00:00+00:00 2024-09-02 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        23 2024-09-02 16:00:00+00:00 2024-09-16 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        24 2024-09-16 16:00:00+00:00 2024-09-30 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        25 2024-09-30 16:00:00+00:00 2024-10-14 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        26 2024-10-14 16:00:00+00:00 2024-10-28 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=1 < min_train_rows=30
+ trend        27 2024-10-28 16:00:00+00:00 2024-11-11 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=2 < min_train_rows=30
+ trend        28 2024-11-11 16:00:00+00:00 2024-11-25 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        29 2024-11-25 16:00:00+00:00 2024-12-09 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        30 2024-12-09 16:00:00+00:00 2024-12-23 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        31 2024-12-23 16:00:00+00:00 2025-01-06 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=0 < min_train_rows=30
+ trend        32 2025-01-06 16:00:00+00:00 2025-01-20 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=1 < min_train_rows=30
+ trend        33 2025-01-20 16:00:00+00:00 2025-02-03 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        34 2025-02-03 16:00:00+00:00 2025-02-17 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        35 2025-02-17 16:00:00+00:00 2025-03-03 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        36 2025-03-03 16:00:00+00:00 2025-03-17 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        37 2025-03-17 16:00:00+00:00 2025-03-31 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        38 2025-03-31 16:00:00+00:00 2025-04-14 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        39 2025-04-14 16:00:00+00:00 2025-04-28 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        40 2025-04-28 16:00:00+00:00 2025-05-12 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        41 2025-05-12 16:00:00+00:00 2025-05-26 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        42 2025-05-26 16:00:00+00:00 2025-06-09 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        43 2025-06-09 16:00:00+00:00 2025-06-23 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        44 2025-06-23 16:00:00+00:00 2025-07-07 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=4 < min_train_rows=30
+ trend        45 2025-07-07 16:00:00+00:00 2025-07-21 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=4, n_test_valid=1 < min_train_rows=30
+ trend        46 2025-07-21 16:00:00+00:00 2025-08-04 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=5, n_test_valid=0 < min_train_rows=30
+ trend        47 2025-08-04 16:00:00+00:00 2025-08-18 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=5, n_test_valid=0 < min_train_rows=30
+ trend        48 2025-08-18 16:00:00+00:00 2025-09-01 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=5, n_test_valid=0 < min_train_rows=30
+ trend        49 2025-09-01 16:00:00+00:00 2025-09-15 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        50 2025-09-15 16:00:00+00:00 2025-09-29 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ trend        51 2025-09-29 16:00:00+00:00 2025-10-13 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=3 < min_train_rows=30
+ trend        52 2025-10-13 16:00:00+00:00 2025-10-27 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        53 2025-10-27 16:00:00+00:00 2025-11-10 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        54 2025-11-10 16:00:00+00:00 2025-11-24 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        55 2025-11-24 16:00:00+00:00 2025-12-08 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=3, n_test_valid=0 < min_train_rows=30
+ trend        56 2025-12-08 16:00:00+00:00 2025-12-22 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=1 < min_train_rows=30
+ trend        57 2025-12-22 16:00:00+00:00 2026-01-05 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        58 2026-01-05 16:00:00+00:00 2026-01-19 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=1 < min_train_rows=30
+ trend        59 2026-01-19 16:00:00+00:00 2026-02-02 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=0 < min_train_rows=30
+ trend        60 2026-02-02 16:00:00+00:00 2026-02-16 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=2, n_test_valid=4 < min_train_rows=30
+ trend        61 2026-02-16 16:00:00+00:00 2026-03-02 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=6, n_test_valid=0 < min_train_rows=30
+ trend        62 2026-03-02 16:00:00+00:00 2026-03-16 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=5, n_test_valid=1 < min_train_rows=30
+ trend        63 2026-03-16 16:00:00+00:00 2026-03-30 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=5, n_test_valid=0 < min_train_rows=30
+ trend        64 2026-03-30 16:00:00+00:00 2026-04-13 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=5, n_test_valid=0 < min_train_rows=30
+ trend        65 2026-04-13 16:00:00+00:00 2026-04-27 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        66 2026-04-27 16:00:00+00:00 2026-05-11 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=1, n_test_valid=0 < min_train_rows=30
+ trend        67 2026-05-11 16:00:00+00:00 2026-05-25 16:00:00+00:00         0          NaN         NaN        NaN       NaN    n_train_valid=0, n_test_valid=0 < min_train_rows=30
+ range         0 2023-09-21 04:00:00+00:00 2023-10-05 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=131, n_test_valid=21 < min_train_rows=30
+ range         1 2023-10-05 04:00:00+00:00 2023-10-19 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=102, n_test_valid=16 < min_train_rows=30
+ range         2 2023-10-19 04:00:00+00:00 2023-11-02 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=82, n_test_valid=1 < min_train_rows=30
+ range         3 2023-11-02 04:00:00+00:00 2023-11-16 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=74, n_test_valid=7 < min_train_rows=30
+ range         4 2023-11-16 04:00:00+00:00 2023-11-30 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=51, n_test_valid=14 < min_train_rows=30
+ range         5 2023-11-30 04:00:00+00:00 2023-12-14 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=38, n_test_valid=16 < min_train_rows=30
+ range         6 2023-12-14 04:00:00+00:00 2023-12-28 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=43, n_test_valid=25 < min_train_rows=30
+ range         7 2023-12-28 04:00:00+00:00 2024-01-11 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=63, n_test_valid=7 < min_train_rows=30
+ range         8 2024-01-11 04:00:00+00:00 2024-01-25 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=64, n_test_valid=23 < min_train_rows=30
+ range         9 2024-01-25 04:00:00+00:00 2024-02-08 04:00:00+00:00        38     0.000595    0.003821   4.906223  0.960542                                                    NaN
+ range        10 2024-02-08 04:00:00+00:00 2024-02-22 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=93, n_test_valid=0 < min_train_rows=30
+ range        11 2024-02-22 04:00:00+00:00 2024-03-07 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=87, n_test_valid=6 < min_train_rows=30
+ range        12 2024-03-07 04:00:00+00:00 2024-03-21 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=67, n_test_valid=0 < min_train_rows=30
+ range        13 2024-03-21 04:00:00+00:00 2024-04-04 04:00:00+00:00        39    -0.001401    0.003660 -12.206271 -2.389747                                                    NaN
+ range        14 2024-04-04 04:00:00+00:00 2024-04-18 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=59, n_test_valid=25 < min_train_rows=30
+ range        15 2024-04-18 04:00:00+00:00 2024-05-02 04:00:00+00:00        35    -0.001682    0.003663 -13.872923 -2.716045                                                    NaN
+ range        16 2024-05-02 04:00:00+00:00 2024-05-16 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=105, n_test_valid=24 < min_train_rows=30
+ range        17 2024-05-16 04:00:00+00:00 2024-05-30 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=129, n_test_valid=18 < min_train_rows=30
+ range        18 2024-05-30 04:00:00+00:00 2024-06-13 04:00:00+00:00        32     0.000188    0.001734   3.140487  0.614845                                                    NaN
+ range        19 2024-06-13 04:00:00+00:00 2024-06-27 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=116, n_test_valid=17 < min_train_rows=30
+ range        20 2024-06-27 04:00:00+00:00 2024-07-11 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=105, n_test_valid=15 < min_train_rows=30
+ range        21 2024-07-11 04:00:00+00:00 2024-07-25 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=96, n_test_valid=20 < min_train_rows=30
+ range        22 2024-07-25 04:00:00+00:00 2024-08-08 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=92, n_test_valid=2 < min_train_rows=30
+ range        23 2024-08-08 04:00:00+00:00 2024-08-22 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=66, n_test_valid=24 < min_train_rows=30
+ range        24 2024-08-22 04:00:00+00:00 2024-09-05 04:00:00+00:00        40     0.001033    0.004140   8.059044  1.577802                                                    NaN
+ range        25 2024-09-05 04:00:00+00:00 2024-09-19 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=86, n_test_valid=25 < min_train_rows=30
+ range        26 2024-09-19 04:00:00+00:00 2024-10-03 04:00:00+00:00        35    -0.000233    0.002767  -2.548453 -0.498937                                                    NaN
+ range        27 2024-10-03 04:00:00+00:00 2024-10-17 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=124, n_test_valid=14 < min_train_rows=30
+ range        28 2024-10-17 04:00:00+00:00 2024-10-31 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=133, n_test_valid=25 < min_train_rows=30
+ range        29 2024-10-31 04:00:00+00:00 2024-11-14 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=111, n_test_valid=0 < min_train_rows=30
+ range        30 2024-11-14 04:00:00+00:00 2024-11-28 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=88, n_test_valid=5 < min_train_rows=30
+ range        31 2024-11-28 04:00:00+00:00 2024-12-12 04:00:00+00:00        34    -0.000840    0.004402  -5.683327 -1.112683                                                    NaN
+ range        32 2024-12-12 04:00:00+00:00 2024-12-26 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=68, n_test_valid=9 < min_train_rows=30
+ range        33 2024-12-26 04:00:00+00:00 2025-01-09 04:00:00+00:00        16    -0.002101    0.002884 -14.881540 -2.913512                                                    NaN
+ range        34 2025-01-09 04:00:00+00:00 2025-01-23 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=99, n_test_valid=5 < min_train_rows=30
+ range        35 2025-01-23 04:00:00+00:00 2025-02-06 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=104, n_test_valid=15 < min_train_rows=30
+ range        36 2025-02-06 04:00:00+00:00 2025-02-20 04:00:00+00:00        56    -0.000412    0.001924  -8.175911 -1.600682                                                    NaN
+ range        37 2025-02-20 04:00:00+00:00 2025-03-06 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=131, n_test_valid=22 < min_train_rows=30
+ range        38 2025-03-06 04:00:00+00:00 2025-03-20 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=109, n_test_valid=28 < min_train_rows=30
+ range        39 2025-03-20 04:00:00+00:00 2025-04-03 04:00:00+00:00        43     0.000342    0.002894   3.958849  0.775064                                                    NaN
+ range        40 2025-04-03 04:00:00+00:00 2025-04-17 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=159, n_test_valid=0 < min_train_rows=30
+ range        41 2025-04-17 04:00:00+00:00 2025-05-01 04:00:00+00:00        30    -0.000010    0.001527  -0.183746 -0.035974                                                    NaN
+ range        42 2025-05-01 04:00:00+00:00 2025-05-15 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=112, n_test_valid=11 < min_train_rows=30
+ range        43 2025-05-15 04:00:00+00:00 2025-05-29 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=112, n_test_valid=5 < min_train_rows=30
+ range        44 2025-05-29 04:00:00+00:00 2025-06-12 04:00:00+00:00        34    -0.001171    0.003918  -8.903139 -1.743059                                                    NaN
+ range        45 2025-06-12 04:00:00+00:00 2025-06-26 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=99, n_test_valid=12 < min_train_rows=30
+ range        46 2025-06-26 04:00:00+00:00 2025-07-10 04:00:00+00:00        50     0.000314    0.001735   6.541522  1.280701                                                    NaN
+ range        47 2025-07-10 04:00:00+00:00 2025-07-24 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=124, n_test_valid=0 < min_train_rows=30
+ range        48 2025-07-24 04:00:00+00:00 2025-08-07 04:00:00+00:00        25    -0.000163    0.001843  -2.256100 -0.441700                                                    NaN
+ range        49 2025-08-07 04:00:00+00:00 2025-08-21 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=119, n_test_valid=15 < min_train_rows=30
+ range        50 2025-08-21 04:00:00+00:00 2025-09-04 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=104, n_test_valid=10 < min_train_rows=30
+ range        51 2025-09-04 04:00:00+00:00 2025-09-18 04:00:00+00:00        57     0.000384    0.001681   8.797884  1.722452                                                    NaN
+ range        52 2025-09-18 04:00:00+00:00 2025-10-02 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=115, n_test_valid=10 < min_train_rows=30
+ range        53 2025-10-02 04:00:00+00:00 2025-10-16 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=105, n_test_valid=0 < min_train_rows=30
+ range        54 2025-10-16 04:00:00+00:00 2025-10-30 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=84, n_test_valid=19 < min_train_rows=30
+ range        55 2025-10-30 04:00:00+00:00 2025-11-13 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=96, n_test_valid=12 < min_train_rows=30
+ range        56 2025-11-13 04:00:00+00:00 2025-11-27 04:00:00+00:00         0          NaN         NaN        NaN       NaN   n_train_valid=61, n_test_valid=0 < min_train_rows=30
+ range        57 2025-11-27 04:00:00+00:00 2025-12-11 04:00:00+00:00        43    -0.000914    0.003777  -8.110069 -1.587791                                                    NaN
+ range        58 2025-12-11 04:00:00+00:00 2025-12-25 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=74, n_test_valid=26 < min_train_rows=30
+ range        59 2025-12-25 04:00:00+00:00 2026-01-08 04:00:00+00:00        36    -0.000607    0.002496  -7.448967 -1.458361                                                    NaN
+ range        60 2026-01-08 04:00:00+00:00 2026-01-22 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=105, n_test_valid=18 < min_train_rows=30
+ range        61 2026-01-22 04:00:00+00:00 2026-02-05 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=123, n_test_valid=3 < min_train_rows=30
+ range        62 2026-02-05 04:00:00+00:00 2026-02-19 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=91, n_test_valid=25 < min_train_rows=30
+ range        63 2026-02-19 04:00:00+00:00 2026-03-05 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=92, n_test_valid=29 < min_train_rows=30
+ range        64 2026-03-05 04:00:00+00:00 2026-03-19 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=75, n_test_valid=18 < min_train_rows=30
+ range        65 2026-03-19 04:00:00+00:00 2026-04-02 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=83, n_test_valid=27 < min_train_rows=30
+ range        66 2026-04-02 04:00:00+00:00 2026-04-16 04:00:00+00:00        23    -0.000829    0.001677 -12.112540 -2.371396                                                    NaN
+ range        67 2026-04-16 04:00:00+00:00 2026-04-30 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=128, n_test_valid=20 < min_train_rows=30
+ range        68 2026-04-30 04:00:00+00:00 2026-05-14 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=96, n_test_valid=24 < min_train_rows=30
+ range        69 2026-05-14 04:00:00+00:00 2026-05-28 04:00:00+00:00         0          NaN         NaN        NaN       NaN n_train_valid=111, n_test_valid=22 < min_train_rows=30
+ range        70 2026-05-28 04:00:00+00:00 2026-06-11 04:00:00+00:00         0          NaN         NaN        NaN       NaN  n_train_valid=109, n_test_valid=7 < min_train_rows=30
+
+=== Klasyfikacja (seed=42) ===
+{'classification': 'NO-GO', 'n_valid_folds': 18, 'n_total_folds': 139, 'fraction_above_threshold': 0.3333333333333333, 'fraction_le_zero': 0.6666666666666666, 'fraction_positive_sign': 0.3333333333333333, 'mean_sharpe': -3.3877209161687376}
+
+=== Rozbicie per reżim (seed=42) ===
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             18             71                  0.333333          0.666667                0.333333    -3.387721
+ trend      WARUNKOWY              0             68                       NaN               NaN                     NaN          NaN
+
+[sweep] 10 seedów: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+  ... seed=43
+  ... seed=44
+  ... seed=45
+  ... seed=46
+  ... seed=47
+  ... seed=48
+  ... seed=49
+  ... seed=50
+  ... seed=51
+
+=== Stabilność między seedami (4h) ===
+  seed= 42  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 43  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 44  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 45  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 46  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 47  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 48  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 49  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 50  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+  seed= 51  mean_sharpe=-3.3877  klasyfikacja=NO-GO
+std(mean_sharpe) między 10 seedami = 0.0000 (STABILNY, próg < 0.2)
+
+========================================================================================
+TABELA PORÓWNAWCZA — 5m (referencja, Commit 2.5) vs 1h vs 4h
+========================================================================================
+timeframe  n_candles  mean_sharpe(seed=42) klasyfikacja(seed=42)  n_valid_folds  n_total_folds  stability_std(10 seed)  stabilny
+       1h      26304               -4.4092                 NO-GO             65            141                     0.0      True
+       4h       6576               -3.3877                 NO-GO             18            139                     0.0      True
+
+[REFERENCJA] 5m (Commit 2.5, baseline 0.7/0.3): mean_sharpe(seed=42)=-14.3078, NO-GO, 6/40 foldów ważnych, std(10 seed)=0.0000.
+
+[UWAGA] Ten skrypt NIE wybiera 'zwycięzcy' między timeframe'ami — to nie jest 
+porównanie kandydatów do wyboru najlepszego, tylko test odporności tej samej 
+hipotezy na zmianę granulacji danych. Interpretacja wyniku (w tym efektu ubocznego 
+VERTICAL_BARRIER_CANDLES=12 opisanego w docstringu modułu) należy do użytkownika.

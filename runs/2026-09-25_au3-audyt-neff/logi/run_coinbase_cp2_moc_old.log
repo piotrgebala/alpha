@@ -1,0 +1,11 @@
+========================================================================================================
+CP2 — RACHUNEK MOCY; reguła CP1 bez zmian; konfiguracja ZAMROŻONA
+========================================================================================================
+  [ETH] premia 2007 dni (2021-01-01 → 2026-06-30), mediana +0.011%; braki w sygnale od startu 0
+  [ETH] sygnał: long 48.4% dni; zmiana znaku 5.2% dni; zgodność z sygnałem CP1 BTC 94.4%; z trendem 28 dni ETH 59.5%
+  [ETH] dni 1880; zmienność H0 34.9%/rok; half-width (z 2,241) 36.2%/rok = 1.04 SR; q97,5 H0 +34.3%/rok
+  [SOL] premia 1840 dni (2021-06-17 → 2026-06-30), mediana +0.005%; braki w sygnale od startu 0
+  [SOL] sygnał: long 47.9% dni; zmiana znaku 5.3% dni; zgodność z sygnałem CP1 BTC 89.3%; z trendem 28 dni SOL 56.9%
+  [SOL] dni 1727; zmienność H0 33.4%/rok; half-width (z 2,241) 37.2%/rok = 1.11 SR; q97,5 H0 +33.8%/rok
+========================================================================================================
+czas: 87s

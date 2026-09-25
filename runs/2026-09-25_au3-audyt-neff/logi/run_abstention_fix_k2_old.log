@@ -1,0 +1,208 @@
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+============================================================================================================
+K2 — NAPRAWA ABSTYNENCJI (konfiguracja i reguly decyzji ZAMROZONE w pre-rejestracji)
+============================================================================================================
+dane          : 14916 swiec 4h, 2019-09-10 00:00:00+00:00 -> 2026-06-30 20:00:00+00:00
+etykiety      : 14899 nie-NaN, udzial klasy timeout 66.51%  <- PODLOGA abstynencji dla poprawnie dzialajacego modelu
+pipeline      : bez bramki rezimu, V=3, walk-forward 60/28/28, seed 42
+cechy         : ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20'] + 'oracle'
+
+============================================================================================================
+0. BRAMKA KOSZTOWA — czas jednego przebiegu A0 decyduje o gestosci siatki
+============================================================================================================
+  jeden przebieg A0 = 2.1s (prog 240s)
+  >>> SIATKA PELNA: {0.0: 12, 0.1: 3, 0.2: 3, 0.3: 3, 0.4: 3, 1.0: 1}
+  laczna liczba przebiegow krzywej = 75
+
+============================================================================================================
+1. KRZYWE WYKRYWALNOSCI — trzy ramiona na tej samej wyroczni
+============================================================================================================
+  A0 (baseline (dzisiejszy kod)): 25 przebiegow gotowych
+  A1 (wagi klas `balanced`): 25 przebiegow gotowych
+  A2 (wymuszony kierunek + pewnosc warunkowa): 25 przebiegow gotowych
+
+  ramie |     q | los. |  abstyn. |       n |  trafnosc |   CI_low |  prog BE |   pasmo
+  --------------------------------------------------------------------------------------------
+     A0 |  0.00 |   12 |   99.63% |     644 |    51.71% |   47.85% |   52.29% |   3.86pp
+     A0 |  0.10 |    3 |   99.52% |     207 |    53.62% |   46.83% |   51.99% |   6.81pp
+     A0 |  0.20 |    3 |   99.27% |     315 |    51.43% |   45.91% |   52.22% |   5.52pp
+     A0 |  0.30 |    3 |   97.78% |     961 |    54.84% |   51.69% |   52.33% |   3.16pp
+     A0 |  0.40 |    3 |   93.87% |    2659 |    59.23% |   57.37% |   52.20% |   1.90pp
+     A0 |  1.00 |    1 |   66.48% |    4843 |   100.00% |  100.00% |   50.80% |   1.41pp
+  --------------------------------------------------------------------------------------------
+     A1 |  0.00 |   12 |   43.55% |   97014 |    50.48% |   50.16% |   52.94% |   0.31pp
+     A1 |  0.10 |    3 |   43.93% |   24158 |    50.79% |   50.16% |   52.93% |   0.63pp
+     A1 |  0.20 |    3 |   45.72% |   23456 |    51.05% |   50.41% |   52.84% |   0.64pp
+     A1 |  0.30 |    3 |   49.47% |   21900 |    53.57% |   52.91% |   52.66% |   0.66pp
+     A1 |  0.40 |    3 |   52.53% |   20575 |    57.25% |   56.58% |   52.34% |   0.68pp
+     A1 |  1.00 |    1 |   66.48% |    4843 |   100.00% |  100.00% |   50.80% |   1.41pp
+  --------------------------------------------------------------------------------------------
+     A2 |  0.00 |   12 |    0.00% |  167160 |    50.33% |   50.09% |   52.94% |   0.24pp
+     A2 |  0.10 |    3 |    0.00% |   41832 |    50.26% |   49.78% |   52.92% |   0.48pp
+     A2 |  0.20 |    3 |    0.00% |   42000 |    50.19% |   49.71% |   52.92% |   0.48pp
+     A2 |  0.30 |    3 |    0.00% |   42840 |    51.61% |   51.14% |   52.92% |   0.47pp
+     A2 |  0.40 |    3 |    0.00% |   43218 |    53.85% |   53.38% |   52.88% |   0.47pp
+     A2 |  1.00 |    1 |    0.00% |   14448 |    65.65% |   64.87% |   52.63% |   0.82pp
+  --------------------------------------------------------------------------------------------
+
+============================================================================================================
+2. BRAMKA 1 — SPECYFICZNOSC (NADRZEDNA, veto). Kryterium: na czystym szumie
+   `ci_low > break_even` moze wystrzelic NAJWYZEJ RAZ, a pooled CI musi ZAWIERAC prog.
+============================================================================================================
+  A0: falszywe alarmy 0/12 | pooled n=   644 p=51.71% CI=[47.85%; 55.57%] prog=52.29%
+       odczyt DOSLOWNY (CI zawiera prog)   : ZDANA
+       odczyt WG CELU  (CI nie nad progiem): ZDANA
+  A1: falszywe alarmy 0/12 | pooled n= 97014 p=50.48% CI=[50.16%; 50.79%] prog=52.94%
+       odczyt DOSLOWNY (CI zawiera prog)   : ODRZUCONE
+       odczyt WG CELU  (CI nie nad progiem): ZDANA
+  A2: falszywe alarmy 0/12 | pooled n=167160 p=50.33% CI=[50.09%; 50.57%] prog=52.94%
+       odczyt DOSLOWNY (CI zawiera prog)   : ODRZUCONE
+       odczyt WG CELU  (CI nie nad progiem): ZDANA
+
+============================================================================================================
+2b. UWAGA METODOLOGICZNA — dwa odczyty czlonu B bramki 1 daja PRZECIWNE werdykty
+============================================================================================================
+  Pre-rejestracja zada, by pooled CI trafnosci ZAWIERALO prog oplacalnosci.
+  Na czystym szumie prawdziwa trafnosc to ~50%, a prog ~52,9% - te wielkosci sa
+  ROZNE z zalozenia. CI zawiera prog wylacznie wtedy, gdy jest dostatecznie SZEROKIE,
+  a szerokosc zalezy wylacznie od n. Tak zapisany czlon B mierzy wiec NIEPRECYZYJNOSC,
+  nie specyficznosc - i dziala dokladnie przeciwnie do celu rundy, ktorym jest
+  PODNIESIENIE n.
+
+  ramie |  pooled n |  szerokosc CI |  |p - prog| |  CI zawiera prog
+  ------------------------------------------------------------------
+     A0 |       644 |         7.72pp |       0.58pp |             True
+     A1 |     97014 |         0.63pp |       2.46pp |            False
+     A2 |    167160 |         0.48pp |       2.60pp |            False
+
+  Dowod usterki jest w tej tabeli: A0 przechodzi odczyt doslowny WYLACZNIE dlatego,
+  ze jego CI jest szerokie. Zadne ramie nie podnioslo falszywego alarmu (0/12 w kazdym),
+  czyli wg CELU bramki - 'ramie kupujace n kosztem falszywych alarmow jest odrzucone' -
+  wszystkie trzy sa czyste.
+  SKRYPT NIE WYBIERA ODCZYTU. Decyzja nalezy do czlowieka i musi byc zapisana
+  w README rundy jako jawne odstepstwo albo jawne trzymanie sie litery.
+
+============================================================================================================
+3. BRAMKA 2 — INTEGRALNOSC lancucha przy q=1,00. Sformulowana WARUNKOWO NA ETYKIECIE,
+   symetrycznie dla wszystkich ramion: trafnosc na transakcjach o prawdziwej
+   etykiecie != 0 ma wynosic ~100%. (A2 wymusza kierunek takze na swiecach timeout,
+   gdzie poprawny kierunek NIE ISTNIEJE - stad zastrzezenie, zapisane Z GORY.)
+============================================================================================================
+  A0: n_all=  4843 | n(etykieta != 0)=  4843 | trafnosc warunkowa=100.00% | trafnosc bezwarunkowa=100.00%
+  A1: n_all=  4843 | n(etykieta != 0)=  4843 | trafnosc warunkowa=100.00% | trafnosc bezwarunkowa=100.00%
+  A2: n_all= 14448 | n(etykieta != 0)=  4843 | trafnosc warunkowa=100.00% | trafnosc bezwarunkowa= 65.65%
+
+============================================================================================================
+4. BRAMKA 3 — METRYKA WYBORU: najmniejsze `wald_half_width(n)` przy q=0, Z ROZRZUTEM
+   po losowaniach (nie jako punkt). To jest szerokosc pasma 'oplacalne, ale
+   NIEWIDZIALNE' - wlasciwosc przyrzadu, zalezna WYLACZNIE od n.
+============================================================================================================
+  ramie |    n/losowanie (min/med/max) |     pasmo pp (min/med/max) |  pooled n | pasmo pooled
+  ------------------------------------------------------------------------------------------------
+     A0 |        24.00 / 52.50 / 90.00 |      10.33 / 13.53 / 20.00 |       644 |        3.86pp
+     A1 |  8004.00 / 8090.00 / 8169.00 |         1.08 / 1.09 / 1.10 |     97014 |        0.31pp
+     A2 | 13860.00 / 13944.00 / 13944.00 |         0.83 / 0.83 / 0.83 |    167160 |        0.24pp
+
+============================================================================================================
+5. ABSTYNENCJA — cel naprawy wyrazony liczba, nie zyczeniem
+============================================================================================================/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: divide by zero encountered in divide
+  c *= np.true_divide(1, fact)
+/home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:2888: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+
+  PODLOGA (udzial klasy timeout w etykietach) = 66.51%
+
+  ramie | q=0.00 | q=0.10 | q=0.20 | q=0.30 | q=0.40 | q=1.00
+  --------------------------------------------------------
+     A0 |  99.6% |  99.5% |  99.3% |  97.8% |  93.9% |  66.5%
+     A1 |  43.6% |  43.9% |  45.7% |  49.5% |  52.5% |  66.5%
+     A2 |   0.0% |   0.0% |   0.0% |   0.0% |   0.0% |   0.0%
+
+============================================================================================================
+6. T6 — kill-switch jako zrodlo obciazenia na szumie (eksperyment SELEKCYJNY)
+============================================================================================================
+  A0 (baseline (dzisiejszy kod)), 12 losowan czystego szumu:
+      ON : n=   644  p=51.71%  CI=[47.85%; 55.57%]  stlumionych=0
+      OFF: n=   644  p=51.71%  CI=[47.85%; 55.57%]
+      ROZNICA (ON - OFF) = +0.00 pp, 95% CI +/-5.46 pp -> NIEODROZNIALNA OD ZERA
+      obie asercje obowiazkowe: ZDANE
+
+  A2 (wymuszony kierunek + pewnosc warunkowa), 12 losowan czystego szumu:
+      ON : n=167160  p=50.33%  CI=[50.09%; 50.57%]  stlumionych=6216
+      OFF: n=173376  p=50.29%  CI=[50.06%; 50.53%]
+      ROZNICA (ON - OFF) = +0.04 pp, 95% CI +/-0.34 pp -> NIEODROZNIALNA OD ZERA
+      obie asercje obowiazkowe: ZDANE
+
+============================================================================================================
+7. PODSUMOWANIE BRAMEK (reguly zapisane PRZED uruchomieniem)
+============================================================================================================
+  ramie |  1 doslownie |  1 wg celu |  2. integralnosc |  3. pasmo pooled
+  ------------------------------------------------------------------------------
+     A0 |        ZDANA |      ZDANA |          100.00% |            3.86pp
+     A1 |      ODRZUC. |      ZDANA |          100.00% |            0.31pp
+     A2 |      ODRZUC. |      ZDANA |          100.00% |            0.24pp
+
+  Rozstrzygniecie zerowe ('brak adopcji') jest dopuszczalne i zapisane z gory.
+  Bramka 1 jest jedyna, ktora moze zabic kandydata. Decyzje podpisuje czlowiek
+  w README rundy - skrypt drukuje liczby.

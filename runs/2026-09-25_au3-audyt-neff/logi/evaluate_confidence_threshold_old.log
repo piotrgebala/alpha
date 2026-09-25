@@ -1,0 +1,70 @@
+[data] 315648 świec: 2023-07-01 00:00:00+00:00 -> 2026-06-30 23:55:00+00:00
+[data] brak dziur.
+
+[seed=42] baseline (q=None) — odtworzenie C2.12...
+
+==============================================================================
+BASELINE — bez progu pewności (C2.12)
+==============================================================================
+{'classification': 'NO-GO', 'n_valid_folds': 54, 'n_total_folds': 144, 'fraction_above_threshold': 0.05555555555555555, 'fraction_le_zero': 0.9444444444444444, 'fraction_positive_sign': 0.05555555555555555, 'mean_sharpe': 36.99131410177545}
+
+-- per reżim --
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             43             72                  0.046512          0.953488                0.046512    47.513623
+ trend          NO-GO             11             72                  0.090909          0.909091                0.090909    -4.141347
+
+-- pooled per reżim --
+regime  n_trades  mean_return  std_return  sharpe_per_trade     t_stat       n_eff  t_stat_neff
+ range      6238    -0.000541    0.001976         -0.273534 -21.603994 3208.754645   -15.494573
+ trend       374    -0.000293    0.002387         -0.122788  -2.374600  374.000000    -2.374600
+
+-- rozbicie edge'u (2p-1)*B vs C + istotność marginesu --
+regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin   z_margin
+ range      6238  0.506733 1.063547 0.494326 0.519140       0.101635          0.507852          0.496845     0.002059  0.000672      0.663154 -0.156421 -24.708511
+ trend       374  0.502674 0.103418 0.452001 0.553347       0.155080          0.518987          0.413793     0.004371  0.000681      0.577918 -0.075245  -2.910326
+
+-- sygnały: przepuszczone=10463, odrzucone przez pewność=0, odrzucone przez koszt=27332
+
+[seed=42] kandydat (q=0.75, próg z foldu TRENINGOWEGO)...
+
+==============================================================================
+KANDYDAT — próg pewności q=0.75
+==============================================================================
+{'classification': 'NO-GO', 'n_valid_folds': 47, 'n_total_folds': 144, 'fraction_above_threshold': 0.10638297872340426, 'fraction_le_zero': 0.8936170212765957, 'fraction_positive_sign': 0.10638297872340426, 'mean_sharpe': -20.317905085322664}
+
+-- per reżim --
+regime classification  n_valid_folds  n_total_folds  fraction_above_threshold  fraction_le_zero  fraction_positive_sign  mean_sharpe
+ range          NO-GO             38             72                  0.000000          1.000000                0.000000   -11.087378
+ trend      WARUNKOWY              9             72                  0.555556          0.444444                0.555556   -59.291243
+
+-- pooled per reżim --
+regime  n_trades  mean_return  std_return  sharpe_per_trade     t_stat       n_eff  t_stat_neff
+ range      2420    -0.000615    0.002232         -0.275526 -13.554063 2299.851284   -13.213313
+ trend        67    -0.000188    0.002291         -0.082194  -0.672786   67.000000    -0.672786
+
+-- rozbicie edge'u (2p-1)*B vs C + istotność marginesu --
+regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin   z_margin
+ range      2420  0.499174 -0.081312 0.479253 0.519094       0.091322          0.499318          0.497738     0.002083  0.000673      0.661635 -0.162462 -15.984113
+ trend        67  0.567164  1.099525 0.448525 0.685803       0.223881          0.557692          0.600000     0.003567  0.000685      0.595960 -0.028796  -0.471415
+
+-- sygnały: przepuszczone=2841, odrzucone przez pewność=27932, odrzucone przez koszt=7022
+
+==============================================================================
+PORÓWNANIE — pre-rejestrowane kryterium sukcesu
+==============================================================================
+
+[range]  n 6238 -> 2420
+  hit_rate      50.67%  ->   49.92%
+  break_even_p  66.32%  ->   66.16%
+  margin       -15.64 pp ->  -16.25 pp
+  z_margin     -24.71    ->  -15.98   
+
+[trend]  n 374 -> 67
+  hit_rate      50.27%  ->   56.72%
+  break_even_p  57.79%  ->   59.60%
+  margin        -7.52 pp ->   -2.88 pp
+  z_margin      -2.91    ->   -0.47   
+
+[kryterium] z_margin > 2 w co najmniej jednym reżimie: False
+[kryterium] zmiana klasyfikacji: False (NO-GO -> NO-GO)
+[uwaga] Skrypt NIE wybiera zwycięzcy — decyzja przy użytkowniku (konwencja runs/).

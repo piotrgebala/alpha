@@ -1,0 +1,40 @@
+====================================================================================================
+K1 — KONTROLA POZYTYWNA aparatu pomiarowego
+====================================================================================================
+dane      : 14916 swiec 4h (te same co S1/S1b/H2.1)
+etykiety  : 14899 nie-NaN, rozklad {-1.0: np.float64(17.23), 0.0: np.float64(66.58), 1.0: np.float64(16.19)}
+pipeline  : NIEZMIENIONY (bez bramki rezimu, V=3, walk-forward 60/28/28, seed 42)
+cechy     : ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20'] + 'oracle'
+
+q = sila wstrzyknietego sygnalu. q=0 to KONTROLA NEGATYWNA (czysty szum):
+    aparat NIE MOZE tam niczego znalezc. Jesli znajdzie - mamy przeciek.
+
+--- q = 0.00  (faktyczna zgodnosc cechy z etykieta: 33.7%) ---
+--- q = 0.05  (faktyczna zgodnosc cechy z etykieta: 36.7%) ---
+--- q = 0.10  (faktyczna zgodnosc cechy z etykieta: 40.3%) ---
+--- q = 0.20  (faktyczna zgodnosc cechy z etykieta: 46.3%) ---
+--- q = 0.40  (faktyczna zgodnosc cechy z etykieta: 59.4%) ---
+--- q = 1.00  (faktyczna zgodnosc cechy z etykieta: 99.9%) ---
+
+====================================================================================================
+KRZYWA WYKRYWALNOSCI — co wstrzyknieto vs co aparat zmierzyl
+====================================================================================================
+      q | zgodnosc |  abstyn. | n_trades | trafnosc |  CI_low |   prog | margines |   werdykt
+  --------------------------------------------------------------------------------------------
+   0.00 |    33.7% |    44.2% |     7982 |   50.78% |  49.68% | 52.91% |   -2.14 pp |     NO-GO
+   0.05 |    36.7% |    44.0% |     8002 |   50.60% |  49.50% | 52.94% |   -2.34 pp |     NO-GO
+   0.10 |    40.3% |    44.0% |     8022 |   50.00% |  48.91% | 52.92% |   -2.92 pp |     NO-GO
+   0.20 |    46.3% |    45.8% |     7820 |   51.52% |  50.41% | 52.89% |   -1.37 pp |     NO-GO
+   0.40 |    59.4% |    52.2% |     6902 |   57.23% |  56.06% | 52.33% |   +4.90 pp |        GO
+   1.00 |    99.9% |    66.5% |     4843 |  100.00% | 100.00% | 50.80% |  +49.20 pp |        GO
+
+====================================================================================================
+ODCZYT
+====================================================================================================
+  KONTROLA NEGATYWNA (q=0): trafnosc 50.78%, margines -2.14 pp, werdykt NO-GO
+    -> aparat NIE powinien tu znalezc przewagi. Znalezienie jej oznaczaloby przeciek.
+
+  NAJSLABSZY WYKRYTY SYGNAL: q = 0.40 (zgodnosc cechy 59.4%) -> trafnosc 57.23%, CI_low 56.06% > prog 52.33%
+    -> APARAT DZIALA. Ponizej tej sily sygnal jest dla niego niewidoczny.
+
+  zapisano: runs/2026-09-22_k1-kontrola-pozytywna/krzywa_wykrywalnosci.csv

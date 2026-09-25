@@ -1,0 +1,9 @@
+========================================================================================================
+KP1 — ZGODNOŚĆ SYGNAŁÓW I RACHUNEK MOCY; konfiguracja ZAMROŻONA
+========================================================================================================
+  premia: 2007 dni (2021-01-01 → 2026-06-30); braki w sygnale od startu: 0
+  sygnał (kierunek +1): long 44.0% dni, zmiana znaku 4.3% dni; zgodność z sygnałem CP1 (Coinbase) 52.8% na 1887 dniach; z trendem 28 dni na BTC 45.9%
+  dni 1880; zmienność H0 35.8%/rok; half-width 95% 30.9%/rok = 0.86 SR; q97,5 H0 +22.8%/rok
+  moc przy założonym efekcie SR 0.15 (≈ +5.4%/rok): 5%; przy SR 0,9 (wynik CP1): 53%
+========================================================================================================
+czas: 43s

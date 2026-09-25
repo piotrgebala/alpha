@@ -106,6 +106,6 @@ def test_n_eff_guarded_no_collapse_on_negative_autocorrelation():
     assert ml.n_eff_guarded(x) == len(x)
     from agents.labeling import effective_sample_size
 
-    assert effective_sample_size(x)["n_eff"] < 0  # przypadek, który psuł kanoniczny przyrząd
+    assert effective_sample_size(x)["n_eff"] == len(x)  # po AU3 kanoniczny = zabezpieczony
     y = pd.Series(np.random.default_rng(6).normal(size=300))
     assert 1 <= ml.n_eff_guarded(y) <= 300

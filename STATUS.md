@@ -168,6 +168,8 @@
 > 25/35 % (ranking po właściwej cesze 80/85 %) → **nie startuje**. Wniosek 93. **DO DECYZJI: błąd kanonicznego N_eff**
 > (`agents/labeling.py::effective_sample_size`, suma autokorelacji < −0,5 → N_eff = 1 / NaN; tylko zaniża pewność) —
 > naprawa + runda audytu AU3 dawnych „nierozstrzygniętych”; dotyka metodologii i modułu importowanego pośrednio przez dziennik.
+> AU3 (2026-09-25, decyzja użytkownika „tak”): N_eff naprawiony w `agents/labeling.py`; audyt 59 przebiegów — **0 zmienionych
+> werdyktów** (zdarzenia tylko w K2/K3, bez wpływu). Poprawka 6 dziennika (bez wpływu). Wniosek 94.
 > SERWER: ciężkie przebiegi z `OMP_NUM_THREADS=1` i ≤ 24 procesami (bez tego przeciążenie ~15× i ryzyko dla walidatora).
 > BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**

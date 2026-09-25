@@ -1,0 +1,647 @@
+[
+ {
+  "round": "2026-09-21_c2.10-extended-history-z5",
+  "module": "backtest.run_checkpoint_v2",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 80,
+  "log": "run_checkpoint_v2_old.log",
+  "calls": 22,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-21_c2.11-edge-instrumentation",
+  "module": "backtest.run_checkpoint_v2",
+  "args": [
+   "--quick"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 9,
+  "log": "run_checkpoint_v2_quick_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-21_c2.13-confidence-threshold",
+  "module": "backtest.evaluate_confidence_threshold",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 15,
+  "log": "evaluate_confidence_threshold_old.log",
+  "calls": 4,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-21_c2.5-threshold-calibration",
+  "module": "backtest.calibrate_regime_thresholds",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 350,
+  "log": "calibrate_regime_thresholds_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-21_c2.6-timeframe-robustness",
+  "module": "backtest.checkpoint_timeframe_robustness",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 33,
+  "log": "checkpoint_timeframe_robustness_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-21_c2.8-adx14-oos-evaluation",
+  "module": "backtest.evaluate_feature_candidate",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 150,
+  "log": "evaluate_feature_candidate_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_f1-funding-zmierzony",
+  "module": "backtest.run_funding_measured_f1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 7,
+  "log": "run_funding_measured_f1_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_h2.1-funding-jako-cecha",
+  "module": "backtest.run_funding_feature_h21",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 7,
+  "log": "run_funding_feature_h21_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_h3-noga-timeout-pasmo",
+  "module": "backtest.run_timeout_leg_band",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 6,
+  "log": "run_timeout_leg_band_old.log",
+  "calls": 3,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_k1-kontrola-pozytywna",
+  "module": "backtest.run_positive_control_k1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 23,
+  "log": "run_positive_control_k1_old.log",
+  "calls": 6,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_k2-naprawa-abstynencji",
+  "module": "backtest.run_abstention_fix_k2",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 261,
+  "log": "run_abstention_fix_k2_old.log",
+  "calls": 99,
+  "bad_denominator": 19
+ },
+ {
+  "round": "2026-09-22_k3-mierzalnosc-po-a1",
+  "module": "backtest.run_measurability_k3",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 9,
+  "log": "run_measurability_k3_old.log",
+  "calls": 4,
+  "bad_denominator": 1
+ },
+ {
+  "round": "2026-09-22_m1-momentum-bez-bramki",
+  "module": "backtest.run_momentum_m1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 7,
+  "log": "run_momentum_m1_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_p2-sonda-carry-przekrojowy",
+  "module": "backtest.run_carry_probe_p2",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 3,
+  "log": "run_carry_probe_p2_old.log",
+  "calls": 9,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_s1-single-regime-4h",
+  "module": "backtest.run_single_regime_4h",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 3,
+  "log": "run_single_regime_4h_old.log",
+  "calls": 1,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_z16-regime-coherence",
+  "module": "backtest.diagnose_regime_coherence",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 37,
+  "log": "diagnose_regime_coherence_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_z19-statistical-power",
+  "module": "backtest.diagnose_statistical_power",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 1,
+  "log": "diagnose_statistical_power_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_a1-formacje-swiecowe",
+  "module": "backtest.run_ta_a1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 6,
+  "log": "run_ta_a1_old.log",
+  "calls": 6,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_a2-rodziny-at",
+  "module": "backtest.run_ta_rules_a2",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 9,
+  "log": "run_ta_rules_a2_old.log",
+  "calls": 12,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_c1-cash-and-carry",
+  "module": "backtest.run_cash_and_carry_c1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 1,
+  "log": "run_cash_and_carry_c1_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_d1-produkt-carry",
+  "module": "backtest.run_carry_product_d1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 1,
+  "log": "run_carry_product_d1_old.log",
+  "calls": 4,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_g1-strach-chciwosc",
+  "module": "backtest.run_external_features_lvg",
+  "args": [],
+  "mode": "old",
+  "rc": 1,
+  "seconds": 1,
+  "log": "run_external_features_lvg_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_n1-nowy-cel-czesciowe-tp",
+  "module": "backtest.run_partial_tp_n1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 4,
+  "log": "run_partial_tp_n1_old.log",
+  "calls": 4,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_o1-pozycjonowanie",
+  "module": "backtest.run_positioning_o1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 7,
+  "log": "run_positioning_o1_old.log",
+  "calls": 4,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_r1-premia-rebalansowa",
+  "module": "backtest.run_rebalance_premium_r1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 2,
+  "log": "run_rebalance_premium_r1_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_t4-kalibracja-early-stopping",
+  "module": "backtest.diagnose_early_stopping_t4",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 38,
+  "log": "diagnose_early_stopping_t4_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_w1-wykonanie-po-cenie",
+  "module": "backtest.run_execution_w1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 9,
+  "log": "run_execution_w1_old.log",
+  "calls": 16,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_x1-momentum-przekrojowe",
+  "module": "backtest.run_xs_momentum_x1",
+  "args": [
+   "--moc",
+   "100"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 288,
+  "log": "run_xs_momentum_x1_moc_100_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_x1-momentum-przekrojowe",
+  "module": "backtest.run_xs_momentum_x1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 8,
+  "log": "run_xs_momentum_x1_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_x2-momentum-top50",
+  "module": "backtest.run_xs_momentum_x2",
+  "args": [
+   "--moc",
+   "100"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 293,
+  "log": "run_xs_momentum_x2_moc_100_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_x2-momentum-top50",
+  "module": "backtest.run_xs_momentum_x2",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 7,
+  "log": "run_xs_momentum_x2_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-23_y1-horyzont-1h",
+  "module": "backtest.run_horizon_y",
+  "args": [
+   "1"
+  ],
+  "mode": "old",
+  "rc": 1,
+  "seconds": 1,
+  "log": "run_horizon_y_1_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_cp1-poza-proba",
+  "module": "backtest.run_coinbase_cp1_oos",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 4,
+  "log": "run_coinbase_cp1_oos_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_cp1-premia-coinbase",
+  "module": "backtest.run_coinbase_cp1",
+  "args": [
+   "--moc"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 53,
+  "log": "run_coinbase_cp1_moc_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_cp1-premia-coinbase",
+  "module": "backtest.run_coinbase_cp1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 54,
+  "log": "run_coinbase_cp1_old.log",
+  "calls": 1,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_cp2-premia-coinbase-eth-sol",
+  "module": "backtest.run_coinbase_cp2",
+  "args": [
+   "--moc"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 87,
+  "log": "run_coinbase_cp2_moc_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_lq1-likwidacje",
+  "module": "backtest.run_ts_liq_lq1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 109,
+  "log": "run_ts_liq_lq1_old.log",
+  "calls": 3,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_nc1-kontrola-negatywna",
+  "module": "backtest.run_negative_control_nc1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 165,
+  "log": "run_negative_control_nc1_old.log",
+  "calls": 280,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_nl1-nowe-listingi",
+  "module": "backtest.run_listings_nl1",
+  "args": [
+   "--moc"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 3,
+  "log": "run_listings_nl1_moc_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_nl1-nowe-listingi",
+  "module": "backtest.run_listings_nl1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 4,
+  "log": "run_listings_nl1_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_ru3-data-startu",
+  "module": "backtest.run_start_fix_ru3",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 97,
+  "log": "run_start_fix_ru3_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_sc1-sila-sygnalu",
+  "module": "backtest.run_signal_strength_sc1",
+  "args": [
+   "--moc"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 9,
+  "log": "run_signal_strength_sc1_moc_old.log",
+  "calls": 2,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_sw-cechy-spoza-wykresu",
+  "module": "backtest.run_sw_series",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 3,
+  "log": "run_sw_series_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_sz1-wielkosc-pozycji",
+  "module": "backtest.run_sizing_sz1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 8,
+  "log": "run_sizing_sz1_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_tf1-trend-filtr-tloku",
+  "module": "backtest.run_crowding_tf1",
+  "args": [
+   "--moc"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 6,
+  "log": "run_crowding_tf1_moc_old.log",
+  "calls": 1,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_tf1-trend-filtr-tloku",
+  "module": "backtest.run_crowding_tf1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 6,
+  "log": "run_crowding_tf1_old.log",
+  "calls": 4,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_tl1-tlok-przekrojowy",
+  "module": "backtest.run_crowding_tl1",
+  "args": [
+   "--moc"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 621,
+  "log": "run_crowding_tl1_moc_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_tl1-tlok-przekrojowy",
+  "module": "backtest.run_crowding_tl1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 632,
+  "log": "run_crowding_tl1_old.log",
+  "calls": 1,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_ts-poza-proba",
+  "module": "backtest.run_ts_momentum_oos",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 54,
+  "log": "run_ts_momentum_oos_old.log",
+  "calls": 1,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_ts1-trend-koszyk",
+  "module": "backtest.run_ts_momentum_ts1",
+  "args": [
+   "--moc",
+   "100"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 104,
+  "log": "run_ts_momentum_ts1_moc_100_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_ts1-trend-koszyk",
+  "module": "backtest.run_ts_momentum_ts1",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 70,
+  "log": "run_ts_momentum_ts1_old.log",
+  "calls": 5,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-24_x1f-siedem-faz",
+  "module": "backtest.run_x1_phases_x1f",
+  "args": [],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 34,
+  "log": "run_x1_phases_x1f_old.log",
+  "calls": 10,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-25_kp1-premia-koreanska",
+  "module": "backtest.run_upbit_kp1",
+  "args": [
+   "--profil"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 1,
+  "log": "run_upbit_kp1_profil_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-25_kp1-premia-koreanska",
+  "module": "backtest.run_upbit_kp1",
+  "args": [
+   "--moc"
+  ],
+  "mode": "old",
+  "rc": 0,
+  "seconds": 45,
+  "log": "run_upbit_kp1_moc_old.log",
+  "calls": 0,
+  "bad_denominator": 0
+ },
+ {
+  "round": "2026-09-22_k2-naprawa-abstynencji",
+  "module": "backtest.run_abstention_fix_k2",
+  "args": [],
+  "mode": "new",
+  "rc": 0,
+  "seconds": 233,
+  "log": "run_abstention_fix_k2_new.log",
+  "calls": 99,
+  "bad_denominator": 19
+ },
+ {
+  "round": "2026-09-22_k3-mierzalnosc-po-a1",
+  "module": "backtest.run_measurability_k3",
+  "args": [],
+  "mode": "new",
+  "rc": 0,
+  "seconds": 7,
+  "log": "run_measurability_k3_new.log",
+  "calls": 4,
+  "bad_denominator": 1
+ }
+]

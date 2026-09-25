@@ -1,0 +1,187 @@
+========================================================================================================
+A2 — RODZINY ANALIZY TECHNICZNEJ jako reguły (A2.1–A2.4) i jako cechy modelu (A2.5); konfiguracja ZAMROŻONA
+========================================================================================================
+dane      : 12042 świec 4h od 2021-01-01 00:00:00+00:00 do 2026-06-30 20:00:00+00:00 (zasada 20: min_start = 2021-01-01T00:00:00Z)
+pipeline  : BEZ bramki reżimu, V=3, wagi klas `balanced`, walk-forward 60/28/28, seed 42, wejście limit_close k=1, pojedyncze wyjście
+kontrola  : cechy ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20']
+A2.1–A2.4 : reguły bez modelu (confidence 1,0): ['rule_trend_structure', 'rule_fib_retrace', 'rule_sr_bounce', 'rule_event_group']
+A2.5      : cechy ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'price_zscore_20', 'trend_structure', 'double_top_bottom', 'head_shoulders', 'ma_state', 'ma_cross_age', 'trendline_distance', 'fib_position', 'fib_impulse', 'sr_distance', 'breakout']
+Bonferroni: m = 5 ramion → z_5 = 2.576 dla POZYTYWU; negatyw przy 1,96 + guard n
+
+0. LEJEK — kontrola i A2.5 (dwa treningi), reguły
+  trening kontroli zakończony po 3 s
+  [kontrola] foldy: 69 aktywne / 69 łącznie
+               świece ocenione:    11592
+    bez kierunku (abstynencja):     4681
+               bramka pewności:        0
+               bramka kosztowa:        0
+           sygnały kandydujące:     6911
+                   abstynencja:   40.38%
+  trening A2.5 zakończony po 6 s
+  [A2.5] foldy: 69 aktywne / 69 łącznie
+               świece ocenione:    11592
+    bez kierunku (abstynencja):     4950
+               bramka pewności:        0
+               bramka kosztowa:        0
+           sygnały kandydujące:     6642
+                   abstynencja:   42.70%
+  [reguły NIEMIERZALNE osobno — zasada 18: zliczenie, bez symulacji]
+             wybicie z zakresu:   988 sygnałów OOS (long 536, short 452) → nie startuje
+           podwójny szczyt/dno:   305 sygnałów OOS (long 154, short 151) → nie startuje
+             głowa z ramionami:    86 sygnałów OOS (long 43, short 43) → nie startuje
+          przecięcie EMA 10/30:   434 sygnałów OOS (long 217, short 217) → nie startuje
+      przełamanie linii trendu:   710 sygnałów OOS (long 355, short 355) → nie startuje
+  [A2.1 rule_trend_structure] świece OOS 11592; bez sygnału 4814; bez etykiety/ATR 0; bramka kosztowa 0; sygnały 6778 (long 3605, short 3173)
+  [A2.2 rule_fib_retrace] świece OOS 11592; bez sygnału 9342; bez etykiety/ATR 0; bramka kosztowa 0; sygnały 2250 (long 1067, short 1183)
+  [A2.3 rule_sr_bounce] świece OOS 11592; bez sygnału 1990; bez etykiety/ATR 0; bramka kosztowa 0; sygnały 9602 (long 4786, short 4816)
+  [A2.4 rule_event_group] świece OOS 11592; bez sygnału 9425; bez etykiety/ATR 0; bramka kosztowa 0; sygnały 2167 (long 1174, short 993)
+
+1. KRYTERIUM — zwrot netto per trade (t_neff) i trafność wobec p*; pozytyw przy z_5 (Bonferroni)
+      ramię |     n |  r̄ netto |                CI 95% |  mediana |      t |  N_eff | t_neff |       p |         CI 95%(p) | ci_low z5 |     p* |  BE ±B
+  --------------------------------------------------------------------------------------------------------------------------------------------
+   kontrola |  6789 |  -0.1069% | [ -0.1487;  -0.0650] | -0.1036% |  -5.01 |   4919 |  -4.26 |  49.58% | [ 48.39;  50.77] |  48.02% | 53.64% | 53.07%
+       A2.1 |  6423 |  -0.1270% | [ -0.1696;  -0.0843] | -0.1415% |  -5.83 |   2875 |  -3.90 |  48.20% | [ 46.98;  49.42] |  46.60% | 53.07% | 53.16%
+       A2.2 |  2223 |  -0.0409% | [ -0.1099;  +0.0280] | -0.0524% |  -1.16 |   1787 |  -1.04 |  51.51% | [ 49.43;  53.58] |  48.78% | 53.18% | 53.34%
+       A2.3 |  9204 |  -0.0796% | [ -0.1141;  -0.0451] | -0.0966% |  -4.52 |   7300 |  -4.03 |  49.87% | [ 48.85;  50.89] |  48.53% | 53.01% | 53.21%
+       A2.4 |  2133 |  -0.1030% | [ -0.1818;  -0.0242] | -0.1420% |  -2.56 |   2133 |  -2.56 |  48.34% | [ 46.21;  50.46] |  45.55% | 52.00% | 52.88%
+       A2.5 |  6525 |  -0.0985% | [ -0.1407;  -0.0563] | -0.0979% |  -4.57 |   3839 |  -3.51 |  49.59% | [ 48.38;  50.81] |  48.00% | 53.42% | 53.17%
+  >>> ODCZYT KRYTERIUM A2.1: NEGATYWNY — t_neff < −1,96 przy n >= required_trades(0,50; BE) = 1,959
+  >>> ODCZYT KRYTERIUM A2.2: NIEROZSTRZYGNIĘTY — |t_neff| poniżej progu, ci_low(p) <= p* albo n poniżej wymaganego
+  >>> ODCZYT KRYTERIUM A2.3: NEGATYWNY — t_neff < −1,96 przy n >= required_trades(0,50; BE) = 1,895
+  >>> ODCZYT KRYTERIUM A2.4: NIEROZSTRZYGNIĘTY — |t_neff| poniżej progu, ci_low(p) <= p* albo n poniżej wymaganego
+  >>> ODCZYT KRYTERIUM A2.5: NEGATYWNY — t_neff < −1,96 przy n >= required_trades(0,50; BE) = 1,949
+  (kontrola: NEGATYWNY — t_neff < −1,96 przy n >= required_trades(0,50; BE) = 2,082 — odniesienie, 0 wariantów)
+  regresja kontroli wobec N1/A1 (n 6789, p 49.58%, r̄ -0.1069%): ZGODNA
+  r̄ = średni zwrot netto w % nominału; t_neff z N_eff ≤ n; p* = (L̄ + C)/(W̄ + L̄); „ci_low z5” = dolny
+  kraniec CI trafności przy z = 2.576 (pięć ramion naraz); „BE ±B” = 0,5(1+C/B) — diagnostyka.
+
+2. PORÓWNANIE PAROWANE A2.5 − kontrola (te same świece i wypełnienia) — obserwacja, nie kryterium
+  wspólnych transakcji 4374 (kontrola 6789, A2.5 6525); identycznych (różnica 0): 2867; ten sam kierunek: 2867
+  średnia różnica +0.0054% nominału, 95% CI [-0.0552; +0.0661], t = +0.18; mediana różnicy +0.0000%
+  tylko w kontroli: 2415, tylko w A2.5: 2151; świece ocenione A2.5 11592 vs kontrola 11592, abstynencja A2.5 42.70%
+
+3. OPISOWO — skąd biorą się pieniądze (bez werdyktów na podzbiorach — pre-rejestracja)
+  A2.1 — powód wyjścia
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                    cel (tp) |  1080 |   16.8% | 100.00% | [100.00; 100.00] |  +2.2840% |  +2.3239% | +2.1042%
+                   stop (sl) |  1072 |   16.7% |   0.00% | [  0.00;   0.00] |  -2.4656% |  -2.3746% | -2.3038%
+                     timeout |  4271 |   66.5% |  47.20% | [ 45.70;  48.70] |  -0.1496% |  -0.0585% | -0.1442%
+  A2.1 — kierunek
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                        long |  3425 |   53.3% |  48.23% | [ 46.56;  49.91] |  -0.1708% |  -0.0750% | -0.1470%
+                       short |  2998 |   46.7% |  48.17% | [ 46.38;  49.95] |  -0.0770% |  -0.0096% | -0.1354%
+  A2.1: W̄ = 1.3077%, L̄ = 1.3027%, C = 0.0825%, std zwrotu 1.745%, p5/p95 [-2.949%; +2.690%], niewypełnione 28, stłumione 327
+  A2.2 — powód wyjścia
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                    cel (tp) |   340 |   15.3% | 100.00% | [100.00; 100.00] |  +2.3377% |  +2.3780% | +2.1438%
+                   stop (sl) |   319 |   14.3% |   0.00% | [  0.00;   0.00] |  -2.3644% |  -2.2740% | -2.2253%
+                     timeout |  1564 |   70.4% |  51.47% | [ 48.99;  53.95] |  -0.0841% |  +0.0044% | -0.0653%
+  A2.2 — kierunek
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                        long |  1053 |   47.4% |  52.99% | [ 49.98;  56.01] |  -0.0607% |  +0.0347% | -0.0308%
+                       short |  1170 |   52.6% |  50.17% | [ 47.31;  53.04] |  -0.0231% |  +0.0457% | -0.0694%
+  A2.2: W̄ = 1.2249%, L̄ = 1.2174%, C = 0.0815%, std zwrotu 1.659%, p5/p95 [-2.720%; +2.796%], niewypełnione 15, stłumione 12
+  A2.3 — powód wyjścia
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                    cel (tp) |  1560 |   16.9% | 100.00% | [100.00; 100.00] |  +2.2469% |  +2.2863% | +2.0962%
+                   stop (sl) |  1496 |   16.3% |   0.00% | [  0.00;   0.00] |  -2.4111% |  -2.3210% | -2.2241%
+                     timeout |  6148 |   66.8% |  49.28% | [ 48.03;  50.53] |  -0.1026% |  -0.0127% | -0.1051%
+  A2.3 — kierunek
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                        long |  4568 |   49.6% |  50.53% | [ 49.08;  51.98] |  -0.0890% |  +0.0063% | -0.0939%
+                       short |  4636 |   50.4% |  49.22% | [ 47.78;  50.66] |  -0.0703% |  -0.0027% | -0.0990%
+  A2.3: W̄ = 1.2713%, L̄ = 1.2611%, C = 0.0814%, std zwrotu 1.688%, p5/p95 [-2.846%; +2.667%], niewypełnione 36, stłumione 362
+  A2.4 — powód wyjścia
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                    cel (tp) |   436 |   20.4% | 100.00% | [100.00; 100.00] |  +2.3254% |  +2.3652% | +2.0958%
+                   stop (sl) |   357 |   16.7% |   0.00% | [  0.00;   0.00] |  -2.6017% |  -2.5099% | -2.3925%
+                     timeout |  1340 |   62.8% |  44.40% | [ 41.74;  47.06] |  -0.2274% |  -0.1361% | -0.1983%
+  A2.4 — kierunek
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                        long |  1158 |   54.3% |  48.70% | [ 45.83;  51.58] |  -0.1303% |  -0.0363% | -0.1405%
+                       short |   975 |   45.7% |  47.90% | [ 44.76;  51.03] |  -0.0706% |  -0.0052% | -0.1526%
+  A2.4 — reguła obecna w świecy sygnału (OPISOWO, bez werdyktów; transakcja może mieć > 1)
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+           wybicie z zakresu |   963 |   39.6% |  48.49% | [ 45.34;  51.65] |  -0.0529% |  +0.0256% | -0.1395%
+         podwójny szczyt/dno |   289 |   11.9% |  44.98% | [ 39.25;  50.72] |  -0.3170% |  -0.2331% | -0.2430%
+           głowa z ramionami |    82 |    3.4% |  47.56% | [ 36.75;  58.37] |  +0.0129% |  +0.0932% | -0.0973%
+        przecięcie EMA 10/30 |   415 |   17.1% |  43.61% | [ 38.84;  48.39] |  -0.1217% |  -0.0412% | -0.2156%
+    przełamanie linii trendu |   680 |   28.0% |  52.21% | [ 48.45;  55.96] |  -0.0514% |  +0.0289% | -0.0555%
+  A2.4: W̄ = 1.4301%, L̄ = 1.3807%, C = 0.0809%, std zwrotu 1.857%, p5/p95 [-3.183%; +2.921%], niewypełnione 13, stłumione 21
+  A2.5 — powód wyjścia
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                    cel (tp) |  1123 |   17.2% | 100.00% | [100.00; 100.00] |  +2.2451% |  +2.2845% | +1.9710%
+                   stop (sl) |  1124 |   17.2% |   0.00% | [  0.00;   0.00] |  -2.3726% |  -2.2826% | -2.1914%
+                     timeout |  4278 |   65.6% |  49.39% | [ 47.89;  50.89] |  -0.1162% |  -0.0259% | -0.0977%
+  A2.5 — kierunek
+                       grupa |     n |  udział |       p |        CI 95% (p) |  r̄ netto | r̄ brutto |  mediana
+  ------------------------------------------------------------------------------------------------------------
+                        long |  3288 |   50.4% |  50.82% | [ 49.11;  52.53] |  -0.1042% |  -0.0090% | -0.0805%
+                       short |  3237 |   49.6% |  48.35% | [ 46.63;  50.07] |  -0.0927% |  -0.0252% | -0.1214%
+  A2.5: W̄ = 1.2790%, L̄ = 1.2922%, C = 0.0815%, std zwrotu 1.739%, p5/p95 [-2.890%; +2.635%], niewypełnione 39, stłumione 78
+  kontrola: W̄ = 1.3029%, L̄ = 1.3329%, C = 0.0808%, niewypełnione 43, stłumione 79
+
+4. MIERZALNOŚĆ (zasada 18) — ex ante wg pre-rejestracji i ex post
+  A2.1: expected_trades ex ante = 6,806; ex post = 6,750; journal = 6,423; pasmo 1.19 / 1.22 pp; p_detectable ex ante = 54.26% → „p ≥ 56%” MIERZALNA; required_trades = 1,959 → guard spełniony; se = 0.0218% → |r̄| >= 0.0610%
+  A2.2: expected_trades ex ante = 2,267; ex post = 2,235; journal = 2,223; pasmo 2.06 / 2.08 pp; p_detectable ex ante = 55.13% → „p ≥ 56%” MIERZALNA; required_trades = 1,759 → guard spełniony; se = 0.0352% → |r̄| >= 0.0985%
+  A2.3: expected_trades ex ante = 9,606; ex post = 9,566; journal = 9,204; pasmo 1.00 / 1.02 pp; p_detectable ex ante = 54.07% → „p ≥ 56%” MIERZALNA; required_trades = 1,895 → guard spełniony; se = 0.0176% → |r̄| >= 0.0493%
+  A2.4: expected_trades ex ante = 2,174; ex post = 2,154; journal = 2,133; pasmo 2.10 / 2.12 pp; p_detectable ex ante = 55.17% → „p ≥ 56%” MIERZALNA; required_trades = 2,361 → guard NIESPEŁNIONY; se = 0.0402% → |r̄| >= 0.1126%
+  A2.5: expected_trades ex ante = 6,870; ex post = 6,603; journal = 6,525; pasmo 1.18 / 1.21 pp; required_trades = 1,949 → guard spełniony; se = 0.0215% → |r̄| >= 0.0603%
+
+========================================================================================================
+5. PEŁNE TABELE (do raw_output)
+========================================================================================================
+  --- kontrola ---
+   regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      6789  0.495802 -0.691786 0.483909 0.507695       0.649138          0.503359          0.491718      0.01318  0.000808      0.530656 -0.034854
+   regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat       n_eff  t_stat_neff
+  __all__      6789    -0.000075    0.001235         -0.061094 -5.033868 4124.705335    -3.923696
+  {'classification': 'NO-GO', 'n_valid_folds': 69, 'n_total_folds': 69, 'fraction_above_threshold': 0.2318840579710145, 'fraction_le_zero': 0.7391304347826086, 'fraction_positive_sign': 0.2608695652173913, 'mean_sharpe': -2.2301377075488498}
+  UWAGA: `classification` NIE jest kryterium (wniosek 24); `break_even_p` = diagnostyka ±B.
+  --- A2.1 ---
+   regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      6423  0.482018 -2.882325 0.469798 0.494238       0.664954          0.501859          0.472021     0.013051  0.000825      0.531604 -0.049586
+   regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat      n_eff  t_stat_neff
+  __all__      6423     -0.00025    0.003271          -0.07631 -6.115754 2666.35765    -3.940399
+  {'classification': 'NO-GO', 'n_valid_folds': 69, 'n_total_folds': 69, 'fraction_above_threshold': 0.2753623188405797, 'fraction_le_zero': 0.6811594202898551, 'fraction_positive_sign': 0.3188405797101449, 'mean_sharpe': -3.099910518769613}
+  UWAGA: `classification` NIE jest kryterium (wniosek 24); `break_even_p` = diagnostyka ±B.
+  --- A2.2 ---
+   regime  n_trades  hit_rate   z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      2223   0.51507 1.421036 0.494294 0.535845       0.703554          0.515933          0.514706     0.012213  0.000815       0.53335 -0.018281
+   regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat       n_eff  t_stat_neff
+  __all__      2223    -0.000124    0.003117         -0.039826 -1.877757 1411.092804    -1.496055
+  {'classification': 'NO-GO', 'n_valid_folds': 69, 'n_total_folds': 69, 'fraction_above_threshold': 0.3333333333333333, 'fraction_le_zero': 0.6231884057971014, 'fraction_positive_sign': 0.37681159420289856, 'mean_sharpe': -0.6639143117263343}
+  UWAGA: `classification` NIE jest kryterium (wniosek 24); `break_even_p` = diagnostyka ±B.
+  --- A2.3 ---
+   regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      9204  0.498696 -0.250163 0.488481 0.508911        0.66797          0.510471          0.492843     0.012662  0.000814      0.532133 -0.033436
+   regime  n_trades  mean_return  std_return  sharpe_per_trade  t_stat       n_eff  t_stat_neff
+  __all__      9204    -0.000164    0.003254         -0.050268 -4.8226 8550.057064    -4.648121
+  {'classification': 'NO-GO', 'n_valid_folds': 69, 'n_total_folds': 69, 'fraction_above_threshold': 0.2753623188405797, 'fraction_le_zero': 0.7101449275362319, 'fraction_positive_sign': 0.2898550724637681, 'mean_sharpe': -2.1767535087562297}
+  UWAGA: `classification` NIE jest kryterium (wniosek 24); `break_even_p` = diagnostyka ±B.
+  --- A2.4 ---
+   regime  n_trades  hit_rate    z_stat  ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p   margin
+  __all__      2133  0.483357 -1.537315 0.46215 0.504564       0.628223          0.549811           0.44403     0.014045  0.000809      0.528797 -0.04544
+   regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat       n_eff  t_stat_neff
+  __all__      2133    -0.000164    0.003419         -0.048037 -2.218554 1871.614193    -2.078178
+  {'classification': 'NO-GO', 'n_valid_folds': 69, 'n_total_folds': 69, 'fraction_above_threshold': 0.3188405797101449, 'fraction_le_zero': 0.6231884057971014, 'fraction_positive_sign': 0.37681159420289856, 'mean_sharpe': -1.0300852082341843}
+  UWAGA: `classification` NIE jest kryterium (wniosek 24); `break_even_p` = diagnostyka ±B.
+  --- A2.5 ---
+   regime  n_trades  hit_rate    z_stat   ci_low  ci_high  share_timeout  hit_rate_barrier  hit_rate_timeout  barrier_pct  cost_pct  break_even_p    margin
+  __all__      6525  0.495939 -0.656124 0.483807  0.50807       0.655632          0.499777          0.493922     0.012857  0.000815      0.531688 -0.035749
+   regime  n_trades  mean_return  std_return  sharpe_per_trade    t_stat       n_eff  t_stat_neff
+  __all__      6525    -0.000083    0.001225         -0.067844 -5.480292 3651.463445    -4.099652
+  {'classification': 'NO-GO', 'n_valid_folds': 69, 'n_total_folds': 69, 'fraction_above_threshold': 0.3333333333333333, 'fraction_le_zero': 0.6231884057971014, 'fraction_positive_sign': 0.37681159420289856, 'mean_sharpe': -2.3762834022053676}
+  UWAGA: `classification` NIE jest kryterium (wniosek 24); `break_even_p` = diagnostyka ±B.
+
+  czas całkowity: 8 s
