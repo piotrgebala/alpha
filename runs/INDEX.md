@@ -9,7 +9,7 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 **Zamknięte — nie wracać bez NOWEJ informacji:**
 - Przewidywanie kierunku BTC z cech wykresu na świecach 5m / 1h / 4h: trafność ~50 % na dużych
   próbach — dowód braku (Faza 0, M1, Y1, WF1; wnioski 12, 39, 69, 85). 1d (Y2) niezmierzony.
-- Klasyczna analiza techniczna na BTC 4h — 7 rodzin (48–53); MACD + EMA na 1h niemierzalne (103). Wykonanie i zarządzanie pozycją nie
+- Klasyczna analiza techniczna na BTC 4h — 7 rodzin (48–53); MACD + EMA na 1h niemierzalne, także z filtrami (103, 104). Wykonanie i zarządzanie pozycją nie
   tworzą przewagi (42–45).
 - Dane spoza wykresu (funding, OI, L/S, przewaga kupujących, VRP, podaż na giełdach, F&G) na BTC 4h — zmierzone
   (SW, 90): jako reguły i jako model 365 dni tracą po kosztach; duża przewaga wykluczona; ślad przed kosztami
@@ -163,6 +163,7 @@ podsumowanie pod tabelą.
 | **PR1** | 2026-09-25 | [pr1-portfel](2026-09-25_pr1-portfel/README.md) | Reguły portfela nóg dziennika pod szczebel 4 ADR-09: R0 równo / R1 dziennik (1/σ) / ERC (równy wkład ryzyka z korelacjami) dla {TS1, CP1} i {TS1, CP1, X1}; ES95 tyg., ES99 dz., obsunięcia, depozyt, przełożenie na 5 % depozytu; pre-rejestracja `7f647f2` | **0 — opisowo** | **2 nogi: ERC ≡ 1/σ (\|Δk\| 0,0000) — dziennik bez zmian. R1: +18,3 %/rok, obsunięcie 18,2 %, najg. tydzień −9,7 %, ES95 tyg. −5,7 % [−6,5; −4,7]; przy 5 % depozytu (limit trzymany każdego dnia) strategia ≈ 10 % kapitału → obsunięcie ≈ 1,9 %, zły tydzień ≈ −1 % całego kapitału. X1 jako 3. noga: obsunięcie 28 %, tydzień −27,5 % (jedno zdarzenie).** Nogi in-sample, bez modelu likwidacji. Walidacja: **Ready (Caveats)** — depozyt realny (druga droga) mediana 24 %, max 45 %; 4 liczby zgodne |
 | **LK0** | 2026-09-25 | [lk0-kolektor-likwidacji](2026-09-25_lk0-kolektor-likwidacji/README.md) | Kolektor likwidacji Binance USDT-M (strumień `!forceOrder@arr`, próbkowany ≤ 1 zdarzenie/s/symbol) od 2026-09-25 do `$HOME/likwidacje` (poza repo) — brama danych rodziny E1; decyzja użytkownika („kolektor tak”) | **0 — POZA licznikami** (zbieranie danych, 0 odczytów) | **Uruchomiony. Dokumentowany adres `/ws/` odpowiada, ale milczy; nadaje `/market/ws/` (jak ccxt 4.5.48). Próba 90 s: 56 zdarzeń, 29 symboli (w tym XAUUSDT, jeden symbol COIN-M), ≈ 3,7 mln USD nominału; `ps`/`st` wewnątrz `o`.** Odczyt E1 najwcześniej po ~roku (rachunek mocy z realnej częstości PRZED). Przegląd bezpieczeństwa: 0 podatności, 2 uwagi niskie wdrożone. Walidacja: n/d (bez wyniku) |
 | **MX1** | 2026-09-25 | [mx1-macd-ema-1h](2026-09-25_mx1-macd-ema-1h/README.md) | Decyzja użytkownika: przecięcie EMA 10/30 potwierdzone WCZEŚNIEJSZYM przecięciem MACD 12/26/9 jako reguła kierunkowa na BTC 1h (przyrząd reguł A2 na bazie Y1); tylko rachunek mierzalności, bez symulacji | **0 — NIEMIERZALNA, nie startuje** | **1 254 sygnały w 5,4 roku; trzeba ≥ 56,8 % trafności wobec obietnicy 56 % (moc przy 56 %: 29 %) → nie startuje. MACD przepuszcza 77 % przecięć EMA — to w większości ten sam sygnał.** Walidacja: **Ready** — TA-Lib co do sztuki (1 256 / 1 626) |
+| **MX2** | 2026-09-25 | [mx2-filtry-1h](2026-09-25_mx2-filtry-1h/README.md) | Decyzja użytkownika: pięć filtrów na sygnale MX1 (trend 28 dni, ADX > 25, wolumen > średnia 20, sesja USA 13–21 UTC, RSI po stronie 50); tylko rachunek mierzalności | **0 — wszystkie 5 NIEMIERZALNE, nie startuje** | **Zostaje 585 / 302 / 684 / 502 / 1 254 sygnałów; trzeba 59,4 / 61,3 / 59,0 / 59,7 / 57,6 % (korekta na 5 filtrów); moc przy 56 %: 4–13 %. RSI nie odcina nic — przy przecięciu potwierdzonym MACD zawsze już „potwierdza”.** Walidacja: **Ready** — TA-Lib co do sztuki |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -184,7 +185,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA M — momentum bez bramki rezimu (od M1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik startowal OD ZERA i nie dziedziczy niczego po Fazie 0 ani po H2. M1 zuzyl jedyny wariant i wyszedl **NEGATYWNY** (ci_high 50,80% < prog 52,94% przy n = 8 512, 1,90x wymaganej proby). Ramie A (reversion) liczone za **0 wariantow** — to samo uzasadnienie co w H2.1: prog oplacalnosci pochodzi z geometrii kosztu, a nie z obejrzanej trafnosci, wiec pomiar odniesienia nie moze przesunac poprzeczki.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
-- **NOWA SERIA MX — MACD + EMA 10/30 na 1h (MX1, 2026-09-25, decyzja użytkownika): 0/1 — NIEMIERZALNA, wariant niezużyty, SERIA ZAMKNIĘTA.** Zakazane bez nowej decyzji użytkownika: inne okna MACD/EMA, okno czasu między przecięciami, wersja „stan”, inne interwały, V/bariery, odwrócenie znaku, podzbiory. Jedyna droga do mierzalności: wiele monet naraz (nowa pre-rejestracja).
+- **NOWA SERIA MX — MACD + EMA 10/30 na 1h (MX1 + MX2, 2026-09-25, decyzje użytkownika): 0/6 — WSZYSTKIE NIEMIERZALNE (MX1 bez filtra, MX2 pięć filtrów), warianty niezużyte, SERIA ZAMKNIĘTA.** Zakazane bez nowej decyzji użytkownika: inne okna MACD/EMA, okno czasu między przecięciami, wersja „stan”, inne interwały, V/bariery, odwrócenie znaku, podzbiory. Jedyna droga do mierzalności: wiele monet naraz (nowa pre-rejestracja).
 - **NOWA SERIA TL — tłok przekrojowy (od TL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna/nogi, odwrócenie znaku (post hoc).
 - **SERIA TS — uzupełnienie (TR1/TP1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — zamknięta na historii.** Dalej tylko dziennik prospektywny tej samej reguły (0 wariantów).
 - **NOWA SERIA TF — trend z filtrem tłoku (od TF1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne progi/okna fundingu, OI jako filtr trendu bez nowego mechanizmu.
@@ -974,6 +975,11 @@ podsumowanie pod tabelą.
     potwierdziłby regułę w 29 % przypadków, więc nie wystartował (zasada 18). Ogólniej: kombinacje wskaźników z tego samego
     zbioru (ważone średnie przeszłej ceny) prawie nie zmniejszają liczby sygnałów i nie dodają informacji, a na jednym aktywie
     zdarzenia rzadsze niż ~2 500 w historii nie dają mierzalnego sprawdzianu przy progu kosztowym 1h (~54 %).
+104. **FILTRY NIE RATUJĄ MIERZALNOŚCI REGUŁY — KAŻDY ODCINA 45–76 % SYGNAŁÓW I PODNOSI POPRZECZKĘ (MX2, 2026-09-25).**
+    Na sygnale MX1 (1 254): trend 28 dni zostawia 585, ADX > 25 302, wolumen 684, sesja USA 502 — wymagana trafność przy
+    korekcie na 5 filtrów 59–61 %, moc przy realistycznych 56 % 4–6 %. RSI po stronie 50 nie odcina nic: przy przecięciu
+    EMA potwierdzonym MACD RSI zawsze już „potwierdza” (long min 50,6, short max 49,6). Podzbiór zbioru niemierzalnego
+    przy tej samej zakładanej trafności nie może być mierzalny — liczby mówią tylko, jak mocny musiałby być filtr (60–65 %).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
