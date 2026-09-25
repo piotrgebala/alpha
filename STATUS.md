@@ -164,6 +164,11 @@
 > AU2 krok 0 (2026-09-25, projekt użytkownika): przyrząd przekrojowy top-50 widzi rank IC ≥ 0,022 (~18 niezależnych
 > zakładów po odjęciu rynku); na IR 0,75 trzeba IC ~0,025 → ML przekrojowe nie wykluczone. **DO DECYZJI:** karta kroków 1–2
 > (`runs/2026-09-25_au2-moc-przekrojowa/karta_krokow_1_2.md`): zbiór cech, budżet przeszukiwania, drugi warunek werdyktu. Wniosek 92.
+> AU2 kroki 1–2 (2026-09-25, decyzje użytkownika): ML przekrojowe uczciwe (0/40 fałszywych), ale moc przy +10/15 %/rok
+> 25/35 % (ranking po właściwej cesze 80/85 %) → **nie startuje**. Wniosek 93. **DO DECYZJI: błąd kanonicznego N_eff**
+> (`agents/labeling.py::effective_sample_size`, suma autokorelacji < −0,5 → N_eff = 1 / NaN; tylko zaniża pewność) —
+> naprawa + runda audytu AU3 dawnych „nierozstrzygniętych”; dotyka metodologii i modułu importowanego pośrednio przez dziennik.
+> SERWER: ciężkie przebiegi z `OMP_NUM_THREADS=1` i ≤ 24 procesami (bez tego przeciążenie ~15× i ryzyko dla walidatora).
 > BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >

@@ -1,0 +1,20 @@
+========================================================================================================
+AU2 kroki 1–2 — przyrząd przekrojowy z ML: ramię negatywne (permutacja) i pozytywne (siatka sił)
+========================================================================================================
+  dni 1969 (2021-02-01 → 2026-06-23), test od 2022-04-01, kwartałów 17, par/dzień mediana 50, koszt 0.070 % × obrót
+  pokrycie cech (udział komórek członków z wartością): r7 100%, r28 100%, r90 91%, vol30 100%, turn30 100%, dturn 100%, fund7 100%, doi7 34%, beta90 96%, dist90 96%
+
+  1. Ramię negatywne (cel permutowany, pełny budżet 24 konfiguracji):
+    ml    : POZYTYWNYCH 0/40 (0.0%); t_neff mediana -0.33 [p5 -2.32; p95 +0.97]; średnie IC mediana -0.0005; zwrot netto mediana -4.9%/rok
+    simple: POZYTYWNYCH 0/40 (0.0%); t_neff mediana -0.41 [p5 -1.93; p95 +0.95]; średnie IC mediana -0.0007; zwrot netto mediana -2.7%/rok
+
+  2. Ramię pozytywne (moc = odsetek werdyktów POZYTYWNYCH):
+    wyrocznia + 5%/rok: ml moc   0.0% (IC mediana +0.0082, netto mediana +0.0%/rok) | simple moc  10.0% (IC mediana +0.0176, netto mediana +7.4%/rok) | 
+    wyrocznia +10%/rok: ml moc  25.0% (IC mediana +0.0176, netto mediana +7.2%/rok) | simple moc  50.0% (IC mediana +0.0277, netto mediana +13.1%/rok) | 
+    wyrocznia +15%/rok: ml moc  20.0% (IC mediana +0.0274, netto mediana +10.6%/rok) | simple moc  70.0% (IC mediana +0.0374, netto mediana +17.7%/rok) | 
+    wyrocznia +20%/rok: ml moc  65.0% (IC mediana +0.0408, netto mediana +14.2%/rok) | simple moc  75.0% (IC mediana +0.0472, netto mediana +20.4%/rok) | 
+    wyrocznia +30%/rok: ml moc  65.0% (IC mediana +0.0639, netto mediana +28.5%/rok) | simple moc  70.0% (IC mediana +0.0685, netto mediana +30.9%/rok) | 
+
+  3. Wybory przeszukiwania (konfiguracja × kwartał, wszystkie przebiegi): S5_positioning/ridge 309; S3_risk/ridge 267; S4_liquidity/ridge 249; S2_price/ridge 155; S3_risk/xgb_reg 105; S5_positioning/xgb_reg 100; S4_liquidity/xgb_rank 97; S4_liquidity/xgb_reg 95
+========================================================================================================
+czas: 1005s, przebiegów 140, procesów 24
