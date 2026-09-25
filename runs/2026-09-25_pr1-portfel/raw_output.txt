@@ -1,0 +1,28 @@
+========================================================================================================
+PR1 — reguły portfela nóg dziennika (R0 równo / R1 = dziennik 1/σ / ERC z korelacjami); opisowo
+========================================================================================================
+  wspólne dni 1880 (2021-05-08 → 2026-06-30); cel 20 %/rok, sufit k ≤ 2, EWMA com 45, krok 7, rozbieg 60
+
+  Nogi osobno (k = 1):
+    TS1  CAGR   +7.5% | zmienność  18.2% | max DD  19.4% | najg. dzień   -6.2% | tydzień   -7.2% | miesiąc   -7.6% | ES95 tyg.   -5.0% | ES99 dz.   -3.5%
+    X1   CAGR   +0.5% | zmienność  35.9% | max DD  55.0% | najg. dzień  -32.6% | tydzień  -50.7% | miesiąc  -35.7% | ES95 tyg.  -11.7% | ES99 dz.   -8.7%
+    CP1  CAGR  +29.7% | zmienność  34.8% | max DD  34.3% | najg. dzień   -9.0% | tydzień  -14.7% | miesiąc  -12.0% | ES95 tyg.   -9.1% | ES99 dz.   -6.4%
+
+  Portfel TS1+CP1:
+    R0 równo            CAGR  +19.8% | zmienność  21.8% | max DD  19.3% | najg. dzień   -6.0% | tydzień   -9.9% | miesiąc   -7.0% | ES95 tyg.   -5.5% | ES99 dz.   -4.3%
+    R1 dziennik (1/σ)   CAGR  +18.3% | zmienność  21.6% | max DD  18.2% | najg. dzień   -6.4% | tydzień   -9.7% | miesiąc   -7.8% | ES95 tyg.   -5.7% | ES99 dz.   -4.4%
+    ERC (korelacje)     CAGR  +18.3% | zmienność  21.6% | max DD  18.2% | najg. dzień   -6.4% | tydzień   -9.7% | miesiąc   -7.8% | ES95 tyg.   -5.7% | ES99 dz.   -4.4%
+    |k R1 − k ERC| max: 0.0000  (2 nogi → tożsamość; 3 nogi → różnica z korelacji)
+    mnożniki R1  mediana [p10; p90]: TS1 0.73 [0.50; 1.02], CP1 0.37 [0.28; 0.51]; depozyt/kapitał mediana 49% [p10 36; p90 67]
+    mnożniki ERC mediana [p10; p90]: TS1 0.73 [0.50; 1.02], CP1 0.37 [0.28; 0.51]; depozyt/kapitał mediana 49% [p10 36; p90 67]
+    ADR-09 (R1): depozyt 5% całego kapitału → kapitał strategii ≈ 10% całego; w % CAŁEGO kapitału: max DD 1.9%, najg. tydzień -1.0%, ES95 tyg. -0.6%, CAGR +1.9 pkt/rok
+
+  Portfel TS1+CP1+X1:
+    R0 równo            CAGR  +14.9% | zmienność  20.8% | max DD  19.7% | najg. dzień  -11.6% | tydzień  -19.4% | miesiąc  -15.7% | ES95 tyg.   -6.4% | ES99 dz.   -4.4%
+    R1 dziennik (1/σ)   CAGR  +13.4% | zmienność  22.5% | max DD  28.0% | najg. dzień  -16.7% | tydzień  -27.5% | miesiąc  -25.2% | ES95 tyg.   -7.1% | ES99 dz.   -5.0%
+    ERC (korelacje)     CAGR  +12.6% | zmienność  22.7% | max DD  28.3% | najg. dzień  -16.7% | tydzień  -27.5% | miesiąc  -25.4% | ES95 tyg.   -7.2% | ES99 dz.   -5.0%
+    |k R1 − k ERC| max: 0.0965  (2 nogi → tożsamość; 3 nogi → różnica z korelacji)
+    mnożniki R1  mediana [p10; p90]: TS1 0.56 [0.35; 0.77], CP1 0.28 [0.21; 0.38], X1 0.33 [0.19; 0.47]; depozyt/kapitał mediana 68% [p10 48; p90 96]
+    mnożniki ERC mediana [p10; p90]: TS1 0.54 [0.33; 0.77], CP1 0.29 [0.22; 0.42], X1 0.32 [0.20; 0.47]; depozyt/kapitał mediana 67% [p10 48; p90 96]
+    ADR-09 (R1): depozyt 5% całego kapitału → kapitał strategii ≈ 7% całego; w % CAŁEGO kapitału: max DD 2.1%, najg. tydzień -2.0%, ES95 tyg. -0.5%, CAGR +1.0 pkt/rok
+========================================================================================================

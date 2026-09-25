@@ -32,6 +32,8 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 - Dźwignia 3× na altach kosztuje trend ~3,6 pkt/rok w likwidacjach, 2× ~1,6 pkt (76).
 - Trend + premia Coinbase razem (po RU1): ~+17 %/rok, największy spadek ~18 %, depozyt ~23 %
   kapitału; hamulec „pół pozycji po −15 %” szkodzi (77, 82). Dziennik na żywo od 2026-09-24.
+- Portfel pod realne pieniądze (PR1, 101): wagi z korelacjami = obecne 1/σ przy 2 nogach; przy depozycie 5 % kapitału
+  (limit trzymany każdego dnia) zły tydzień ≈ −1 %, najgorsza seria ≈ −2 % całego kapitału; X1 jako 3. noga pogarsza (obsunięcie 28 %).
 
 **Przyrząd — dlaczego ufamy liczbom:**
 - „Nierozstrzygnięty” = za mało lat: przy prawdziwym +10 %/rok test na 5,4 roku wykrywa go w ~25 %
@@ -157,6 +159,7 @@ podsumowanie pod tabelą.
 | **P4** | 2026-09-25 | [p4-pokrycie-onchain](2026-09-25_p4-pokrycie-onchain/README.md) | Brama danych on-chain: pokrycie katalogu CoinMetrics community (przepływy/podaż na giełdach, adresy, MVRV, transakcje) dla koszyków top-20/top-50 point-in-time | **0 — brama danych** | **Przepływy i podaż na giełdach: tylko BTC i ETH (4–10 % koszyka); adresy/MVRV/transakcje 34–46 % i spada — ranking on-chain na darmowych danych niewykonalny.** Brakuje SOL, AVAX, PEPE, SUI, MATIC… Płatni dostawcy — do sprawdzenia przez użytkownika. |
 | **KO1** | 2026-09-25 | [ko1-koszty-wykonania](2026-09-25_ko1-koszty-wykonania/README.md) | Koszty wykonania nóg dziennika (TS1, X1 7 faz, CP1): ten sam silnik, stawka taker 0,07 % vs maker 90 %/100 % wypełnień | **0 — opisowo** | **Koszt taker: TS1 0,8 %/rok, CP1 1,5 %, X1 3,3 %; limity oddałyby +0,5 / +1,0 / +2,2 pkt/rok (przed niekorzystną selekcją).** Koszty nie są wąskim gardłem trendu ani CP1. |
 | **KR2** | 2026-09-25 | [kr2-korelacje-tradfi](2026-09-25_kr2-korelacje-tradfi/README.md) | Korelacje tygodniowe BTC/ETH i nóg dziennika z S&P 500, Nasdaq, Nikkei, złotem (PAXG), ropą, dolarem, rentownościami USA, VIX | **0 — opisowo** | **BTC–Nasdaq 0,30 (2-tyg. 0,43), rośnie: 2026 0,58; z dolarem −0,16, VIX −0,22; złoto/ropa/stopy ≈ 0. Nogi dziennika niezależne od tradfi (|ρ| ≤ 0,15; trend −0,15 do akcji).** |
+| **PR1** | 2026-09-25 | [pr1-portfel](2026-09-25_pr1-portfel/README.md) | Reguły portfela nóg dziennika pod szczebel 4 ADR-09: R0 równo / R1 dziennik (1/σ) / ERC (równy wkład ryzyka z korelacjami) dla {TS1, CP1} i {TS1, CP1, X1}; ES95 tyg., ES99 dz., obsunięcia, depozyt, przełożenie na 5 % depozytu; pre-rejestracja `7f647f2` | **0 — opisowo** | **2 nogi: ERC ≡ 1/σ (\|Δk\| 0,0000) — dziennik bez zmian. R1: +18,3 %/rok, obsunięcie 18,2 %, najg. tydzień −9,7 %, ES95 tyg. −5,7 % [−6,5; −4,7]; przy 5 % depozytu (limit trzymany każdego dnia) strategia ≈ 10 % kapitału → obsunięcie ≈ 1,9 %, zły tydzień ≈ −1 % całego kapitału. X1 jako 3. noga: obsunięcie 28 %, tydzień −27,5 % (jedno zdarzenie).** Nogi in-sample, bez modelu likwidacji. Walidacja: **Ready (Caveats)** — depozyt realny (druga droga) mediana 24 %, max 45 %; 4 liczby zgodne |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -947,6 +950,14 @@ podsumowanie pod tabelą.
     rosnąco: 2022 0,43, 2025 0,41, 2026 0,58; z dolarem −0,16, z VIX −0,22; ze złotem, ropą i stopami ≈ 0. Nogi dziennika (trend, X1,
     premia Coinbase) z rynkami tradycyjnymi |ρ| ≤ 0,15 — trend lekko przeciw akcjom (−0,15). Sam BTC nie dywersyfikuje portfela
     akcyjnego; strategie z dziennika tak. Opis, nie prognoza (wyprzedzanie = nowa hipoteza).
+101. **PORTFEL DWÓCH NÓG: WAGI Z KORELACJAMI = OBECNE 1/σ; PRZY 5 % DEPOZYTU RYZYKO ≈ 2 % CAŁEGO KAPITAŁU; X1 JAKO TRZECIA NOGA
+    POGARSZA (PR1, 2026-09-25).** Dla dwóch nóg równy wkład ryzyka (ERC) to tożsamość z 1/σ (|Δk| 0,0000, z konstrukcji) — dziennik
+    bez zmian. Profil R1 na 100 % kapitału strategii (in-sample, bez likwidacji, 2021-05 → 2026-06): +18 %/rok, obsunięcie 18 %,
+    najgorszy tydzień −9,7 %, ES95 tygodniowy −5,7 % [−6,5; −4,7] z 14 tygodni ogona. Limit „≤ 5 % kapitału jako depozyt” trzymany
+    każdego dnia (Σ k/dźwignia, mediana 49 %; realny depozyt mediana 24 %, max 45 %) → strategia ≈ 10 % całego kapitału → zły
+    tydzień ≈ −1 %, najgorsza seria ≈ −1,9 %, zysk ≈ +1,9 pkt/rok całego kapitału. Dołożenie X1: obsunięcie 28 %, tydzień −27,5 %
+    (jeden wystrzał MYX), zysk 13 % — X1 tylko w dzienniku papierowym. Punkt odniesienia dla każdej przyszłej reguły
+    przełączania lub ważenia: stała mieszanka R1 z tymi liczbami (każdy taki odczyt = nowy wariant).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
