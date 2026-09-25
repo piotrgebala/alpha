@@ -18,7 +18,9 @@ Zasady zapisu (`dziennik/`):
 - `wyniki.csv` — dzienny wynik papierowy od `JOURNAL_START`; istniejące wiersze NIE są zmieniane —
   gdy przeliczenie daje inną wartość (rewizja danych, zmiana kodu), przebieg zgłasza „HISTORIA
   ZMIENIONA” i zostawia stary zapis;
-- `przebiegi.log` — czas przebiegu, ostatnia świeca każdego źródła, status progów.
+- `przebiegi.log` — czas przebiegu, ostatnia świeca każdego źródła, status progów;
+- `stan_rynku.csv` (poprawka 7) i `fng.csv` (poprawka 8) — etykiety TYLKO do zapisu (zmienność/trend BTC,
+  Fear & Greed z alternative.me), nie wpływają na pozycje; ich brak lub błąd nie zatrzymuje dziennika.
 
     PYTHONUTF8=1 py -m backtest.live_journal              # pobranie danych + zapis
     PYTHONUTF8=1 py -m backtest.live_journal --bez-pobierania
@@ -72,6 +74,10 @@ TOL = 1e-9
 # 30-dniowej zmienności BTC (roczna) zamrożone z historii 2021-01-01 → 2026-06-30 (perp BTCUSDT 1d).
 VOL_TERCILES = (0.428, 0.6014)
 VOL_WINDOW, TREND_WINDOW = 30, 90
+# Poprawka 8 (2026-09-25): etykieta Fear & Greed (alternative.me) — TYLKO zapis do `fng.csv`, wartość
+# i klasa wprost z publikacji (bez własnych progów); plik z `data.fetch_live.fetch_fng_safe`.
+FNG_FILE = "alternative_fng_1d.parquet"
+FNG_LABELS = ("Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed")  # klasy alternative.me
 
 
 # ------------------------------------------------------------------ dane
@@ -382,6 +388,32 @@ def market_state(close: pd.Series, start: pd.Timestamp | None = None) -> pd.Data
     )
 
 
+def fng_rows(
+    fng: pd.DataFrame, start: pd.Timestamp | None = None, now: pd.Timestamp | None = None
+) -> pd.DataFrame:
+    """
+    Etykieta Fear & Greed per dzień ≥ `start` (poprawka 8, tylko zapis): `fng` = wartość 0–100 i
+    `fng_etykieta` = klasa wprost z alternative.me (`parse_fng`: date, value, label). Tylko dni już
+    opublikowane (≤ `now`); braki po awarii uzupełniają się przy następnym przebiegu z pełnej historii.
+    """
+    start = JOURNAL_START if start is None else start
+    now = pd.Timestamp.now(tz="UTC") if now is None else now
+    d = pd.to_datetime(fng["date"], utc=True)
+    keep = ((d >= start) & (d <= now)).to_numpy()
+    labels = fng.loc[keep, "label"].astype(str)
+    unknown = sorted(set(labels) - set(FNG_LABELS))
+    if unknown:  # fail loud (jak `fetch_external`): do CSV trafiają tylko znane klasy
+        raise ValueError(f"fng: nieznana klasa {unknown[:3]} — oczekiwano {FNG_LABELS}")
+    out = pd.DataFrame(
+        {
+            "date": d[keep].dt.strftime("%Y-%m-%d").to_numpy(),
+            "fng": fng.loc[keep, "value"].astype(float).round().astype(int).to_numpy(),
+            "fng_etykieta": labels.to_numpy(),
+        }
+    )
+    return out.drop_duplicates("date").sort_values("date").reset_index(drop=True)
+
+
 # ------------------------------------------------------------------ przebieg
 def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURNAL_DIR) -> str:
     started = pd.Timestamp.now(tz="UTC")
@@ -448,18 +480,38 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     ) as exc:  # noqa: BLE001 — błąd etykiety tylko do logu, nie jako „historia zmieniona”
         n_st, ch_st = f"BŁĄD {type(exc).__name__}", []
     st_txt = n_st if isinstance(n_st, str) else f"+{n_st}"
+    # etykieta Fear & Greed (poprawka 8): osobny plik; brak pliku lub błąd tylko do logu
+    try:
+        fng_path = Path(live_dir) / FNG_FILE
+        if fng_path.exists():
+            rows_fg = fng_rows(pd.read_parquet(fng_path))
+            n_fg, ch_fg = append_rows(
+                journal_dir / "fng.csv", rows_fg, ["date"], ["fng", "fng_etykieta"]
+            )
+        else:
+            rows_fg, n_fg, ch_fg = None, "brak pliku", []
+    except Exception as exc:  # noqa: BLE001 — jak stan rynku: etykieta nie zatrzymuje dziennika
+        rows_fg, n_fg, ch_fg = None, f"BŁĄD {type(exc).__name__}", []
+    fg_txt = n_fg if isinstance(n_fg, str) else f"+{n_fg}"
     dd = float(res["drawdown"].iloc[-1]) if len(res) else 0.0
     eq = float(res["equity"].iloc[-1]) if len(res) else 1.0
     status = stop_status(dd)
-    changed = ch_sig + ch_res + ch_x1 + ch_st
+    changed = ch_sig + ch_res + ch_x1 + ch_st + ch_fg
     late = (started.normalize() - as_of).days > 1
-    summary = summarize(pos, k, as_of, eq, dd, status, late, changed, last) + "\n" + text_x1
+    summary = (
+        summarize(pos, k, as_of, eq, dd, status, late, changed, last)
+        + "\n"
+        + text_x1
+        + "\n"
+        + summarize_fng(rows_fg, fg_txt)
+    )
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
         f"premia {last['coinbase_premia'].date()} | sygnały +{n_sig} | wyniki +{n_res} | "
         f"kapitał {eq:.4f} | obsunięcie {100 * dd:.1f}% | {status} | "
         f"X1 sygnały +{n_sig_x1} wyniki +{n_res_x1} kapitał {eq_x1:.4f} "
-        f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | stan rynku {st_txt} | historia zmieniona: {len(changed)}\n"
+        f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | stan rynku {st_txt} | F&G {fg_txt} | "
+        f"historia zmieniona: {len(changed)}\n"
     )
     journal_dir.mkdir(parents=True, exist_ok=True)
     with open(journal_dir / "przebiegi.log", "a", encoding="utf-8") as f:
@@ -520,6 +572,17 @@ def run_x1(data: dict, as_of: pd.Timestamp, fee: float, journal_dir: Path) -> tu
     dd = float(res_x1["drawdown"].iloc[-1]) if len(res_x1) else 0.0
     eq = float(res_x1["equity"].iloc[-1]) if len(res_x1) else 1.0
     return n_sig, n_res, ch_sig + ch_res, eq, dd, pos_x1
+
+
+def summarize_fng(rows: pd.DataFrame | None, txt: str) -> str:
+    """Jedna linia do wydruku: ostatnia opublikowana wartość Fear & Greed (poprawka 8, tylko zapis)."""
+    if rows is None or not len(rows):
+        return f"  Fear & Greed (poprawka 8, tylko zapis): {txt}"
+    last = rows.iloc[-1]
+    return (
+        f"  Fear & Greed (poprawka 8, tylko zapis): {last['date']} = {int(last['fng'])} "
+        f"({last['fng_etykieta']}); dopisane {txt}"
+    )
 
 
 def summarize_x1(pos: pd.DataFrame, eq: float, dd: float, status: str) -> str:
