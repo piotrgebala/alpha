@@ -128,9 +128,7 @@ def compute_triple_barrier_labels(
         labels[t] = label
         exit_bar_offset[t] = offset
 
-    return pd.DataFrame(
-        {"label": labels, "exit_bar_offset": exit_bar_offset}, index=df.index
-    )
+    return pd.DataFrame({"label": labels, "exit_bar_offset": exit_bar_offset}, index=df.index)
 
 
 def generate_walk_forward_folds(
@@ -224,5 +222,9 @@ def effective_sample_size(returns: pd.Series, max_lag: int = 50) -> dict:
     n = len(clean)
     autocorrs = [clean.autocorr(lag=k) for k in range(1, max_lag + 1)]
     autocorrs = [a for a in autocorrs if not np.isnan(a)]
-    n_eff = n / (1 + 2 * sum(autocorrs))
+    denominator = 1 + 2 * sum(autocorrs)
+    # AU3 (2026-09-25): suma zaszumionych autokorelacji < −0,5 dawała mianownik ≤ 0, N_eff ujemne,
+    # a wywołujący robili z tego N_eff = 1 (summarize_pnl) albo NaN (summarize_trade_returns).
+    # Wzór nie ma wtedy sensu; korekta może tylko odejmować pewność (wniosek 50) → N_eff = n.
+    n_eff = n / denominator if denominator > 0 else float(n)
     return {"n": n, "n_eff": n_eff, "max_lag": max_lag}
