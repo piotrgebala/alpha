@@ -70,17 +70,42 @@ def _one(job: tuple[str, pd.Timestamp]) -> dict | None:
     return {"symbol": sym, "date": day, **snap} if snap else None
 
 
-def run(out: str = OUT) -> None:
+def missing_jobs(
+    jobs: list[tuple[str, pd.Timestamp]], existing: pd.DataFrame | None
+) -> list[tuple[str, pd.Timestamp]]:
+    """Pary (symbol, dzień) bez wiersza w istniejącym panelu — tylko je trzeba pobrać."""
+    if existing is None or existing.empty:
+        return list(jobs)
+    have = set(zip(existing["symbol"], pd.to_datetime(existing["date"], utc=True), strict=True))
+    return [j for j in jobs if (j[0], pd.Timestamp(j[1])) not in have]
+
+
+def run(out: str = OUT, universe_dir: str = "data/raw/universe", reuse: str | None = None) -> None:
+    """
+    Panel OI dla członków koszyka z `universe_dir`. `reuse` = istniejący panel, którego wiersze
+    są brane bez pobierania (RU4: pełne uniwersum na bazie panelu z obciętego).
+    """
     from backtest.rebalance_premium import load_universe, monthly_members
 
-    _, volume = load_universe("data/raw/universe")
+    _, volume = load_universe(universe_dir)
     lo, end = pd.Timestamp("2021-01-01", tz="UTC"), pd.Timestamp(END, tz="UTC")
     volume = volume[(volume.index >= lo) & (volume.index < end)]
     months = [m for m in pd.date_range(FIRST_MONTH, END, freq="MS", tz="UTC") if m < end]
     members = monthly_members(volume, months)
     jobs = sorted(needed_days(members))
-    print(f"[oi] miesięcy {len(months)}, par (symbol, dzień): {len(jobs)}", flush=True)
+    old = pd.read_parquet(reuse) if reuse else None
+    todo = missing_jobs(jobs, old)
+    print(
+        f"[oi] miesięcy {len(months)}, par (symbol, dzień): {len(jobs)}, do pobrania: {len(todo)}",
+        flush=True,
+    )
     rows = []
+    if old is not None:
+        keep = set(jobs)
+        old_d = pd.to_datetime(old["date"], utc=True)
+        mask = [(s, d) in keep for s, d in zip(old["symbol"], old_d, strict=True)]
+        rows = old[mask].to_dict("records")
+    jobs = todo
     with ThreadPoolExecutor(WORKERS) as ex:
         for i, r in enumerate(ex.map(_one, jobs), 1):
             if r:
@@ -91,7 +116,7 @@ def run(out: str = OUT) -> None:
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out, index=False)
     print(
-        f"[oi] zapisano {len(df)} wierszy, {df['symbol'].nunique()} symboli; brak pliku: {len(jobs) - len(df)}"
+        f"[oi] zapisano {len(df)} wierszy, {df['symbol'].nunique()} symboli; pobieranych: {len(jobs)}"
     )
 
 
