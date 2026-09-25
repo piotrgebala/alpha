@@ -162,6 +162,9 @@
 > Claude Code na serwerze uruchamiać w `tmux` (zerwanie SSH kończy sesję i Remote Control).
 > KP1 (2026-09-25): premia koreańska (Upbit) — **NIEMIERZALNA, 0 wariantów, zysków nie liczono**: sygnał inny niż CP1
 > (zgodność 52,8 %), ale efekt z badań SR ~0,15 wobec progu przyrządu 0,86 (moc 5 %). Wniosek 91.
+> AU2 krok 0 (2026-09-25, projekt użytkownika): przyrząd przekrojowy top-50 widzi rank IC ≥ 0,022 (~18 niezależnych
+> zakładów po odjęciu rynku); na IR 0,75 trzeba IC ~0,025 → ML przekrojowe nie wykluczone. **DO DECYZJI:** karta kroków 1–2
+> (`runs/2026-09-25_au2-moc-przekrojowa/karta_krokow_1_2.md`): zbiór cech, budżet przeszukiwania, drugi warunek werdyktu. Wniosek 92.
 > BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >

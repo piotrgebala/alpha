@@ -1,7 +1,10 @@
 # AU2 — moc przyrządu przekrojowego, krok 0: szerokość efektywna i szum rank IC (2026-09-25)
 
-> **STATUS: PRE-REJESTRACJA** (zapisana przed uruchomieniem). Kalibracja przyrządu — POZA licznikami
-> hipotez, 0 wariantów (jak K1/K2/K3/T4/NC1). Żaden prawdziwy sygnał nie jest liczony.
+> **STATUS: ZAMKNIĘTA — krok 0 NIE zamyka ML przekrojowego:** `IC* = 0,025` (≤ 0,05) → kroki 1–2
+> dostają osobną kartę (`karta_krokow_1_2.md`, SZKIC — 3 decyzje użytkownika przed startem).
+> Koszyk top-50 po odjęciu rynku ≈ 18 niezależnych zakładów (surowo ≈ 3); przyrząd widzi średnie
+> rank IC ≥ 0,022 (moc 80 %); na IR 0,75 trzeba IC ≈ 0,025 brutto. Kalibracja — POZA licznikami
+> hipotez, 0 wariantów. Pre-rejestracja `f5f269d`. Walidacja (16a): **Ready**; przegląd (16c): **Approve**.
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
 
@@ -76,4 +79,104 @@ pre-rejestracja**, tylko jeśli pozwoli reguła decyzji niżej.
 
 ---
 
-_(sekcje poniżej po przebiegu)_
+## Wynik w skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+Monety w koszyku 50 największych chodzą razem tak mocno, że „surowo” to jak ~3 niezależne zakłady.
+Ale koszyk long/short odejmuje ruch całego rynku — po odjęciu zostaje ~18 niezależnych zakładów
+co tydzień. Przy takiej szerokości wystarczy, żeby ranking modelu był trafny w bardzo małym
+stopniu (IC ≈ 0,025, czyli korelacja rankingu z przyszłym zwrotem 2,5 %), by dać zysk rzędu
++20 %/rok przed kosztami — i nasz test na 5 latach taki poziom już widzi (najmniejsze wykrywalne
+IC 0,022). **Wniosek: przyrząd przekrojowy jest znacznie czulszy niż jednoaktywowy** (tam przyrząd
+widział dopiero Sharpe ≈ 0,86), więc sensownie jest zmierzyć, czy ML w ogóle potrafi taki sygnał
+wydobyć — kroki 1–2. Uwaga: momentum na top-50 miało IC −0,006 (X2), więc 0,025 to nadal więcej,
+niż dotąd widzieliśmy na tych danych.
+
+## Wynik
+
+Pełny stdout: `raw_output.txt` (140 s). Mediana po miesiącach [p10; p90].
+
+| koszyk | śr. korelacja par | szerokość surowa | **szerokość po odjęciu rynku** | IC na IR 0,5 / 0,75 / 1,0 (brutto) | sd IC dziennego | se średniego IC (półtrwanie 7 / 28 d) | **najmniejsze wykrywalne IC** (moc 80 %; 7 / 28 d) |
+|---|---|---|---|---|---|---|---|
+| top-20 (65 mies.) | 0,52 [0,34; 0,65] | 2,8 [2,1; 4,9] | 8,6 [4,3; 11,6] | 0,024 / 0,035 / 0,047 | 0,229 | 0,0115 / 0,0144 | 0,032 / 0,040 |
+| **top-50** (65 mies.) | 0,51 [0,34; 0,64] | 3,2 [2,2; 5,9] | **17,7** [12,1; 21,4] | 0,016 / **0,025** / 0,033 | 0,143 | 0,0067 / 0,0078 | 0,019 / **0,022** |
+| top-100 (62 mies.*) | 0,53 [0,35; 0,68] | 3,1 [2,1; 6,0] | 25,7 [17,8; 32,6]** | 0,014 / 0,021 / 0,027 | 0,100 | 0,0049 / 0,0062 | 0,014 / 0,017 |
+
+\* 3 pierwsze miesiące 2021 bez 100 kandydatów pominięte (poprawka po pierwszym przebiegu, który
+się na tym zatrzymał — tylko część opisowa; top-20/top-50 identyczne w obu przebiegach).
+\*\* przy N ≈ 93 i oknie 90 dni macierz ma rząd ≤ 89 — zaniżone (zapisane z góry).
+Średnie IC pod H0 we wszystkich wariantach −0,0010 … +0,0006 (≈ 0, bez skrzywienia przyrządu).
+
+**Decyzja wg pre-rejestracji:** `IC* = max(0,022; 0,025) = 0,025 ≤ 0,05` → **kroki 1–2 dostają
+osobną kartę**; temat nie jest zamknięty.
+
+## Co na plus (+) / Co na minus (−)
+
+**(+)**
+- Bez żadnego prawdziwego sygnału — zero ryzyka dopasowania; kontrola pozytywna w testach
+  (wstrzyknięte IC 0,10 odzyskane), średnie pod H0 ≈ 0.
+- Przeliczenie drugą drogą (wzór, nie kod): sd dziennego IC pod H0 ≈ 1/√(N−1) = 0,229 / 0,143 / 0,100
+  — identycznie; se średniego 2,1–2,4× większe niż dla niezależnych dni (nakładanie 7-dniowych
+  okien, górna granica √7 ≈ 2,6) — spójne; szerokość surowa top-20 2,8 ≈ wniosek 40 (~2) i wzór
+  dla równej korelacji 0,52 (3,3).
+- Liczba ważna dla całego projektu: przekrój po odjęciu rynku daje ~18 niezależnych zakładów
+  tygodniowo (top-50) — wniosek 40 („20 monet ≈ 2”) dotyczy pozycji z ekspozycją na rynek, nie
+  koszyka long/short.
+
+**(−)**
+- **IC_IR jest brutto** — koszty obrotu (tygodniowa wymiana części nóg, 0,07 %) podniosą wymagane IC;
+  przy obrocie ~50 %/tydz. to ~1,8 %/rok kapitału, czyli IR o ~0,06–0,1 mniej — rząd 0,003–0,004 IC.
+- Prawo fundamentalne zakłada równe, niezależne zakłady i stałe IC; realne IC jest zmienne
+  (sd IC dziennego 0,14), a korelacje zmieniają się w czasie (p10–p90 szerokości 12–21).
+- Szerokość z okna 90 dni jest zaniżona szumem próby (Marčenko–Pastur; przy 47/90 czynnik do ~1,5)
+  — to działa NA NIEKORZYŚĆ pomysłu (zawyża wymagane IC), więc decyzja jest ostrożna.
+- **Kogo nie ma w zbiorze:** monety wycofane w trakcie tygodnia (brak ceny za 7 dni → para
+  pominięta, lekki survivorship w obrębie tygodnia); luty–kwiecień 2021 dla top-100; kontrakty
+  spoza Binance USDT-M.
+- Krok 0 nie mówi nic o tym, czy ML ZNAJDZIE IC 0,025 — tylko że gdyby je znalazł, test by to
+  zobaczył. Wniosek 11 nadal obowiązuje: te same dane OHLCV przemielone nieliniowo to czwarte
+  podejście do tej samej ściany (X2: momentum IC −0,006).
+
+## Walidacja (16a), statystyka (16b), przegląd (16c)
+
+`data:validate-data`: przeliczenia jak wyżej — **Ready**. `data:statistical-analysis`: zakresy p10–p90
+zamiast punktów, MDE = 2,80 · se z rozrzutu 200 symulacji, H0 wycentrowane. `engineering:code-review`
+(samodzielnie, lista kontrolna): losowy sygnał, maska członków, okno korelacji przed miesiącem —
+poprawne; `feasible_members` dodane po pre-rejestracji, dotyczy tylko opisowego top-100; drobiazg:
+martwa lista `ns` w `ic_noise` (bez wpływu, kod zostawiony jak uruchomiony). **Werdykt jednym zdaniem:
+Approve** — skrypt mierzy przyrząd bez prawdziwego sygnału, a testy (w tym kontrola pozytywna) pokrywają
+wszystkie funkcje liczące.
+
+## Wniosek
+
+**Prostym językiem:** przyrząd do rankingów monet jest dużo czulszy, niż się obawialiśmy — zobaczyłby
+nawet bardzo słabą, ale opłacalną przewagę. Dlatego warto zmierzyć następny krok: czy model ML na tym
+przyrządzie nie „wymyśla” zysków z szumu (krok 1) i jak słaby sygnał potrafi znaleźć (krok 2).
+
+**Technicznie:** top-50 po odjęciu rynku ≈ 17,7 niezależnych zakładów; MDE IC 0,022 (półtrwanie 28 d),
+IC_IR(0,75) 0,025 brutto → `IC* = 0,025 ≤ 0,05`: ML przekrojowe nie jest wykluczone przez przyrząd.
+
+## Rekomendacja
+
+1. Kroki 1–2 — **karta `karta_krokow_1_2.md` (SZKIC)**; przed startem trzy decyzje użytkownika:
+   zbiór cech (informacyjny), budżet przeszukiwania, drugi warunek werdyktu dla koszyka.
+2. Przy każdej przyszłej strategii przekrojowej używać tych liczb jako rachunku mocy (zasada 18):
+   `se` średniego IC ≈ 0,008 (top-50), ≈ 0,014 (top-20).
+3. Do wniosku 40: „20 monet ≈ 2 niezależne” dotyczy ekspozycji kierunkowej; koszyk long/short ma ~9 (top-20).
+
+## Użyte skille
+
+Rejestr `runs/skille/au2-moc-przekrojowa.jsonl` (`py tools/skill_audit.py raport --galaz au2-moc-przekrojowa`):
+**6 wczytań, 6 skilli.**
+
+| skill | co wniósł |
+|---|---|
+| `anthropic-skills:clas5-runda` | kolejność: pre-rejestracja z regułą decyzji w osobnym commicie przed przebiegiem |
+| `anthropic-skills:clas5-quant` | przyrząd przekrojowy ≠ p/break-even (methodology §9); kalibracja tylko bez sygnału albo ze znanym (wniosek 41) |
+| `engineering:testing-strategy` | testy funkcji liczących + kontrola pozytywna (wstrzyknięte IC) |
+| `data:validate-data` | przeliczenie drugą drogą (1/√(N−1), wzór dla równej korelacji), „kogo nie ma w zbiorze” |
+| `data:statistical-analysis` | zakresy p10–p90, MDE z rozrzutu symulacji, IC_IR jawnie brutto |
+| `engineering:code-review` | przegląd przed scaleniem: Approve |
+
+Pominięte z tabeli zasady 19: `quant-strategy-catalog` (kalibracja przyrządu, nie nowa hipoteza —
+wczytany przy kroku 1–2, gdy powstanie karta hipotezy ML), `dataviz` (bez wykresu; krzywa mocy
+przy krokach 1–2), `data:explore-data` (`universe_full` sprofilowany w RU1).

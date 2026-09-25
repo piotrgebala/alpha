@@ -135,6 +135,19 @@ def ic_noise(
     }
 
 
+def feasible_members(
+    volume: pd.DataFrame, months: list[pd.Timestamp], top_n: int
+) -> tuple[dict[pd.Timestamp, list[str]], int]:
+    """Skład miesiąc po miesiącu; miesiące z < `top_n` kandydatami pomijane (np. top-100 w 2021)."""
+    out, skipped = {}, 0
+    for m in months:
+        try:
+            out.update(monthly_members(volume, [m], top_n=top_n))
+        except ValueError:
+            skipped += 1
+    return out, skipped
+
+
 def main() -> None:
     t0 = time.time()
     close, volume = load_universe(FULL)
@@ -158,11 +171,12 @@ def main() -> None:
         f"ocena {eval_days.min().date()} → {eval_days.max().date()} ({len(eval_days)} dni formowania, trzymanie {HOLD_DAYS} dni)"
     )
     for top_n in TOP_NS:
-        members = monthly_members(volume, months, top_n=top_n)
+        members, skipped = feasible_members(volume, months, top_n)
         br = effective_breadth(returns, members)
         pr_res = float(br["pr_resid"].median())
         print(
-            f"\n  TOP-{top_n}: miesięcy {len(br)}, członków w macierzy mediana {br['n'].median():.0f}"
+            f"\n  TOP-{top_n}: miesięcy {len(br)} (pominięte bez {top_n} kandydatów: {skipped}), "
+            f"członków w macierzy mediana {br['n'].median():.0f}"
         )
         print(
             f"    średnia korelacja par: mediana {br['mean_corr'].median():.2f} [p10 {br['mean_corr'].quantile(0.1):.2f}; p90 {br['mean_corr'].quantile(0.9):.2f}]"
