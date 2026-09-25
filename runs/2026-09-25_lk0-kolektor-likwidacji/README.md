@@ -30,6 +30,17 @@ P1 (pozycjonowanie z REST: 30 dni → niemierzalne), P3 (archiwum `data.binance.
 cecha 4h — nic), TL1/RU4 (tłok OI — nierozstrzygnięty), katalog `quant-strategy-catalog` E1 = WYKLUCZONE-danymi, STATUS ETAP 5
 pkt 4 („jedyna rodzina z mocnym mechanizmem wykluczona wyłącznie danymi; zdarzeniowa → setki zdarzeń/rok → mierzalna szybciej”).
 
+## Pre-rejestracja (zapisane PRZED uruchomieniem; 0 wariantów)
+
+- **Co zbieramy:** wszystkie zdarzenia strumienia likwidacji Binance USDT-M (`!forceOrder@arr`), surowo, bez przeliczeń,
+  plik per dzień UTC. **Czego NIE robimy:** żadnego odczytu hipotezy (E1 ani innej) na zebranych danych, dopóki rachunek
+  mocy z REALNEJ częstości zdarzeń (`expected_trades` z częstości, nie ze świec — zasada 18) nie da werdyktu MIERZALNA.
+- **Kryterium „działa”:** proces żyje 24/7 (cron co 5 min wznawia), `--status` pokazuje ostatnie zdarzenie sprzed minut,
+  brak dziur > 5 min poza restartami serwera; kontrola pozytywna źródła przy starcie (strumień, który na pewno nadaje).
+- **Znane z góry ograniczenie:** strumień jest PRÓBKĄ (≤ 1 zlecenie/s/symbol) — liczby będą dolnym ograniczeniem.
+- **Ścieżka odwrotu:** usunięcie linii crona i procesu; dane poza repo (`$HOME/likwidacje`) można skasować bez śladu
+  w kodzie; kod nie wpływa na żadną rundę ani na dziennik.
+
 ## Co ustalono przy uruchomieniu (2026-09-25) — pełny zapis w `raw_output.txt`
 
 1. **Dokumentowany adres nie działa.** `wss://fstream.binance.com/ws/!forceOrder@arr` odpowiada poprawnym handshake'iem (101),
