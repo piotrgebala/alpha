@@ -58,9 +58,12 @@ def _prices(n: int = 30, x: float = 0.02):
     t8 = pd.date_range("2021-01-01", periods=3 * n, freq="8h", tz="UTC")
     spot_close = np.where(t8.hour == 16, 100.0 + np.arange(3 * n) / 3, 1.0)
     spot = pd.DataFrame({"timestamp": t8, "close": spot_close})
-    fx = _fx([str(d.date()) for d in days if d.dayofweek < 5], [1100.0] * sum(days.dayofweek < 5))
+    # kurs zmienia się każdego dnia roboczego — kurs z innego dnia (np. z przyszłości) psuje premię
+    wd = [d for d in days if d.dayofweek < 5]
+    fx = _fx([str(d.date()) for d in wd], [1100.0 + 7.0 * i for i in range(len(wd))])
+    rate, _ = kp.fx_asof(days, fx)
     s16 = spot_close[t8.hour == 16]
-    upbit = pd.DataFrame({"open_time": days, "close": s16 * 1100.0 * (1 + x)})
+    upbit = pd.DataFrame({"open_time": days, "close": s16 * rate.to_numpy() * (1 + x)})
     return upbit, spot, fx
 
 
@@ -69,6 +72,12 @@ def test_korea_premium_recovers_known_premium_with_16h_close():
     prem = kp.korea_premium(upbit, spot, fx)
     assert len(prem) == 30
     assert prem.to_numpy() == pytest.approx(0.02)
+    # ręcznie jeden dzień: niedziela 2021-01-10 → kurs z piątku 2021-01-08
+    t = pd.Timestamp("2021-01-10", tz="UTC")
+    fri = fx.set_index("date")["value"][pd.Timestamp("2021-01-08", tz="UTC")]
+    s16 = spot.set_index("timestamp")["close"][t + pd.Timedelta(hours=16)]
+    up = upbit.set_index("open_time")["close"][t]
+    assert prem[t] == pytest.approx(up / (s16 * fri) - 1)
 
 
 @pytest.mark.parametrize("cut", [10, 25])

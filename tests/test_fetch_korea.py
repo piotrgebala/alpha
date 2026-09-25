@@ -58,21 +58,48 @@ def test_parse_upbit_days_empty_and_next_to():
     assert fk.next_to(df) == "2021-01-02T00:00:00Z"
 
 
-def test_fetch_upbit_daily_paginates_backwards_without_gaps(tmp_path, monkeypatch):
-    days = pd.date_range("2019-01-01", periods=450, freq="D", tz="UTC")
+DAYS = pd.date_range("2019-01-01", periods=450, freq="D", tz="UTC")
+
+
+def _fake_api(monkeypatch, ignore_to: bool = False) -> list:
+    """Udawane API Upbit: ≤ 200 świec PRZED `to`, malejąco; `ignore_to` — zawsze najnowsze."""
     calls = []
 
     def fake_http_get(url: str) -> bytes:
         to = pd.Timestamp(url.split("to=")[1].replace("%3A", ":"))
         calls.append(to)
-        before = [d for d in days if d < to][-fk.UPBIT_MAX_CANDLES :]
+        cut = DAYS[-1] if ignore_to else to
+        before = [d for d in DAYS if d < cut][-fk.UPBIT_MAX_CANDLES :]
         return json.dumps([_row(d.strftime("%Y-%m-%d")) for d in reversed(before)]).encode()
 
     monkeypatch.setattr(fk, "http_get", fake_http_get)
     monkeypatch.setattr(fk.time, "sleep", lambda s: None)
+    return calls
+
+
+def test_fetch_upbit_daily_paginates_backwards_without_gaps(tmp_path, monkeypatch):
+    days = DAYS
+    calls = _fake_api(monkeypatch)
     now = days[-1] + pd.Timedelta(hours=5)
     path = fk.fetch_upbit_daily("KRW-BTC", "2019-01-01", tmp_path, now=now)
     df = pd.read_parquet(path)
     assert len(calls) == 3  # 200 + 200 + 49
     assert df["open_time"].tolist() == list(days[:-1])  # dzień w toku pominięty, bez dziur
     assert fk.fetch_upbit_daily("KRW-BTC", "2019-01-01", tmp_path, now=now) is None  # idempotencja
+
+
+def test_fetch_upbit_daily_stops_early_and_filters_before_start(tmp_path, monkeypatch):
+    calls = _fake_api(monkeypatch)
+    now = DAYS[-1] + pd.Timedelta(hours=5)
+    path = fk.fetch_upbit_daily("KRW-BTC", str(DAYS[250].date()), tmp_path, now=now)
+    df = pd.read_parquet(path)
+    assert len(calls) == 1  # pierwsza paczka (dni 249–448) już sięga przed start
+    assert df["open_time"].min() == DAYS[250]  # dzień 249 odfiltrowany
+    assert df["open_time"].tolist() == list(DAYS[250:-1])
+
+
+def test_fetch_upbit_daily_fails_loud_when_cursor_does_not_move(tmp_path, monkeypatch):
+    _fake_api(monkeypatch, ignore_to=True)
+    now = DAYS[-1] + pd.Timedelta(days=3)  # `to` po ostatniej świecy → druga paczka identyczna
+    with pytest.raises(ValueError, match="kursor nie cofa się"):
+        fk.fetch_upbit_daily("KRW-BTC", "2019-01-01", tmp_path, now=now)

@@ -104,11 +104,16 @@ def fetch_upbit_daily(
             raise ValueError(f"upbit: nieoczekiwana odpowiedź {str(rows)[:200]}")
         batch = parse_upbit_days(rows)
         frames.append(batch)
-        to = (
+        new_to = (
             next_to(batch)
             if len(batch) == UPBIT_MAX_CANDLES and batch["open_time"].min() > lo
             else None
         )
+        if new_to is not None and new_to >= to:  # ISO UTC: porządek tekstowy = czasowy
+            raise ValueError(
+                f"upbit: kursor nie cofa się ({to} → {new_to}) — API zignorowało `to`?"
+            )
+        to = new_to
         time.sleep(pacing_s)
     df = (
         pd.concat(frames, ignore_index=True)

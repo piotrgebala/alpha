@@ -64,4 +64,5 @@ backtest/run_halving_cycle_hc1.py            # HC1
 backtest/run_start_fix_ru3.py                # RU3
 backtest/run_x1_phases_x1f.py               # X1F
 backtest/run_sw_series.py                   # SW
+backtest/run_upbit_kp1.py                   # KP1
 backtest/screen_feature_candidates.py        # C2.7
