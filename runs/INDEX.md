@@ -52,7 +52,8 @@ TL1 przeliczony w RU4 (97); NL1 i P2 nie dotyczy.
 **Kryterium od 2026-09-24 (ADR-09):** o kapitale decyduje drabina dowodów (`docs/rag/09`); ten plik nadal
 księguje każdy odczyt. Trend: szczebel 2 spełniony (post hoc); szczebel 1(b) TX1 NIEROZSTRZYGNIĘTY — działa 1990–2012, zanika po 2013 (84).
 
-**Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1). Nowe źródła
+**Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1). Likwidacje zbierane od
+2026-09-25 (LK0, 102) — odczyt E1 po ≥ 1 roku. Nowe źródła
 popytu: premia koreańska NIEMIERZALNA (KP1, 91; sygnał inny niż CP1, ale efekt z badań ~SR 0,15 wobec
 progu 0,86); stablecoiny i ETF — NIEMIERZALNE w SH1 (81). Kolejne sygnały kierunkowe na samym BTC
 wymagają priorytetu SR ≥ ~0,9 z badań po publikacji — inaczej nie startują (filtr przed pobraniem danych).
@@ -160,6 +161,7 @@ podsumowanie pod tabelą.
 | **KO1** | 2026-09-25 | [ko1-koszty-wykonania](2026-09-25_ko1-koszty-wykonania/README.md) | Koszty wykonania nóg dziennika (TS1, X1 7 faz, CP1): ten sam silnik, stawka taker 0,07 % vs maker 90 %/100 % wypełnień | **0 — opisowo** | **Koszt taker: TS1 0,8 %/rok, CP1 1,5 %, X1 3,3 %; limity oddałyby +0,5 / +1,0 / +2,2 pkt/rok (przed niekorzystną selekcją).** Koszty nie są wąskim gardłem trendu ani CP1. |
 | **KR2** | 2026-09-25 | [kr2-korelacje-tradfi](2026-09-25_kr2-korelacje-tradfi/README.md) | Korelacje tygodniowe BTC/ETH i nóg dziennika z S&P 500, Nasdaq, Nikkei, złotem (PAXG), ropą, dolarem, rentownościami USA, VIX | **0 — opisowo** | **BTC–Nasdaq 0,30 (2-tyg. 0,43), rośnie: 2026 0,58; z dolarem −0,16, VIX −0,22; złoto/ropa/stopy ≈ 0. Nogi dziennika niezależne od tradfi (|ρ| ≤ 0,15; trend −0,15 do akcji).** |
 | **PR1** | 2026-09-25 | [pr1-portfel](2026-09-25_pr1-portfel/README.md) | Reguły portfela nóg dziennika pod szczebel 4 ADR-09: R0 równo / R1 dziennik (1/σ) / ERC (równy wkład ryzyka z korelacjami) dla {TS1, CP1} i {TS1, CP1, X1}; ES95 tyg., ES99 dz., obsunięcia, depozyt, przełożenie na 5 % depozytu; pre-rejestracja `7f647f2` | **0 — opisowo** | **2 nogi: ERC ≡ 1/σ (\|Δk\| 0,0000) — dziennik bez zmian. R1: +18,3 %/rok, obsunięcie 18,2 %, najg. tydzień −9,7 %, ES95 tyg. −5,7 % [−6,5; −4,7]; przy 5 % depozytu (limit trzymany każdego dnia) strategia ≈ 10 % kapitału → obsunięcie ≈ 1,9 %, zły tydzień ≈ −1 % całego kapitału. X1 jako 3. noga: obsunięcie 28 %, tydzień −27,5 % (jedno zdarzenie).** Nogi in-sample, bez modelu likwidacji. Walidacja: **Ready (Caveats)** — depozyt realny (druga droga) mediana 24 %, max 45 %; 4 liczby zgodne |
+| **LK0** | 2026-09-25 | [lk0-kolektor-likwidacji](2026-09-25_lk0-kolektor-likwidacji/README.md) | Kolektor likwidacji Binance USDT-M (strumień `!forceOrder@arr`, próbkowany ≤ 1 zdarzenie/s/symbol) od 2026-09-25 do `$HOME/likwidacje` (poza repo) — brama danych rodziny E1; decyzja użytkownika („kolektor tak”) | **0 — POZA licznikami** (zbieranie danych, 0 odczytów) | **Uruchomiony. Dokumentowany adres `/ws/` odpowiada, ale milczy; nadaje `/market/ws/` (jak ccxt 4.5.48). Próba 90 s: 56 zdarzeń, 29 symboli (w tym XAUUSDT, jeden symbol COIN-M), ≈ 3,7 mln USD nominału; `ps`/`st` wewnątrz `o`.** Odczyt E1 najwcześniej po ~roku (rachunek mocy z realnej częstości PRZED). Przegląd bezpieczeństwa: 0 podatności, 2 uwagi niskie wdrożone. Walidacja: n/d (bez wyniku) |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -958,6 +960,12 @@ podsumowanie pod tabelą.
     tydzień ≈ −1 %, najgorsza seria ≈ −1,9 %, zysk ≈ +1,9 pkt/rok całego kapitału. Dołożenie X1: obsunięcie 28 %, tydzień −27,5 %
     (jeden wystrzał MYX), zysk 13 % — X1 tylko w dzienniku papierowym. Punkt odniesienia dla każdej przyszłej reguły
     przełączania lub ważenia: stała mieszanka R1 z tymi liczbami (każdy taki odczyt = nowy wariant).
+102. **LIKWIDACJE ZBIERANE OD 2026-09-25 (LK0).** Jedyne darmowe źródło likwidacji to strumień na żywo (próbka: ≤ 1 zdarzenie/s/symbol,
+    w kaskadach zaniżony wolumen); archiwum ich nie ma (P3), REST zniknął w 2021, płatni dostawcy nie dokumentują głębokości.
+    Dokumentowany adres `wss://fstream.binance.com/ws/…` odpowiada handshake'iem i milczy — nadaje `/market/ws/…` (Binance rozdzielił
+    strumienie futures na kategorie; tak łączy się ccxt 4.5.48). Rząd wielkości: ~40 zdarzeń/min, ~30 symboli/90 s, ~2–3 mln USD/min.
+    Rodzina E1 (kaskady likwidacji) przestaje być wykluczona danymi dopiero po ≥ 1 roku zbierania; do tego czasu tylko nadzór
+    (`--status`, cron co 5 min wznawia proces). Karta hipotezy E1 = rachunek mocy z realnej częstości zdarzeń PRZED odczytem.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

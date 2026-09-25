@@ -1,0 +1,29 @@
+=== Sonda adresów (ws_diag2.py, 2026-09-25 13:20 UTC; aiohttp 3.14.3, każdy adres 25 s) ===
+spot 443 aggTrade: handshake 101 → pierwsza ramka po 0.1s (aggTrade BTCUSDT)
+spot 9443 aggTrade: handshake 101 → pierwsza ramka po 0.1s
+echo postman (wss://ws.postman-echo.com/raw): handshake 101 → echo po 0.3s
+ccxt.pro binanceusdm.watch_trades("BTC/USDT:USDT"): 22 transakcje  [klient ccxt łączy się z wss://fstream.binance.com/public/ws/0]
+fstream aggTrade (wss://fstream.binance.com/ws/btcusdt@aggTrade): handshake 101 → BRAK ramek przez 25s
+raw !forceOrder@arr (wss://fstream.binance.com/ws/!forceOrder@arr): TEXT 0 w 60s (także wcześniej: kolektor 75 s — 0 zdarzeń)
+combined (wss://fstream.binance.com/stream?streams=!forceOrder@arr): TEXT 0 w 60s
+/ws + SUBSCRIBE btcusdt@aggTrade: tylko ack {"result":null,"id":1}, 0 danych w 15s
+
+=== ccxt 4.5.48, pro/binance.py get_ws_url/get_future_ws_category ===
+future: baseUrl "…/ws" → "…/<category>/ws"; category 'public' dla depth/rpiDepth/bookTicker/trade/aggTrade, 'market' dla reszty
+(forceOrder → market); ccxt: 'sending {"method": "SUBSCRIBE", "params": ["btcusdt@trade"], "id": 1}' na wss://fstream.binance.com/public/ws/0
+
+=== Sonda /market/ws (ws_diag8.py, 2026-09-25 13:26 UTC) ===
+market/ws/0 SUBSCRIBE markPrice (kontrola): zdarzeń 3 w 10s; ack {"result":null,"id":1}
+public/ws/0 SUBSCRIBE btcusdt@trade (kontrola): zdarzeń 469 w 10s; ack {"result":null,"id":1}
+market/ws/0 SUBSCRIBE !forceOrder@arr: zdarzeń 25 w 60s; ack {"result":null,"id":1}; pierwsze: {"e":"forceOrder","E":1790342761749,"o":{"s":"XAUUSDT","S":"SELL","o":"LIMIT","f":"IOC","q":"0.030","p":"4265.29","ap":"4286.18","X":"FILLED","l":"0.030","z":"0.030","T":1790342760744,"ps":"XAUUSDT","st":1}}
+market/ws/<stream> !forceOrder@arr: zdarzeń 26 w 60s; ack None; pierwsze: (to samo zdarzenie)
+
+=== Próba kolektora po poprawce adresu (data.collect_liquidations, 90 s, 2026-09-25 13:28:45 UTC) ===
+kolektor.log: 2026-09-25T13:28:45+00:00 połączono wss://fstream.binance.com/market/ws/!forceOrder@arr
+--status: kolektor pid 2511214 od 2026-09-25T13:28:44+00:00; status z 2026-09-25T13:29:51+00:00; zdarzeń 18 (pominiętych 0), ostatnie 2026-09-25T13:29:51+00:00; rozłączeń 0, ostatni błąd: None; dziś w pliku: 56
+pierwsze 2 zdarzenia:
+{"E":1790342926142,"st":1,"ps":"BRUSDT","s":"BRUSDT","S":"BUY","o":"LIMIT","f":"IOC","q":"79","p":"1.0075100","ap":"0.9882044","X":"FILLED","l":"7","z":"79","T":1790342925138}
+{"E":1790342961084,"st":1,"ps":"ZECUSDT","s":"ZECUSDT","S":"SELL","o":"LIMIT","f":"IOC","q":"0.006","p":"1589.79","ap":"1606.07","X":"FILLED","l":"0.006","z":"0.006","T":1790342960082}
+zdarzeń 56, symboli 29, top5 [('XAUUSDT', 5), ('BTCUSDT', 5), ('龙虾USDT', 4), ('SPCXUSDT', 4), ('CLUSDT', 4)]
+st {1: 55, 2: 1}, strony {'BUY': 13, 'SELL': 43}, status {'FILLED': 56}, wartość ≈ 3 685 998 USD (Σ ap·z)
+klucze ['E', 'st', 'ps', 's', 'S', 'o', 'f', 'q', 'p', 'ap', 'X', 'l', 'z', 'T']
