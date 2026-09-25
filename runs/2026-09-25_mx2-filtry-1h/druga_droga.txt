@@ -1,0 +1,7 @@
+MX1 w oknie (TA-Lib): 1256 (moc: 1254 + bramka)
+       trend 28 dni zgodny:   585 (moc: sygnały + bramka)
+              ADX(14) > 25:   302 (moc: sygnały + bramka)
+      wolumen > średnia 20:   685 (moc: sygnały + bramka)
+       sesja USA 13–21 UTC:   502 (moc: sygnały + bramka)
+     RSI(14) po stronie 50:  1256 (moc: sygnały + bramka)
+RSI(14) na świecach sygnału: long min 50.6 / mediana 58.3; short max 49.6 / mediana 41.5

@@ -1,0 +1,28 @@
+========================================================================================================
+MX2 — pięć filtrów na sygnale MX1 (MACD, potem EMA 10/30; BTC 1h) — rachunek mierzalności
+========================================================================================================
+dane: 48168 świec 1h (2021-01-01 00:00:00+00:00 → 2026-06-30 23:00:00+00:00); populacja: 69/69 okien, 46368 świec (Y1/MX1: 46368 → ZGODNA)
+bramka zasady 18: zakładana trafność 56%, z = 1,96; wymóg pozytywu przy 5 filtrach: z_5 = 2.576; próg odniesienia = max(0,5(1 + C/B) na świecach sygnału, p* Y1 54.01%)
+
+  kontrola: sygnały MX1 bez filtra 1254 (MX1: 1254 → ZGODNE)
+
+                         filtr | sygnały | bramka | zostaje |  long/short | bariera |   próg | half-w. | trzeba (1,96) | trzeba (z_5) |    zasada 18
+  ---------------------------------------------------------------------------------------------------------------------------------------------------
+  MX1 bez filtra (odniesienie) |    1254 |      2 |  100.0% |   616/638   |  1.079% | 54.01% |  2.78 pp |        56.79% |       57.62% | NIEMIERZALNA
+           trend 28 dni zgodny |     585 |      0 |   46.7% |   287/298   |  1.049% | 54.01% |  4.07 pp |        58.08% |       59.38% | NIEMIERZALNA
+                  ADX(14) > 25 |     302 |      0 |   24.1% |   172/130   |  1.294% | 54.01% |  5.66 pp |        59.67% |       61.33% | NIEMIERZALNA
+          wolumen > średnia 20 |     684 |      1 |   54.5% |   315/369   |  1.090% | 54.01% |  3.76 pp |        57.77% |       58.97% | NIEMIERZALNA
+           sesja USA 13–21 UTC |     502 |      0 |   40.0% |   229/273   |  1.114% | 54.01% |  4.39 pp |        58.40% |       59.72% | NIEMIERZALNA
+         RSI(14) po stronie 50 |    1254 |      2 |  100.0% |   616/638   |  1.079% | 54.01% |  2.78 pp |        56.79% |       57.62% | NIEMIERZALNA
+
+  Dokładna moc (dwumian) przy wymogu pozytywu z_5 — szansa potwierdzenia, gdyby filtr naprawdę trafiał:
+                         filtr |    56% |    58% |    60% |    62% |    65%
+           trend 28 dni zgodny |   5.5% |  26.4% |  63.7% |  91.0% |  99.8%
+                  ADX(14) > 25 |   3.5% |  13.3% |  34.1% |  61.9% |  91.7%
+          wolumen > średnia 20 |   6.4% |  31.8% |  72.2% |  95.2% | 100.0%
+           sesja USA 13–21 UTC |   5.1% |  23.2% |  57.0% |  86.3% |  99.4%
+         RSI(14) po stronie 50 |  13.0% |  61.7% |  95.9% |  99.9% | 100.0%
+
+  Strona negatywna: required_trades(0,50; próg) = trend 28 dni zgodny 1,215 (dla wszystkich filtrów ten sam próg odniesienia)
+
+  (bez symulacji transakcji; czas 8 s)
