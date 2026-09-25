@@ -183,6 +183,8 @@
 > PR1 (2026-09-25): reguły portfela pod szczebel 4 — ERC ≡ 1/σ przy 2 nogach (dziennik bez zmian); przy 5 % depozytu strategia ≈ 10 % kapitału, zły tydzień ≈ −1 %, obsunięcie ≈ 2 % całego kapitału; X1 jako 3. noga pogarsza (wniosek 101).
 > LK0 (2026-09-25, decyzja użytkownika): kolektor likwidacji Binance uruchomiony (dane w `~/likwidacje`, poza repo; nadzór cron co 5 min
 > `tools/likwidacje.sh` — linię crona dodaje użytkownik); dokumentowany adres `/ws/` milczy, nadaje `/market/ws/` (wniosek 102).
+> MX1 (2026-09-25, decyzja użytkownika): MACD, potem przecięcie EMA 10/30 na BTC 1h — NIEMIERZALNE (1 254 sygnały, trzeba ≥ 56,8 %
+> trafności; MACD przepuszcza 77 % przecięć EMA); runda nie wystartowała, 0 wariantów (wniosek 103).
 > SKILL `quant-strategy-catalog` — nowa wersja 2026-09-25 (decyzja użytkownika): statusy rodzin po wnioskach 51–102 (ŚLAD-bez-dowodu,
 > ZBIERANE-dane, rodziny C2 premie giełdowe / G3 halving / J sentyment, ranking po PR1/LK0, siedem błędów, karta z DSR i fazami);
 > paczka `quant-strategy-catalog.skill` przekazana użytkownikowi do wgrania na claude.ai (repo nie trzyma kopii skilli).

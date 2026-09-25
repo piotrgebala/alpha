@@ -1,0 +1,10 @@
+świece w oknie populacji: 46368 (moc.txt: 46368)
+TA-Lib: przecięcia EMA 10/30 w oknie 1626 (moc: 1623 + 3 = 1626); MX1 1256 (moc: 1254 + 2 = 1256)
+MACD przepuszcza 77.2% przecięć (moc: 77.3%)
+mediana bariery na świecach MX1: 1.077% (moc: 1.079%); próg ±B = 53.75% (moc: 53.75%)
+potwierdzenie wymaga ≥ 708 trafień z 1246 = 56.82% (Wald, jak kryterium)
+  prawdziwa trafność 54.00% → szansa potwierdzenia   2.4%
+  prawdziwa trafność 54.01% → szansa potwierdzenia   2.5%
+  prawdziwa trafność 56.00% → szansa potwierdzenia  28.9%
+  prawdziwa trafność 58.00% → szansa potwierdzenia  80.8%
+  prawdziwa trafność 60.00% → szansa potwierdzenia  99.0%
