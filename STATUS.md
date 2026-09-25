@@ -157,8 +157,7 @@
 > SERWER (2026-09-25): `.venv` badawczy przebudowany z `requirements-lock.txt` (był sprzed skryptu: XGBoost 3.4 → 3.2);
 > autor commitów ustawiony lokalnie w obu klonach (jego brak dał 24.09 „commit nieudany” w próbie dziennika). Pierwszy
 > przebieg dziennika na serwerze 2026-09-25 (`dantey1`); komputer nadrobił ten sam dzień 13 s wcześniej — wyniki
-> identyczne, bez duplikatów. **DO ZROBIENIA (użytkownik): wpis crona** `30 2 * * * bash $HOME/alpha-dziennik/dziennik/uruchom.sh`
-> (tryb auto nie pozwala Claude'owi zmieniać crona) — bez niego komputer przy następnym przebiegu sam się wyłączy i dziennik stanie.
+> identyczne, bez duplikatów. Cron na serwerze dodany przez użytkownika (`30 2 * * *`, czas UTC) — od następnej nocy dziennik liczy serwer.
 > Claude Code na serwerze uruchamiać w `tmux` (zerwanie SSH kończy sesję i Remote Control).
 > KP1 (2026-09-25): premia koreańska (Upbit) — **NIEMIERZALNA, 0 wariantów, zysków nie liczono**: sygnał inny niż CP1
 > (zgodność 52,8 %), ale efekt z badań SR ~0,15 wobec progu przyrządu 0,86 (moc 5 %). Wniosek 91.
