@@ -2912,3 +2912,75 @@ od zera.
   zleceń, nie kolejnego założenia.
 - **Budowy czegokolwiek z PRD** (5 agentów, dashboard, Docker) — zasada nadrzędna projektu
   nie zmieniła się: architektura powstaje PO dowodzie edge'u, nie przed.
+
+---
+
+### ETAP 5 — przegląd po 100 wnioskach (2026-09-25): co jeszcze ma wartość
+
+> Prośba użytkownika: „przeanalizuj wszystko, co jest w repo, i zaproponuj kolejne kroki albo co
+> jeszcze dołożyć do weryfikacji (np. sentyment, Fear & Greed)”. Poniżej stan po 100 wnioskach
+> i propozycje — **decyzje należą do użytkownika**. Źródła: `runs/INDEX.md` (wnioski 1–100), katalog
+> rodzin w skillu `quant-strategy-catalog` (wersja z 2026-09-23 — NIEAKTUALNA, patrz zadanie S1),
+> ETAP 4 wyżej, `docs/rag/09` (drabina dowodów), `docs/rag/10` (preferencje).
+
+#### Mapa stanu (co zmierzone, co zostało)
+
+| obszar | stan | wnioski |
+|---|---|---|
+| kierunek BTC z wykresu (5m / 1h / 4h / 1d; ML, AT, formacje) | **zamknięte, dowód braku** | 10, 35, 48–53, 69, 85 |
+| dane spoza wykresu na BTC 4h (funding, OI, L/S, VRP, on-chain, F&G) — jako cechy i jako reguły | **zamknięte**: ślad +0,02–0,05 %/tr < koszt 0,08 % | 67, 87, 90 |
+| pozycjonowanie w 4 formach (cecha, filtr, tłok przekrojowy, OI 24h) | **zamknięte** | 66, 73, 75, 97 |
+| carry / cash-and-carry / basis | działa (+5–9 %/rok), **odrzucone przez użytkownika** (nie ten rodzaj zwrotu) | 54, 61 |
+| premia rebalansowa, nowe listingi, kalendarz/zdarzenia (SH1) | zamknięte / niemierzalne | 57, 71, 81 |
+| przyrząd na samym BTC tygodniowo | widzi dopiero SR ≥ 0,86 (±31 %/rok) → nowe sygnały na BTC **z zasady niemierzalne** | 81, 91, 96 |
+| przyrząd przekrojowy top-50 | czuły (IC ≥ 0,022; ~18 niezależnych zakładów), ale **ML traci 2/3 mocy** → tylko jedna reguła z góry | 92, 93 |
+| trend tygodniowy (TS1), premia Coinbase (CP1), X1 | jedyne ślady; CP1 po korekcie na liczbę prób = rzut monetą; **rozstrzyga dziennik** (odczyt ~2026-12-25) | 70, 72, 89, 96 |
+| portfel nóg | nogi niezależne od siebie (0,16–0,35) i od tradfi (|ρ| ≤ 0,15); BTC sam ≈ Nasdaq (0,3 → 0,58 w 2026) | 95, 100 |
+| koszty wykonania | nie są wąskim gardłem nóg tygodniowych (0,8–3,3 %/rok) | 99 |
+| dane on-chain per moneta (darmowe) | pokrycie 4–46 % koszyka → ranking niewykonalny | 98 |
+| przyrząd i odtwarzalność | N_eff naprawiony (AU3), serwer = Windows, kontrole K1/NC1 | 79, 94 |
+
+**Sedno:** na historii 2021–2026 projekt wyczerpał to, co da się uczciwie zmierzyć. Zostały trzy dźwignie:
+**czas** (dziennik), **składanie niezależnych nóg** (dywersyfikacja zamiast przełączania) i **nowe dane per
+moneta**, których dziś nie ma (płatne albo zbierane od teraz). Każdy kolejny test odkrywczy na tych samych
+danych obniża wiarygodność wszystkich poprzednich (AU4: przy 28 pustych pomysłach najlepszy ma t ≥ 2,09 w 40 %).
+
+#### Sentyment i Fear & Greed — odpowiedź wprost
+
+- **Fear & Greed zmierzony dwa razy na BTC 4h:** jako 5. cecha modelu (G1: 49,9 %, parowo +0,002 pp; przyrząd
+  słaby — 87) i jako reguła „za/przeciw odchyleniu od normy 365 dni” (SW: NEGATYWNA po kosztach — 90).
+- **Na BTC tygodniowo** F&G podlega temu samemu limitowi co premia koreańska: przyrząd widzi dopiero SR 0,86,
+  a badania nie dają priorytetu tej wielkości → NIEMIERZALNY z góry (zasada 18), tak jak KP1.
+- **W przekroju (ranking monet)** F&G nie działa z definicji: jedna liczba dla całego rynku, nie da się nią
+  uporządkować 50 monet.
+- **Sentyment per moneta** (X/Twitter, LunarCrush, Santiment, Google Trends) to jedyna forma z szansą na
+  mierzalność (przyrząd przekrojowy, AU2) — ale dane płatne albo złej jakości point-in-time (sentyment bywa
+  przeliczany wstecz), a nazwy monet w wyszukiwarkach są wieloznaczne (SUI, OP, NEAR). Warunek jak w P4:
+  brama danych ≥ ~70 % pokrycia koszyka 2021–2026 PRZED jakąkolwiek hipotezą.
+- **Jedyne tanie i uczciwe użycie F&G dziś:** etykieta stanu rynku w dzienniku (obok zmienności i trendu,
+  poprawka 7) — tylko zapis, odczyt za 6–12 miesięcy. Wymaga codziennego pobrania z alternative.me
+  (nowa zależność sieciowa dziennika → poprawka 8, decyzja użytkownika). Wartość: niska–umiarkowana.
+
+#### Propozycje — kolejność wg wartości/kosztu (żadna nie startuje bez decyzji użytkownika)
+
+| # | co | rodzaj | koszt | co daje | licznik prób |
+|---|---|---|---|---|---|
+| **1** | **Odczyt dziennika ~2026-12-25** (szczebel 3): mechanika + wynik poza próbą TS1/CP1/X1; potem decyzja o ≤ 5 % kapitału | potwierdzający | 0 (czas) | jedyna rzecz, która może przesunąć CP1/TS1 po drabinie | 0 |
+| **2** | **PR1 — konstrukcja portfela pod szczebel 4:** wagi risk parity z korelacjami (KR1) zamiast 1/σ, Expected Shortfall (średnia strata w najgorszych 5 % tygodni) obok progów obsunięcia; test „stała mieszanka vs przełączanie” jako punkt odniesienia | opisowy, ryzyko | ~pół dnia | reguły alokacji zapisane PRZED realnym kapitałem; nie tworzy przewagi | 0 |
+| **3** | **Sprawdzian danych na żywo po 4–6 tygodniach:** świece/funding/premia pobrane na żywo vs archiwum za wspólne dni (korelacja, sumy, dziury) | higiena | 1–2 h | chroni odczyt grudniowy przed błędem danych (lekcja RU1) | 0 |
+| **4** | **Kolektor likwidacji od dziś** (Binance `!forceOrder@arr`, serwer 24/7; strumień jest PRÓBKOWANY przez giełdę — 1 zlecenie/s/symbol) + sprawdzenie głębokości historii CoinGlass | nowe dane | godziny; wartość za 1–2 lata | jedyna rodzina z mocnym mechanizmem (wymuszone przepływy, E1) wykluczona wyłącznie danymi; zdarzeniowa → setki zdarzeń/rok na koszyku → mierzalna szybciej niż sygnały tygodniowe. Uwaga: horyzont godzinowy = automatyczne wykonanie, inne niż dziennik | 0 (zbieranie) |
+| **5** | **S1 — nowa wersja skilla `quant-strategy-catalog`** (statusy po R1, X1F, SW, AU2, AU4, KR1/2, KO1, P4, RU4; kopia na serwerze nie zna żadnej z tych rund) + paczka do wgrania | porządek | 1–2 h | katalog przestaje proponować zamknięte rodziny (B2 „NIETKNIĘTE” — a R1 ją zamknęła) | 0 |
+| 6 | Brama danych sentymentu per moneta (Santiment/LunarCrush — pokrycie koszyka, głębokość, point-in-time) — tylko jeśli użytkownik rozważa płatny dostęp | brama danych | 1 h + koszt dostępu | odpowiedź „czy w ogóle” przed zakupem, jak P4 | 0 |
+| 7 | Rachunek mocy (bez odczytu) dla B4 — reszta po PCA na top-50 (inny target: powrót reszty); R1 i X1 sugerują, że ruchy względne trwają, więc prior niski | rachunek | 2 h | prawdopodobnie NIEMIERZALNA → zamknięcie bez zużycia licznika | 0 albo 1 |
+| 8 | Etykieta F&G w dzienniku (poprawka 8) | zapis | 1 h | odczyt „strach a nogi” za 6–12 mies. | 0 |
+
+**Czego świadomie nie proponuję:** nowych sygnałów kierunkowych na samym BTC (przyrząd ich nie rozstrzygnie —
+81/91/96), przełączania strategii po reżimie (w tym reguły halvingowej z HC1 — 3 obserwacje, wniosek 86),
+ML przekrojowego (93), kolejnych cech z wykresu i analizy technicznej (11, 51), replikacji „wszerz” na
+ETH/SOL (80), on-chain na BTC (P4, 91), Glassnode bez sprawdzenia pokrycia (98), obniżania kosztów jako
+źródła przewagi (99), trendu na rynkach poza krypto jako nogi (poza zasięgiem rachunku perpetuali; TX1 84).
+
+**Otwarte decyzje użytkownika (zebrane):** (a) dźwignia trendu 18–30 mies. po halvingu — rekomendacja: NIE
+(reguła po reżimie na 3 obserwacjach); (b) płatni dostawcy on-chain — rekomendacja: NIE bez katalogu
+pokrycia ≥ 70 %; (c) poprawka 8 (F&G w dzienniku); (d) kolektor likwidacji (pkt 4); (e) PR1 (pkt 2);
+(f) nowa wersja skilla katalogu (pkt 5); (g) `black --check .` — porządki na 15 starych plikach.
