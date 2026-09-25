@@ -45,6 +45,11 @@ def _write_live(tmp_path, n_days=480, n_coins=22, seed=3):
     pd.DataFrame({"timestamp": ts8, "close": np.repeat(btc.to_numpy(), 3)}).to_parquet(
         tmp_path / "spot_BTC-USDT_8h.parquet", index=False
     )
+    # poprawka 8: Fear & Greed jak z `fetch_external.fetch_fng` (date, value, label)
+    v = rng.integers(5, 96, n_days).astype(float)
+    pd.DataFrame(
+        {"date": r.index, "value": v, "label": np.where(v < 45, "Fear", "Greed")}
+    ).to_parquet(tmp_path / lj.FNG_FILE, index=False)
     return lj.load_live(tmp_path)
 
 
@@ -154,6 +159,83 @@ def test_run_writes_journal_and_log(tmp_path, live, monkeypatch):
     assert list(st.columns) == ["date", "btc_vol30", "vol_stan", "btc_r90", "trend90"]
     assert len(st) > 0 and st["date"].is_unique
     assert "stan rynku +" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
+    # poprawka 8: etykieta Fear & Greed w osobnym pliku od JOURNAL_START, bez zmian przy powtórce
+    fg = pd.read_csv(jdir / "fng.csv")
+    assert list(fg.columns) == ["date", "fng", "fng_etykieta"]
+    assert fg["date"].is_unique and fg["date"].min() == "2026-08-01"
+    assert fg["fng"].between(0, 100).all() and set(fg["fng_etykieta"]) <= {"Fear", "Greed"}
+    log_lines = (jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()
+    assert f"F&G +{len(fg)} |" in log_lines[0] and "F&G +0 |" in log_lines[1]
+    assert "Fear & Greed (poprawka 8, tylko zapis): 2026-09-" in text2 and "dopisane +0" in text2
+
+
+def test_fng_rows_filters_start_future_and_duplicates():
+    days = pd.date_range("2026-09-20", periods=8, freq="D", tz="UTC")
+    fng = pd.DataFrame(
+        {
+            "date": list(days) + [days[3]],
+            "value": [10.0, 30.4, 50.6, 70, 80, 90, 95, 99, 30.4],
+            "label": ["Extreme Fear", "Fear", "Greed", "Greed"] + ["Extreme Greed"] * 4 + ["Fear"],
+        }
+    )
+    out = lj.fng_rows(fng, start=days[2], now=days[5])
+    assert list(out.columns) == ["date", "fng", "fng_etykieta"]
+    assert out["date"].tolist() == [d.strftime("%Y-%m-%d") for d in days[2:6]]
+    assert out["fng"].tolist() == [51, 70, 80, 90]  # do całości; dni po `now` odrzucone
+    assert out["fng_etykieta"].tolist() == ["Greed", "Greed", "Extreme Greed", "Extreme Greed"]
+
+
+def test_fng_rows_rejects_unknown_label():
+    days = pd.date_range("2026-09-24", periods=2, freq="D", tz="UTC")
+    bad = pd.DataFrame({"date": days, "value": [50.0, 51.0], "label": ["Neutral", "=1+1"]})
+    with pytest.raises(ValueError, match="nieznana klasa"):
+        lj.fng_rows(bad, start=days[0], now=days[-1])
+    ok = bad.assign(label=["Neutral", "Extreme Greed"])
+    assert lj.fng_rows(ok, start=days[0], now=days[-1])["fng_etykieta"].tolist() == [
+        "Neutral",
+        "Extreme Greed",
+    ]
+
+
+def test_fng_append_backfills_missing_days_and_flags_revision(tmp_path):
+    days = pd.date_range("2026-09-24", periods=6, freq="D", tz="UTC")
+    full = pd.DataFrame({"date": days, "value": [20.0, 25, 30, 35, 40, 45], "label": "Fear"})
+    path, start, now = tmp_path / "fng.csv", days[0], days[-1]
+    cols = ["fng", "fng_etykieta"]
+    assert lj.append_rows(path, lj.fng_rows(full.iloc[:3], start, now), ["date"], cols) == (3, [])
+    # przerwa 3 dni (awaria źródła) → następny udany przebieg dopisuje brakujące dni z historii
+    assert lj.append_rows(path, lj.fng_rows(full, start, now), ["date"], cols) == (3, [])
+    revised = full.copy()
+    revised.loc[1, "value"] = 99.0  # rewizja opublikowanej wartości → „historia zmieniona”
+    n, changed = lj.append_rows(path, lj.fng_rows(revised, start, now), ["date"], cols)
+    assert n == 0 and changed == ["2026-09-25:fng"]
+    assert pd.read_csv(path)["fng"].tolist() == [20, 25, 30, 35, 40, 45]  # stary zapis zostaje
+
+
+def test_run_without_fng_file_keeps_journal(tmp_path, monkeypatch):
+    src = tmp_path / "live"
+    src.mkdir()
+    _write_live(src)
+    (src / lj.FNG_FILE).unlink()
+    jdir = tmp_path / "dziennik"
+    monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp("2026-08-01", tz="UTC"))
+    text = lj.run(fetch=False, live_dir=src, journal_dir=jdir)
+    assert (jdir / "wyniki.csv").exists() and not (jdir / "fng.csv").exists()
+    assert "| F&G brak pliku |" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
+    assert "Fear & Greed (poprawka 8, tylko zapis): brak pliku" in text
+
+
+def test_fetch_fng_safe_swallows_errors(tmp_path, monkeypatch):
+    import data.fetch_external as fe
+    from data.fetch_live import fetch_fng_safe
+
+    def boom(out_dir, force=False):
+        raise ConnectionError("sieć")
+
+    monkeypatch.setattr(fe, "fetch_fng", boom)
+    assert fetch_fng_safe(tmp_path) is None
+    monkeypatch.setattr(fe, "fetch_fng", lambda out_dir, force=False: tmp_path / "x.parquet")
+    assert fetch_fng_safe(tmp_path) == tmp_path / "x.parquet"
 
 
 def test_parse_klines_keeps_high_low_and_drops_open_candle():

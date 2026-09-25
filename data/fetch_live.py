@@ -6,7 +6,9 @@ Osobny katalog `data/raw/live/` — zamrożone cache rund (`data/raw/universe`, 
 - Binance USDT-M: lista aktywnych perpetuali (`exchangeInfo`), świece 1d z open/high/low/close/obrót,
   funding — każdy przebieg nadpisuje pliki (dane na żywo, nie archiwum);
 - Coinbase Exchange: BTC-USD 1d (`data.fetch_external.fetch_coinbase_daily`);
-- Binance spot: BTC/USDT 8h (świeca 16:00 = zamknięcie o 24:00 UTC, jak `run_coinbase_cp1.daily_premium`).
+- Binance spot: BTC/USDT 8h (świeca 16:00 = zamknięcie o 24:00 UTC, jak `run_coinbase_cp1.daily_premium`);
+- alternative.me: Fear & Greed dzienny (`data.fetch_external.fetch_fng`, poprawka 8) — TYLKO etykieta do
+  zapisu; awaria tego źródła nie zatrzymuje pobierania ani dziennika (`fetch_fng_safe`).
 Tylko świece ZAMKNIĘTE (open_time + 1 dzień ≤ teraz). Testy bez sieci: `tests/test_live_journal.py`.
 
     PYTHONUTF8=1 py -m data.fetch_live
@@ -132,6 +134,23 @@ def funding_symbols(live_dir: Path, now: pd.Timestamp) -> list[str]:
     return sorted({s for syms in members.values() for s in syms} | {"BTCUSDT"})
 
 
+def fetch_fng_safe(out_dir: Path) -> Path | None:
+    """
+    Fear & Greed (alternative.me) do `out_dir` (poprawka 8): pełna historia, nadpisywana przy każdym
+    przebiegu. Błąd sieci/schematu → wydruk i `None`; dziennik ma liczyć bez etykiety.
+    """
+    from data.fetch_external import fetch_fng
+
+    try:
+        return fetch_fng(out_dir, force=True)
+    except Exception as exc:  # noqa: BLE001 — etykieta pomocnicza, nie może zatrzymać przebiegu
+        print(
+            f"[live] Fear & Greed BŁĄD {type(exc).__name__}: {str(exc)[:120]} — etykieta bez aktualizacji",
+            flush=True,
+        )
+        return None
+
+
 def run(out_dir: Path = LIVE_DIR, start: str = LIVE_START) -> dict:
     import ccxt
 
@@ -164,6 +183,7 @@ def run(out_dir: Path = LIVE_DIR, start: str = LIVE_START) -> dict:
     spot = get_ohlcv("BTC/USDT", "8h", start, now.strftime("%Y-%m-%dT%H:%M:%SZ"), "binance")
     spot = spot[spot["timestamp"] + pd.Timedelta(hours=8) <= now]
     spot.to_parquet(out_dir / "spot_BTC-USDT_8h.parquet", index=False)
+    fetch_fng_safe(out_dir)
     return {"symbols": len(symbols), "fetched_at": now.isoformat()}
 
 

@@ -173,6 +173,8 @@
 > KR1 (2026-09-25): korelacje nóg TS1/X1/CP1 tyg. 0,35 / 0,24 / 0,16, w złych dniach niższe — portfel dywersyfikuje (wniosek 95).
 > DZIENNIK Poprawka 7 (2026-09-25, zgoda użytkownika): `dziennik/stan_rynku.csv` — zamrożona etykieta (tercyl zmienności 30 d BTC,
 > znak trendu 90 d), tylko zapis; odczyt „który składnik w jakich warunkach” po 6–12 miesiącach.
+> DZIENNIK Poprawka 8 (2026-09-25, decyzja użytkownika): `dziennik/fng.csv` — etykieta Fear & Greed z alternative.me (wartość i klasa
+> wprost z publikacji, bez własnych progów), tylko zapis; awaria źródła nie zatrzymuje dziennika, braki uzupełniają się z historii.
 > AU4 (2026-09-25): deflated Sharpe CP1 = 0,52 przy N = 28 prób — po korekcie nieodróżnialny od szczęścia; tylko dziennik rozstrzygnie (wniosek 96).
 > RU4 (2026-09-25): TL1 na pełnych danych OI +8,1 %/rok, t 0,62 — nadal nierozstrzygnięty, znak odwrócony (szum); luka danych z RU2 zamknięta (wniosek 97).
 > P4 (2026-09-25): darmowe on-chain pokrywa 4–46 % koszyka (przepływy tylko BTC/ETH) — ranking on-chain niewykonalny; **DO DECYZJI:** czy sprawdzać płatnych dostawców (wniosek 98).
@@ -2973,7 +2975,7 @@ danych obniża wiarygodność wszystkich poprzednich (AU4: przy 28 pustych pomys
 | **5** | **S1 — nowa wersja skilla `quant-strategy-catalog`** (statusy po R1, X1F, SW, AU2, AU4, KR1/2, KO1, P4, RU4; kopia na serwerze nie zna żadnej z tych rund) + paczka do wgrania | porządek | 1–2 h | katalog przestaje proponować zamknięte rodziny (B2 „NIETKNIĘTE” — a R1 ją zamknęła) | 0 |
 | 6 | Brama danych sentymentu per moneta (Santiment/LunarCrush — pokrycie koszyka, głębokość, point-in-time) — tylko jeśli użytkownik rozważa płatny dostęp | brama danych | 1 h + koszt dostępu | odpowiedź „czy w ogóle” przed zakupem, jak P4 | 0 |
 | 7 | Rachunek mocy (bez odczytu) dla B4 — reszta po PCA na top-50 (inny target: powrót reszty); R1 i X1 sugerują, że ruchy względne trwają, więc prior niski | rachunek | 2 h | prawdopodobnie NIEMIERZALNA → zamknięcie bez zużycia licznika | 0 albo 1 |
-| 8 | Etykieta F&G w dzienniku (poprawka 8) | zapis | 1 h | odczyt „strach a nogi” za 6–12 mies. | 0 |
+| 8 | **WYKONANE 2026-09-25** — etykieta F&G w dzienniku (poprawka 8, `dziennik/fng.csv`) | zapis | 1 h | odczyt „strach a nogi” za 6–12 mies. | 0 |
 
 **Czego świadomie nie proponuję:** nowych sygnałów kierunkowych na samym BTC (przyrząd ich nie rozstrzygnie —
 81/91/96), przełączania strategii po reżimie (w tym reguły halvingowej z HC1 — 3 obserwacje, wniosek 86),
@@ -2982,6 +2984,6 @@ ETH/SOL (80), on-chain na BTC (P4, 91), Glassnode bez sprawdzenia pokrycia (98),
 źródła przewagi (99), trendu na rynkach poza krypto jako nogi (poza zasięgiem rachunku perpetuali; TX1 84).
 
 **Otwarte decyzje użytkownika (zebrane):** (a) dźwignia trendu 18–30 mies. po halvingu — rekomendacja: NIE
-(reguła po reżimie na 3 obserwacjach); (b) płatni dostawcy on-chain — rekomendacja: NIE bez katalogu
-pokrycia ≥ 70 %; (c) poprawka 8 (F&G w dzienniku); (d) kolektor likwidacji (pkt 4); (e) PR1 wykonana — decyzja przy szczeblu 4: depozyt 5 % liczony górnym oszacowaniem Σ k/dźwignia (≈ 10 % kapitału na strategię; rekomendacja PR1);
-(f) nowa wersja skilla katalogu (pkt 5); (g) `black --check .` — porządki na 15 starych plikach.
+(reguła po reżimie na 3 obserwacjach); (b) płatni dostawcy on-chain — decyzja 2026-09-25: NIE na razie (rekomendacja: nie bez katalogu
+pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) kolektor likwidacji — decyzja 2026-09-25: TAK (w toku); (e) PR1 wykonana — decyzja przy szczeblu 4: depozyt 5 % liczony górnym oszacowaniem Σ k/dźwignia (≈ 10 % kapitału na strategię; rekomendacja PR1);
+(f) nowa wersja skilla katalogu — decyzja 2026-09-25: TAK (w toku); (g) `black --check .` — porządki na 15 starych plikach.

@@ -97,6 +97,28 @@ radzi sobie w jakich warunkach (dane z przyszłości, bez zaglądania w przyszł
 nie zatrzymuje dziennika (zapis „stan rynku BŁĄD …” w `przebiegi.log`). Próba na kopii dziennika
 2026-09-25: +1 wiersz (24.09: średnia, trend +1), istniejące pliki bez zmian.
 
+## Poprawka 8 (2026-09-25 — etykieta Fear & Greed, tylko zapis)
+
+Decyzja użytkownika 2026-09-25: „poprawka 8 tak” (STATUS ETAP 5, propozycja 8). Kontekst: F&G zmierzony
+dwukrotnie na BTC 4h (G1, SW) nie daje przewagi, a tygodniowo jest niemierzalny — zostaje WYŁĄCZNIE jako
+etykieta do odczytu po 6–12 miesiącach („strach a nogi dziennika”), obok `stan_rynku.csv` z poprawki 7.
+Nowy plik `fng.csv` (append-only, jeden wiersz na dzień od 2026-09-24): `fng` (0–100) i `fng_etykieta`
+(Extreme Fear / Fear / Neutral / Greed / Extreme Greed) **wprost z publikacji alternative.me** — bez własnych
+progów, więc nie ma czego stroić. Pobranie: `data/fetch_live.py::fetch_fng_safe` (pełna historia przez
+`fetch_external.fetch_fng`, to samo publiczne źródło bez klucza, które zasiliło P3/G1; tylko https, adres
+stały w kodzie) do `data/raw/live/alternative_fng_1d.parquet`; zapis: `live_journal.run` → `fng_rows`
+(dni ≥ 2026-09-24 i ≤ dziś) → `append_rows`. **Nie wpływa na żadną pozycję ani wynik.** Odporność:
+awaria źródła nie zatrzymuje pobierania ani dziennika (`F&G BŁĄD …` / `F&G brak pliku` w `przebiegi.log`),
+brakujące dni uzupełniają się przy następnym udanym przebiegu z pełnej historii, a rewizja już zapisanej
+wartości to „historia zmieniona” (stary zapis zostaje) — jak w pozostałych plikach. Testy:
+`tests/test_live_journal.py` (filtr dat i zaokrąglenie, uzupełnianie po przerwie, brak pliku, błąd sieci).
+Próba na kopii dziennika 2026-09-25 (prawdziwe pobranie: 3 155 dni historii, ostatni 2026-09-25 = 71 Greed):
+nowe tylko `fng.csv` (+2 wiersze: 24.09 i 25.09, oba 71 Greed) i linia w `przebiegi.log` („F&G +2”);
+`sygnaly.csv`, `wyniki.csv`, `x1_*.csv` bez zmian. Przegląd bezpieczeństwa (skill `security-review`, nowe
+połączenie sieciowe w dzienniku): 0 podatności; jedna uwaga niska (tekst klasy z serwera wprost do CSV) →
+do pliku trafia tylko pięć znanych klas, inna = głośny błąd w logu, zapis pominięty. Przegląd kodu
+(`engineering:code-review`): Approve — zmiana ograniczona do etykiety, wszystkie błędy zatrzymują się w logu.
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
