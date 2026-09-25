@@ -38,7 +38,7 @@ UPBIT = "data/raw/external/upbit_KRW-BTC_1d.parquet"
 FX = "data/raw/external/fred_DEXKOUS_1d.parquet"
 FX_MAX_STALE_DAYS = 5  # weekend + święto USA; dłuższa dziura = brak premii tego dnia
 DIRECTION = 1  # +1: premia ponad normą → long (jak CP1); ustalone w pre-rejestracji
-ASSUMED_SR = 0.0  # założony efekt (Sharpe netto) z pre-rejestracji — tylko do linii mocy
+ASSUMED_SR = 0.15  # założony efekt (Sharpe netto) z pre-rejestracji — tylko do linii mocy
 SEP = "=" * 104
 
 
