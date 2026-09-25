@@ -1,0 +1,34 @@
+/home/dantey1/alpha/backtest/run_au2_szerokosc.py:94: RuntimeWarning: Mean of empty slice
+  rs = rs - np.nanmean(rs, axis=1, keepdims=True)
+/home/dantey1/alpha/backtest/run_au2_szerokosc.py:95: RuntimeWarning: Mean of empty slice
+  rf = rf - np.nanmean(rf, axis=1, keepdims=True)
+========================================================================================================
+AU2 krok 0 — szerokość efektywna i szum rank IC przyrządu przekrojowego; bez prawdziwego sygnału
+========================================================================================================
+  uniwersum: 675 kontraktów, dni 2021-01-01 → 2026-06-30; ocena 2021-02-01 → 2026-06-23 (1969 dni formowania, trzymanie 7 dni)
+
+  TOP-20: miesięcy 65 (pominięte bez 20 kandydatów: 0), członków w macierzy mediana 19
+    średnia korelacja par: mediana 0.52 [p10 0.34; p90 0.65]
+    szerokość efektywna surowa (uczestnictwo): mediana 2.8 [p10 2.1; p90 4.9]
+    szerokość po odjęciu rynku (long/short):   mediana 8.6 [p10 4.3; p90 11.6]
+    prawo fundamentalne (szerokość 8.6 × 52 tyg.): IR 0.50 → IC 0.024; IR 0.75 → IC 0.035; IR 1.00 → IC 0.047
+    szum IC, sygnał losowy półtrwanie  7 d: 1969 dni, par/dzień mediana 20, sd IC dziennego 0.229, średnia pod H0 +0.0003, se średniego IC 0.0115 → half-width 95% 0.022, najmniejsze wykrywalne IC (moc 80%) 0.032
+    szum IC, sygnał losowy półtrwanie 28 d: 1969 dni, par/dzień mediana 20, sd IC dziennego 0.229, średnia pod H0 -0.0010, se średniego IC 0.0144 → half-width 95% 0.028, najmniejsze wykrywalne IC (moc 80%) 0.040
+
+  TOP-50: miesięcy 65 (pominięte bez 50 kandydatów: 0), członków w macierzy mediana 47
+    średnia korelacja par: mediana 0.51 [p10 0.34; p90 0.64]
+    szerokość efektywna surowa (uczestnictwo): mediana 3.2 [p10 2.2; p90 5.9]
+    szerokość po odjęciu rynku (long/short):   mediana 17.7 [p10 12.1; p90 21.4]
+    prawo fundamentalne (szerokość 17.7 × 52 tyg.): IR 0.50 → IC 0.016; IR 0.75 → IC 0.025; IR 1.00 → IC 0.033
+    szum IC, sygnał losowy półtrwanie  7 d: 1969 dni, par/dzień mediana 50, sd IC dziennego 0.143, średnia pod H0 +0.0001, se średniego IC 0.0067 → half-width 95% 0.013, najmniejsze wykrywalne IC (moc 80%) 0.019
+    szum IC, sygnał losowy półtrwanie 28 d: 1969 dni, par/dzień mediana 50, sd IC dziennego 0.142, średnia pod H0 +0.0006, se średniego IC 0.0078 → half-width 95% 0.015, najmniejsze wykrywalne IC (moc 80%) 0.022
+
+  TOP-100: miesięcy 62 (pominięte bez 100 kandydatów: 3), członków w macierzy mediana 93
+    średnia korelacja par: mediana 0.53 [p10 0.35; p90 0.68]
+    szerokość efektywna surowa (uczestnictwo): mediana 3.1 [p10 2.1; p90 6.0]
+    szerokość po odjęciu rynku (long/short):   mediana 25.7 [p10 17.8; p90 32.6]
+    prawo fundamentalne (szerokość 25.7 × 52 tyg.): IR 0.50 → IC 0.014; IR 0.75 → IC 0.021; IR 1.00 → IC 0.027
+    szum IC, sygnał losowy półtrwanie  7 d: 1880 dni, par/dzień mediana 100, sd IC dziennego 0.100, średnia pod H0 -0.0000, se średniego IC 0.0049 → half-width 95% 0.010, najmniejsze wykrywalne IC (moc 80%) 0.014
+    szum IC, sygnał losowy półtrwanie 28 d: 1880 dni, par/dzień mediana 100, sd IC dziennego 0.101, średnia pod H0 -0.0004, se średniego IC 0.0062 → half-width 95% 0.012, najmniejsze wykrywalne IC (moc 80%) 0.017
+========================================================================================================
+czas: 140s
