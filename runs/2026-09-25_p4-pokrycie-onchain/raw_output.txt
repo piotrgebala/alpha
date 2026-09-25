@@ -1,0 +1,22 @@
+========================================================================================================
+P4 — pokrycie danymi on-chain (CoinMetrics community, 1d) koszyków top-20 / top-50 perpetuali
+========================================================================================================
+
+  TOP-20 (65 miesięcy):
+    FlowInExUSD  aktywów w katalogu    2 | pokrycie koszyka średnio  10.0% [min  10.0%, 2021  10.0%, 2025–26  10.0%]
+    FlowOutExUSD aktywów w katalogu    2 | pokrycie koszyka średnio  10.0% [min  10.0%, 2021  10.0%, 2025–26  10.0%]
+    SplyExNtv    aktywów w katalogu    2 | pokrycie koszyka średnio  10.0% [min  10.0%, 2021  10.0%, 2025–26  10.0%]
+    AdrActCnt    aktywów w katalogu  138 | pokrycie koszyka średnio  46.2% [min  25.0%, 2021  68.2%, 2025–26  43.3%]
+    CapMVRVCur   aktywów w katalogu  125 | pokrycie koszyka średnio  44.5% [min  25.0%, 2021  61.8%, 2025–26  43.1%]
+    TxCnt        aktywów w katalogu  142 | pokrycie koszyka średnio  46.2% [min  25.0%, 2021  68.2%, 2025–26  43.6%]
+    najczęstsi członkowie BEZ przepływów na giełdy (miesięcy w koszyku): BNBUSDT 65, XRPUSDT 65, SOLUSDT 62, DOGEUSDT 61, ADAUSDT 54, LINKUSDT 44, AVAXUSDT 40, LTCUSDT 33, 1000PEPEUSDT 33, MATICUSDT 29, SUIUSDT 27, 1000SHIBUSDT 25
+
+  TOP-50 (65 miesięcy):
+    FlowInExUSD  aktywów w katalogu    2 | pokrycie koszyka średnio   4.0% [min   4.0%, 2021   4.0%, 2025–26   4.0%]
+    FlowOutExUSD aktywów w katalogu    2 | pokrycie koszyka średnio   4.0% [min   4.0%, 2021   4.0%, 2025–26   4.0%]
+    SplyExNtv    aktywów w katalogu    2 | pokrycie koszyka średnio   4.0% [min   4.0%, 2021   4.0%, 2025–26   4.0%]
+    AdrActCnt    aktywów w katalogu  138 | pokrycie koszyka średnio  36.6% [min  22.0%, 2021  51.3%, 2025–26  30.2%]
+    CapMVRVCur   aktywów w katalogu  125 | pokrycie koszyka średnio  34.2% [min  22.0%, 2021  47.1%, 2025–26  28.9%]
+    TxCnt        aktywów w katalogu  142 | pokrycie koszyka średnio  36.9% [min  22.0%, 2021  52.2%, 2025–26  30.3%]
+    najczęstsi członkowie BEZ przepływów na giełdy (miesięcy w koszyku): ADAUSDT 65, BNBUSDT 65, DOGEUSDT 65, LINKUSDT 65, SOLUSDT 65, XRPUSDT 65, AVAXUSDT 64, LTCUSDT 64, DOTUSDT 63, FILUSDT 63, BCHUSDT 61, NEARUSDT 52
+========================================================================================================
