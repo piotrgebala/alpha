@@ -1,0 +1,13 @@
+========================================================================================================
+KR1 — korelacje nóg: TS1 (trend), X1 (momentum przekrojowe, 7 faz), CP1 (premia Coinbase)
+========================================================================================================
+  wspólne dni: 1880 (2021-05-08 → 2026-06-30)
+  TS1 : zmienność 18.2%/rok
+  X1  : zmienność 35.9%/rok
+  CP1 : zmienność 34.8%/rok
+  korelacja dzienne                 : TS1–X1 +0.37 | TS1–CP1 +0.29 | X1–CP1 +0.09
+  korelacja tygodniowe              : TS1–X1 +0.35 | TS1–CP1 +0.24 | X1–CP1 +0.16
+  korelacja 10% najgorszych dni TS1 : TS1–X1 +0.24 | TS1–CP1 +0.09 | X1–CP1 +0.04
+  portfel 1/σ TS1+CP1     : zmienność 19.1%/rok, współczynnik dywersyfikacji 0.80 (1 = brak korzyści)
+  portfel 1/σ TS1+CP1+X1  : zmienność 19.0%/rok, współczynnik dywersyfikacji 0.71 (1 = brak korzyści)
+========================================================================================================
