@@ -98,3 +98,14 @@ def test_fit_predict_models_learn_monotone_relation():
     for m in ml.MODELS:
         p = ml.fit_predict(m, x[:500], y[:500], q[:500], x[500:])
         assert np.corrcoef(p, y[500:])[0, 1] > 0.7, m
+
+
+def test_n_eff_guarded_no_collapse_on_negative_autocorrelation():
+    """Regresja AU2: Σρ < −0,5 dawało ujemne N_eff → kanonicznie N_eff = 1; tu N_eff = n."""
+    x = pd.Series(np.diff(np.random.default_rng(1).normal(size=221)))  # zróżnicowany szum, n = 220
+    assert ml.n_eff_guarded(x) == len(x)
+    from agents.labeling import effective_sample_size
+
+    assert effective_sample_size(x)["n_eff"] < 0  # przypadek, który psuł kanoniczny przyrząd
+    y = pd.Series(np.random.default_rng(6).normal(size=300))
+    assert 1 <= ml.n_eff_guarded(y) <= 300

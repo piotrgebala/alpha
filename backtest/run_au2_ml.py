@@ -194,17 +194,44 @@ def weekly_phase_average(per_formation: pd.Series) -> pd.Series:
     return x.groupby([week, phase]).first().groupby(level=0).mean()
 
 
+def n_eff_guarded(x: pd.Series) -> float:
+    """
+    N_eff z tego samego wzoru co `effective_sample_size`, ale gdy mianownik 1 + 2·Σρ ≤ 0 (suma
+    zaszumionych autokorelacji < −0,5) → N_eff = n (bez korekty), zamiast ujemnego N_eff, które
+    kanoniczny `summarize_pnl` przycina do 1 (błąd wykryty w AU2 krokach 1–2).
+    """
+    x = x.dropna()
+    n = len(x)
+    rho = np.nansum([x.autocorr(k) for k in range(1, 51)])
+    den = 1.0 + 2.0 * rho
+    return float(n) if den <= 0 else float(max(1.0, min(n / den, n)))
+
+
+def _t_guarded(x: pd.Series) -> tuple[float, float]:
+    x = x.dropna()
+    se = x.std(ddof=1) / np.sqrt(n_eff_guarded(x))
+    return float(x.mean() / se), float(x.mean() - Z95 * se)
+
+
 def verdict(bask: pd.DataFrame, ic: np.ndarray) -> dict:
-    """Werdykt dwuwarunkowy: t_neff tygodniowego zwrotu netto > 1,96 ORAZ ci_low(średnie IC) > 0."""
+    """
+    Werdykt dwuwarunkowy: t_neff tygodniowego zwrotu netto > 1,96 ORAZ ci_low(średnie IC) > 0.
+    `positive` — kanoniczny `summarize_pnl` (pre-rejestracja); `positive_fix` — z `n_eff_guarded`.
+    """
     net = weekly_phase_average(bask["gross"] - bask["cost"])
     w = summarize_pnl(net, periods_per_year=52, capital_per_notional=1.0)
     s = summarize_pnl(pd.Series(ic), periods_per_year=365, capital_per_notional=1.0)
+    t_fix, _ = _t_guarded(net)
+    _, ic_lo_fix = _t_guarded(pd.Series(ic))
     return {
         "net_annual": 52 * w["mean"],
         "t_neff": w["t_neff"],
         "ic_mean": s["mean"],
         "ic_ci_low": s["mean"] - Z95 * s["se_neff"],
         "positive": bool(w["t_neff"] > Z95 and s["mean"] - Z95 * s["se_neff"] > 0),
+        "t_fix": t_fix,
+        "ic_ci_low_fix": ic_lo_fix,
+        "positive_fix": bool(t_fix > Z95 and ic_lo_fix > 0),
     }
 
 
@@ -366,7 +393,7 @@ def main(argv: list[str]) -> None:
     s_neg, s_pos = (4, 2) if quick else (S_NEG, S_POS)
     jobs = [("neg", 0.0, 1000 + i) for i in range(s_neg)]
     jobs += [("pos", float(s), 2000 + 100 * s + i) for s in STRENGTHS for i in range(s_pos)]
-    workers = max(1, min(len(jobs), (os.cpu_count() or 2) - 2))
+    workers = max(1, min(len(jobs), (os.cpu_count() or 2) - 8))  # zapas dla innych procesów serwera
     with ProcessPoolExecutor(max_workers=workers) as ex:
         res = list(ex.map(_job, jobs))
     rows = []
@@ -393,9 +420,11 @@ def main(argv: list[str]) -> None:
     for inst in ("ml", "simple"):
         g = df[(df["arm"] == "neg") & (df["instrument"] == inst)]
         k, n = int(g["positive"].sum()), len(g)
+        kf = int(g["positive_fix"].sum())
         print(
             f"    {inst:<6}: POZYTYWNYCH {k}/{n} ({100 * k / n:.1f}%); t_neff mediana {g['t_neff'].median():+.2f} [p5 {g['t_neff'].quantile(0.05):+.2f}; p95 {g['t_neff'].quantile(0.95):+.2f}]; "
-            f"średnie IC mediana {g['ic_mean'].median():+.4f}; zwrot netto mediana {100 * g['net_annual'].median():+.1f}%/rok"
+            f"średnie IC mediana {g['ic_mean'].median():+.4f}; zwrot netto mediana {100 * g['net_annual'].median():+.1f}%/rok; "
+            f"POPRAWIONE N_eff: POZYTYWNYCH {kf}/{n}, t mediana {g['t_fix'].median():+.2f}"
         )
     print("\n  2. Ramię pozytywne (moc = odsetek werdyktów POZYTYWNYCH):")
     for s in STRENGTHS:
@@ -403,7 +432,8 @@ def main(argv: list[str]) -> None:
         for inst in ("ml", "simple"):
             g = df[(df["arm"] == "pos") & (df["strength"] == s) & (df["instrument"] == inst)]
             line += (
-                f"{inst} moc {100 * g['positive'].mean():5.1f}% (IC mediana {g['ic_mean'].median():+.4f}, "
+                f"{inst} moc {100 * g['positive'].mean():5.1f}% / poprawiona N_eff "
+                f"{100 * g['positive_fix'].mean():5.1f}% (IC mediana {g['ic_mean'].median():+.4f}, "
                 f"netto mediana {100 * g['net_annual'].median():+.1f}%/rok) | "
             )
         print(line)

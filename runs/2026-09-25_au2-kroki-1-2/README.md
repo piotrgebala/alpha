@@ -79,6 +79,21 @@ zbiór cech A, budżet 8 zestawów × 3 modele, drugi warunek werdyktu `ci_low(�
 - **Czego runda NIE robi:** nie mierzy prawdziwych cech (cel permutowany w obu ramionach), nie stroi
   budżetu po wyniku, nie dotyka dziennika.
 
+## Odstępstwo po przebiegu 1 (zapisane PRZED przebiegiem 2)
+
+Przebieg 1 (`raw_output_przebieg1_kanoniczny.txt`, `przebiegi_przebieg1.csv`) ujawnił błąd przyrządu
+kanonicznego: przy tym samym zysku t_neff wychodzi 3–8 albo ~0,4. Przyczyna (odtworzona, `engineering:debug`):
+`agents/labeling.py::effective_sample_size` sumuje 50 zaszumionych autokorelacji; gdy suma < −0,5,
+mianownik `1 + 2Σρ` < 0 → N_eff ujemne → `carry_hedged.summarize_pnl` przycina do **1**
+(`checkpoint_lib.summarize_trade_returns` daje wtedy NaN). Błąd tylko zaniża pewność (fałszywe
+„nierozstrzygnięte”), nigdy nie tworzy fałszywego sukcesu.
+**Przebieg 2** = te same ziarna i ten sam kod ML (wyniki ML identyczne), do każdego werdyktu dopisany
+werdykt z `n_eff_guarded` (mianownik ≤ 0 → N_eff = n, czyli bez korekty; ujemna autokorelacja czyni
+zwykły błąd zachowawczym). **Odczyt główny: werdykt poprawiony; kanoniczny raportowany obok.**
+Reguła decyzji bez zmian. Kanonicznego kodu nie zmieniono (decyzja użytkownika — metodologia pomiaru
+i moduł importowany pośrednio przez dziennik). Przebieg 2: 24 procesy, 1 wątek numeryczny na proces
+(przebieg 1 przeciążał serwer).
+
 ---
 
 _(sekcje poniżej po przebiegu)_
