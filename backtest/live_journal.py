@@ -68,6 +68,10 @@ X1_WARN_DD = 0.550  # największe obsunięcie X1 (średnia 7 faz) w historii 202
 X1_STOP_DD = 0.825  # 1,5 × powyższe — ta sama reguła co dla R1, zapisana z góry (poprawka 3)
 BTC = "BTCUSDT"
 TOL = 1e-9
+# Poprawka 7 (2026-09-25): etykieta stanu rynku — TYLKO zapis, nie wpływa na pozycje. Progi tercyli
+# 30-dniowej zmienności BTC (roczna) zamrożone z historii 2021-01-01 → 2026-06-30 (perp BTCUSDT 1d).
+VOL_TERCILES = (0.428, 0.6014)
+VOL_WINDOW, TREND_WINDOW = 30, 90
 
 
 # ------------------------------------------------------------------ dane
@@ -353,6 +357,31 @@ def stop_status(drawdown: float, warn: float = WARN_DD, stop: float = STOP_DD) -
     return "OK"
 
 
+def market_state(close: pd.Series, start: pd.Timestamp | None = None) -> pd.DataFrame:
+    """
+    Etykieta stanu rynku per dzień d ≥ `start` z zamknięć BTC ≤ d (poprawka 7, tylko zapis):
+    zmienność 30 dni (roczna) i jej tercyl wg zamrożonych progów, zwrot 90 dni i jego znak.
+    """
+    start = JOURNAL_START if start is None else start
+    c = close.dropna().astype(float)
+    vol = c.pct_change().rolling(VOL_WINDOW, min_periods=VOL_WINDOW).std() * np.sqrt(365)
+    r90 = c / c.shift(TREND_WINDOW) - 1.0
+    lo, hi = VOL_TERCILES
+    stan = np.where(vol < lo, "niska", np.where(vol < hi, "srednia", "wysoka"))
+    out = pd.DataFrame(
+        {
+            "date": c.index.strftime("%Y-%m-%d"),
+            "btc_vol30": vol.round(6).to_numpy(),
+            "vol_stan": np.where(vol.isna(), "", stan),
+            "btc_r90": r90.round(6).to_numpy(),
+            "trend90": np.sign(r90).fillna(0).astype(int).to_numpy(),
+        }
+    )
+    return out[(c.index >= start) & vol.notna().to_numpy() & r90.notna().to_numpy()].reset_index(
+        drop=True
+    )
+
+
 # ------------------------------------------------------------------ przebieg
 def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURNAL_DIR) -> str:
     started = pd.Timestamp.now(tz="UTC")
@@ -406,10 +435,23 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         ch_x1, eq_x1, dd_x1 = [], float("nan"), float("nan")
         status_x1 = f"BŁĄD {type(exc).__name__}: {str(exc)[:120]}"
         text_x1 = f"  X1: {status_x1} (dziennik główny zapisany normalnie)"
+    # etykieta stanu rynku (poprawka 7): osobny plik, błąd nie zatrzymuje dziennika
+    try:
+        n_st, ch_st = append_rows(
+            journal_dir / "stan_rynku.csv",
+            market_state(truncate(data, as_of)["close"][BTC]),
+            ["date"],
+            ["btc_vol30", "btc_r90"],
+        )
+    except (
+        Exception
+    ) as exc:  # noqa: BLE001 — błąd etykiety tylko do logu, nie jako „historia zmieniona”
+        n_st, ch_st = f"BŁĄD {type(exc).__name__}", []
+    st_txt = n_st if isinstance(n_st, str) else f"+{n_st}"
     dd = float(res["drawdown"].iloc[-1]) if len(res) else 0.0
     eq = float(res["equity"].iloc[-1]) if len(res) else 1.0
     status = stop_status(dd)
-    changed = ch_sig + ch_res + ch_x1
+    changed = ch_sig + ch_res + ch_x1 + ch_st
     late = (started.normalize() - as_of).days > 1
     summary = summarize(pos, k, as_of, eq, dd, status, late, changed, last) + "\n" + text_x1
     log = (
@@ -417,7 +459,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         f"premia {last['coinbase_premia'].date()} | sygnały +{n_sig} | wyniki +{n_res} | "
         f"kapitał {eq:.4f} | obsunięcie {100 * dd:.1f}% | {status} | "
         f"X1 sygnały +{n_sig_x1} wyniki +{n_res_x1} kapitał {eq_x1:.4f} "
-        f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | historia zmieniona: {len(changed)}\n"
+        f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | stan rynku {st_txt} | historia zmieniona: {len(changed)}\n"
     )
     journal_dir.mkdir(parents=True, exist_ok=True)
     with open(journal_dir / "przebiegi.log", "a", encoding="utf-8") as f:

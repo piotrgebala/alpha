@@ -171,7 +171,8 @@
 > AU3 (2026-09-25, decyzja użytkownika „tak”): N_eff naprawiony w `agents/labeling.py`; audyt 59 przebiegów — **0 zmienionych
 > werdyktów** (zdarzenia tylko w K2/K3, bez wpływu). Poprawka 6 dziennika (bez wpływu). Wniosek 94.
 > KR1 (2026-09-25): korelacje nóg TS1/X1/CP1 tyg. 0,35 / 0,24 / 0,16, w złych dniach niższe — portfel dywersyfikuje (wniosek 95).
-> **DO DECYZJI:** zamrożona etykieta stanu rynku w dzienniku (tylko zapis, bez wpływu na pozycje) — Poprawka 7.
+> DZIENNIK Poprawka 7 (2026-09-25, zgoda użytkownika): `dziennik/stan_rynku.csv` — zamrożona etykieta (tercyl zmienności 30 d BTC,
+> znak trendu 90 d), tylko zapis; odczyt „który składnik w jakich warunkach” po 6–12 miesiącach.
 > SERWER: ciężkie przebiegi z `OMP_NUM_THREADS=1` i ≤ 24 procesami (bez tego przeciążenie ~15× i ryzyko dla walidatora).
 > BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**

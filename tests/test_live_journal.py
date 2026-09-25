@@ -149,6 +149,11 @@ def test_run_writes_journal_and_log(tmp_path, live, monkeypatch):
     assert "HISTORIA ZMIENIONA" not in text2
     assert len(pd.read_csv(jdir / "wyniki.csv")) == len(first)
     assert len((jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()) == 2
+    # poprawka 7: etykieta stanu rynku dopisywana raz na dzień, bez zmian przy powtórce
+    st = pd.read_csv(jdir / "stan_rynku.csv")
+    assert list(st.columns) == ["date", "btc_vol30", "vol_stan", "btc_r90", "trend90"]
+    assert len(st) > 0 and st["date"].is_unique
+    assert "stan rynku +" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
 
 
 def test_parse_klines_keeps_high_low_and_drops_open_candle():
@@ -364,3 +369,33 @@ def test_x1_error_does_not_stop_main_journal(tmp_path, monkeypatch):
     assert len(pd.read_csv(jdir / "wyniki.csv")) > 0
     assert not (jdir / "x1_wyniki.csv").exists()
     assert "BŁĄD ValueError" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
+
+
+def _btc(n=260, seed=7):
+    rng = np.random.default_rng(seed)
+    days = pd.date_range("2026-01-01", periods=n, freq="D", tz="UTC")
+    return pd.Series(100 * np.exp(np.cumsum(rng.normal(0, 0.03, n))), index=days)
+
+
+@pytest.mark.parametrize("cut", [150, 230])
+def test_market_state_no_lookahead(cut):
+    """Poprawka 7: etykieta dnia d nie zmienia się po obcięciu zamknięć po d."""
+    c = _btc()
+    start = c.index[100]
+    full = lj.market_state(c, start).set_index("date")
+    d = c.index[cut]
+    part = lj.market_state(c[c.index <= d], start).set_index("date")
+    pd.testing.assert_frame_equal(full.loc[: d.strftime("%Y-%m-%d")], part)
+
+
+def test_market_state_thresholds_and_start():
+    c = _btc()
+    st = lj.market_state(c, c.index[120])
+    assert st["date"].min() == c.index[120].strftime("%Y-%m-%d")
+    lo, hi = lj.VOL_TERCILES
+    expect = np.where(
+        st["btc_vol30"] < lo, "niska", np.where(st["btc_vol30"] < hi, "srednia", "wysoka")
+    )
+    assert (st["vol_stan"] == expect).all()
+    assert set(st["trend90"]) <= {-1, 0, 1}
+    assert (np.sign(st["btc_r90"]) == st["trend90"]).all()

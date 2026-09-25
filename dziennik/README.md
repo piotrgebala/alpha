@@ -86,6 +86,17 @@ przy mianowniku `1 + 2Σρ ≤ 0` zwraca teraz N_eff = n zamiast liczby ujemnej.
 tylko pośrednio (`run_coinbase_cp1` → `carry_hedged`) i **nie liczy N_eff** — sygnały, wyniki i progi
 bez zmian. Wpis dla porządku (CLAUDE.md: zmiana modułu importowanego przez dziennik = decyzja + poprawka).
 
+## Poprawka 7 (2026-09-25 — etykieta stanu rynku, tylko zapis)
+
+Decyzja użytkownika: „Zgoda” (po KR1, wniosek 95: dywersyfikacja zamiast przełączania strategii po reżimie).
+Nowy plik `stan_rynku.csv` (append-only, jeden wiersz na dzień od 2026-09-24): zamknięcia BTC ≤ d →
+`btc_vol30` (zmienność 30 dni, roczna), `vol_stan` (tercyl: niska < 42,8 % ≤ srednia < 60,14 % ≤ wysoka —
+progi ZAMROŻONE z historii 2021-01-01 → 2026-06-30), `btc_r90` (zwrot 90 dni), `trend90` (jego znak).
+**Nie wpływa na żadną pozycję ani wynik** — służy wyłącznie do odczytu po 6–12 miesiącach, który składnik
+radzi sobie w jakich warunkach (dane z przyszłości, bez zaglądania w przyszłość). Błąd liczenia etykiety
+nie zatrzymuje dziennika (zapis „stan rynku BŁĄD …” w `przebiegi.log`). Próba na kopii dziennika
+2026-09-25: +1 wiersz (24.09: średnia, trend +1), istniejące pliki bez zmian.
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
@@ -160,6 +171,8 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
   ZMIENIONA” w wydruku i w logu.
 - `przebiegi.log` — czas przebiegu, ostatnia świeca każdego źródła, liczba dopisanych wierszy,
   status progów.
+- `stan_rynku.csv` — etykieta stanu rynku per dzień (poprawka 7): zmienność 30 dni BTC i jej tercyl,
+  zwrot 90 dni i jego znak. Tylko zapis, bez wpływu na pozycje.
 
 ## Progi (zapisane z góry)
 
