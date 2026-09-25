@@ -68,4 +68,5 @@ backtest/run_upbit_kp1.py                   # KP1
 backtest/run_au2_szerokosc.py               # AU2 krok 0
 backtest/run_au2_ml.py                      # AU2 kroki 1-2
 backtest/run_kr1_korelacje.py               # KR1
+backtest/run_au4_dsr.py                     # AU4
 backtest/screen_feature_candidates.py        # C2.7
