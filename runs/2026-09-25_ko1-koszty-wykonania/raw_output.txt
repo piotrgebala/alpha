@@ -1,0 +1,10 @@
+========================================================================================================
+KO1 — koszty wykonania nóg dziennika: taker vs maker (ten sam silnik, tylko stawka × obrót)
+========================================================================================================
+  stawki za stronę: taker 0.070%, maker 90% 0.025%, maker 100% 0.020%
+  noga  | bez kosztów |       taker |   maker 90% |  maker 100% | koszt taker | zysk maker 90% vs taker
+  TS1   |       +9.7% |       +8.9% |       +9.4% |       +9.5% |        0.8% | +0.5 pkt/rok
+  X1    |      +10.6% |       +7.2% |       +9.4% |       +9.6% |        3.3% | +2.2 pkt/rok
+  CP1   |      +33.6% |      +32.0% |      +33.0% |      +33.1% |        1.5% | +1.0 pkt/rok
+  (zwroty %/rok z dziennych średnich; zmienność nóg bez zmian — koszt przesuwa tylko średnią)
+========================================================================================================
