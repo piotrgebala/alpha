@@ -1,0 +1,19 @@
+========================================================================================================
+MX1 — przecięcie EMA 10/30 potwierdzone wcześniejszym przecięciem MACD 12/26/9, BTC 1h, reguła bez modelu
+========================================================================================================
+dane      : 48168 świec 1h od 2021-01-01 00:00:00+00:00 do 2026-06-30 23:00:00+00:00; przerwy w szeregu (≠ 1 h): 0
+przyrząd  : bariera 1.5·ATR, V = 3 świece, walk-forward 60/28/28 dni, wejście limit_close k = 1, populacja = okna OOS (A2)
+
+0. POPULACJA: foldy 69/69, świece ocenione 46368 (Y1: 46368 → ZGODNA)
+   przecięcia MACD/sygnał w oknie OOS: 3560 (kontekst)
+
+1. RACHUNEK MIERZALNOŚCI EX ANTE (zasada 18) — z częstości sygnałów i bariery, bez wyników transakcji
+    MX1: MACD, potem EMA 10/30: świece OOS 46368, bez sygnału 45112, bez etykiety/ATR 0, bramka kosztowa 2 → sygnały 1254 (long 616, short 638)
+                                bariera (mediana) 1.079% → próg ±B ze wzoru 53.75%; próg odniesienia max(wzór, p* Y1 54.01%) = 54.01%
+                                expected_trades(1254; 0; 0.994) = 1,246; half-width 2.78 pp; trzeba zmierzyć ≥ 56.79% → dla zakładanej 56%: NIEMIERZALNA; negatyw wymaga n ≥ 1,215
+   odniesienie: samo EMA 10/30: świece OOS 46368, bez sygnału 44742, bez etykiety/ATR 0, bramka kosztowa 3 → sygnały 1623 (long 812, short 811)
+                                bariera (mediana) 1.067% → próg ±B ze wzoru 53.78%; próg odniesienia max(wzór, p* Y1 54.01%) = 54.01%
+                                expected_trades(1623; 0; 0.994) = 1,613; half-width 2.44 pp; trzeba zmierzyć ≥ 56.45% → dla zakładanej 56%: NIEMIERZALNA; negatyw wymaga n ≥ 1,215
+  MACD przepuszcza 77.3% przecięć EMA 10/30 w populacji OOS
+
+  (bez symulacji transakcji; czas 6 s)
