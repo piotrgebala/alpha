@@ -1,0 +1,16 @@
+okno 2021-05-08 → 2026-06-30, dni 1880, braki 0
+zgodność nóg z KR1 legs(): max |Δ| TS1 0.00e+00, CP1 0.00e+00
+ekspozycja nóg (nominał/kapitał) mediana: TS1 0.38×, CP1 0.76×; p90: TS1 0.48×, CP1 1.05×; max: TS1 0.61×, CP1 1.27×
+R1 (KR1 legs): CAGR +18.3%, DD 18.2%, ES95 tyg -5.7%, n_weeks 269
+depozyt GÓRNE oszacowanie Σk/dźw.: mediana 48.9% [p10 36; p90 67], max 82%
+depozyt REALNY k·nominał/dźw.:     mediana 23.9% [p10 14; p90 37], max 45%, p99 44%
+udział dni z realnym depozytem > 5%/10% kapitału strategii ≈ (skala 10%): >50%: 0.0% dni; >100%: 0.0% dni
+  ADR-09 przez górne      depozyt  48.9% → kapitał strategii  10.2% całego; max DD 1.9%, najg. tydz. -1.0%, ES95 -0.6%, CAGR +1.9 pkt
+  ADR-09 przez realne     depozyt  23.9% → kapitał strategii  20.9% całego; max DD 3.8%, najg. tydz. -2.0%, ES95 -1.2%, CAGR +3.8 pkt
+  ADR-09 przez realne p90 depozyt  36.7% → kapitał strategii  13.6% całego; max DD 2.5%, najg. tydz. -1.3%, ES95 -0.8%, CAGR +2.5 pkt
+  ADR-09 przez realne max depozyt  45.5% → kapitał strategii  11.0% całego; max DD 2.0%, najg. tydz. -1.1%, ES95 -0.6%, CAGR +2.0 pkt
+tygodnie 269, w ogonie 5%: 14, ES95 -5.68%, najgorsze 3: [-9.7, -6.4, -6.3]
+ES95 tyg. bootstrap 95%: [-6.52%; -4.69%]
+max DD (log-cumsum): 18.19% vs summary 18.19%
+CAGR kalendarzowo (5.14 lat): +18.37% vs summary +18.35%
+tygodnie: średnia +0.37%, mediana +0.24%, sd 2.95%, skośność 0.79, kurtoza 3.20, ujemnych 43%

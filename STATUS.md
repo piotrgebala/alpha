@@ -178,6 +178,7 @@
 > P4 (2026-09-25): darmowe on-chain pokrywa 4–46 % koszyka (przepływy tylko BTC/ETH) — ranking on-chain niewykonalny; **DO DECYZJI:** czy sprawdzać płatnych dostawców (wniosek 98).
 > KO1 (2026-09-25): koszty wykonania trendu 0,8 %/rok, CP1 1,5 %, X1 3,3 % — limity dałyby +0,5/+1,0/+2,2 pkt; koszty nie są wąskim gardłem (wniosek 99).
 > KR2 (2026-09-25): BTC–Nasdaq 0,30 i rośnie (2026: 0,58); nogi dziennika niezależne od akcji, złota, stóp (wniosek 100).
+> PR1 (2026-09-25): reguły portfela pod szczebel 4 — ERC ≡ 1/σ przy 2 nogach (dziennik bez zmian); przy 5 % depozytu strategia ≈ 10 % kapitału, zły tydzień ≈ −1 %, obsunięcie ≈ 2 % całego kapitału; X1 jako 3. noga pogarsza (wniosek 101).
 > SERWER: ciężkie przebiegi z `OMP_NUM_THREADS=1` i ≤ 24 procesami (bez tego przeciążenie ~15× i ryzyko dla walidatora).
 > BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
@@ -2966,7 +2967,7 @@ danych obniża wiarygodność wszystkich poprzednich (AU4: przy 28 pustych pomys
 | # | co | rodzaj | koszt | co daje | licznik prób |
 |---|---|---|---|---|---|
 | **1** | **Odczyt dziennika ~2026-12-25** (szczebel 3): mechanika + wynik poza próbą TS1/CP1/X1; potem decyzja o ≤ 5 % kapitału | potwierdzający | 0 (czas) | jedyna rzecz, która może przesunąć CP1/TS1 po drabinie | 0 |
-| **2** | **PR1 — konstrukcja portfela pod szczebel 4:** wagi risk parity z korelacjami (KR1) zamiast 1/σ, Expected Shortfall (średnia strata w najgorszych 5 % tygodni) obok progów obsunięcia; test „stała mieszanka vs przełączanie” jako punkt odniesienia | opisowy, ryzyko | ~pół dnia | reguły alokacji zapisane PRZED realnym kapitałem; nie tworzy przewagi | 0 |
+| **2** | **WYKONANE 2026-09-25** → [pr1-portfel](runs/2026-09-25_pr1-portfel/README.md), wniosek 101 (ERC ≡ 1/σ przy 2 nogach; przy 5 % depozytu ≈ 10 % kapitału, seria ≈ −2 % całego; X1 pogarsza). Pierwotnie: **PR1 — konstrukcja portfela pod szczebel 4:** wagi risk parity z korelacjami (KR1) zamiast 1/σ, Expected Shortfall (średnia strata w najgorszych 5 % tygodni) obok progów obsunięcia; test „stała mieszanka vs przełączanie” jako punkt odniesienia | opisowy, ryzyko | ~pół dnia | reguły alokacji zapisane PRZED realnym kapitałem; nie tworzy przewagi | 0 |
 | **3** | **Sprawdzian danych na żywo po 4–6 tygodniach:** świece/funding/premia pobrane na żywo vs archiwum za wspólne dni (korelacja, sumy, dziury) | higiena | 1–2 h | chroni odczyt grudniowy przed błędem danych (lekcja RU1) | 0 |
 | **4** | **Kolektor likwidacji od dziś** (Binance `!forceOrder@arr`, serwer 24/7; strumień jest PRÓBKOWANY przez giełdę — 1 zlecenie/s/symbol) + sprawdzenie głębokości historii CoinGlass | nowe dane | godziny; wartość za 1–2 lata | jedyna rodzina z mocnym mechanizmem (wymuszone przepływy, E1) wykluczona wyłącznie danymi; zdarzeniowa → setki zdarzeń/rok na koszyku → mierzalna szybciej niż sygnały tygodniowe. Uwaga: horyzont godzinowy = automatyczne wykonanie, inne niż dziennik | 0 (zbieranie) |
 | **5** | **S1 — nowa wersja skilla `quant-strategy-catalog`** (statusy po R1, X1F, SW, AU2, AU4, KR1/2, KO1, P4, RU4; kopia na serwerze nie zna żadnej z tych rund) + paczka do wgrania | porządek | 1–2 h | katalog przestaje proponować zamknięte rodziny (B2 „NIETKNIĘTE” — a R1 ją zamknęła) | 0 |
@@ -2982,5 +2983,5 @@ ETH/SOL (80), on-chain na BTC (P4, 91), Glassnode bez sprawdzenia pokrycia (98),
 
 **Otwarte decyzje użytkownika (zebrane):** (a) dźwignia trendu 18–30 mies. po halvingu — rekomendacja: NIE
 (reguła po reżimie na 3 obserwacjach); (b) płatni dostawcy on-chain — rekomendacja: NIE bez katalogu
-pokrycia ≥ 70 %; (c) poprawka 8 (F&G w dzienniku); (d) kolektor likwidacji (pkt 4); (e) PR1 (pkt 2);
+pokrycia ≥ 70 %; (c) poprawka 8 (F&G w dzienniku); (d) kolektor likwidacji (pkt 4); (e) PR1 wykonana — decyzja przy szczeblu 4: depozyt 5 % liczony górnym oszacowaniem Σ k/dźwignia (≈ 10 % kapitału na strategię; rekomendacja PR1);
 (f) nowa wersja skilla katalogu (pkt 5); (g) `black --check .` — porządki na 15 starych plikach.

@@ -49,6 +49,8 @@ def erc_weights(cov: np.ndarray) -> np.ndarray:
         constraints=[{"type": "eq", "fun": lambda w: w.sum() - 1.0}],
         options={"ftol": 1e-16, "maxiter": 1000},
     )
+    if not res.success:  # reporter neutralny: brak zbieżności = błąd, nie cicha podmiana wag
+        raise RuntimeError(f"ERC: SLSQP nie zbiegł ({res.message})")
     w = np.clip(res.x, 0.0, None)
     return w / w.sum()
 
