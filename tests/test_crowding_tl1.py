@@ -59,3 +59,16 @@ def test_needed_days_includes_pad():
     days = fo.needed_days({m: ["A"]})
     assert ("A", m - pd.Timedelta(days=fo.LOOKBACK_PAD)) in days
     assert ("A", pd.Timestamp("2022-02-28", tz="UTC")) in days
+
+
+def test_missing_jobs_skips_existing_pairs():
+    """RU4: pobieramy tylko pary (symbol, dzień), których nie ma w istniejącym panelu."""
+    import pandas as pd
+
+    from data.fetch_oi_panel import missing_jobs
+
+    d1, d2 = pd.Timestamp("2022-01-01", tz="UTC"), pd.Timestamp("2022-01-02", tz="UTC")
+    jobs = [("AUSDT", d1), ("AUSDT", d2), ("BUSDT", d1)]
+    old = pd.DataFrame({"symbol": ["AUSDT"], "date": [d1], "oi": [1.0]})
+    assert missing_jobs(jobs, old) == [("AUSDT", d2), ("BUSDT", d1)]
+    assert missing_jobs(jobs, None) == jobs

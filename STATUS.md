@@ -174,6 +174,7 @@
 > DZIENNIK Poprawka 7 (2026-09-25, zgoda użytkownika): `dziennik/stan_rynku.csv` — zamrożona etykieta (tercyl zmienności 30 d BTC,
 > znak trendu 90 d), tylko zapis; odczyt „który składnik w jakich warunkach” po 6–12 miesiącach.
 > AU4 (2026-09-25): deflated Sharpe CP1 = 0,52 przy N = 28 prób — po korekcie nieodróżnialny od szczęścia; tylko dziennik rozstrzygnie (wniosek 96).
+> RU4 (2026-09-25): TL1 na pełnych danych OI +8,1 %/rok, t 0,62 — nadal nierozstrzygnięty, znak odwrócony (szum); luka danych z RU2 zamknięta (wniosek 97).
 > SERWER: ciężkie przebiegi z `OMP_NUM_THREADS=1` i ≤ 24 procesami (bez tego przeciążenie ~15× i ryzyko dla walidatora).
 > BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
