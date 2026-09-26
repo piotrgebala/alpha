@@ -21,6 +21,10 @@ Zasady zapisu (`dziennik/`):
 - `przebiegi.log` — czas przebiegu, ostatnia świeca każdego źródła, status progów;
 - `stan_rynku.csv` (poprawka 7) i `fng.csv` (poprawka 8) — etykiety TYLKO do zapisu (zmienność/trend BTC,
   Fear & Greed z alternative.me), nie wpływają na pozycje; ich brak lub błąd nie zatrzymuje dziennika.
+- `transakcje.csv` (poprawka 9) — lista ZAMKNIĘTYCH transakcji (append-only): pozycja jednej fazy w jednej
+  monecie od zamknięcia dnia formowania do zamknięcia dnia kolejnego formowania tej fazy albo do likwidacji;
+  `transakcje_otwarte.csv` — widok pozycji otwartych na `as_of`, NADPISYWANY przy każdym przebiegu. Tylko
+  zapis — wynik portfela liczą `wyniki.csv` / `x1_wyniki.csv`.
 
     PYTHONUTF8=1 py -m backtest.live_journal              # pobranie danych + zapis
     PYTHONUTF8=1 py -m backtest.live_journal --bez-pobierania
@@ -41,6 +45,7 @@ from backtest.rebalance_premium import monthly_members
 from backtest.run_coinbase_cp1 import daily_premium, premium_signal
 from backtest.sizing import apply_rules
 from backtest.ts_momentum import (
+    HOLD_DAYS,
     PHASES,
     build_formations,
     ewma_vol,
@@ -78,6 +83,42 @@ VOL_WINDOW, TREND_WINDOW = 30, 90
 # i klasa wprost z publikacji (bez własnych progów); plik z `data.fetch_live.fetch_fng_safe`.
 FNG_FILE = "alternative_fng_1d.parquet"
 FNG_LABELS = ("Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed")  # klasy alternative.me
+# Poprawka 9 (2026-09-26): lista transakcji — tylko zapis; kolumny w kolejności pliku.
+TRADE_KEY = ["skladowa", "faza", "data_wejscia", "symbol"]
+TRADE_COMMON = [
+    "skladowa",
+    "faza",
+    "symbol",
+    "kierunek",
+    "data_wejscia",
+    "cena_wejscia",
+]
+TRADE_SIZE = [
+    "dzwignia",
+    "waga",
+    "k",
+    "wielkosc_proc_kapitalu",
+    "depozyt_proc_kapitalu",
+]
+TRADE_CLOSED_COLS = [
+    *TRADE_COMMON,
+    "data_wyjscia",
+    "cena_wyjscia",
+    "powod_wyjscia",
+    *TRADE_SIZE,
+    "zwrot_pozycji_proc",
+    "wynik_cenowy_proc_kapitalu",
+    "przed_startem",
+]
+TRADE_OPEN_COLS = [
+    "as_of",
+    *TRADE_COMMON,
+    "cena_biezaca",
+    "planowane_wyjscie",
+    *TRADE_SIZE,
+    "zwrot_biezacy_proc",
+    "przed_startem",
+]
 
 
 # ------------------------------------------------------------------ dane
@@ -414,6 +455,202 @@ def fng_rows(
     return out.drop_duplicates("date").sort_values("date").reset_index(drop=True)
 
 
+def phase_lots(
+    close: pd.DataFrame,
+    low: pd.DataFrame | None,
+    high: pd.DataFrame | None,
+    forms: list[tuple[int, np.ndarray]],
+    as_of: pd.Timestamp,
+    lev: float | None,
+    mmr: float = MMR,
+) -> list[dict]:
+    """
+    Pozycje jednej fazy (poprawka 9). Niezerowa waga formowania k żyje od zamknięcia dnia formowania
+    do zamknięcia dnia formowania k+1 (≤ `as_of`) — to samo okno zwrotów co
+    `ts_momentum.phase_returns_liq`. Likwidacja izolowana jak w silniku: pierwszy dzień, w którym
+    minimum (long) / maksimum (short) odsuwa cenę od ceny wejścia o ≥ 1/lev − mmr; cena wyjścia =
+    cena likwidacji, zwrot pozycji = −1/lev (cały depozyt). `lev=None` — bez likwidacji (X1).
+    """
+    pos_as_of = close.index.get_loc(as_of)
+    thr = 1.0 / lev - mmr if lev else None
+    lots = []
+    for j, (t_pos, w) in enumerate(forms):
+        if t_pos > pos_as_of:
+            break
+        nxt = forms[j + 1][0] if j + 1 < len(forms) else None
+        rotated = nxt is not None and nxt <= pos_as_of
+        end_pos = nxt if rotated else pos_as_of
+        for s in np.flatnonzero(w):
+            sym, wi = close.columns[s], float(w[s])
+            entry = float(close.iat[t_pos, s])
+            lot = {"symbol": sym, "w": wi, "t_pos": t_pos, "entry": entry, "next_pos": nxt}
+            lot.update(status="otwarta", exit_pos=None, exit_price=np.nan, ret=np.nan)
+            if thr is not None and end_pos > t_pos:
+                if wi > 0:
+                    ext = low[sym].iloc[t_pos + 1 : end_pos + 1].to_numpy(float) / entry
+                    hit = np.flatnonzero(ext <= 1.0 - thr)
+                else:
+                    ext = high[sym].iloc[t_pos + 1 : end_pos + 1].to_numpy(float) / entry
+                    hit = np.flatnonzero(ext >= 1.0 + thr)
+                if len(hit):
+                    lot.update(
+                        status="likwidacja",
+                        exit_pos=t_pos + 1 + int(hit[0]),
+                        exit_price=entry * (1.0 - thr if wi > 0 else 1.0 + thr),
+                        ret=-1.0 / lev,
+                    )
+            if lot["status"] == "otwarta" and rotated:
+                exit_price = float(close.iat[nxt, s])
+                lot.update(
+                    status="rotacja",
+                    exit_pos=nxt,
+                    exit_price=exit_price,
+                    ret=float(np.sign(wi)) * (exit_price / entry - 1.0),
+                )
+            lots.append(lot)
+    return lots
+
+
+def _k_at(
+    hist: pd.DataFrame, k_next: dict, col: str, day: pd.Timestamp, as_of: pd.Timestamp
+) -> float:
+    """Mnożnik R1 składowej w pierwszym dniu trzymania pozycji (dzień po formowaniu)."""
+    if day > as_of:
+        return float(k_next[col])
+    return float(hist.at[day, f"k_{col}"]) if day in hist.index else float("nan")
+
+
+def trade_ledger(
+    data: dict, as_of: pd.Timestamp, hist: pd.DataFrame, k_next: dict
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Lista transakcji (poprawka 9): (zamknięte, otwarte na `as_of`) dla trendu, premii Coinbase i X1 —
+    pozycje, które żyły w okresie wyniku dziennika (wyjście ≥ start składowej) albo są otwarte.
+    Wielkość = |waga × k| w % kapitału portfela (trend/premia: portfel R1; X1: własny kapitał X1).
+    """
+    d = truncate(data, as_of)
+    close = d["close"]
+    idx = close.index
+    end = as_of + pd.Timedelta(days=1)
+    members = monthly_members(d["volume"], _months(as_of))
+    signs_b = pd.DataFrame({BTC: premium_signal(d["premium"]).reindex(idx)})
+    specs = [
+        ("trend", close, signal_sign(close), members, LEV_TREND, "trend", JOURNAL_START),
+        (
+            "premia_coinbase",
+            close[[BTC]],
+            signs_b,
+            {m: [BTC] for m in members},
+            LEV_CB,
+            "coinbase",
+            JOURNAL_START,
+        ),
+    ]
+    closed, opened = [], []
+
+    def emit(name, ph, lot, lev, weight, k, start):
+        formed = idx[lot["t_pos"]]
+        size = 100.0 * abs(weight * k)
+        base = {
+            "skladowa": name,
+            "faza": ph,
+            "symbol": lot["symbol"],
+            "kierunek": "long" if weight > 0 else "short",
+            "data_wejscia": formed.date().isoformat(),
+            "cena_wejscia": lot["entry"],
+            "dzwignia": lev,
+            "waga": weight,
+            "k": k,
+            "wielkosc_proc_kapitalu": size,
+            "depozyt_proc_kapitalu": size / lev,
+            "przed_startem": bool(formed < start - pd.Timedelta(days=1)),
+        }
+        if lot["status"] == "otwarta":
+            cur = float(close[lot["symbol"]].loc[as_of])
+            opened.append(
+                {
+                    **base,
+                    "as_of": as_of.date().isoformat(),
+                    "cena_biezaca": cur,
+                    "planowane_wyjscie": (formed + pd.Timedelta(days=HOLD_DAYS)).date().isoformat(),
+                    "zwrot_biezacy_proc": 100.0
+                    * float(np.sign(weight))
+                    * (cur / lot["entry"] - 1.0),
+                }
+            )
+            return
+        exit_day = idx[lot["exit_pos"]]
+        if exit_day < start:
+            return  # zamknięta przed startem wyniku składowej — poza dziennikiem
+        closed.append(
+            {
+                **base,
+                "data_wyjscia": exit_day.date().isoformat(),
+                "cena_wyjscia": lot["exit_price"],
+                "powod_wyjscia": lot["status"],
+                "zwrot_pozycji_proc": 100.0 * lot["ret"],
+                "wynik_cenowy_proc_kapitalu": size * lot["ret"],
+            }
+        )
+
+    for name, cl, signs, mem, lev, kcol, start in specs:
+        vols = ewma_vol(cl)
+        for ph in range(PHASES):
+            forms = build_formations(
+                signs, vols, mem, formation_dates(cl.index, ENGINE_START, end, ph)
+            )
+            for lot in phase_lots(
+                cl, d["low"][cl.columns], d["high"][cl.columns], forms, as_of, lev
+            ):
+                day = idx[lot["t_pos"]] + pd.Timedelta(days=1)
+                emit(
+                    name,
+                    ph,
+                    lot,
+                    lev,
+                    lot["w"] / PHASES,
+                    _k_at(hist, k_next, kcol, day, as_of),
+                    start,
+                )
+    signal = signal_panel(close)
+    month_starts = sorted(members)
+    col_pos = {c: i for i, c in enumerate(close.columns)}
+    for ph in range(PHASES):
+        forms = []
+        for t in formation_dates(idx, ENGINE_START, end, ph):
+            m = _month_of(t, month_starts)
+            legs = rank_legs(signal.loc[t], members[m]) if m is not None else None
+            w = np.zeros(len(close.columns))
+            if legs is not None:
+                for sgn, syms in ((1.0, legs[0]), (-1.0, legs[1])):
+                    for sym in syms:
+                        w[col_pos[sym]] = sgn * CAPITAL_PER_LEG / LEG_SIZE
+            forms.append((idx.get_loc(t), w))
+        for lot in phase_lots(close, None, None, forms, as_of, None):
+            emit("x1", ph, lot, 1.0, lot["w"] / PHASES, 1.0, X1_START)
+    closed_df = pd.DataFrame(closed, columns=TRADE_CLOSED_COLS)
+    open_df = pd.DataFrame(opened, columns=TRADE_OPEN_COLS)
+    return (
+        closed_df.sort_values(["data_wyjscia", "skladowa", "faza", "symbol"]).reset_index(
+            drop=True
+        ),
+        open_df.sort_values(["skladowa", "faza", "symbol"]).reset_index(drop=True),
+    )
+
+
+def summarize_trades(closed: pd.DataFrame | None, opened: pd.DataFrame | None, txt: str) -> str:
+    """Jedna linia do wydruku: zamknięte w tym przebiegu i otwarte per składowa (poprawka 9)."""
+    if opened is None:
+        return f"  Transakcje (poprawka 9): {txt}"
+    per = opened.groupby("skladowa").size().to_dict()
+    liq = int((closed["powod_wyjscia"] == "likwidacja").sum()) if closed is not None else 0
+    return (
+        f"  Transakcje (poprawka 9): zamknięte dopisane {txt}; otwarte {len(opened)} "
+        f"(trend {per.get('trend', 0)}, premia Coinbase {per.get('premia_coinbase', 0)}, "
+        f"X1 {per.get('x1', 0)}); likwidacji w historii dziennika: {liq}"
+    )
+
+
 # ------------------------------------------------------------------ przebieg
 def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURNAL_DIR) -> str:
     started = pd.Timestamp.now(tz="UTC")
@@ -493,10 +730,30 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     except Exception as exc:  # noqa: BLE001 — jak stan rynku: etykieta nie zatrzymuje dziennika
         rows_fg, n_fg, ch_fg = None, f"BŁĄD {type(exc).__name__}", []
     fg_txt = n_fg if isinstance(n_fg, str) else f"+{n_fg}"
+    # lista transakcji (poprawka 9): zamknięte append-only, otwarte nadpisywane; błąd tylko do logu
+    try:
+        tr_closed, tr_open = trade_ledger(data, as_of, hist, k)
+        n_tr, ch_tr = append_rows(
+            journal_dir / "transakcje.csv",
+            tr_closed,
+            TRADE_KEY,
+            [
+                "cena_wejscia",
+                "cena_wyjscia",
+                "wielkosc_proc_kapitalu",
+                "data_wyjscia",
+                "powod_wyjscia",
+            ],
+        )
+        journal_dir.mkdir(parents=True, exist_ok=True)
+        tr_open.to_csv(journal_dir / "transakcje_otwarte.csv", index=False)
+        tr_txt = f"+{n_tr}"
+    except Exception as exc:  # noqa: BLE001 — lista transakcji nie zatrzymuje dziennika
+        tr_closed, tr_open, ch_tr, tr_txt = None, None, [], f"BŁĄD {type(exc).__name__}"
     dd = float(res["drawdown"].iloc[-1]) if len(res) else 0.0
     eq = float(res["equity"].iloc[-1]) if len(res) else 1.0
     status = stop_status(dd)
-    changed = ch_sig + ch_res + ch_x1 + ch_st + ch_fg
+    changed = ch_sig + ch_res + ch_x1 + ch_st + ch_fg + ch_tr
     late = (started.normalize() - as_of).days > 1
     summary = (
         summarize(pos, k, as_of, eq, dd, status, late, changed, last)
@@ -504,6 +761,8 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         + text_x1
         + "\n"
         + summarize_fng(rows_fg, fg_txt)
+        + "\n"
+        + summarize_trades(tr_closed, tr_open, tr_txt)
     )
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
@@ -511,7 +770,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         f"kapitał {eq:.4f} | obsunięcie {100 * dd:.1f}% | {status} | "
         f"X1 sygnały +{n_sig_x1} wyniki +{n_res_x1} kapitał {eq_x1:.4f} "
         f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | stan rynku {st_txt} | F&G {fg_txt} | "
-        f"historia zmieniona: {len(changed)}\n"
+        f"transakcje {tr_txt} | historia zmieniona: {len(changed)}\n"
     )
     journal_dir.mkdir(parents=True, exist_ok=True)
     with open(journal_dir / "przebiegi.log", "a", encoding="utf-8") as f:
