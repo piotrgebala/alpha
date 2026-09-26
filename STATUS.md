@@ -177,6 +177,8 @@
 > wprost z publikacji, bez własnych progów), tylko zapis; awaria źródła nie zatrzymuje dziennika, braki uzupełniają się z historii.
 > DZIENNIK Poprawka 9 (2026-09-26, decyzja użytkownika): lista transakcji — `dziennik/transakcje.csv` (zamknięte, append-only)
 > i `transakcje_otwarte.csv` (bieżące): data i cena wejścia/wyjścia, symbol, kierunek, wielkość, dźwignia, likwidacje; zgodna z silnikiem co do 1e-9.
+> DZIENNIK Poprawka 10 (2026-09-26, decyzja użytkownika): opis i dokładne założenia każdej aktywnej strategii (TS1, CP1, R1, X1) z jednego
+> źródła `backtest/journal_strategies.py` — blok w każdym raporcie, `dziennik/strategie.csv` i `dziennik/STRATEGIE.md`; test pilnuje kompletności.
 > AU4 (2026-09-25): deflated Sharpe CP1 = 0,52 przy N = 28 prób — po korekcie nieodróżnialny od szczęścia; tylko dziennik rozstrzygnie (wniosek 96).
 > RU4 (2026-09-25): TL1 na pełnych danych OI +8,1 %/rok, t 0,62 — nadal nierozstrzygnięty, znak odwrócony (szum); luka danych z RU2 zamknięta (wniosek 97).
 > P4 (2026-09-25): darmowe on-chain pokrywa 4–46 % koszyka (przepływy tylko BTC/ETH) — ranking on-chain niewykonalny; **DO DECYZJI:** czy sprawdzać płatnych dostawców (wniosek 98).

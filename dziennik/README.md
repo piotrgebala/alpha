@@ -161,6 +161,26 @@ maksimum 1,495× ceny wejścia przy progu 1,49×, strata = depozyt 0,13 % kapita
 i `transakcje_otwarte.csv` (216 otwartych: trend 139, premia 7, X1 70); pozostałe pliki bez zmian, historia zmieniona 0.
 Lista nie wpływa na pozycje ani wynik; jej błąd nie zatrzymuje dziennika („transakcje BŁĄD …” w `przebiegi.log`).
 
+## Poprawka 10 (2026-09-26 — opis i założenia każdej aktywnej strategii, tylko zapis)
+
+Decyzja użytkownika 2026-09-26: „podaj dokładne założenia każdej strategii, dopisz je do raportu i niech każda aktywna
+strategia ma zawsze opis”. **Jedno źródło:** `backtest/journal_strategies.py` — opisy TS1, CP1, R1 i X1 z liczbami brane ze
+stałych silników (`ts_momentum`, `xs_momentum`, `run_coinbase_cp1`, `rebalance_premium`, domyślne parametry
+`sizing.apply_rules`, koszty z `config/settings.yaml`) i z parametrów dziennika — opis nie może rozjechać się z kodem.
+Z niego powstają:
+- blok **„STRATEGIE AKTYWNE”** w każdym raporcie przebiegu (`ostatni_wydruk.txt`) — nazwa i jednozdaniowy opis każdej strategii;
+- **`strategie.csv`** — pełne założenia, stan dowodów, od kiedy i gdzie jest wynik; nadpisywany w każdym przebiegu
+  (automat go commituje razem z resztą plików dziennika), więc opis zawsze leży obok danych;
+- **`STRATEGIE.md`** — ten sam opis do czytania (`PYTHONUTF8=1 py -m backtest.journal_strategies > dziennik/STRATEGIE.md`;
+  plik generowany, nie edytować ręcznie).
+
+**Zawsze:** test `tests/test_live_journal.py` sprawdza, że każda składowa pojawiająca się w `sygnaly.csv` i liście transakcji
+ma opis, że opis zmienia się razem ze stałą silnika (np. okno sygnału), że `STRATEGIE.md` jest aktualny względem kodu
+i że przebieg zapisuje `strategie.csv` oraz drukuje blok opisów (log: „opisy strategii 4”). Nowa strategia bez wpisu
+w `journal_strategies.py` = czerwony test. Moduł jest odtąd częścią kodu dziennika — jego zmiana wymaga poprawki.
+Próba na kopii dziennika 2026-09-26: nowe tylko `strategie.csv` (4 wiersze) i linia w `przebiegi.log`; reszta bez zmian,
+historia zmieniona 0. Nie wpływa na pozycje ani wynik; błąd opisu nie zatrzymuje dziennika.
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).

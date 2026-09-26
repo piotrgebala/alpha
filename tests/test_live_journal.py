@@ -647,3 +647,62 @@ def test_run_writes_trade_files(tmp_path, monkeypatch):
     assert "HISTORIA ZMIENIONA" not in text2
     log = (jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()
     assert f"transakcje +{len(closed)} |" in log[0] and "transakcje +0 |" in log[1]
+
+
+# ------------------------------------------------------------------ poprawka 10: opisy strategii
+def test_every_journal_component_has_description(live, monkeypatch):
+    from backtest import journal_strategies as js
+
+    book = {s["id"]: s for s in lj.strategy_book()}
+    assert set(book) == {"trend", "coinbase", "portfel_r1", "x1"}
+    for s in book.values():
+        assert s["nazwa"] and s["opis"] and s["status"] and len(s["zalozenia"]) >= 4
+    as_of = live["close"].index[-2]
+    pos, _, closed, opened = _ledger(live, as_of, monkeypatch)
+    assert set(pos["component"]) <= set(book)  # składowe z sygnaly.csv
+    names = set(closed["skladowa"]) | set(opened["skladowa"])
+    assert names == set(js.LEDGER_TO_ID) and {js.LEDGER_TO_ID[n] for n in names} <= set(book)
+
+
+def test_descriptions_follow_engine_constants(monkeypatch):
+    import backtest.run_coinbase_cp1 as cp
+    import backtest.ts_momentum as tsm
+
+    monkeypatch.setattr(tsm, "LOOKBACK_DAYS", 99)
+    monkeypatch.setattr(cp, "SHORT", 5)
+    book = {s["id"]: s for s in lj.strategy_book()}
+    assert "ostatnich 99 dni" in book["trend"]["opis"]
+    assert any("średnia premii z 5 dni" in z for z in book["coinbase"]["zalozenia"])
+
+
+def test_strategie_md_is_current():
+    from pathlib import Path
+
+    from backtest.journal_strategies import render_markdown
+
+    doc = Path(__file__).resolve().parents[1] / "dziennik" / "STRATEGIE.md"
+    assert doc.read_text(encoding="utf-8") == render_markdown(
+        lj.strategy_book()
+    ), "dziennik/STRATEGIE.md nieaktualny — uruchom: py -m backtest.journal_strategies > dziennik/STRATEGIE.md"
+
+
+def test_run_writes_strategy_descriptions(tmp_path, monkeypatch):
+    from backtest.journal_strategies import CSV_COLS
+
+    src = tmp_path / "live"
+    src.mkdir()
+    _write_live(src)
+    jdir = tmp_path / "dziennik"
+    monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp("2026-08-01", tz="UTC"))
+    text = lj.run(fetch=False, live_dir=src, journal_dir=jdir)
+    st = pd.read_csv(jdir / "strategie.csv")
+    assert list(st.columns) == CSV_COLS and set(st["id"]) == {
+        "trend",
+        "coinbase",
+        "portfel_r1",
+        "x1",
+    }
+    assert "STRATEGIE AKTYWNE" in text and all(
+        f"{k} — " in text for k in ("TS1", "CP1", "R1", "X1")
+    )
+    assert "| opisy strategii 4 |" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
