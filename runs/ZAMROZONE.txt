@@ -76,4 +76,5 @@ backtest/run_kr2_tradfi.py                  # KR2
 backtest/run_pr1_portfel.py                 # PR1
 backtest/run_mx1_macd_ema.py                # MX1
 backtest/run_mx2_filtry.py                  # MX2
+backtest/run_tp1_cel_zysku.py               # TP1
 backtest/screen_feature_candidates.py        # C2.7

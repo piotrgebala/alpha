@@ -1,0 +1,21 @@
+========================================================================================================
+TP1 — wyjście na celu zysku +1 % / +2 % przy równym ryzyku (sterowanie zmiennością jak dziennik)
+========================================================================================================
+ramiona: ['TS1', 'CP1'] × cel ['1%', '2%'] = 4; z_4 = 2.498; efekt istotny praktycznie: 5 pkt %/rok; cel i likwidacja w jednej świecy → likwidacja
+
+0. ZGODNOŚĆ silnika bez celu z silnikiem dziennika i mechanika celu (bez średnich)
+  TS1: dni 1969; max |różnica| 0.00e+00
+     cel 1%: pozycji 39459, zamkniętych na celu 36482 (92%), likwidacji 158 (bez celu 688); mnożnik k mediana 2.00 vs bez celu 1.14; k na sufitcie 2 w 97% dni
+     cel 2%: pozycji 39459, zamkniętych na celu 33819 (86%), likwidacji 249 (bez celu 688); mnożnik k mediana 2.00 vs bez celu 1.14; k na sufitcie 2 w 97% dni
+  CP1: dni 1880; max |różnica| 0.00e+00
+     cel 1%: pozycji 1887, zamkniętych na celu 1659 (88%), likwidacji 4 (bez celu 8); mnożnik k mediana 1.95 vs bez celu 0.58; k na sufitcie 2 w 48% dni
+     cel 2%: pozycji 1887, zamkniętych na celu 1470 (78%), likwidacji 7 (bez celu 8); mnożnik k mediana 1.23 vs bez celu 0.58; k na sufitcie 2 w 9% dni
+
+1. MIERZALNOŚĆ (zasada 18) — szum dziennej różnicy (cel − bez celu) przy równym ryzyku, BEZ średnich
+  noga |  cel |   dni |  N_eff | korelacja |  sd różnicy |   ± (z_4) |  ± (1,96) |  efekt | werdykt
+   TS1 |   1% |  1969 |   1969 |      0.55 |    18.25%/r |  19.62 pp |  15.40 pp |    5 pp | NIEMIERZALNA (potrzeba ~83 lat danych)
+   TS1 |   2% |  1969 |   1969 |      0.64 |    16.33%/r |  17.56 pp |  13.78 pp |    5 pp | NIEMIERZALNA (potrzeba ~67 lat danych)
+   CP1 |   1% |  1880 |   1880 |      0.60 |    18.22%/r |  20.05 pp |  15.74 pp |    5 pp | NIEMIERZALNA (potrzeba ~83 lat danych)
+   CP1 |   2% |  1880 |   1880 |      0.66 |    17.96%/r |  19.76 pp |  15.51 pp |    5 pp | NIEMIERZALNA (potrzeba ~80 lat danych)
+
+  (bez średnich wyników; czas 12 s)

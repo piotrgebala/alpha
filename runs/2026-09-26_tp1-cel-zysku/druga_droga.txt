@@ -1,0 +1,6 @@
+CP1 cel 1%: pozycji 1887, dotyka celu 1665 (88%)
+CP1 cel 2%: pozycji 1887, dotyka celu 1476 (78%)
+TS1 cel 1%: sd różnicy ≈ 19.0%/rok → ± (z_4) ≈ 20.4 pp/rok
+TS1 cel 2%: sd różnicy ≈ 17.0%/rok → ± (z_4) ≈ 18.3 pp/rok
+CP1 cel 1%: sd różnicy ≈ 17.9%/rok → ± (z_4) ≈ 19.7 pp/rok
+CP1 cel 2%: sd różnicy ≈ 16.5%/rok → ± (z_4) ≈ 18.2 pp/rok
