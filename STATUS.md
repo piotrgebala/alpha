@@ -189,6 +189,8 @@
 > trafności; MACD przepuszcza 77 % przecięć EMA); runda nie wystartowała, 0 wariantów (wniosek 103).
 > MX2 (2026-09-25, decyzja użytkownika): pięć filtrów na MX1 (trend 28 dni, ADX, wolumen, sesja USA, RSI) — wszystkie NIEMIERZALNE
 > (zostaje 24–55 % sygnałów, trzeba 59–61 % trafności; RSI nie odcina nic); seria MX zamknięta 0/6 (wniosek 104).
+> TP1 (2026-09-26, decyzja użytkownika): cel zysku +1–2 % „większym wolumenem” na trendzie i premii Coinbase — NIEMIERZALNE
+> (szum ±18–20 pp/rok, potrzeba ~70–80 lat danych); cel uruchamia się w ~80–90 % pozycji, równe ryzyko = dźwignia na sufitcie 2× (wniosek 105).
 > SKILL `quant-strategy-catalog` — nowa wersja 2026-09-25 (decyzja użytkownika): statusy rodzin po wnioskach 51–102 (ŚLAD-bez-dowodu,
 > ZBIERANE-dane, rodziny C2 premie giełdowe / G3 halving / J sentyment, ranking po PR1/LK0, siedem błędów, karta z DSR i fazami);
 > paczka `quant-strategy-catalog.skill` przekazana użytkownikowi do wgrania na claude.ai (repo nie trzyma kopii skilli).
