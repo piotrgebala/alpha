@@ -21,6 +21,8 @@ Zasady zapisu (`dziennik/`):
 - `przebiegi.log` — czas przebiegu, ostatnia świeca każdego źródła, status progów;
 - `stan_rynku.csv` (poprawka 7) i `fng.csv` (poprawka 8) — etykiety TYLKO do zapisu (zmienność/trend BTC,
   Fear & Greed z alternative.me), nie wpływają na pozycje; ich brak lub błąd nie zatrzymuje dziennika.
+- `strategie.csv` (poprawka 10) — opis i dokładne założenia każdej aktywnej strategii (z `journal_strategies`),
+  nadpisywany w każdym przebiegu; ten sam opis drukowany w raporcie i w `dziennik/STRATEGIE.md`;
 - `transakcje.csv` (poprawka 9) — lista ZAMKNIĘTYCH transakcji (append-only): pozycja jednej fazy w jednej
   monecie od zamknięcia dnia formowania do zamknięcia dnia kolejnego formowania tej fazy albo do likwidacji;
   `transakcje_otwarte.csv` — widok pozycji otwartych na `as_of`, NADPISYWANY przy każdym przebiegu. Tylko
@@ -41,6 +43,9 @@ import numpy as np
 import pandas as pd
 
 from backtest.checkpoint_lib import load_config
+from backtest.journal_strategies import build as build_strategies
+from backtest.journal_strategies import summarize as summarize_strategies
+from backtest.journal_strategies import to_rows as strategy_rows
 from backtest.rebalance_premium import monthly_members
 from backtest.run_coinbase_cp1 import daily_premium, premium_signal
 from backtest.sizing import apply_rules
@@ -638,6 +643,23 @@ def trade_ledger(
     )
 
 
+def strategy_book() -> list[dict]:
+    """Opisy aktywnych strategii (poprawka 10) z parametrami tego dziennika."""
+    return build_strategies(
+        {
+            "JOURNAL_START": JOURNAL_START,
+            "X1_START": X1_START,
+            "LEV_TREND": LEV_TREND,
+            "LEV_CB": LEV_CB,
+            "MMR": MMR,
+            "WARN_DD": WARN_DD,
+            "STOP_DD": STOP_DD,
+            "X1_WARN_DD": X1_WARN_DD,
+            "X1_STOP_DD": X1_STOP_DD,
+        }
+    )
+
+
 def summarize_trades(closed: pd.DataFrame | None, opened: pd.DataFrame | None, txt: str) -> str:
     """Jedna linia do wydruku: zamknięte w tym przebiegu i otwarte per składowa (poprawka 9)."""
     if opened is None:
@@ -750,6 +772,15 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         tr_txt = f"+{n_tr}"
     except Exception as exc:  # noqa: BLE001 — lista transakcji nie zatrzymuje dziennika
         tr_closed, tr_open, ch_tr, tr_txt = None, None, [], f"BŁĄD {type(exc).__name__}"
+    # opisy strategii (poprawka 10): zawsze w raporcie i w strategie.csv; błąd tylko do logu
+    try:
+        book = strategy_book()
+        journal_dir.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(strategy_rows(book)).to_csv(journal_dir / "strategie.csv", index=False)
+        text_str, str_txt = summarize_strategies(book), f"{len(book)}"
+    except Exception as exc:  # noqa: BLE001 — opis nie zatrzymuje dziennika
+        text_str = f"  STRATEGIE AKTYWNE: BŁĄD opisu {type(exc).__name__}: {str(exc)[:120]}"
+        str_txt = f"BŁĄD {type(exc).__name__}"
     dd = float(res["drawdown"].iloc[-1]) if len(res) else 0.0
     eq = float(res["equity"].iloc[-1]) if len(res) else 1.0
     status = stop_status(dd)
@@ -763,6 +794,8 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         + summarize_fng(rows_fg, fg_txt)
         + "\n"
         + summarize_trades(tr_closed, tr_open, tr_txt)
+        + "\n"
+        + text_str
     )
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
@@ -770,7 +803,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         f"kapitał {eq:.4f} | obsunięcie {100 * dd:.1f}% | {status} | "
         f"X1 sygnały +{n_sig_x1} wyniki +{n_res_x1} kapitał {eq_x1:.4f} "
         f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | stan rynku {st_txt} | F&G {fg_txt} | "
-        f"transakcje {tr_txt} | historia zmieniona: {len(changed)}\n"
+        f"transakcje {tr_txt} | opisy strategii {str_txt} | historia zmieniona: {len(changed)}\n"
     )
     journal_dir.mkdir(parents=True, exist_ok=True)
     with open(journal_dir / "przebiegi.log", "a", encoding="utf-8") as f:
