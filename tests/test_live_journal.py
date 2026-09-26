@@ -10,7 +10,13 @@ import pytest
 from backtest import live_journal as lj
 from backtest.negative_control import synthetic_ohlc, synthetic_returns
 from backtest.sizing import apply_rules
-from backtest.ts_momentum import PHASES, formation_dates, portfolio, signal_sign
+from backtest.ts_momentum import (
+    PHASES,
+    formation_dates,
+    phase_returns_liq,
+    portfolio,
+    signal_sign,
+)
 from data.fetch_live import active_usdt_perpetuals, parse_klines_1d
 
 FEE = 0.0007
@@ -481,3 +487,163 @@ def test_market_state_thresholds_and_start():
     assert (st["vol_stan"] == expect).all()
     assert set(st["trend90"]) <= {-1, 0, 1}
     assert (np.sign(st["btc_r90"]) == st["trend90"]).all()
+
+
+# ------------------------------------------------------------------ poprawka 9: lista transakcji
+
+
+def test_phase_lots_liquidation_and_engine_identity():
+    """Ręczny przykład: long z krachem (likwidacja 2×), short z rotacją; Σ |w|·zwrot = P&L fazy silnika."""
+    idx = pd.date_range("2026-01-01", periods=20, freq="D", tz="UTC")
+    close = pd.DataFrame({"A": 100.0, "B": 100.0}, index=idx)
+    close.loc[idx[3:], "B"] = [
+        101,
+        103,
+        104,
+        106,
+        108,
+        110,
+        111,
+        112,
+        113,
+        112,
+        111,
+        110,
+        109,
+        108,
+        107,
+        106,
+        105,
+    ]
+    close.loc[idx[4:], "A"] = 80.0
+    low, high = close * 0.99, close * 1.01
+    low.loc[idx[5], "A"] = 45.0  # minimum 45 % ceny wejścia → likwidacja przy 2× (próg 51 %)
+    w1 = np.array([0.1, -0.2])
+    forms = [(2, w1), (9, np.array([0.0, -0.1])), (16, np.array([0.05, 0.0]))]
+    lots = lj.phase_lots(close, low, high, forms, idx[19], lj.LEV_TREND)
+    a, b = lots[0], lots[1]
+    assert a["status"] == "likwidacja" and a["exit_pos"] == 5
+    assert a["exit_price"] == pytest.approx(100.0 * (1 - (0.5 - 0.01))) and a["ret"] == -0.5
+    assert b["status"] == "rotacja" and b["exit_pos"] == 9
+    assert b["ret"] == pytest.approx(-(close["B"].iat[9] / 100.0 - 1.0))
+    assert lots[-1]["status"] == "otwarta" and lots[-1]["t_pos"] == 16  # formowanie z 16 trwa
+    rets = close.pct_change().to_numpy()
+    lo_rel = (low / close.shift(1)).to_numpy()
+    hi_rel = (high / close.shift(1)).to_numpy()
+    eng = phase_returns_liq(
+        rets, np.zeros_like(rets), idx, forms, 0.0, lo_rel, hi_rel, lj.LEV_TREND, lj.MMR
+    ).set_index("date")
+    week = eng.loc[(eng.index > idx[2]) & (eng.index <= idx[9]), "gross"]
+    assert np.prod(1 + week) - 1 == pytest.approx(0.1 * a["ret"] + 0.2 * b["ret"], abs=1e-12)
+    assert eng.loc[idx[5], "liquidations"] == 1
+
+
+def _ledger(live, as_of, monkeypatch, start="2026-06-01"):
+    monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp(start, tz="UTC"))
+    monkeypatch.setattr(lj, "X1_START", pd.Timestamp(start, tz="UTC"))
+    pos, k, hist, _ = lj.positions(live, as_of, FEE)
+    closed, opened = lj.trade_ledger(live, as_of, hist, k)
+    return pos, k, closed, opened
+
+
+def test_ledger_trend_matches_engine_phase_pnl(live, monkeypatch):
+    """Każde zamknięte formowanie fazy trendu: Π(1 + gross silnika) − 1 = Σ |waga·7| · zwrot pozycji."""
+    as_of = live["close"].index[-2]
+    _, _, closed, _ = _ledger(live, as_of, monkeypatch)
+    d = lj.truncate(live, as_of)
+    members = lj.monthly_members(d["volume"], lj._months(as_of))
+    liq = {"high": d["high"], "low": d["low"], "lev": lj.LEV_TREND, "mmr": lj.MMR}
+    end = as_of + pd.Timedelta(days=1)
+    _, per_phase = portfolio(d["close"], d["funding"], members, lj.ENGINE_START, end, FEE, liq=liq)
+    tr = closed[closed["skladowa"] == "trend"]
+    assert len(tr) > 100 and set(tr["powod_wyjscia"]) <= {"rotacja", "likwidacja"}
+    checked = 0
+    for (ph, formed), g in tr.groupby(["faza", "data_wejscia"]):
+        f0 = pd.Timestamp(formed, tz="UTC")
+        eng = per_phase[ph]
+        gross = eng.loc[(eng.index > f0) & (eng.index <= f0 + pd.Timedelta(days=7)), "gross"]
+        lots = (g["waga"].abs() * PHASES * g["zwrot_pozycji_proc"] / 100).sum()
+        assert np.prod(1 + gross) - 1 == pytest.approx(lots, abs=1e-9)
+        checked += 1
+    assert checked >= 10
+
+
+def test_ledger_open_lots_match_published_positions(live, monkeypatch):
+    """Otwarte pozycje trendu/premii/X1 = pozycje ogłaszane w sygnaly.csv / x1_sygnaly.csv (poza likwidacjami)."""
+    as_of = live["close"].index[-2]
+    pos, _, closed, opened = _ledger(live, as_of, monkeypatch)
+    comp = {"trend": "trend", "coinbase": "premia_coinbase"}
+    want = {
+        (comp[r.component], r.phase, r.formed, r.symbol, r.sign, round(r.weight, 12))
+        for r in pos.itertuples()
+    }
+    liq_now = {
+        (r.skladowa, r.faza, r.data_wejscia, r.symbol)
+        for r in closed.itertuples()
+        if r.powod_wyjscia == "likwidacja" and r.data_wejscia >= min(p[2] for p in want)
+    }
+    got = {
+        (
+            r.skladowa,
+            r.faza,
+            r.data_wejscia,
+            r.symbol,
+            1 if r.kierunek == "long" else -1,
+            round(r.waga, 12),
+        )
+        for r in opened.itertuples()
+        if r.skladowa != "x1"
+    }
+    assert got == {w for w in want if w[:4] not in liq_now}
+    d = lj.truncate(live, as_of)
+    _, pos_x1 = lj.x1_component(
+        d["close"],
+        d["funding"],
+        lj.monthly_members(d["volume"], lj._months(as_of)),
+        as_of,
+        as_of + pd.Timedelta(days=1),
+        FEE,
+    )
+    want_x1 = {
+        (r.phase, r.formed, r.symbol, r.sign, round(r.weight, 12)) for r in pos_x1.itertuples()
+    }
+    got_x1 = {
+        (r.faza, r.data_wejscia, r.symbol, 1 if r.kierunek == "long" else -1, round(r.waga, 12))
+        for r in opened.itertuples()
+        if r.skladowa == "x1"
+    }
+    assert got_x1 == want_x1 and len(got_x1) == 70  # 7 faz × (5 long + 5 short)
+
+
+def test_ledger_closed_history_is_stable(live, monkeypatch):
+    """Transakcje zamknięte do dnia t mają te same liczby, gdy liczyć je dzień później (append-only)."""
+    idx = live["close"].index
+    _, _, c1, _ = _ledger(live, idx[-9], monkeypatch)
+    _, _, c2, _ = _ledger(live, idx[-2], monkeypatch)
+    m = c1.merge(c2, on=lj.TRADE_KEY, suffixes=("_a", "_b"), validate="one_to_one")
+    assert len(m) == len(c1) > 0
+    for c in ("cena_wejscia", "cena_wyjscia", "wielkosc_proc_kapitalu", "zwrot_pozycji_proc"):
+        assert np.allclose(m[f"{c}_a"], m[f"{c}_b"], rtol=0, atol=1e-12)
+    assert (m["data_wyjscia_a"] == m["data_wyjscia_b"]).all()
+
+
+def test_run_writes_trade_files(tmp_path, monkeypatch):
+    src = tmp_path / "live"
+    src.mkdir()
+    _write_live(src)
+    jdir = tmp_path / "dziennik"
+    monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp("2026-08-01", tz="UTC"))
+    monkeypatch.setattr(lj, "X1_START", pd.Timestamp("2026-08-01", tz="UTC"))
+    text = lj.run(fetch=False, live_dir=src, journal_dir=jdir)
+    closed = pd.read_csv(jdir / "transakcje.csv")
+    opened = pd.read_csv(jdir / "transakcje_otwarte.csv")
+    assert list(closed.columns) == lj.TRADE_CLOSED_COLS and len(closed) > 0
+    assert list(opened.columns) == lj.TRADE_OPEN_COLS and opened["as_of"].nunique() == 1
+    assert set(closed["skladowa"]) == {"trend", "premia_coinbase", "x1"}
+    assert (closed["data_wyjscia"] >= "2026-08-01").all()
+    assert "Transakcje (poprawka 9): zamknięte dopisane +" in text
+    text2 = lj.run(fetch=False, live_dir=src, journal_dir=jdir)
+    assert len(pd.read_csv(jdir / "transakcje.csv")) == len(closed)
+    assert "HISTORIA ZMIENIONA" not in text2
+    log = (jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()
+    assert f"transakcje +{len(closed)} |" in log[0] and "transakcje +0 |" in log[1]

@@ -119,6 +119,48 @@ połączenie sieciowe w dzienniku): 0 podatności; jedna uwaga niska (tekst klas
 do pliku trafia tylko pięć znanych klas, inna = głośny błąd w logu, zapis pominięty. Przegląd kodu
 (`engineering:code-review`): Approve — zmiana ograniczona do etykiety, wszystkie błędy zatrzymują się w logu.
 
+## Poprawka 9 (2026-09-26 — lista transakcji, tylko zapis)
+
+Decyzja użytkownika 2026-09-26: „Dodaj jeszcze do dziennika listę zawieranych transakcji — data wejścia, symbol, cena wejścia
+i wyjścia, wielkość pozycji, data zamknięcia — i uaktualnij bieżący stan”.
+
+**Co jest transakcją.** Każda składowa (trend, premia Coinbase, X1) to 7 faz. Faza co 7 dni kupuje swój koszyk po zamknięciu
+dnia formowania i trzyma go do zamknięcia dnia kolejnego formowania tej fazy — albo krócej, gdy pozycja trafi w likwidację
+izolowaną (trend 2×, premia 3×; X1 bez dźwigni i bez likwidacji). **Jeden wiersz = jedna moneta w jednej fazie przez jeden
+tydzień.** Ta sama moneta w tym samym kierunku w następnym tygodniu to nowy wiersz (w praktyce zmiana wielkości, nie nowe
+zlecenie). Pozycja netto w monecie = suma jej otwartych wierszy.
+
+**Pliki:** `transakcje.csv` — transakcje ZAMKNIĘTE, dopisywane i nigdy nie zmieniane (klucz: składowa + faza + data wejścia +
+symbol; inny wynik przeliczenia = „historia zmieniona”, stary zapis zostaje); `transakcje_otwarte.csv` — pozycje otwarte na
+`as_of`, **nadpisywany** przy każdym przebiegu (widok bieżący, nie historia).
+
+**Kolumny:** `skladowa` (trend / premia_coinbase / x1), `faza` (0–6), `symbol`, `kierunek` (long/short), `data_wejscia`
+(zamknięcie świecy dziennej tej daty = cena wejścia `cena_wejscia`), `data_wyjscia` + `cena_wyjscia` (zamknięcie dnia kolejnego
+formowania; przy likwidacji — dzień i cena likwidacji: wejście × (1 ∓ (1/dźwignia − 0,01))), `powod_wyjscia` (rotacja /
+likwidacja), `dzwignia`, `waga` (część kapitału składowej, ze znakiem), `k` (mnożnik R1 z pierwszego dnia trzymania; X1: 1),
+`wielkosc_proc_kapitalu` = |waga × k| w % kapitału portfela (trend i premia: portfel R1; X1: własny kapitał X1),
+`depozyt_proc_kapitalu` = wielkość / dźwignia, `zwrot_pozycji_proc` (zmiana ceny z punktu widzenia pozycji; likwidacja =
+−100 % / dźwignia, cały depozyt), `wynik_cenowy_proc_kapitalu` = wielkość × zwrot, `przed_startem` (pozycja otwarta przed
+pierwszym dniem dziennika — odziedziczona z rozbiegu silnika). W pliku otwartych: `cena_biezaca` (zamknięcie `as_of`),
+`planowane_wyjscie` (data wejścia + 7 dni), `zwrot_biezacy_proc`.
+
+**Zakres:** pozycje, które żyły w okresie wyniku dziennika (wyjście ≥ 2026-09-24; X1 ≥ 2026-09-25), oraz wszystkie otwarte.
+**Czego lista nie liczy:** fundingu i kosztów (są w `wyniki.csv` / `x1_wyniki.csv` — tam jest wynik portfela). Mnożnik k może
+zmienić się w trakcie tygodnia, a X1 w silniku codziennie wyrównuje wartość nóg — suma `wynik_cenowy_proc_kapitalu` jest więc
+bliska wynikowi, ale nie co do grosza. Ceny = dzienne zamknięcia Binance (to „cena odniesienia” dziennika wykonania, skill
+`zarzadzanie-pozycja` E4). `sygnaly.csv` pokazuje pozycję zlikwidowaną do końca tygodnia fazy; lista transakcji — jako zamkniętą.
+
+**Zgodność z silnikiem (testy `tests/test_live_journal.py`):** wynik każdej fazy trendu z silnika (z likwidacjami) =
+Σ |waga × 7| × zwrot pozycji co do 1e-9; ręczny przykład z krachem (likwidacja long 2×) i rotacją short; otwarte pozycje =
+pozycje z `sygnaly.csv` i `x1_sygnaly.csv` (poza zlikwidowanymi); transakcje zamknięte liczone dzień później mają te same
+liczby; przebieg dopisuje zamknięte raz (powtórka: +0, bez „historia zmieniona”).
+
+**Próba na kopii dziennika 2026-09-26** (dane z przebiegu 02:30, `as_of` 2026-09-25): nowe tylko `transakcje.csv` (52
+zamknięte: trend 40, premia 2, X1 10 — wszystkie odziedziczone z rozbiegu; 1 likwidacja: SUI short, faza 4, 18.09 → 25.09,
+maksimum 1,495× ceny wejścia przy progu 1,49×, strata = depozyt 0,13 % kapitału, uwzględniona już w wyniku 25.09)
+i `transakcje_otwarte.csv` (216 otwartych: trend 139, premia 7, X1 70); pozostałe pliki bez zmian, historia zmieniona 0.
+Lista nie wpływa na pozycje ani wynik; jej błąd nie zatrzymuje dziennika („transakcje BŁĄD …” w `przebiegi.log`).
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
