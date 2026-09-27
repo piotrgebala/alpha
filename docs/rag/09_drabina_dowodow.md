@@ -39,7 +39,7 @@ dopiero po spełnieniu poprzedniego. **Obalenie na dowolnym szczeblu wyłącza s
 |---|---|---|
 | **1. Mechanizm poza naszymi danymi** | Mechanizm ekonomiczny jednym zdaniem. Do tego oba poniższe: (a) oparcie w badaniach z innych rynków lub okresów; (b) nasz własny test tej samej reguły, bez strojenia, na danych niezależnych od krypto (np. trend na surowcach, walutach i indeksach w okresie PO publikacji badań). Test jest zwykłą rundą: pre-rejestracja, zasada 18, licznik. | Claude (runda) |
 | **2. Spójność w niezależnych wycinkach naszych danych** | Wycinki ustalone z góry: pełne lata kalendarzowe 2021–2025, 7 faz tygodniowych oraz, dla koszyków, pasma monet top-20 i 21–50. Warunek: ≥ 80 % wycinków dodatnich i żaden z t < −1,96. **Uwaga:** dla strategii już oglądanych to sprawdzenie jest częściowo post hoc, więc sam szczebel 2 nie niesie decyzji. | Claude (odczyt) |
-| **3. Dziennik papierowy** | ≥ 3 miesiące: kryteria mechaniki z `dziennik/README.md` spełnione, a wynik nie gorszy niż próg obalenia (średnia poniżej zakładanej minus 2 × błąd standardowy dla tej długości). | Claude (odczyt) |
+| **3. Dziennik papierowy** | ≥ 3 miesiące: kryteria mechaniki z `dziennik/README.md` spełnione, a wynik nie gorszy niż próg obalenia (średnia poniżej zakładanej minus z × błąd standardowy dla tej długości; z = 2,31 na każdym z 3 odczytów po 3, 6 i 12 miesiącach — decyzja użytkownika 2026-09-27; stałe, daty i skrypt: `dziennik/README.md` → „Zmiana kryteriów odczytu”). | Claude (odczyt) |
 | **4. Mała realna kwota** | Najwyżej 5 % kapitału jako depozyt, dźwignie jak w dzienniku (trend 2×, BTC 3×), STOP portfela 27,6 % spadku. | **użytkownik** |
 | **5. Skalowanie** | ≥ 12 miesięcy realnie bez obalenia; zwiększanie najwyżej ×2 na krok. | **użytkownik** |
 

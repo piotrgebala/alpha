@@ -297,7 +297,8 @@ def build_state(repo: str, now: datetime) -> tuple[dict, int]:
             "ts": r["ts"],
             "as_of": r["as_of"],
             "n": r["changed"],
-            "before_first_result": bool(first_result_ts) and r["ts"] < first_result_ts,
+            # bez żadnego wyniku każde zdarzenie jest sprzed pierwszego wyniku
+            "before_first_result": first_result_ts is None or r["ts"] < first_result_ts,
         }
         for r in runs
         if r["changed"] > 0
