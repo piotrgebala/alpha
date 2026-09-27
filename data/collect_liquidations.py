@@ -97,10 +97,14 @@ def _now_iso() -> str:
 
 
 class DayWriter:
-    """Append-only JSONL, plik per dzień UTC zdarzenia; `flush` po każdej linii."""
+    """Append-only JSONL, plik per dzień UTC zdarzenia; `flush` po każdej linii.
 
-    def __init__(self, root: Path) -> None:
+    `time_key` — pole rekordu z czasem zdarzenia w ms (Binance `E`; kolektor Bybit używa `T`).
+    """
+
+    def __init__(self, root: Path, time_key: str = "E") -> None:
         self.root = Path(root)
+        self.time_key = time_key
         self.root.mkdir(parents=True, exist_ok=True)
         self._path: Path | None = None
         self._f = None
@@ -108,7 +112,7 @@ class DayWriter:
         self.last_event_ms: int | None = None
 
     def write(self, rec: dict) -> None:
-        path = day_path(self.root, rec["E"])
+        path = day_path(self.root, rec[self.time_key])
         if path != self._path:
             self.close()
             self._f = open(path, "a", encoding="utf-8")  # noqa: SIM115 — plik żyje przez cały dzień
@@ -116,7 +120,7 @@ class DayWriter:
         self._f.write(json.dumps(rec, separators=(",", ":")) + "\n")  # ASCII: linia = rekord
         self._f.flush()
         self.count += 1
-        self.last_event_ms = int(rec["E"])
+        self.last_event_ms = int(rec[self.time_key])
 
     def close(self) -> None:
         if self._f is not None:

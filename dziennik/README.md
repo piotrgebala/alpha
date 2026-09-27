@@ -181,6 +181,88 @@ w `journal_strategies.py` = czerwony test. Moduł jest odtąd częścią kodu dz
 Próba na kopii dziennika 2026-09-26: nowe tylko `strategie.csv` (4 wiersze) i linia w `przebiegi.log`; reszta bez zmian,
 historia zmieniona 0. Nie wpływa na pozycje ani wynik; błąd opisu nie zatrzymuje dziennika.
 
+## Poprawka 11 (2026-09-27, decyzja użytkownika — rozbicie zwrotu, fazy, skład koszyka)
+
+Decyzja użytkownika 2026-09-27: „wykonaj wszystkie” propozycje z przeglądu kandydatów (`docs/rag/11_przeglad_kandydatow_2026-09-27.md`,
+sekcje 2 i 6, krok 3). **Trzy nowe pliki TYLKO DO ZAPISU.** Pozycje, mnożniki, wynik i progi — bez zmian.
+
+**Po co.** Dziennik zapisywał dotąd tylko wynik netto każdej składowej. Silnik przy każdym przebiegu ma w pamięci więcej:
+ile dała sama cena, ile funding (opłata co 8 h między longami i shortami), ile koszt transakcji i jaki był obrót (ile
+kapitału wymieniono). `data/raw/live` jest nadpisywany co noc, więc tego, co dziennik faktycznie policzył, nie da się
+później odtworzyć. Teraz zapisujemy to od razu.
+
+**Pliki i kolumny** (append-only jak `wyniki.csv`: istniejących wierszy przebieg nie zmienia; inna wartość przy
+przeliczeniu = „historia zmieniona”, stary zapis zostaje):
+- **`rozbicie.csv`** — klucz `date` + `skladowa` (`trend`, `coinbase`, `x1`); zakres dat jak w wynikach (trend i premia od
+  2026-09-24, X1 od 2026-09-25). Kolumny: `cena` (zwrot cenowy brutto; przy trendzie i premii zawiera też stratę
+  z likwidacji), `funding`, `koszt` (**ujemny** — to wkład kosztu do zwrotu, = opłata × obrót), `netto`, `obrot` (w kapitale
+  składowej, średnia 7 faz), `likwidacje` (liczba pozycji zlikwidowanych tego dnia we wszystkich fazach; X1: 0 z konstrukcji),
+  dla X1 także `r_long` i `r_short` (zwrot nogi long i short na jednostkę nogi; `cena` X1 = 0,5 · (r_long − r_short)).
+  Wszystko przy k = 1, czyli w jednostkach kapitału składowej — tak jak `r_trend` / `r_coinbase` w `wyniki.csv`.
+  **Zasada:** `cena + funding + koszt = netto` i `netto` = `r_trend` / `r_coinbase` (`wyniki.csv`) albo `r_x1`
+  (`x1_wyniki.csv`), oba do 1e-9 — sprawdzane w przebiegu PRZED zapisem; niezgodność = błąd w logu i brak zapisu
+  tej składowej. **Dokładnie:** przebieg porównuje netto z wynikiem, który sam właśnie policzył (przy nowym dniu to ta sama
+  liczba, którą dopisuje do `wyniki.csv`). Równość z zapisanym plikiem jest więc pewna, gdy log mówi „historia zmieniona: 0”;
+  przy odczycie po 3 miesiącach porównujemy `rozbicie.csv` z `wyniki.csv` / `x1_wyniki.csv` wprost, dzień po dniu.
+- **`fazy.csv`** — klucz `date` + `skladowa` + `faza` (0–6): `netto` jednej fazy (fazy = 7 kopii strategii startujących
+  w kolejne dni tygodnia, każda z 1/7 kapitału). **Zasada:** średnia 7 faz = netto składowej (1e-9), sprawdzane przed zapisem.
+- **`koszyk.csv`** — klucz `miesiac` + `symbol`, od miesiąca startu dziennika (2026-09): `pozycja` w rankingu obrotu 1–50
+  (ta sama miara co skład koszyka: średni obrót z 30 dni przed początkiem miesiąca, co najmniej 30 dni notowań; remis →
+  alfabetycznie), `sredni_obrot_30d` (USDT, zaokrąglony do 1 USDT), `czlonek_top20` (moneta w koszyku silnika), `funding_pobrany`
+  (czy dane przebiegu mają choć jedno rozliczenie fundingu tej monety w tym 30-dniowym oknie). Skład top-20 jest **ten sam
+  co do bajtu** co `rebalance_premium.monthly_members` (kontrola w przebiegu + testy). `funding_pobrany` opisuje stan pobrania
+  w dniu zapisu (funding pobieramy tylko dla członków koszyka), więc jego późniejsza zmiana NIE liczy się jako „historia
+  zmieniona”; pozostałe kolumny tak. **`funding_pobrany` = False znaczy „fundingu tej monety nie pobraliśmy”, a nie „moneta
+  nie ma fundingu”** (każdy perpetual ma funding; np. w 2026-09 miejsce 21 BLESSUSDT ma False, miejsce 22 WLDUSDT True —
+  z 50 monet True ma 35).
+
+**Kod.** Nowy ranking `rebalance_premium.monthly_ranking` (obok `monthly_members`, która zostaje bez zmian — silnik dziennika
+jej nie zmienia). `live_journal`: `components` / `positions` / `x1_component` / `run_x1` dostały opcjonalny argument, który
+tylko zbiera ramki silnika z tego samego przeliczenia (domyślnie nic nie robi); nowe funkcje `ts_breakdown`, `x1_breakdown`,
+`phase_rows`, `check_breakdown`, `check_phases`, `basket_rows`. W `przebiegi.log` przed „historia zmieniona” doszły pola
+`rozbicie +N | fazy +N | koszyk +N`; błąd liczenia albo zapisu któregokolwiek pliku to „BŁĄD <typ>” w tym polu, a dziennik
+idzie dalej (jak opisy strategii w poprawce 10). Wydruk ma nową linię „Rozbicie zwrotu, fazy, koszyk (poprawka 11…)”, a pod
+nią po jednej linii na każdy błąd z pełnym komunikatem („BŁĄD koszyk: ValueError: …”) — log zostaje krótki, komunikat jest
+w `ostatni_wydruk.txt`. Rozbicie i fazy liczy się **osobno dla każdej składowej**: błąd samego X1 nie blokuje zapisu trendu
+i premii, a pole w logu wygląda wtedy tak: „rozbicie +6 (x1 BŁĄD ValueError)”. Brakujące dni dopisuje następny udany
+przebieg (liczy całą historię od startu i dopisuje brakujące klucze). Takie wiersze trafiają na koniec pliku, więc **plików
+nie czyta się „po kolei” — zawsze sortuje się je po kluczu** (`date`, `skladowa` [, `faza`]).
+Parser strony (`tools/strona_dziennika.py`) czyta nowe pola bez zmian (test z nowym formatem).
+
+**Testy** (`tests/test_live_journal.py`, `tests/test_rebalance_premium.py`, `tests/test_strona_dziennika.py`): suma składników
+= netto = wynik dziennika; średnia faz = wynik; trend z rozbicia = drugie, niezależne wywołanie silnika (cena, funding, koszt,
+likwidacje, każda faza); kontrole odrzucają każde zaburzenie > 1e-9 (test właściwości w `hypothesis`), brak dnia i brak fazy;
+top-20 rankingu = `monthly_members` (test właściwości z remisami, dziurami i stablecoinami + prawdziwe panele: `data/raw/live`
+dziennika od 2025-09 i archiwum `universe_full` 2021-02 → 2026-06, 65 miesięcy, co do bajtu); powtórka dopisuje 0 wierszy;
+ręcznie zmieniony wiersz → „historia zmieniona: 1”, stary zapis zostaje; błąd rozbicia i koszyka → „BŁĄD RuntimeError”
+w logu, a **wszystkie pozostałe pliki bajt w bajt takie same jak w przebiegu bez błędu**; komunikat błędu w wydruku,
+nie w logu; błąd X1 → rozbicie tylko dla trendu i premii; błąd samego rozbicia X1 → trend i premia zapisane, w logu
+„(x1 BŁĄD ValueError)”, a następny udany przebieg dopisuje X1 (zbiór wierszy jak bez błędu); `funding_pobrany` liczone tylko
+z 30 dni przed początkiem miesiąca (funding usunięty wyłącznie w tym oknie → False).
+
+**Próba na kopii dziennika 2026-09-27** (kopia `dziennik/` z klonu dziennika, dane `data/raw/live` z przebiegu 02:30,
+`as_of` 2026-09-26, bez pobierania): nowe tylko `rozbicie.csv` (+8: trend 3, premia 3, X1 2), `fazy.csv` (+56 = 8 × 7) i
+`koszyk.csv` (+50, miesiąc 2026-09: 20 w koszyku, 35 z fundingiem); w `przebiegi.log` nowa linia „… | rozbicie +8 | fazy +56 |
+koszyk +50 | historia zmieniona: 0”. Wszystkie dotychczasowe pliki CSV **bajt w bajt bez zmian**, stare linie logu bez zmian.
+Kontrole na prawdziwych danych: |cena + funding + koszt − netto| ≤ 9·10⁻¹⁷, |netto − wyniki.csv / x1_wyniki.csv| = 0,
+|średnia faz − wynik| ≤ 5·10⁻¹⁷, top-20 = `monthly_members`. Druga droga: likwidacje w rozbiciu (trend: 1 w dniu 25.09,
+2 w dniu 26.09) = likwidacje w `transakcje.csv` według daty wyjścia. Czas przebiegu 5,9 s (nowe pliki: ~0,1 s). Drugi przebieg
+na tej samej kopii: „rozbicie +0 | fazy +0 | koszyk +0 | historia zmieniona: 0”. Próbę powtórzono po poprawkach
+z przeglądu kodu (izolacja składowych, komunikat błędu w wydruku): te same liczby, czas 5,9 s, parser strony czyta nową linię.
+
+**Co wolno odczytać i kiedy** (zapisane przed jakimkolwiek odczytem):
+- **Rozbicie po ~3 miesiącach** (odczyt 25.12): tylko mechanika — czy obrót i koszt zgadzają się z założeniami KO1
+  (jednorazowy pomiar kosztów wykonania z 2026-09-25, `runs/2026-09-25_ko1-koszty-wykonania/`; oczekiwany obrót trendu (TS1)
+  ≈ 11, premii Coinbase (CP1) ≈ 21 i X1 ≈ 47 kapitałów na rok, czyli koszt w kwartale ≈ 0,2 / 0,4 / 0,8 %). Odchylenie > 30 % = błąd
+  mechaniki do wyjaśnienia. **Po ~12 miesiącach:** poziom fundingu (dokładność ±2–3 pp/rok). Rozbicie **nie rozstrzyga**, skąd
+  bierze się wynik X1 (cena X1 ma po roku rozrzut ±32 %/rok) — żadna decyzja o regule nie zapada na podstawie nóg X1.
+- **Fazy — tylko diagnostyka:** różnica faz ≳ 3–5 % kapitału w tygodniu wskazuje błąd silnika albo jedno zdarzenie w jednej
+  monecie. **Nigdy nie wybieramy fazy ani nie zmieniamy wag faz po wyniku** — mierzonym obiektem zostaje średnia 7 faz.
+- **Koszyk — rejestr uniwersum:** do sprawdzianu „dane na żywo vs archiwum” (porównanie świec i fundingu pobranych przez
+  dziennik z archiwum za te same dni — STATUS, ETAP 5 pkt 3, termin 22.10–05.11) i do odtworzenia, co było w top-50 danego
+  miesiąca. Monety wycofane widać tylko od dnia startu, nie wstecz. Miejsca 21–50 nie są strategią (cień TR1 — czyli
+  ten sam trend liczony na monetach z miejsc 21–50 — odtwarza się z archiwum; `docs/rag/11_przeglad_kandydatow_2026-09-27.md`).
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
@@ -257,6 +339,11 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
   status progów.
 - `stan_rynku.csv` — etykieta stanu rynku per dzień (poprawka 7): zmienność 30 dni BTC i jej tercyl,
   zwrot 90 dni i jego znak. Tylko zapis, bez wpływu na pozycje.
+- `rozbicie.csv` (poprawka 11) — dzienny zwrot każdej składowej rozbity na cenę, funding, koszt i obrót
+  (+ liczba likwidacji; X1 także noga long i short); suma składników = netto = wynik w `wyniki.csv` / `x1_wyniki.csv`.
+- `fazy.csv` (poprawka 11) — dzienne netto każdej z 7 faz każdej składowej; średnia faz = wynik składowej.
+- `koszyk.csv` (poprawka 11) — ranking obrotu 1–50 na początek każdego miesiąca od 2026-09: pozycja, średni obrót
+  30 dni, członek top-20 (= skład koszyka silnika), czy jest funding. Wszystkie trzy tylko do zapisu, bez wpływu na pozycje.
 
 ## Progi (zapisane z góry)
 
@@ -271,7 +358,103 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
 3. **Terminowość:** dane z poprzedniego dnia dostępne przy przebiegu w ≥ 95 % dni.
 4. **Zgodność z założeniami SZ1:** depozyt w medianie 15–35 % kapitału, mnożniki w granicach sufitu.
 5. **Wynik (opisowo, bez werdyktu):** zwrot z przedziałem, dopisany do wspólnego rachunku „poza
-   próbą” razem z CP1P i TP1. Nie jest testem przewagi.
+   próbą” razem z CP1P i TP1. Nie jest testem przewagi. *(Zastąpione 2026-09-27 progiem obalenia —
+   patrz „Zmiana kryteriów odczytu” niżej.)*
+
+### Zmiana kryteriów odczytu (decyzja użytkownika 2026-09-27, przed pierwszym odczytem)
+
+Decyzja użytkownika 2026-09-27: „wykonaj wszystkie” (propozycje z `docs/rag/11_przeglad_kandydatow_2026-09-27.md`,
+sekcje 2 i 6). Zapis powstał **przed pierwszym odczytem**, przy 3 dniach wyniku R1 i 2 dniach X1 — liczby niżej
+nie zależą od wyniku dziennika. Reguły handlu, pozycje i kod dziennika — bez zmian (to nie jest Poprawka N:
+skrypt odczytu tylko czyta pliki). Kryteria 1–4 zostają jak wyżej.
+
+**Nowe kryterium 4b — zmienność R1 w paśmie.** Zrealizowana zmienność portfela R1 od pierwszego wyniku
+(odchylenie standardowe dziennego `r_port` × √365) po ~92 dniach mieści się w **[13; 31] %/rok** (granice
+włącznie). Reguła R1 celuje w 20 %/rok, więc wynik poza pasmem oznacza raczej błąd mechaniki (np. zły mnożnik,
+błąd rzędu ≥ 1,5×) niż pecha: na historii R1 poza pasmem leży 5,1 % okien 92-dniowych (sprawdzone drugą
+drogą, `docs/rag/11` sekcja 8). Pasmo zapisano tylko dla ~92 dni; przy odczytach po 6 i 12 miesiącach
+zmienność jest podawana opisowo (pasmo wiąże tylko w odczycie 1).
+
+**Nowe brzmienie kryterium 5 — próg obalenia (szczebel 3 ADR-09), zamiast „opisowo”.** Dla każdej nogi osobno:
+TS1 (`wyniki.csv: r_trend`), CP1 (`r_coinbase`), R1 (`r_port`) i X1 (`x1_wyniki.csv: r_x1`):
+
+- średnia roczna = średnia dzienna × 365 z n dni wyniku (braki pomijane i liczone osobno);
+- SE (błąd standardowy średniej) = σ / √(n/365), gdzie σ to zmienność **zakładana** (tabela niżej);
+- **próg obalenia = μ − z·SE**; średnia poniżej progu = próg przekroczony, czyli noga obalona
+  (ADR-09: obalenie wyłącza strategię z drabiny); średnia nad progiem = brak obalenia.
+  **Brak obalenia nie jest potwierdzeniem przewagi** — przy tej długości danych próg odrzuca tylko wyniki
+  wyraźnie gorsze od założeń;
+- **odczyty wiążące: 3** — po ~3, 6 i 12 miesiącach, czyli przy 92, 182 i 365 dniach wyniku R1 (ostatni dzień
+  wyniku 2026-12-24, 2027-03-24, 2027-09-23; odczyt dzień później). **Wiąże WYŁĄCZNIE wydruk z `--as-of` równym
+  dacie planu**, gdy migawka dziennika zawiera wynik R1 za ten dzień. Okno 7 dni po planie to tylko zapas: gdy
+  migawka na datę planu jest niepełna (przebieg nie doszedł), wiąże pierwsza data w oknie z pełną migawką —
+  skrypt sprawdza to sam i pisze „NIE WIĄŻE” przy każdej innej dacie. Ta sama migawka daje ten sam wydruk:
+  kolejne uruchomienia to kopie, nie nowe odczyty. Status liczy się raz, z kalendarza, i jest wspólny dla
+  wszystkich nóg: X1 (start dzień później) i noga z brakami wiążą razem z R1, a braki zmniejszają tylko ich n
+  w SE. Przed pierwszą datą planu skrypt pisze „ZA WCZEŚNIE — tylko podgląd”, bez `--as-of` i między
+  odczytami — „podgląd”. Wydruk ostrzega („UWAGA”), gdy migawka nie sięga dnia `--as-of` albo gdy dziennik
+  jest starszy niż 2 dni;
+- **z = 2,31 na każdym z 3 odczytów** (jeden stały próg). Dobór: łączna jednostronna szansa fałszywego
+  obalenia nogi, która naprawdę ma zakładane μ, przez wszystkie 3 odczyty = **2,5 %** — tyle, ile daje
+  pojedynczy odczyt przy 1,96. Metoda: symulacja błądzenia losowego (kroki dzienne N(0, 1), statystyka
+  odczytu k to suma po n_k dniach / √n_k; odczyty są zagnieżdżone, więc skorelowane: √(n_i/n_j)),
+  `simulate_z()` w skrypcie, 10 mln powtórzeń, ziarno 20260927 → 2,3102; druga droga — dokładna całka
+  normalna trójwymiarowa (`scipy.stats.multivariate_normal`) → 2,3113. Dla porównania: stałe 1,96 dałoby
+  5,7 % fałszywych obaleń. Bonferroni 2,394 (liczba 2,39 z przeglądu) pomija korelację odczytów: łączna
+  szansa fałszywego obalenia wyszłaby 2,0 % zamiast 2,5 %, czyli próg obalenia niższy (nogę trudniej obalić),
+  niż wymaga założenie. Przy 4 nogach łączna szansa fałszywego obalenia którejkolwiek wynosi do ~10 %
+  (nogi są skorelowane, bo R1 składa się z TS1 i CP1).
+
+**Stałe μ i σ** (roczne, arytmetyczne: średnia dzienna × 365, σ dzienna × √365) — konfiguracja dziennika na
+historii 2021–2026, zamrożone silniki, statystyka opisowa już raportowana (**0 wariantów, 0 nowych odczytów**).
+Komenda: `PYTHONUTF8=1 py -m backtest.odczyt_dziennika_stale` (wydruk z 2026-09-27 poniżej); stałe
+w `backtest/odczyt_dziennika.py::LEGS`, zgodność tabeli ze skryptem pilnuje test.
+
+| noga | konfiguracja | μ %/rok | σ %/rok | okres, dni | sprawdzenie drugą drogą | próg obalenia %/rok (Σ za okres) przy 92 / 182 / 365 dniach | lata do wykrycia μ przy 2·SE |
+|---|---|---|---|---|---|---|---|
+| TS1 | trend 2× z likwidacją izolowaną, pełne uniwersum (silnik RU1 `run_sz1`) | 10,69 | 18,12 | 2021-02-08 → 2026-06-30, 1 969 | CAGR 9,47 %; w oknie wspólnym z CP1 (1 880 dni) CAGR 7,1 / zmienność 18,2 = `runs/2026-09-24_ru1-pelne-uniwersum/raw_output_sz1.txt` l. 5 | −72,7 (−18,3) / −48,6 (−24,2) / −31,2 (−31,2) | 11,5 |
+| CP1 | premia Coinbase na BTC, 3× z likwidacją | 31,04 | 35,11 | 2021-05-08 → 2026-06-30, 1 880 | CAGR 28,2 / zmienność 35,1 = RU1 `raw_output_sz1.txt` l. 6 | −130,5 (−32,9) / −83,8 (−41,8) / −50,1 (−50,1) | 5,1 |
+| R1 | portfel: budżet ryzyka 1/σ, cel 20 %/rok, sufit 2 | 18,17 | 21,66 | 2021-05-08 → 2026-06-30, 1 880 | CAGR 17,1 / zmienność 21,7 = RU1 `raw_output_sz1.txt` l. 8 | −81,5 (−20,5) / −52,7 (−26,3) / −31,9 (−31,9) | 5,7 |
+| X1 | momentum przekrojowe, średnia 7 faz (silnik X1F) | 9,49 | 36,26 | 2021-02-08 → 2026-06-30, 1 969 | +9,5 %/rok = `runs/2026-09-24_x1f-siedem-faz/raw_output.txt` l. 14 | −157,3 (−39,7) / −109,1 (−54,4) / −74,3 (−74,3) | 58,4 |
+
+- **Dlaczego R1 μ = 18,17, a nie 17,1:** 17,1 %/rok w RU1 to CAGR (średnia geometryczna). Próg obalenia porównuje
+  średnią arytmetyczną, więc potrzebna jest arytmetyczna — ta sama historia daje 18,17 %. (18,6 z SZ1 to stary
+  CAGR na obciętym uniwersum.) TS1 w dzienniku to trend **z likwidacją 2×** — dlatego 10,69, a nie 11,1 z RU1
+  (bez likwidacji).
+- **Przedział:** obok średniej wydruk podaje przedział 95 % zrealizowanej średniej (średnia ± 1,96 × zrealizowane
+  odchylenie / √(n/365)) — opis efektu (bramka 16b), nie część progu.
+- **Co to znaczy dla decyzji:** progi są bardzo niskie (np. R1 po kwartale −20,5 % sumy zwrotów), bo 3 miesiące
+  to mało danych. Odczyt 25.12 rozstrzyga więc mechanikę (1–4b), a przewagi nie rozstrzyga. Szansa, że noga
+  **bez żadnej przewagi** (prawdziwe μ = 0) zostanie obalona w którymś z 3 odczytów: TS1 ~7 %, CP1 ~11 %,
+  R1 ~10 %, X1 ~4 % (ta sama symulacja). Potwierdzenie zakładanego zysku wymagałoby 5–58 lat (ostatnia kolumna).
+- Założenie symulacji: dzienne zwroty niezależne, a średnia z ~90+ dni w przybliżeniu normalna. Grube ogony
+  (np. X1) sprawiają, że rzeczywista szansa fałszywego obalenia może się nieco różnić od 2,5 %.
+
+Wydruk komendy stałych (2026-09-27):
+
+```
+μ, σ nóg dziennika na historii 2021–2026 (arytmetycznie; opisowo, 0 wariantów)
+  TS1 trend 2× (własne okno)          1969 dni 2021-02-08 → 2026-06-30 | μ +10.69 %/rok | σ 18.12 %/rok | CAGR  +9.47 %
+  TS1 trend 2× (okno wspólne z CP1)   1880 dni 2021-05-08 → 2026-06-30 | μ  +8.50 %/rok | σ 18.20 %/rok | CAGR  +7.08 %
+  CP1 premia Coinbase 3×              1880 dni 2021-05-08 → 2026-06-30 | μ +31.04 %/rok | σ 35.11 %/rok | CAGR +28.25 %
+  R1 portfel (budżet ryzyka)          1880 dni 2021-05-08 → 2026-06-30 | μ +18.17 %/rok | σ 21.66 %/rok | CAGR +17.14 %
+  X1 średnia 7 faz                    1969 dni 2021-02-08 → 2026-06-30 | μ  +9.49 %/rok | σ 36.26 %/rok | CAGR  +2.63 %
+```
+
+**Komenda odczytu** (czyta tylko `origin/master:dziennik/*`, niczego nie zapisuje; `--as-of` odtwarza stan
+z ostatniego commita „Dziennik: przebieg” z datą ≤ as_of + 1 dzień; `git fetch` przed każdym wydrukiem, bo
+skrypt czyta lokalny `origin/master`):
+
+```
+git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2026-12-24          # odczyt 1
+git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-03-24          # odczyt 2
+git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-09-23          # odczyt 3
+git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika [--repo .] [--json]         # podgląd
+```
+
+Skrypt jest reporterem („próg przekroczony / nieprzekroczony”); werdykt o każdej nodze podpisuje Claude
+w dokumentacji odczytu, a decyzja o szczeblu 4 należy do użytkownika. Kryteria 1–4 skrypt liczy tymi samymi
+definicjami co strona dziennika (`tools/strona_dziennika.build_state`). Testy: `tests/test_odczyt_dziennika.py`.
 
 ## Sprawdzian przed startem (2026-09-24)
 

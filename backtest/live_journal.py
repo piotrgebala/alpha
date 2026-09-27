@@ -27,6 +27,17 @@ Zasady zapisu (`dziennik/`):
   monecie od zamknięcia dnia formowania do zamknięcia dnia kolejnego formowania tej fazy albo do likwidacji;
   `transakcje_otwarte.csv` — widok pozycji otwartych na `as_of`, NADPISYWANY przy każdym przebiegu. Tylko
   zapis — wynik portfela liczą `wyniki.csv` / `x1_wyniki.csv`.
+- `rozbicie.csv`, `fazy.csv`, `koszyk.csv` (poprawka 11) — TYLKO zapis (append-only, wykrywanie „historia
+  zmieniona” jak wyżej): dzienny zwrot składowej (k = 1) rozbity na cenę, funding, koszt i obrót (suma
+  składników = netto = wartość w `wyniki.csv` / `x1_wyniki.csv`, sprawdzane przed zapisem); netto każdej
+  z 7 faz (średnia faz = netto składowej); ranking obrotu 1–50 na początek miesiąca (top-20 = skład
+  koszyka silnika). Liczone z tych samych ramek silnika co wynik (bez drugiego przeliczenia); błąd
+  nie zatrzymuje dziennika („rozbicie/fazy/koszyk BŁĄD <typ>” w `przebiegi.log`, pełny komunikat
+  w wydruku). Rozbicie i fazy liczone OSOBNO dla każdej składowej: błąd X1 nie blokuje zapisu trendu
+  i premii („rozbicie +N (x1 BŁĄD <typ>)”); brakujące dni dopisuje następny udany przebieg (liczy od
+  startu), więc kolejność wierszy w pliku nie musi być chronologiczna — czytać po kluczu. Netto
+  porównywane jest z wynikiem TEGO przebiegu (to samo, co trafia do `wyniki.csv` przy nowym dniu);
+  równość z zapisanym plikiem jest ścisła, gdy „historia zmieniona” = 0.
 
     PYTHONUTF8=1 py -m backtest.live_journal              # pobranie danych + zapis
     PYTHONUTF8=1 py -m backtest.live_journal --bez-pobierania
@@ -46,7 +57,12 @@ from backtest.checkpoint_lib import load_config
 from backtest.journal_strategies import build as build_strategies
 from backtest.journal_strategies import summarize as summarize_strategies
 from backtest.journal_strategies import to_rows as strategy_rows
-from backtest.rebalance_premium import monthly_members
+from backtest.rebalance_premium import (
+    TOP_N,
+    VOLUME_LOOKBACK_DAYS,
+    monthly_members,
+    monthly_ranking,
+)
 from backtest.run_coinbase_cp1 import daily_premium, premium_signal
 from backtest.sizing import apply_rules
 from backtest.ts_momentum import (
@@ -124,6 +140,28 @@ TRADE_OPEN_COLS = [
     "zwrot_biezacy_proc",
     "przed_startem",
 ]
+# Poprawka 11 (2026-09-27): rozbicie zwrotu, wyniki per faza, skład koszyka — tylko zapis.
+BREAKDOWN_KEY = ["date", "skladowa"]
+BREAKDOWN_VALUES = [
+    "cena",
+    "funding",
+    "koszt",
+    "netto",
+    "obrot",
+    "likwidacje",
+    "r_long",
+    "r_short",
+]
+BREAKDOWN_COLS = [*BREAKDOWN_KEY, *BREAKDOWN_VALUES]
+PHASE_KEY = ["date", "skladowa", "faza"]
+PHASE_COLS = [*PHASE_KEY, "netto"]
+BASKET_KEY = ["miesiac", "symbol"]
+BASKET_COLS = [*BASKET_KEY, "pozycja", "sredni_obrot_30d", "czlonek_top20", "funding_pobrany"]
+# `funding_pobrany` = stan pobrania w dniu zapisu (funding pobierany tylko dla członków koszyka od
+# ENGINE_START) — późniejsze dociągnięcie pliku to nie zmiana historii, więc poza porównaniem.
+BASKET_VALUES = ["pozycja", "sredni_obrot_30d", "czlonek_top20"]
+BASKET_DEPTH = 50
+X1_PHASE_COLS = ["r_long", "r_short", "r_ls_gross", "funding_net", "cost", "turnover", "r_net"]
 
 
 # ------------------------------------------------------------------ dane
@@ -170,18 +208,24 @@ def _months(as_of: pd.Timestamp) -> list[pd.Timestamp]:
     return list(pd.date_range(ENGINE_START, as_of, freq="MS"))
 
 
-def components(data: dict, as_of: pd.Timestamp, fee: float) -> tuple[pd.DataFrame, dict]:
-    """Dzienne zwroty netto składowych (k = 1) do `as_of` + wejścia silnika (do pozycji)."""
+def components(
+    data: dict, as_of: pd.Timestamp, fee: float, engines: dict | None = None
+) -> tuple[pd.DataFrame, dict]:
+    """
+    Dzienne zwroty netto składowych (k = 1) do `as_of` + wejścia silnika (do pozycji).
+    `engines` (poprawka 11, tylko zapis): gdy podany, dostaje pełne ramki silnika — średnią
+    i 7 faz każdej składowej oraz skład koszyka — te same obiekty, z których powstał wynik.
+    """
     d = truncate(data, as_of)
     end = as_of + pd.Timedelta(days=1)
     members = monthly_members(d["volume"], _months(as_of))
     liq = {"high": d["high"], "low": d["low"], "lev": LEV_TREND, "mmr": MMR}
-    tr, _ = portfolio(d["close"], d["funding"], members, ENGINE_START, end, fee, liq=liq)
+    tr, tr_phases = portfolio(d["close"], d["funding"], members, ENGINE_START, end, fee, liq=liq)
     close_b = d["close"][[BTC]]
     signs_b = pd.DataFrame({BTC: premium_signal(d["premium"]).reindex(close_b.index)})
     mem_b = {m: [BTC] for m in members}
     liq_b = {"high": d["high"][[BTC]], "low": d["low"][[BTC]], "lev": LEV_CB, "mmr": MMR}
-    cb, _ = portfolio(
+    cb, cb_phases = portfolio(
         close_b,
         d["funding"][[BTC]],
         mem_b,
@@ -199,6 +243,14 @@ def components(data: dict, as_of: pd.Timestamp, fee: float) -> tuple[pd.DataFram
         axis=1,
     ).dropna()
     ctx = {"members": members, "signs_b": signs_b, "close": d["close"], "end": end}
+    if engines is not None:
+        engines.update(
+            trend=tr,
+            trend_phases=tr_phases,
+            coinbase=cb,
+            coinbase_phases=cb_phases,
+            members=members,
+        )
     return rets, ctx
 
 
@@ -251,9 +303,9 @@ def phase_positions(
     return df
 
 
-def positions(data: dict, as_of: pd.Timestamp, fee: float) -> tuple:
+def positions(data: dict, as_of: pd.Timestamp, fee: float, engines: dict | None = None) -> tuple:
     """Pozycje na dzień po `as_of` (obie składowe, po mnożnikach R1), mnożniki, historia R1, zwroty."""
-    rets, ctx = components(data, as_of, fee)
+    rets, ctx = components(data, as_of, fee, engines)
     hist, k = next_multipliers(rets)
     close = ctx["close"]
     tr = phase_positions(
@@ -277,11 +329,13 @@ def x1_component(
     as_of: pd.Timestamp,
     end: pd.Timestamp,
     fee: float,
+    phases_out: list | None = None,
 ) -> tuple[pd.Series, pd.DataFrame]:
     """
     X1 (poprawka 3): dzienny zwrot netto jako średnia 7 faz `long_short_returns` (fazy startują
     w kolejne dni od `ENGINE_START`, wspólne okno) + nogi ostatniego formowania każdej fazy (≤ `as_of`)
-    w jednostkach kapitału X1 (±0,5/5 na monetę, / 7 faz).
+    w jednostkach kapitału X1 (±0,5/5 na monetę, / 7 faz). `phases_out` (poprawka 11, tylko zapis):
+    gdy podana, dostaje pełną ramkę `long_short_returns` każdej fazy (po kolei 0–6).
     """
     signal = signal_panel(close)
     month_starts = sorted(members)
@@ -289,6 +343,8 @@ def x1_component(
     for ph in range(PHASES):
         dates = formation_dates(close.index, ENGINE_START, end, ph)
         out = long_short_returns(close, funding, members, dates, fee)
+        if phases_out is not None:
+            phases_out.append(out)
         if len(out):
             series.append(out.set_index("date")["r_net"].rename(ph))
         past = [t for t in dates if t <= as_of]
@@ -673,6 +729,322 @@ def summarize_trades(closed: pd.DataFrame | None, opened: pd.DataFrame | None, t
     )
 
 
+# ------------------------------------------------------------------ poprawka 11: tylko zapis
+def _days(dates) -> pd.DatetimeIndex:
+    """Daty wyniku (tekst RRRR-MM-DD albo znaczniki) → indeks dni UTC."""
+    return pd.DatetimeIndex(pd.to_datetime(pd.Series(list(dates), dtype=object), utc=True))
+
+
+def ts_breakdown(avg: pd.DataFrame, name: str, dates) -> pd.DataFrame:
+    """
+    Rozbicie zwrotu składowej silnika TS1 (trend / premia Coinbase, k = 1) na dni `dates`: średnia
+    7 faz `ts_momentum.portfolio` — `cena` = gross (strata likwidacji jest w cenie), `funding`,
+    `koszt` = −cost (wkład kosztu do zwrotu, ≤ 0), `netto` = net, `obrot` = turnover (w kapitale
+    składowej), `likwidacje` = liczba pozycji zlikwidowanych tego dnia we wszystkich fazach.
+    Brak dnia w silniku = ValueError.
+    """
+    days = _days(dates)
+    a = avg.set_index("date").reindex(days)
+    if a["net"].isna().any():
+        raise ValueError(f"{name}: brak dni silnika {list(a.index[a['net'].isna()].date)[:3]}")
+    liq = a["liquidations"] * PHASES if "liquidations" in a else pd.Series(0.0, index=days)
+    return pd.DataFrame(
+        {
+            "date": days.strftime("%Y-%m-%d"),
+            "skladowa": name,
+            "cena": a["gross"].to_numpy(),
+            "funding": a["funding"].to_numpy(),
+            "koszt": -a["cost"].to_numpy(),
+            "netto": a["net"].to_numpy(),
+            "obrot": a["turnover"].to_numpy(),
+            "likwidacje": liq.round().astype(int).to_numpy(),
+            "r_long": np.nan,
+            "r_short": np.nan,
+        },
+        columns=BREAKDOWN_COLS,
+    )
+
+
+def x1_panels(phases: list[pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    """
+    Panele dni × faza (0–6) kolumn `long_short_returns` X1 na tym samym wspólnym oknie co
+    `x1_component` (od pierwszego dnia, w którym wszystkie fazy mają zwrot).
+    """
+    frames = [f.set_index("date") for f in phases if len(f)]
+    if len(frames) < PHASES:
+        raise ValueError(f"x1: {len(frames)} faz z wynikiem < {PHASES}")
+    net = pd.concat([f["r_net"].rename(ph) for ph, f in enumerate(frames)], axis=1)
+    cut = max(s.first_valid_index() for _, s in net.items())
+    out = {}
+    for c in X1_PHASE_COLS:
+        p = pd.concat([f[c].rename(ph) for ph, f in enumerate(frames)], axis=1)
+        out[c] = p[p.index >= cut]
+    return out
+
+
+def x1_breakdown(panels: dict[str, pd.DataFrame], dates) -> pd.DataFrame:
+    """
+    Rozbicie zwrotu X1 na dni `dates` (średnie 7 faz): `cena` = 0,5·(r_long − r_short) (brutto obu
+    nóg), `funding`, `koszt` = −cost, `netto` = r_net, `obrot`, `likwidacje` = 0 (X1 bez dźwigni
+    i likwidacji), `r_long` / `r_short` = zwrot nogi long / short na jednostkę nogi.
+    """
+    days = _days(dates)
+    mean = {c: p.reindex(days).mean(axis=1) for c, p in panels.items()}
+    if mean["r_net"].isna().any():
+        raise ValueError(f"x1: brak dni silnika {list(days[mean['r_net'].isna()].date)[:3]}")
+    return pd.DataFrame(
+        {
+            "date": days.strftime("%Y-%m-%d"),
+            "skladowa": "x1",
+            "cena": mean["r_ls_gross"].to_numpy(),
+            "funding": mean["funding_net"].to_numpy(),
+            "koszt": -mean["cost"].to_numpy(),
+            "netto": mean["r_net"].to_numpy(),
+            "obrot": mean["turnover"].to_numpy(),
+            "likwidacje": 0,
+            "r_long": mean["r_long"].to_numpy(),
+            "r_short": mean["r_short"].to_numpy(),
+        },
+        columns=BREAKDOWN_COLS,
+    )
+
+
+def phase_rows(phase_net: dict[int, pd.Series], name: str, dates) -> pd.DataFrame:
+    """Netto każdej fazy (0–6) składowej w dni `dates` (`fazy.csv`); brak fazy albo dnia = błąd."""
+    if sorted(phase_net) != list(range(PHASES)):
+        raise ValueError(f"{name}: fazy {sorted(phase_net)} zamiast 0–{PHASES - 1}")
+    days = _days(dates)
+    if not len(days):
+        return pd.DataFrame(columns=PHASE_COLS)
+    parts = []
+    for ph in range(PHASES):
+        v = phase_net[ph].reindex(days)
+        if v.isna().any():
+            raise ValueError(f"{name}: faza {ph} bez wyniku {list(days[v.isna()].date)[:3]}")
+        parts.append(
+            pd.DataFrame(
+                {
+                    "date": days.strftime("%Y-%m-%d"),
+                    "skladowa": name,
+                    "faza": ph,
+                    "netto": v.to_numpy(),
+                }
+            )
+        )
+    out = pd.concat(parts, ignore_index=True)[PHASE_COLS]
+    return out.sort_values(["date", "faza"], kind="stable").reset_index(drop=True)
+
+
+def _expected(expected: dict[str, pd.Series], name: str, dates: pd.Series) -> np.ndarray:
+    e = expected[name].reindex(dates.to_numpy())
+    if e.isna().any():
+        raise ValueError(f"{name}: dni bez wyniku dziennika {list(dates[e.isna().to_numpy()])[:3]}")
+    return e.to_numpy(dtype=float)
+
+
+def check_breakdown(rows: pd.DataFrame, expected: dict[str, pd.Series], tol: float = TOL) -> None:
+    """
+    Kontrola przed zapisem `rozbicie.csv`: cena + funding + koszt = netto i netto = wynik składowej
+    (`expected`: składowa → seria po dacie z `expected_results`, czyli wynik TEGO przebiegu, który
+    przy nowym dniu trafia do `wyniki.csv` / `x1_wyniki.csv`), oba do `tol`; każdy dzień wyniku ma
+    wiersz rozbicia. Niezgodność = ValueError (nic nie jest zapisane). Równość z PLIKIEM wyników jest
+    ścisła, gdy przebieg zgłasza „historia zmieniona: 0” (inaczej plik trzyma starszy zapis).
+    """
+    total = rows["cena"] + rows["funding"] + rows["koszt"]
+    bad = ~((total - rows["netto"]).abs() <= tol)
+    if bad.any():
+        raise ValueError(f"rozbicie: suma składników ≠ netto w {int(bad.sum())} wierszach")
+    for name, g in rows.groupby("skladowa"):
+        diff = np.abs(g["netto"].to_numpy(dtype=float) - _expected(expected, name, g["date"]))
+        if not (diff <= tol).all():
+            raise ValueError(f"rozbicie {name}: netto ≠ wynik dziennika (maks. {diff.max():.3g})")
+    for name, e in expected.items():
+        missing = set(e.index) - set(rows.loc[rows["skladowa"] == name, "date"])
+        if missing:
+            raise ValueError(f"rozbicie {name}: brak dni {sorted(missing)[:3]}")
+
+
+def check_phases(rows: pd.DataFrame, expected: dict[str, pd.Series], tol: float = TOL) -> None:
+    """Kontrola przed zapisem `fazy.csv`: w każdym dniu 7 faz, ich średnia = wynik składowej (`tol`)."""
+    g = rows.groupby(["skladowa", "date"])["netto"].agg(["size", "mean"]).reset_index()
+    if not (g["size"] == PHASES).all():
+        raise ValueError("fazy: dzień bez kompletu 7 faz")
+    for name, h in g.groupby("skladowa"):
+        diff = np.abs(h["mean"].to_numpy(dtype=float) - _expected(expected, name, h["date"]))
+        if not (diff <= tol).all():
+            raise ValueError(f"fazy {name}: średnia faz ≠ wynik dziennika (maks. {diff.max():.3g})")
+    for name, e in expected.items():
+        if set(e.index) - set(g.loc[g["skladowa"] == name, "date"]):
+            raise ValueError(f"fazy {name}: brak dni wyniku")
+
+
+def expected_results(res: pd.DataFrame, res_x1: pd.DataFrame | None) -> dict[str, pd.Series]:
+    """
+    Wynik składowych po dacie (tekst) z przeliczenia TEGO przebiegu — to, co przebieg dopisuje do
+    `wyniki.csv` / `x1_wyniki.csv` przy nowym dniu. Dla dni już zapisanych plik ma pierwszeństwo
+    (append-only), więc przy „historia zmieniona” > 0 plik może się różnić od tej serii.
+    """
+    days = res["date"].to_numpy()
+    out = {
+        "trend": pd.Series(res["r_trend"].to_numpy(dtype=float), index=days),
+        "coinbase": pd.Series(res["r_coinbase"].to_numpy(dtype=float), index=days),
+    }
+    if res_x1 is not None:
+        out["x1"] = pd.Series(res_x1["r_x1"].to_numpy(dtype=float), index=res_x1["date"].to_numpy())
+    return out
+
+
+def component_breakdown(
+    engines: dict, name: str, res: pd.DataFrame, res_x1: pd.DataFrame | None, expected: dict
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    (`rozbicie.csv`, `fazy.csv`) jednej składowej (`trend` / `coinbase` na dni `res`, `x1` na dni
+    `res_x1`) z ramek silnika tego przebiegu; obie kontrole przed zwrotem — niezgodność = ValueError.
+    """
+    if name == "x1":
+        panels = x1_panels(engines["x1_phases"])
+        rb = x1_breakdown(panels, res_x1["date"])
+        fz = phase_rows(dict(panels["r_net"].items()), "x1", res_x1["date"])
+    else:
+        rb = ts_breakdown(engines[name], name, res["date"])
+        per = {ph: f["net"] for ph, f in enumerate(engines[f"{name}_phases"])}
+        fz = phase_rows(per, name, res["date"])
+    rb = rb.astype({c: float for c in BREAKDOWN_VALUES if c != "likwidacje"})
+    own = {name: expected[name]}
+    check_breakdown(rb, own)
+    check_phases(fz, own)
+    return rb, fz
+
+
+def breakdown_and_phases(
+    engines: dict,
+    res: pd.DataFrame,
+    res_x1: pd.DataFrame | None,
+    errors: dict[str, Exception] | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    (`rozbicie.csv`, `fazy.csv`) z ramek silnika zebranych w tym przebiegu (`components`, `run_x1`)
+    na dni wyniku: trend i premia od `JOURNAL_START`, X1 od `X1_START` (gdy X1 policzone). Każda
+    składowa liczona i sprawdzana osobno (`component_breakdown`). Bez `errors` pierwszy błąd
+    przerywa (ValueError); z `errors` (słownik) błąd składowej trafia do niego (składowa → wyjątek),
+    a ta składowa jest pominięta — pozostałe zapisują się normalnie (błąd X1 nie blokuje trendu).
+    """
+    expected = expected_results(res, res_x1)
+    names = ["trend", "coinbase"] + (["x1"] if res_x1 is not None else [])
+    rb, fz = [], []
+    for name in names:
+        try:
+            r, f = component_breakdown(engines, name, res, res_x1, expected)
+        except Exception as exc:  # noqa: BLE001 — izolacja składowej tylko na życzenie (`errors`)
+            if errors is None:
+                raise
+            errors[name] = exc
+            continue
+        if len(r):
+            rb.append(r)
+        if len(f):
+            fz.append(f)
+    rows_rb = pd.concat(rb, ignore_index=True) if rb else pd.DataFrame(columns=BREAKDOWN_COLS)
+    rows_fz = pd.concat(fz, ignore_index=True) if fz else pd.DataFrame(columns=PHASE_COLS)
+    rows_rb = rows_rb.sort_values(BREAKDOWN_KEY, kind="stable").reset_index(drop=True)
+    rows_fz = rows_fz.sort_values(PHASE_KEY, kind="stable").reset_index(drop=True)
+    return rows_rb, rows_fz
+
+
+def error_text(exc: Exception, limit: int = 120) -> str:
+    """Opis błędu do wydruku: „<typ>: <komunikat>” (komunikat skrócony do `limit` znaków)."""
+    return f"{type(exc).__name__}: {str(exc)[:limit]}"
+
+
+def basket_rows(
+    volume: pd.DataFrame,
+    funding: pd.DataFrame,
+    members: dict,
+    months: list[pd.Timestamp],
+    depth: int = BASKET_DEPTH,
+) -> pd.DataFrame:
+    """
+    Rejestr uniwersum (`koszyk.csv`): na początek każdego miesiąca z `months` ranking obrotu
+    1–`depth` (`rebalance_premium.monthly_ranking` — miara `monthly_members`: średni obrót 30 dni,
+    ≥ 30 dni historii), `czlonek_top20` = w koszyku silnika (`members`), `funding_pobrany` = ≥ 1
+    rozliczenie fundingu w oknie 30 dni przed początkiem miesiąca w danych przebiegu.
+    `sredni_obrot_30d` w pliku zaokrąglony do 1 USDT: liczba całkowita przechodzi przez CSV bez
+    błędu ostatniego bitu (float rzędu 1e8 nie — powtórka dałaby fałszywą „historię zmienioną”).
+    Top-20 rankingu ≠ skład koszyka silnika = ValueError.
+    """
+    ranking = monthly_ranking(volume, months, depth)
+    rows = []
+    for m in months:
+        ranked = ranking[m]
+        if sorted(s for s, _ in ranked[:TOP_N]) != list(members[m]):
+            raise ValueError(f"koszyk {m:%Y-%m}: top-{TOP_N} rankingu ≠ skład koszyka silnika")
+        win = funding.loc[
+            (funding.index >= m - pd.Timedelta(days=VOLUME_LOOKBACK_DAYS)) & (funding.index < m)
+        ]
+        for pos, (sym, vol) in enumerate(ranked, start=1):
+            rows.append(
+                {
+                    "miesiac": m.strftime("%Y-%m"),
+                    "symbol": sym,
+                    "pozycja": pos,
+                    "sredni_obrot_30d": int(round(vol)),
+                    "czlonek_top20": sym in members[m],
+                    "funding_pobrany": bool(sym in win.columns and win[sym].notna().any()),
+                }
+            )
+    return pd.DataFrame(rows, columns=BASKET_COLS)
+
+
+def basket_months(as_of: pd.Timestamp, start: pd.Timestamp | None = None) -> list[pd.Timestamp]:
+    """Miesiące rejestru koszyka: od miesiąca startu dziennika (`JOURNAL_START`) do `as_of`."""
+    start = JOURNAL_START if start is None else start
+    first = start.normalize() - pd.Timedelta(days=start.day - 1)
+    return [m for m in _months(as_of) if m >= first]
+
+
+def append_safe(
+    path: Path,
+    rows: pd.DataFrame | None,
+    key: list[str],
+    value_cols: list[str],
+    error: str | None = None,
+    details: list[str] | None = None,
+) -> tuple[str, list[str]]:
+    """
+    `append_rows` dla plików tylko do zapisu (poprawka 11): zwraca (tekst do logu, „historia
+    zmieniona”). Błąd liczenia (`error`) albo zapisu → („BŁĄD <typ>”, []) — dziennik idzie dalej;
+    komunikat błędu zapisu trafia do `details` (wydruk), log zostaje krótki.
+    """
+    if error is not None:
+        return error, []
+    try:
+        n, changed = append_rows(path, rows, key, value_cols)
+    except Exception as exc:  # noqa: BLE001 — plik tylko do zapisu nie zatrzymuje dziennika
+        if details is not None:
+            details.append(f"zapis {path.name}: {error_text(exc)}")
+        return f"BŁĄD {type(exc).__name__}", []
+    return f"+{n}", changed
+
+
+def summarize_p11(rb_txt: str, fz_txt: str, ks_txt: str, details: list[str] | None = None) -> str:
+    """
+    Linia do wydruku (poprawka 11, tylko zapis) + po jednej linii na błąd z komunikatem (`details`:
+    „gdzie: <typ>: <komunikat>”) — log ma tylko „BŁĄD <typ>”, komunikat jest tu (jak X1 i opisy).
+    """
+    line = (
+        f"  Rozbicie zwrotu, fazy, koszyk (poprawka 11, tylko zapis): rozbicie {rb_txt}, "
+        f"fazy {fz_txt}, koszyk {ks_txt}"
+    )
+    return "\n".join([line] + [f"    BŁĄD {d}" for d in details or []])
+
+
+def with_errors(txt: str, errors: dict[str, Exception]) -> str:
+    """Pole logu + składowe pominięte przez błąd: „+N (x1 BŁĄD ValueError)”; bez błędów bez zmian."""
+    if not errors or txt.startswith("BŁĄD"):
+        return txt
+    return f"{txt} (" + ", ".join(f"{n} BŁĄD {type(e).__name__}" for n, e in errors.items()) + ")"
+
+
 # ------------------------------------------------------------------ przebieg
 def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURNAL_DIR) -> str:
     started = pd.Timestamp.now(tz="UTC")
@@ -688,7 +1060,8 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         "coinbase_premia": data["premium"].index.max(),
     }
     as_of = min(last.values())
-    pos, k, hist, rets = positions(data, as_of, fee)
+    engines: dict = {}  # poprawka 11: ramki silnika tego przebiegu (tylko do zapisu rozbicia)
+    pos, k, hist, rets = positions(data, as_of, fee, engines)
     res = journal_rows(hist, rets)
     n_sig, ch_sig = append_rows(
         journal_dir / "sygnaly.csv",
@@ -718,7 +1091,9 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     )
     # X1 osobno: jego błąd nie może zatrzymać dziennika głównego (kompletność liczona z logu)
     try:
-        n_sig_x1, n_res_x1, ch_x1, eq_x1, dd_x1, pos_x1 = run_x1(data, as_of, fee, journal_dir)
+        n_sig_x1, n_res_x1, ch_x1, eq_x1, dd_x1, pos_x1 = run_x1(
+            data, as_of, fee, journal_dir, engines
+        )
         status_x1 = stop_status(dd_x1, X1_WARN_DD, X1_STOP_DD)
         text_x1 = summarize_x1(pos_x1, eq_x1, dd_x1, status_x1)
     except Exception as exc:  # noqa: BLE001 — zapis błędu zamiast przerwania przebiegu
@@ -781,10 +1156,41 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     except Exception as exc:  # noqa: BLE001 — opis nie zatrzymuje dziennika
         text_str = f"  STRATEGIE AKTYWNE: BŁĄD opisu {type(exc).__name__}: {str(exc)[:120]}"
         str_txt = f"BŁĄD {type(exc).__name__}"
+    # rozbicie zwrotu, fazy, koszyk (poprawka 11): tylko zapis, każdy plik osobno; błąd tylko do logu
+    # (każda składowa rozbicia osobno: błąd X1 nie blokuje trendu i premii; komunikat → wydruk)
+    p11_err: list[str] = []
+    comp_err: dict[str, Exception] = {}
+    try:
+        rows_rb, rows_fz = breakdown_and_phases(engines, res, engines.get("x1_res"), comp_err)
+        err_rf = None
+    except Exception as exc:  # noqa: BLE001 — rozbicie nie zatrzymuje dziennika
+        rows_rb = rows_fz = None
+        err_rf = f"BŁĄD {type(exc).__name__}"
+        p11_err.append(f"rozbicie/fazy: {error_text(exc)}")
+    p11_err += [f"rozbicie/fazy {n}: {error_text(e)}" for n, e in comp_err.items()]
+    rb_txt, ch_rb = append_safe(
+        journal_dir / "rozbicie.csv", rows_rb, BREAKDOWN_KEY, BREAKDOWN_VALUES, err_rf, p11_err
+    )
+    fz_txt, ch_fz = append_safe(
+        journal_dir / "fazy.csv", rows_fz, PHASE_KEY, ["netto"], err_rf, p11_err
+    )
+    rb_txt, fz_txt = with_errors(rb_txt, comp_err), with_errors(fz_txt, comp_err)
+    try:
+        d_now = truncate(data, as_of)
+        rows_ks = basket_rows(
+            d_now["volume"], d_now["funding"], engines["members"], basket_months(as_of)
+        )
+        err_ks = None
+    except Exception as exc:  # noqa: BLE001 — rejestr koszyka nie zatrzymuje dziennika
+        rows_ks, err_ks = None, f"BŁĄD {type(exc).__name__}"
+        p11_err.append(f"koszyk: {error_text(exc)}")
+    ks_txt, ch_ks = append_safe(
+        journal_dir / "koszyk.csv", rows_ks, BASKET_KEY, BASKET_VALUES, err_ks, p11_err
+    )
     dd = float(res["drawdown"].iloc[-1]) if len(res) else 0.0
     eq = float(res["equity"].iloc[-1]) if len(res) else 1.0
     status = stop_status(dd)
-    changed = ch_sig + ch_res + ch_x1 + ch_st + ch_fg + ch_tr
+    changed = ch_sig + ch_res + ch_x1 + ch_st + ch_fg + ch_tr + ch_rb + ch_fz + ch_ks
     late = (started.normalize() - as_of).days > 1
     summary = (
         summarize(pos, k, as_of, eq, dd, status, late, changed, last)
@@ -796,6 +1202,8 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         + summarize_trades(tr_closed, tr_open, tr_txt)
         + "\n"
         + text_str
+        + "\n"
+        + summarize_p11(rb_txt, fz_txt, ks_txt, p11_err)
     )
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
@@ -803,7 +1211,8 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         f"kapitał {eq:.4f} | obsunięcie {100 * dd:.1f}% | {status} | "
         f"X1 sygnały +{n_sig_x1} wyniki +{n_res_x1} kapitał {eq_x1:.4f} "
         f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | stan rynku {st_txt} | F&G {fg_txt} | "
-        f"transakcje {tr_txt} | opisy strategii {str_txt} | historia zmieniona: {len(changed)}\n"
+        f"transakcje {tr_txt} | opisy strategii {str_txt} | rozbicie {rb_txt} | fazy {fz_txt} | "
+        f"koszyk {ks_txt} | historia zmieniona: {len(changed)}\n"
     )
     journal_dir.mkdir(parents=True, exist_ok=True)
     with open(journal_dir / "przebiegi.log", "a", encoding="utf-8") as f:
@@ -844,9 +1253,15 @@ def summarize(pos, k, as_of, eq, dd, status, late, changed, last) -> str:
     return "\n".join(lines)
 
 
-def run_x1(data: dict, as_of: pd.Timestamp, fee: float, journal_dir: Path) -> tuple:
-    """Pozycje i wynik X1 do `as_of` + zapis `x1_sygnaly.csv` / `x1_wyniki.csv` (append-only)."""
+def run_x1(
+    data: dict, as_of: pd.Timestamp, fee: float, journal_dir: Path, engines: dict | None = None
+) -> tuple:
+    """
+    Pozycje i wynik X1 do `as_of` + zapis `x1_sygnaly.csv` / `x1_wyniki.csv` (append-only).
+    `engines` (poprawka 11): po udanym zapisie dostaje ramki 7 faz i wiersze wyniku X1.
+    """
     d = truncate(data, as_of)
+    phases: list[pd.DataFrame] = []
     r_x1, pos_x1 = x1_component(
         d["close"],
         d["funding"],
@@ -854,6 +1269,7 @@ def run_x1(data: dict, as_of: pd.Timestamp, fee: float, journal_dir: Path) -> tu
         as_of,
         as_of + pd.Timedelta(days=1),
         fee,
+        phases_out=phases,
     )
     pos_x1.insert(0, "as_of", as_of.date().isoformat())
     res_x1 = x1_rows(r_x1)
@@ -861,6 +1277,8 @@ def run_x1(data: dict, as_of: pd.Timestamp, fee: float, journal_dir: Path) -> tu
         journal_dir / "x1_sygnaly.csv", pos_x1, ["as_of", "phase", "symbol"], ["sign", "weight"]
     )
     n_res, ch_res = append_rows(journal_dir / "x1_wyniki.csv", res_x1, ["date"], ["r_x1"])
+    if engines is not None:
+        engines.update(x1_phases=phases, x1_res=res_x1)
     dd = float(res_x1["drawdown"].iloc[-1]) if len(res_x1) else 0.0
     eq = float(res_x1["equity"].iloc[-1]) if len(res_x1) else 1.0
     return n_sig, n_res, ch_sig + ch_res, eq, dd, pos_x1

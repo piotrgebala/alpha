@@ -3021,3 +3021,28 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **Do poprawienia w skillu `quant-strategy-catalog`** (nowa wersja przy następnej aktualizacji): brak rodziny low-vol/BAB w `families.md`,
   opis D1 „TL1 jako forma fundingu” (TL1 używał OI).
 
+#### ETAP 6 — wykonanie (2026-09-27, decyzja użytkownika „wykonaj wszystkie”)
+
+- **LB0 — kolektor pełnych likwidacji Bybit:** [runda](runs/2026-09-27_lb0-kolektor-bybit/README.md), wniosek 106. Nadzór
+  w `tools/likwidacje.sh` (ta sama linia crona co LK0 — nowej nie trzeba); wyłącznik `touch ~/likwidacje_bybit/WYLACZONY`.
+- **Kopia + dzienny indeks likwidacji** (`data/liquidation_backup.py`, `data/liquidation_index.py`; wywołuje ją
+  `tools/likwidacje.sh`, praca raz na dobę po 00:15 UTC): lokalne repo git `~/likwidacje_kopia` działa od dziś.
+  **Zdalna kopia czeka na użytkownika:** prywatne repo GitHub `piotrgebala/alpha-likwidacje` (puste) + klucz
+  `~/.ssh/likwidacje_deploy.pub` dodany jako deploy key z prawem zapisu; remote już ustawiony — pierwszy push sam.
+  Do tego czasu `kopia.log` pisze „BRAK ZDALNEJ KOPII” (kod 0, kolektory działają).
+- **Odczyt dziennika z progami z góry:** `backtest/odczyt_dziennika.py` + „Zmiana kryteriów odczytu” w
+  [dziennik/README.md](dziennik/README.md). Decyzje: kryterium 5 = próg obalenia (zamiast opisu) — decyzja użytkownika;
+  **z = 2,31** na 3 odczytach (92/182/365 dni; dokładna całka normalna 2,3113; przegląd podał przybliżone 2,39 =
+  Bonferroni bez korelacji); kryterium 4b zmienność R1 [13; 31] %/rok; wiąże tylko `--as-of` = data planu
+  (2026-12-24 / 2027-03-24 / 2027-09-23). Wniosek 107.
+- **Poprawka 11 dziennika** (rozbicie.csv, fazy.csv, koszyk.csv — tylko zapis): [dziennik/README.md](dziennik/README.md).
+  Próba na kopii: dotychczasowe CSV bajt w bajt, historia zmieniona 0. Kolumna `funding_pobrany` (przemianowana z
+  `ma_funding` przed pierwszym przebiegiem — znaczy „pobraliśmy funding”, nie „moneta ma funding”).
+- **Rejestr odczytów historii:** [`runs/odczyty_historii.csv`](runs/odczyty_historii.csv) + `py -m backtest.dsr --k <warianty>`.
+  **Obowiązuje metoda AU4** (N = Σ wariantów = 40; nowa runda → 41 → t 3,84 dla DSR 0,95), zgodna z AU4 i wnioskiem 96;
+  wariant ostrożny (każda runda z wynikiem ≥ 1) N = 52 → t 3,94 — tylko do wglądu. Wniosek 107.
+- **Skrypt strony dziennika** `tools/strona_dziennika.py` scalony (źródło definicji kryteriów 1–4 dla odczytu); rutyna
+  Cowork nadal ma własną wklejoną kopię z sumą — nową instrukcję wkleja użytkownik (plik z 2026-09-27).
+- **Backlog:** kontrola (f) na stronie — alarm przy „BŁĄD” w polach ostatniej linii `przebiegi.log`; nowa wersja skilla
+  katalogu (low-vol/BAB, D1 vs TL1); kolektor Binance nie sprawdza zakresu T przy zapisie (sprawdza go indeks/kopia).
+

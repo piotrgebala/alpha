@@ -53,7 +53,7 @@ TL1 przeliczony w RU4 (97); NL1 i P2 nie dotyczy.
 księguje każdy odczyt. Trend: szczebel 2 spełniony (post hoc); szczebel 1(b) TX1 NIEROZSTRZYGNIĘTY — działa 1990–2012, zanika po 2013 (84).
 
 **Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1). Likwidacje zbierane od
-2026-09-25 (LK0, 102) — odczyt E1 po ≥ 1 roku. Nowe źródła
+2026-09-25 (LK0, 102, próbka Binance) i pełne z Bybit od 2026-09-27 (LB0, 106) — odczyt E1 po ≥ 1 roku. Nowe źródła
 popytu: premia koreańska NIEMIERZALNA (KP1, 91; sygnał inny niż CP1, ale efekt z badań ~SR 0,15 wobec
 progu 0,86); stablecoiny i ETF — NIEMIERZALNE w SH1 (81). Kolejne sygnały kierunkowe na samym BTC
 wymagają priorytetu SR ≥ ~0,9 z badań po publikacji — inaczej nie startują (filtr przed pobraniem danych).
@@ -165,6 +165,7 @@ podsumowanie pod tabelą.
 | **MX1** | 2026-09-25 | [mx1-macd-ema-1h](2026-09-25_mx1-macd-ema-1h/README.md) | Decyzja użytkownika: przecięcie EMA 10/30 potwierdzone WCZEŚNIEJSZYM przecięciem MACD 12/26/9 jako reguła kierunkowa na BTC 1h (przyrząd reguł A2 na bazie Y1); tylko rachunek mierzalności, bez symulacji | **0 — NIEMIERZALNA, nie startuje** | **1 254 sygnały w 5,4 roku; trzeba ≥ 56,8 % trafności wobec obietnicy 56 % (moc przy 56 %: 29 %) → nie startuje. MACD przepuszcza 77 % przecięć EMA — to w większości ten sam sygnał.** Walidacja: **Ready** — TA-Lib co do sztuki (1 256 / 1 626) |
 | **MX2** | 2026-09-25 | [mx2-filtry-1h](2026-09-25_mx2-filtry-1h/README.md) | Decyzja użytkownika: pięć filtrów na sygnale MX1 (trend 28 dni, ADX > 25, wolumen > średnia 20, sesja USA 13–21 UTC, RSI po stronie 50); tylko rachunek mierzalności | **0 — wszystkie 5 NIEMIERZALNE, nie startuje** | **Zostaje 585 / 302 / 684 / 502 / 1 254 sygnałów; trzeba 59,4 / 61,3 / 59,0 / 59,7 / 57,6 % (korekta na 5 filtrów); moc przy 56 %: 4–13 %. RSI nie odcina nic — przy przecięciu potwierdzonym MACD zawsze już „potwierdza”.** Walidacja: **Ready** — TA-Lib co do sztuki |
 | **TP1** | 2026-09-26 | [tp1-cel-zysku](2026-09-26_tp1-cel-zysku/README.md) | Decyzja użytkownika („sprawdź jednak”): wyjście na celu zysku +1 % / +2 % „większym wolumenem” — trend TS1 i premia CP1 przy równym ryzyku (R1 na jednym szeregu, sufit 2); X1 wyłączony (konstrukcja nóg); tylko mierzalność | **0 — NIEMIERZALNA, nie startuje** | **Szum różnicy przy równym ryzyku ±17,6–20,1 pp/rok wobec efektu 5 pp → potrzeba 67–83 lat danych. Cel uruchamia się w 78–92 % pozycji; dla równego ryzyka trend musiałby w 97 % dni grać na sufitcie dźwigni 2×.** Walidacja: **Ready** — silnik = dziennik co do bitu, druga droga z OHLC 1 665 / 1 659 |
+| **LB0** | 2026-09-27 | [lb0-kolektor-bybit](2026-09-27_lb0-kolektor-bybit/README.md) | Kolektor PEŁNYCH likwidacji Bybit (`allLiquidation.*`, wszystkie zdarzenia, nie próbka) od 2026-09-27 do `$HOME/likwidacje_bybit` (poza repo) — druga brama danych rodziny E1 obok LK0; decyzja użytkownika („wykonaj wszystkie”, docs/rag/11) | **0 — POZA licznikami** (zbieranie danych, 0 odczytów; jeden licznik E1 dla LK0 i LB0) | **Uruchomiony. Kontrola pozytywna 180 s: 777 symboli na 2 połączeniach, subskrypcje 78/78, 58 likwidacji z 16 monet (14 longów, 44 shortów); LK0 w tym samym oknie 62 zdarzenia, te same główne monety i kierunek (ENA: Bybit 25, Binance 13 — próbkowanie Binance).** Nadzór w `tools/likwidacje.sh` (bez nowej linii crona), wyłącznik `WYLACZONY`; kopia + dzienny indeks obu giełd (`data/liquidation_backup.py`). Walidacja 16a: **Caveats** (jedno krótkie okno) |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
@@ -989,6 +990,22 @@ podsumowanie pod tabelą.
     w 97 % dni grać na sufitcie dźwigni 2× — „większy wolumen” opiera się o zasadę 5. Wersja z celem to inna strategia (korelacja
     0,55–0,66 z bazową); prior z teorii zatrzymania i N1: cel nie dodaje wartości oczekiwanej, oddaje część przewagi i dokłada koszty.
 
+106. **PEŁNE LIKWIDACJE BYBIT DOSTĘPNE ZA DARMO NA ŻYWO; BINANCE TO PRÓBKA (LB0, 2026-09-27).** Strumień Bybit
+    `allLiquidation.*` podaje wszystkie likwidacje (dokumentacja + kontrola pozytywna: 58 zdarzeń / 180 s, 78/78 subskrypcji);
+    w tym samym oknie próbka Binance 62 zdarzenia, te same główne monety i kierunek, ale w gęstej serii Binance gubi zdarzenia
+    (ENA 13 wobec 25). Strona `S` ma ODWROTNE znaczenie: Bybit „Buy” = zlikwidowany long, Binance SELL = zlikwidowany long.
+    → Karta E1 (za ≥ 1 rok) liczy kaskady z Bybit, a Binance tylko jako drugi, próbkowany nośnik; jeden licznik E1 dla obu.
+    Rachunek mocy z realnej częstości po 4–6 tyg., bez cen. Kopia obu katalogów działa lokalnie od 2026-09-27; zdalna czeka
+    na repo i klucz (użytkownik).
+107. **ODCZYT DZIENNIKA MA PROGI Z GÓRY; PRÓG t ROŚNIE Z LICZBĄ ODCZYTÓW (ETAP 6, 2026-09-27, 0 wariantów).** Kryterium 5
+    odczytu = próg obalenia μ − z·σ/√(n/365) z **z = 2,31** na trzech odczytach (92/182/365 dni; łącznie 2,5 % fałszywego
+    obalenia nogi — dokładna całka normalna 2,3113, przy 1,96 byłoby 5,67 %); nowe kryterium 4b: zmienność R1 w [13; 31] %/rok
+    (na historii R1 poza pasmem 5,1 % okien 92-dniowych). Wiąże tylko `--as-of` = data planu (2026-12-24 / 2027-03-24 /
+    2027-09-23). Rejestr `runs/odczyty_historii.csv`: N = 40 metodą AU4 (suma wariantów), z nową rundą 41 → próg t 3,84
+    (DSR 0,95), minimalny roczny SR ~1,6 na 5,5 roku; wariant ostrożny N = 52 (każda runda z wynikiem liczona co najmniej raz), z nową rundą 53 → 3,94.
+    → Każda pre-rejestracja na historii 2021–2026 drukuje `py -m backtest.dsr --k <warianty>`; wynik poniżej tego progu to
+    najwyżej „kandydat do dziennika”. Obowiązuje metoda AU4 (decyzja koordynatora, STATUS ETAP 6).
+
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
 0. **Najpierw gałąź rundy, potem skille** (`clas5-runda`, `clas5-quant` i pozostałe z tabeli
@@ -1004,6 +1021,13 @@ podsumowanie pod tabelą.
    eksperymentu policz MOC statystyczną (Z19: `required_trades`, `min_detectable_hit_rate`).
    Uruchom skrypt (nowe budują na `backtest/checkpoint_lib.py`; raport metodologią checkpointu
    v2 + rozbicie edge'u — CLAUDE.md zasada 12), przechwyć pełny stdout.
+2a. **Rejestr odczytów historii:** dopisz wiersz do `runs/odczyty_historii.csv` (opis kolumn:
+   docstring `backtest/dsr.py`; pilnuje `tests/test_odczyty_guard.py`). Gdy inna gałąź dopisała
+   wiersz z tym samym `nr`, przy scalaniu do master przenumeruj `nr` po kolei. W pre-rejestracji
+   wklej wynik `PYTHONUTF8=1 py -m backtest.dsr --k <liczba wariantów rundy>`. Skrypt drukuje
+   próg t dla N + liczba wariantów rundy, gdzie N to liczba odczytów tej samej historii (DSR —
+   Sharpe po korekcie na liczbę sprawdzonych pomysłów, wniosek 96). Drukuje dwie liczby N; która
+   obowiązuje, mówi `STATUS.md`.
 3. Utwórz katalog `runs/YYYY-MM-DD_<id>-<slug>/` z `README.md` (sekcje jak w nagłówku tego
    pliku) i `raw_output.txt` (pełny stdout, nieskrócony). Sekcja **„Użyte skille”**: wynik
    `py tools/skill_audit.py raport --galaz <gałąź rundy>` + jedno zdanie, co wniósł każdy
