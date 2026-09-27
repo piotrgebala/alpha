@@ -891,7 +891,9 @@ def test_basket_rows_top20_is_engine_basket_and_ranks(live):
     last = f.index[in_win][-1]
     f2.loc[last, "C05USDT"] = 1e-4
     ks5 = lj.basket_rows(live["volume"], f2, members, months)
-    assert ks5.loc[(ks5["symbol"] == "C05USDT") & (ks5["miesiac"] == "2026-09"), "funding_pobrany"].all()
+    assert ks5.loc[
+        (ks5["symbol"] == "C05USDT") & (ks5["miesiac"] == "2026-09"), "funding_pobrany"
+    ].all()
 
 
 def test_basket_months_from_journal_start_month():
