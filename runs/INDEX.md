@@ -1005,9 +1005,12 @@ podsumowanie pod tabelą.
    Uruchom skrypt (nowe budują na `backtest/checkpoint_lib.py`; raport metodologią checkpointu
    v2 + rozbicie edge'u — CLAUDE.md zasada 12), przechwyć pełny stdout.
 2a. **Rejestr odczytów historii:** dopisz wiersz do `runs/odczyty_historii.csv` (opis kolumn:
-   docstring `backtest/dsr.py`; pilnuje `tests/test_odczyty_guard.py`), a w pre-rejestracji
-   wklej wynik `py -m backtest.dsr` — próg t dla bieżącego N (DSR, wniosek 96; odczyt rundy
-   jest N + 1-szy).
+   docstring `backtest/dsr.py`; pilnuje `tests/test_odczyty_guard.py`). Gdy inna gałąź dopisała
+   wiersz z tym samym `nr`, przy scalaniu do master przenumeruj `nr` po kolei. W pre-rejestracji
+   wklej wynik `PYTHONUTF8=1 py -m backtest.dsr --k <liczba wariantów rundy>`. Skrypt drukuje
+   próg t dla N + liczba wariantów rundy, gdzie N to liczba odczytów tej samej historii (DSR —
+   Sharpe po korekcie na liczbę sprawdzonych pomysłów, wniosek 96). Drukuje dwie liczby N; która
+   obowiązuje, mówi `STATUS.md`.
 3. Utwórz katalog `runs/YYYY-MM-DD_<id>-<slug>/` z `README.md` (sekcje jak w nagłówku tego
    pliku) i `raw_output.txt` (pełny stdout, nieskrócony). Sekcja **„Użyte skille”**: wynik
    `py tools/skill_audit.py raport --galaz <gałąź rundy>` + jedno zdanie, co wniósł każdy

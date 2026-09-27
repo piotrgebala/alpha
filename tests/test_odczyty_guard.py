@@ -24,6 +24,7 @@ AU4_RAW = RUNS / "2026-09-25_au4-dsr-cp1" / "raw_output.txt"
 DIR_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_[a-z0-9][a-z0-9.\-]*$")
 OD_DATY = "2026-09-23"
 # Rundy z gałęzi równoległych, dopisane do rejestru z góry (katalog pojawi się po scaleniu).
+# Po scaleniu takiej gałęzi wpis trzeba usunąć — pilnuje test_oczekiwane_not_stale.
 OCZEKIWANE = {"2026-09-27_lb0-kolektor-bybit"}
 
 ROWS = dsr.load_registry()
@@ -56,6 +57,12 @@ def test_every_row_points_to_existing_dir():
     assert not ghosts, f"wiersze rejestru bez katalogu w runs/: {ghosts}"
 
 
+def test_oczekiwane_not_stale():
+    # wyjątek zostawiony po scaleniu ukryłby „wiersz-ducha”, gdyby runda kiedyś zniknęła
+    stale = sorted(k for k in OCZEKIWANE if (RUNS / k).is_dir())
+    assert not stale, f"katalog już jest w runs/ — usuń z OCZEKIWANE: {stale}"
+
+
 def test_registry_has_no_errors():
     assert dsr.registry_errors(ROWS) == []
 
@@ -71,17 +78,63 @@ def test_allowed_values():
     assert {r["odczyt_programu"] for r in ROWS} <= dsr.ODCZYT
 
 
-def test_registry_errors_catch_bad_rows():
-    good = dict(ROWS[0])
-    bad = [
-        {**good, "baza": "krypto"},
-        {**good, "nr": "2", "rodzaj": "cos"},
-        {**good, "nr": "3", "katalog": good["katalog"], "odczyt_programu": "moze"},
-        {**good, "nr": "4", "katalog": "x", "wariantow": "-1", "uwagi": ""},
-    ]
-    errs = "\n".join(dsr.registry_errors(bad))
-    for frag in ("baza", "rodzaj", "duplikat", "odczyt_programu", "nie zaczyna", "wariantow"):
-        assert frag in errs
+BASE = [dict(r) for r in ROWS[:3]]  # T4, W1, N1: poprawny prefiks rejestru
+
+
+def _mut(**zmiany) -> dict[str, str]:
+    return {**BASE[2], **zmiany}
+
+
+# (wiersz 3 po zmianie, fragment jedynego oczekiwanego komunikatu) — po jednym na każdą regułę
+BAD_ROWS = [
+    (_mut(nr="7"), "numeracja ciągła"),
+    (_mut(data="2026-09-22", katalog="2026-09-22_n1-x"), "wcześniejsza"),
+    (_mut(katalog="x"), "nie zaczyna"),
+    (_mut(katalog=BASE[1]["katalog"]), "duplikat"),
+    (_mut(runda=" "), "pusta runda"),
+    (_mut(uwagi=" "), "puste uwagi"),
+    (_mut(baza="krypto"), "baza 'krypto'"),
+    (_mut(rodzaj="cos"), "rodzaj 'cos'"),
+    (_mut(odczyt_programu="moze"), "odczyt_programu 'moze'"),
+    (_mut(wariantow="-1"), "wariantow '-1'"),
+    (_mut(rodzaj="bez-wyniku", wariantow="0"), "sprzeczność"),
+    (_mut(odczyt_programu="nie", wariantow="2"), "warianty zużyte"),
+    (_mut(baza="stara-baza", odczyt_programu="nie", wariantow="1"), "warianty zużyte"),
+    ({k: v for k, v in BASE[2].items() if k != "uwagi"}, "kolumny"),
+    ({**BASE[2], None: ["nadmiar"]}, "kolumny"),
+    (_mut(uwagi=None), "brak pól"),
+]
+
+
+def test_base_prefix_is_valid():
+    assert dsr.registry_errors(BASE) == []
+
+
+@pytest.mark.parametrize("zly, frag", BAD_ROWS, ids=[f for _, f in BAD_ROWS])
+def test_registry_errors_catch_each_rule(zly, frag):
+    errs = dsr.registry_errors([*BASE[:2], zly])
+    assert len(errs) == 1, errs
+    assert errs[0].startswith("wiersz 3") and frag in errs[0], errs
+
+
+def test_registry_rules_that_must_not_fire():
+    # 0 wariantów bez odczytu i warianty na innej bazie (TX1) nie są błędem
+    assert dsr.registry_errors([*BASE[:2], _mut(odczyt_programu="nie", wariantow="0")]) == []
+    tx = _mut(baza="tradfi-1990-2026", odczyt_programu="nie", wariantow="1")
+    assert dsr.registry_errors([*BASE[:2], tx]) == []
+
+
+def test_load_registry_short_row_and_bom(tmp_path):
+    tekst = dsr.REJESTR.read_text(encoding="utf-8")
+    bom = tmp_path / "bom.csv"
+    bom.write_text("\ufeff" + tekst, encoding="utf-8")
+    rows = dsr.load_registry(bom)
+    assert rows == ROWS and dsr.registry_errors(rows) == []
+    krotki = tmp_path / "krotki.csv"
+    naglowek, pierwszy = tekst.splitlines()[:2]
+    krotki.write_text(naglowek + "\n" + pierwszy.split(',"')[0] + "\n", encoding="utf-8")
+    errs = dsr.registry_errors(dsr.load_registry(krotki))
+    assert len(errs) == 1 and "brak pól" in errs[0]
 
 
 def test_zero_variant_readings_named_in_review_count():
@@ -105,11 +158,17 @@ def test_zero_variant_readings_named_in_review_count():
 
 
 def test_n_matches_au4_counts():
-    # AU4 (pre-rejestracja): 40 wariantów na dzień AU4, ~28 w chwili odczytu CP1
+    # Metoda AU4 (Σ wariantów) dla obu dat: pre-rejestracja AU4 podaje 40 w dniu AU4 (twardo)
+    # i „~28” przy CP1 (przybliżenie za README CP1 — stąd zakres; rejestr daje 27).
     nr_au4 = int(_row("2026-09-25_au4-dsr-cp1")["nr"])
     nr_cp1 = int(_row("2026-09-24_cp1-premia-coinbase")["nr"])
     assert dsr.n_warianty(ROWS, nr_au4) == 40
-    assert dsr.n_program(ROWS, nr_cp1) == 28
+    assert 27 <= dsr.n_warianty(ROWS, nr_cp1) <= 29
+    # Metoda z odczytami 0-wariantowymi (Σ max(w, 1)) w dniu AU4 daje 50, nie 40: to zmiana
+    # metody (10 odczytów 0-wariantowych sprzed AU4), nie przedłużenie liczenia AU4.
+    assert dsr.n_program(ROWS, nr_au4) == 50
+    zero_do_au4 = [r for r in dsr._odczyty(ROWS, nr_au4) if r["wariantow"] == "0"]
+    assert len(zero_do_au4) == 10
     assert dsr.n_program(ROWS) >= dsr.n_warianty(ROWS) >= 40
 
 
@@ -178,6 +237,36 @@ def test_required_t_rejects_bad_input():
         dsr.required_t(10, 1.0)
     with pytest.raises(ValueError):
         dsr.required_t(10, 0.95, n_obs=2)
+    for n in (0, -3):
+        with pytest.raises(ValueError, match="liczba prób"):
+            dsr.required_t(n, 0.95)
+
+
+@pytest.mark.parametrize("d", [0.05, 0.3, 0.5, 0.8, 0.95])
+def test_required_t_exact_all_levels(d):
+    # dsr < 0,5: pierwiastek leży poniżej SR0 (wcześniej brentq w [sr0; sr0 + 1] padał)
+    t_star = dsr.required_t(41, d, n_obs=1880)
+    assert t_star == pytest.approx(dsr.required_t(41, d), abs=0.01)
+    sr0 = dsr.expected_max_sr(41, 1 / 1880)
+    assert dsr.deflated_sharpe(t_star / np.sqrt(1880), sr0, 1880, 0.0, 3.0) == pytest.approx(d)
+
+
+def test_required_t_exact_short_sample_and_heavy_tails():
+    # krótka próba: próg wyraźnie wyżej niż asymptotyczny, ale istnieje
+    assert dsr.required_t(41, 0.95, n_obs=3) > dsr.required_t(41, 0.95) + 5
+    # g3 = 3, g4 = 7,8: wzór nie działa dla SR ∈ (0,45; 1,32); pierwiastek (SR ≈ 0,08) leży przed
+    t_star = dsr.required_t(41, 0.95, n_obs=1880, g3=3.0, g4=7.8)
+    sr0 = dsr.expected_max_sr(41, 1 / 1880)
+    assert dsr.deflated_sharpe(t_star / np.sqrt(1880), sr0, 1880, 3.0, 7.8) == pytest.approx(0.95)
+    # grube ogony + krótka próba: DSR ma asymptotę Φ(2√(T − 1)/√(g4 − 1)) < 0,95 → czytelny błąd
+    for g4 in (20.0, 50.0):
+        with pytest.raises(ValueError, match="nieosiągalne"):
+            dsr.required_t(41, 0.95, n_obs=5, g4=g4)
+
+
+def test_deflated_sharpe_rejects_negative_radicand():
+    with pytest.raises(ValueError, match="nie działa"):
+        dsr.deflated_sharpe(0.8, 0.0, 100, 3.0, 7.8)
 
 
 def test_cli_prints_thresholds(capsys):
@@ -186,7 +275,20 @@ def test_cli_prints_thresholds(capsys):
     assert "2.20" in out and "3.04" in out and "3.84" in out and "1.64" in out
     dsr.main([])
     out = capsys.readouterr().out
-    assert f"Następny odczyt historii będzie {dsr.n_program(ROWS) + 1}." in out
+    n_reg, n_au4 = dsr.n_program(ROWS), dsr.n_warianty(ROWS)
+    assert f"progi dla N + 1 = {n_au4 + 1} (metodą AU4) i {n_reg + 1} " in out
+    assert "obowiązuje, zapisuje się w STATUS.md" in out  # skrypt nie wybiera metody N
+    assert not re.search(r"obowiązuje\)|obowiązuje:", out)
+    dsr.main(["--k", "9"])
+    out = capsys.readouterr().out
+    assert f"progi dla N + 9 = {n_au4 + 9} (metodą AU4) i {n_reg + 9} " in out
+    assert f"  {n_au4 + 9:4d} |" in out and f"  {n_reg + 9:4d} |" in out
+    dsr.main(["--k", "0"])  # runda 0-wariantowa z odczytem liczy się za 1
+    assert f"N + 1 = {n_au4 + 1}" in capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        dsr.main(["--k", "-1"])
+    with pytest.raises(ValueError):
+        dsr.report(ROWS, k=-1)
 
 
 # ---------------------------------------------------------------------------- (e) właściwości
