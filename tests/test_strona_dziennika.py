@@ -62,12 +62,49 @@ def test_every_record_of_repo_log_parses():
             "+1",
         ),  # poprawki 9 i 10
         (
+            HEAD
+            + X1
+            + " | stan rynku +1 | F&G +1 | transakcje +31 | opisy strategii 4"
+            + " | rozbicie +8 | fazy +56 | koszyk +50"
+            + TAIL,
+            "sygnały +70 wyniki +1 kapitał 1.0221 obsunięcie 3.7% OK",
+            "+1",
+        ),  # poprawka 11
+        (
+            HEAD
+            + X1
+            + " | stan rynku +0 | F&G +0 | transakcje +0 | opisy strategii 4"
+            + " | rozbicie BŁĄD ValueError | fazy BŁĄD ValueError | koszyk BŁĄD KeyError"
+            + TAIL,
+            None,
+            "+0",
+        ),  # poprawka 11: błąd liczenia nowych plików
+        (
+            HEAD
+            + X1
+            + " | stan rynku +0 | F&G +0 | transakcje +0 | opisy strategii 4"
+            + " | rozbicie +2 (x1 BŁĄD ValueError) | fazy +14 (x1 BŁĄD ValueError) | koszyk +0"
+            + TAIL,
+            "sygnały +70 wyniki +1 kapitał 1.0221 obsunięcie 3.7% OK",
+            "+0",
+        ),  # poprawka 11: błąd jednej składowej (X1), trend i premia zapisane
+        (
             HEAD + X1 + " | stan rynku BŁĄD ValueError | F&G BŁĄD KeyError | nowe pole 7" + TAIL,
             None,
             "BŁĄD ValueError",
         ),  # błędy pól i pole z przyszłości
     ],
-    ids=["bez-X1", "X1", "stan-rynku", "F&G", "transakcje-opisy", "bledy-nowe-pole"],
+    ids=[
+        "bez-X1",
+        "X1",
+        "stan-rynku",
+        "F&G",
+        "transakcje-opisy",
+        "rozbicie-fazy-koszyk",
+        "rozbicie-bledy",
+        "rozbicie-blad-x1",
+        "bledy-nowe-pole",
+    ],
 )
 def test_parse_log_reads_every_journal_format(line, x1, stan):
     runs, bad = sd.parse_log(line + "\n")

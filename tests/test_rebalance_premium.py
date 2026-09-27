@@ -103,3 +103,91 @@ def test_gross_identity_turnover_nonnegative_and_single_asset_zero(
     assert (out["turnover"] >= -1e-15).all()
     if n_assets == 1:
         assert np.allclose(out["premium_gross"], 0.0) and np.allclose(out["turnover"], 0.0)
+
+
+# ------------------------------------------------------------------ poprawka 11: ranking 1–50
+
+
+@given(
+    seed=st.integers(0, 10_000),
+    n_sym=st.integers(20, 60),
+    depth=st.integers(20, 50),
+    ties=st.booleans(),
+    holes=st.floats(0.0, 0.3),
+)
+@settings(max_examples=60, deadline=None)
+def test_ranking_top_n_is_monthly_members_exactly(seed, n_sym, depth, ties, holes) -> None:
+    """Pierwsze TOP_N miejsc rankingu (posortowane) = `monthly_members` — remisy, dziury, stablecoiny."""
+    rng = np.random.default_rng(seed)
+    idx = pd.date_range("2025-12-01", periods=95, freq="D", tz="UTC")
+    cols = [f"S{i:02d}USDT" for i in range(n_sym)] + ["USDCUSDT", "XBTC"]
+    shape = (len(idx), len(cols))
+    vals = rng.integers(1, 6, shape) * 1e6 if ties else rng.lognormal(15, 2, shape)
+    vol = pd.DataFrame(vals, index=idx, columns=cols)
+    vol = vol.mask(rng.random(vol.shape) < holes)  # brak notowań → próg 30 dni historii
+    months = [pd.Timestamp("2026-01-01", tz="UTC"), pd.Timestamp("2026-02-01", tz="UTC")]
+    ranking = rp.monthly_ranking(vol, months, depth)
+    try:
+        members = rp.monthly_members(vol, months)
+    except ValueError:  # < TOP_N kandydatów: silnik głośno odmawia, ranking jest krótszy
+        assert any(len(ranking[m]) < rp.TOP_N for m in months)
+        return
+    for m in months:
+        r = ranking[m]
+        assert sorted(s for s, _ in r[: rp.TOP_N]) == members[m]
+        assert len(r) <= depth and len({s for s, _ in r}) == len(r)
+        v = [x for _, x in r]
+        assert v == sorted(v, reverse=True)
+        assert {s for s, _ in r} <= set(rp.eligible_symbols(cols))
+
+
+def test_ranking_uses_only_data_before_month_and_same_tie_break() -> None:
+    idx = pd.date_range("2021-01-01", periods=70, freq="D", tz="UTC")
+    vol = pd.DataFrame(1e6, index=idx, columns=["BUSDT", "AUSDT", "CUSDT"])
+    m = pd.Timestamp("2021-02-01", tz="UTC")
+    before = rp.monthly_ranking(vol, [m], depth=3)[m]
+    assert [s for s, _ in before] == ["AUSDT", "BUSDT", "CUSDT"]  # remis → alfabetycznie
+    vol.loc[vol.index >= m, "CUSDT"] = 1e12  # przyszłość nie zmienia rankingu
+    assert rp.monthly_ranking(vol, [m], depth=3)[m] == before
+    assert rp.monthly_ranking(vol, [m], depth=2)[m] == before[:2]
+
+
+def _real_volume(kind: str) -> tuple[pd.DataFrame, list[pd.Timestamp]]:
+    """Prawdziwy panel obrotu (TYLKO odczyt): `data/raw/live` dziennika albo archiwum RU1."""
+    import os
+    from pathlib import Path
+
+    default = Path(__file__).resolve().parents[1] / "data" / "raw"
+    root = Path(os.environ.get("CLAS5_DANE_RAW", default))
+    if kind == "live":
+        cands = [root / "live", Path.home() / "alpha-dziennik" / "data" / "raw" / "live"]
+    else:
+        cands = [root / "universe_full"]
+    src = next((p for p in cands if len(list(p.glob("*_1d.parquet"))) >= 100), None)
+    if src is None:
+        pytest.skip(f"brak prawdziwego panelu {kind} (ustaw CLAS5_DANE_RAW)")
+    if kind == "universe_full":
+        _, vol = rp.load_universe(src)
+        return vol, list(pd.date_range("2021-02-01", "2026-06-01", freq="MS", tz="UTC"))
+    from data.fetch_live import symbol_files  # jak dziennik: bez pliku Coinbase
+
+    frames = {}
+    for sym, p in symbol_files(src).items():
+        d = pd.read_parquet(p, columns=["open_time", "quote_volume"])
+        if len(d):
+            frames[sym] = d.set_index(pd.to_datetime(d["open_time"], utc=True))["quote_volume"]
+    vol = pd.concat(frames, axis=1, sort=True)
+    start = pd.Timestamp("2025-09-01", tz="UTC")  # ENGINE_START dziennika
+    return vol, list(pd.date_range(start, vol.index.max(), freq="MS"))
+
+
+@pytest.mark.parametrize("kind", ["live", "universe_full"])
+def test_ranking_top20_equals_members_on_real_panel(kind) -> None:
+    """Skład top-20 z rankingu 1–50 = `monthly_members` co do bajtu na prawdziwym panelu."""
+    vol, months = _real_volume(kind)
+    members = rp.monthly_members(vol, months)
+    ranking = rp.monthly_ranking(vol, months, depth=50)
+    for m in months:
+        top = sorted(s for s, _ in ranking[m][: rp.TOP_N])
+        assert repr(top).encode("utf-8") == repr(members[m]).encode("utf-8"), m
+        assert len(ranking[m]) == 50
