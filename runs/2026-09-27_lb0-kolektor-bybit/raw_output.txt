@@ -1,0 +1,22 @@
+=== Kontrola pozytywna LB0: PYTHONUTF8=1 .venv/bin/python -m data.collect_liquidations_bybit --probe 180 (serwer Linux, commit 557d8fb; start polecenia 2026-09-27T18:46:57Z) ===
+źródło: wss://stream.bybit.com/v5/public/linear; lista symboli: https://api.bybit.com/v5/market/instruments-info
+symboli: 777; połączeń: 2; żądań subskrypcji: 78 (znaki tematów na połączenie: [17991, 2287]; limit Bybit 21000)
+start próby: 2026-09-27T18:46:58+00:00 (1790534818743 ms), czas 180 s
+połączono #0 wss://stream.bybit.com/v5/public/linear: 688 tematów w 69 żądaniach
+połączono #1 wss://stream.bybit.com/v5/public/linear: 89 tematów w 9 żądaniach
+koniec próby: 2026-09-27T18:49:58+00:00 (1790534998744 ms); powód: koniec okna (odświeżenie listy symboli albo koniec próby); błąd: False
+subskrypcje udane: 78 / 78, nieudane: 0; pongi: 16; wiadomości z likwidacjami: 45; pominięte: 0
+likwidacji: 58 (19.3/min na 180 s), symboli: 16; zlikwidowane longi: 14, shorty: 44; nominał (v × cena upadłości) ≈ 55,050 USD
+najczęstsze symbole: ENAUSDT 25, QNTUSDT 7, ARXUSDT 5, ETHUSDT 4, ZECUSDT 2
+przykład 1: {"T":1790534825491,"s":"QNTUSDT","S":"Buy","v":"0.96","p":"184.48","pos":"long","ts":1790534825872,"rcv":1790534825969}
+przykład 2: {"T":1790534828471,"s":"QNTUSDT","S":"Sell","v":"1.75","p":"188.64","pos":"short","ts":1790534828872,"rcv":1790534828969}
+przykład 3: {"T":1790534834946,"s":"ZECUSDT","S":"Sell","v":"0.33","p":"1617.25","pos":"short","ts":1790534835330,"rcv":1790534835440}
+=== kod wyjścia: 0 ===
+
+=== Porównanie opisowe z LK0 (Binance, próbka) w tym samym oknie: PYTHONUTF8=1 .venv/bin/python runs/2026-09-27_lb0-kolektor-bybit/porownanie_lk0.py (tylko odczyt ~/likwidacje; 2026-09-27T18:50:31Z) ===
+plik: /home/dantey1/likwidacje/2026-09-27.jsonl (tylko odczyt); okno E w [1790534818743, 1790534998744] ms = 180 s
+zdarzeń LK0: 62 (20.7/min); w tym UM (st=1): 61; symboli: 26
+zlikwidowane longi (S=SELL): 10, shorty (S=BUY): 52
+nominał (q x ap) ≈ 416,703 USD
+najczęstsze symbole: ENAUSDT 13, QNTUSDT 6, ZECUSDT 5, ARXUSDT 5, NEARUSDT 4
+=== kod wyjścia: 0 ===
