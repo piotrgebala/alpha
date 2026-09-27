@@ -53,7 +53,7 @@ o kapitale**. Nie zmienia się sposób mierzenia.
 |---|---|---|---|
 | Trend tygodniowy (TS1/TR1) | (a) mocne: trend na wielu rynkach od dekad (Moskowitz–Ooi–Pedersen 2012, Hurst–Ooi–Pedersen 2017); (b) **TX1: NIEROZSTRZYGNIĘTY** — +5,1 %/rok 1990–2026 (t 2,73), ale −0,2 % po 2013 (wniosek 84) | lata 2021–2025: 5/5 dodatnich; fazy 7/7; pasma 2/2 → spełniony | jeśli TX1 nie obali → szczebel 3 (dziennik trwa) |
 | Premia Coinbase (CP1) | (a) słabe: praktyka rynkowa, brak badań; (b) brak niezależnego testu (CP2: inne monety to ten sam sygnał) | lata 3/5 (2021 −11,6 %, 2024 −8,9 %) → **niespełniony** | zostaje w dzienniku papierowym, **bez realnego kapitału** do czasu nowego dowodu |
-| Momentum między monetami (X1/X2) | (a) umiarkowane (badania nad momentum w krypto, mieszane); (b) brak | X1: lata 5/5, ale X2 2022 −10 % i wrażliwość na dzień rebalansu (wniosek 68) | poza dziennikiem; kandydat na później |
+| Momentum między monetami (X1/X2) | (a) umiarkowane (badania nad momentum w krypto, mieszane); (b) brak | X1: lata 5/5, ale X2 2022 −10 % i wrażliwość na dzień rebalansu (wniosek 68) | w dzienniku papierowym od 2026-09-25 jako osobna reguła poza R1 (Poprawka 3); bez realnego kapitału |
 
 ## Rozważane opcje
 
