@@ -200,7 +200,10 @@ przeliczeniu = „historia zmieniona”, stary zapis zostaje):
   dla X1 także `r_long` i `r_short` (zwrot nogi long i short na jednostkę nogi; `cena` X1 = 0,5 · (r_long − r_short)).
   Wszystko przy k = 1, czyli w jednostkach kapitału składowej — tak jak `r_trend` / `r_coinbase` w `wyniki.csv`.
   **Zasada:** `cena + funding + koszt = netto` i `netto` = `r_trend` / `r_coinbase` (`wyniki.csv`) albo `r_x1`
-  (`x1_wyniki.csv`), oba do 1e-9 — sprawdzane w przebiegu PRZED zapisem; niezgodność = błąd w logu i brak zapisu.
+  (`x1_wyniki.csv`), oba do 1e-9 — sprawdzane w przebiegu PRZED zapisem; niezgodność = błąd w logu i brak zapisu
+  tej składowej. **Dokładnie:** przebieg porównuje netto z wynikiem, który sam właśnie policzył (przy nowym dniu to ta sama
+  liczba, którą dopisuje do `wyniki.csv`). Równość z zapisanym plikiem jest więc pewna, gdy log mówi „historia zmieniona: 0”;
+  przy odczycie po 3 miesiącach porównujemy `rozbicie.csv` z `wyniki.csv` / `x1_wyniki.csv` wprost, dzień po dniu.
 - **`fazy.csv`** — klucz `date` + `skladowa` + `faza` (0–6): `netto` jednej fazy (fazy = 7 kopii strategii startujących
   w kolejne dni tygodnia, każda z 1/7 kapitału). **Zasada:** średnia 7 faz = netto składowej (1e-9), sprawdzane przed zapisem.
 - **`koszyk.csv`** — klucz `miesiac` + `symbol`, od miesiąca startu dziennika (2026-09): `pozycja` w rankingu obrotu 1–50
@@ -209,14 +212,21 @@ przeliczeniu = „historia zmieniona”, stary zapis zostaje):
   (czy dane przebiegu mają choć jedno rozliczenie fundingu tej monety w tym 30-dniowym oknie). Skład top-20 jest **ten sam
   co do bajtu** co `rebalance_premium.monthly_members` (kontrola w przebiegu + testy). `ma_funding` opisuje stan pobrania
   w dniu zapisu (funding pobieramy tylko dla członków koszyka), więc jego późniejsza zmiana NIE liczy się jako „historia
-  zmieniona”; pozostałe kolumny tak.
+  zmieniona”; pozostałe kolumny tak. **`ma_funding` = False znaczy „fundingu tej monety nie pobraliśmy”, a nie „moneta
+  nie ma fundingu”** (każdy perpetual ma funding; np. w 2026-09 miejsce 21 BLESSUSDT ma False, miejsce 22 WLDUSDT True —
+  z 50 monet True ma 35).
 
 **Kod.** Nowy ranking `rebalance_premium.monthly_ranking` (obok `monthly_members`, która zostaje bez zmian — silnik dziennika
 jej nie zmienia). `live_journal`: `components` / `positions` / `x1_component` / `run_x1` dostały opcjonalny argument, który
 tylko zbiera ramki silnika z tego samego przeliczenia (domyślnie nic nie robi); nowe funkcje `ts_breakdown`, `x1_breakdown`,
 `phase_rows`, `check_breakdown`, `check_phases`, `basket_rows`. W `przebiegi.log` przed „historia zmieniona” doszły pola
 `rozbicie +N | fazy +N | koszyk +N`; błąd liczenia albo zapisu któregokolwiek pliku to „BŁĄD <typ>” w tym polu, a dziennik
-idzie dalej (jak opisy strategii w poprawce 10). Wydruk ma jedną nową linię „Rozbicie zwrotu, fazy, koszyk (poprawka 11…)”.
+idzie dalej (jak opisy strategii w poprawce 10). Wydruk ma nową linię „Rozbicie zwrotu, fazy, koszyk (poprawka 11…)”, a pod
+nią po jednej linii na każdy błąd z pełnym komunikatem („BŁĄD koszyk: ValueError: …”) — log zostaje krótki, komunikat jest
+w `ostatni_wydruk.txt`. Rozbicie i fazy liczy się **osobno dla każdej składowej**: błąd samego X1 nie blokuje zapisu trendu
+i premii, a pole w logu wygląda wtedy tak: „rozbicie +6 (x1 BŁĄD ValueError)”. Brakujące dni dopisuje następny udany
+przebieg (liczy całą historię od startu i dopisuje brakujące klucze). Takie wiersze trafiają na koniec pliku, więc **plików
+nie czyta się „po kolei” — zawsze sortuje się je po kluczu** (`date`, `skladowa` [, `faza`]).
 Parser strony (`tools/strona_dziennika.py`) czyta nowe pola bez zmian (test z nowym formatem).
 
 **Testy** (`tests/test_live_journal.py`, `tests/test_rebalance_premium.py`, `tests/test_strona_dziennika.py`): suma składników
@@ -225,8 +235,10 @@ likwidacje, każda faza); kontrole odrzucają każde zaburzenie > 1e-9 (test wł
 top-20 rankingu = `monthly_members` (test właściwości z remisami, dziurami i stablecoinami + prawdziwe panele: `data/raw/live`
 dziennika od 2025-09 i archiwum `universe_full` 2021-02 → 2026-06, 65 miesięcy, co do bajtu); powtórka dopisuje 0 wierszy;
 ręcznie zmieniony wiersz → „historia zmieniona: 1”, stary zapis zostaje; błąd rozbicia i koszyka → „BŁĄD RuntimeError”
-w logu, a **wszystkie pozostałe pliki bajt w bajt takie same jak w przebiegu bez błędu**; błąd X1 → rozbicie tylko dla
-trendu i premii.
+w logu, a **wszystkie pozostałe pliki bajt w bajt takie same jak w przebiegu bez błędu**; komunikat błędu w wydruku,
+nie w logu; błąd X1 → rozbicie tylko dla trendu i premii; błąd samego rozbicia X1 → trend i premia zapisane, w logu
+„(x1 BŁĄD ValueError)”, a następny udany przebieg dopisuje X1 (zbiór wierszy jak bez błędu); `ma_funding` liczone tylko
+z 30 dni przed początkiem miesiąca (funding usunięty wyłącznie w tym oknie → False).
 
 **Próba na kopii dziennika 2026-09-27** (kopia `dziennik/` z klonu dziennika, dane `data/raw/live` z przebiegu 02:30,
 `as_of` 2026-09-26, bez pobierania): nowe tylko `rozbicie.csv` (+8: trend 3, premia 3, X1 2), `fazy.csv` (+56 = 8 × 7) i
@@ -235,18 +247,21 @@ koszyk +50 | historia zmieniona: 0”. Wszystkie dotychczasowe pliki CSV **bajt 
 Kontrole na prawdziwych danych: |cena + funding + koszt − netto| ≤ 9·10⁻¹⁷, |netto − wyniki.csv / x1_wyniki.csv| = 0,
 |średnia faz − wynik| ≤ 5·10⁻¹⁷, top-20 = `monthly_members`. Druga droga: likwidacje w rozbiciu (trend: 1 w dniu 25.09,
 2 w dniu 26.09) = likwidacje w `transakcje.csv` według daty wyjścia. Czas przebiegu 5,9 s (nowe pliki: ~0,1 s). Drugi przebieg
-na tej samej kopii: „rozbicie +0 | fazy +0 | koszyk +0 | historia zmieniona: 0”.
+na tej samej kopii: „rozbicie +0 | fazy +0 | koszyk +0 | historia zmieniona: 0”. Próbę powtórzono po poprawkach
+z przeglądu kodu (izolacja składowych, komunikat błędu w wydruku): te same liczby, czas 5,9 s, parser strony czyta nową linię.
 
 **Co wolno odczytać i kiedy** (zapisane przed jakimkolwiek odczytem):
-- **Rozbicie po ~3 miesiącach** (odczyt 25.12): tylko mechanika — czy obrót i koszt zgadzają się z założeniami KO1 (oczekiwany
-  obrót TS1 ≈ 11, CP1 ≈ 21, X1 ≈ 47 kapitałów na rok, czyli koszt w kwartale ≈ 0,2 / 0,4 / 0,8 %). Odchylenie > 30 % = błąd
+- **Rozbicie po ~3 miesiącach** (odczyt 25.12): tylko mechanika — czy obrót i koszt zgadzają się z założeniami KO1
+  (jednorazowy pomiar kosztów wykonania z 2026-09-25, `runs/2026-09-25_ko1-koszty-wykonania/`; oczekiwany obrót trendu (TS1)
+  ≈ 11, premii Coinbase (CP1) ≈ 21 i X1 ≈ 47 kapitałów na rok, czyli koszt w kwartale ≈ 0,2 / 0,4 / 0,8 %). Odchylenie > 30 % = błąd
   mechaniki do wyjaśnienia. **Po ~12 miesiącach:** poziom fundingu (dokładność ±2–3 pp/rok). Rozbicie **nie rozstrzyga**, skąd
   bierze się wynik X1 (cena X1 ma po roku rozrzut ±32 %/rok) — żadna decyzja o regule nie zapada na podstawie nóg X1.
 - **Fazy — tylko diagnostyka:** różnica faz ≳ 3–5 % kapitału w tygodniu wskazuje błąd silnika albo jedno zdarzenie w jednej
   monecie. **Nigdy nie wybieramy fazy ani nie zmieniamy wag faz po wyniku** — mierzonym obiektem zostaje średnia 7 faz.
-- **Koszyk — rejestr uniwersum:** do sprawdzianu „dane na żywo vs archiwum” (STATUS, termin 22.10–05.11) i do odtworzenia,
-  co było w top-50 danego miesiąca. Monety wycofane widać tylko od dnia startu, nie wstecz. Miejsca 21–50 nie są strategią
-  (cień TR1 odtwarza się z archiwum).
+- **Koszyk — rejestr uniwersum:** do sprawdzianu „dane na żywo vs archiwum” (porównanie świec i fundingu pobranych przez
+  dziennik z archiwum za te same dni — STATUS, ETAP 5 pkt 3, termin 22.10–05.11) i do odtworzenia, co było w top-50 danego
+  miesiąca. Monety wycofane widać tylko od dnia startu, nie wstecz. Miejsca 21–50 nie są strategią (cień TR1 — czyli
+  ten sam trend liczony na monetach z miejsc 21–50 — odtwarza się z archiwum; `docs/rag/11_przeglad_kandydatow_2026-09-27.md`).
 
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 

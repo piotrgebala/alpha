@@ -870,6 +870,28 @@ def test_basket_rows_top20_is_engine_basket_and_ranks(live):
     bad = {m: sorted([*members[m][1:], "C99USDT"]) for m in months}
     with pytest.raises(ValueError, match="top-20"):
         lj.basket_rows(live["volume"], live["funding"], bad, months)
+    # ma_funding patrzy TYLKO na okno [m − 30 dni, m): funding usunięty wyłącznie w oknie września
+    # (przed i po oknie zostaje) → wrzesień False, sierpień True (okno sierpnia nietknięte)
+    sep = months[1]
+    f = live["funding"].copy()
+    in_win = (f.index >= sep - pd.Timedelta(days=30)) & (f.index < sep)
+    f.loc[in_win, "C05USDT"] = np.nan
+    assert f.loc[f.index < sep - pd.Timedelta(days=30), "C05USDT"].notna().any()
+    assert f.loc[f.index >= sep, "C05USDT"].notna().any()
+    ks3 = lj.basket_rows(live["volume"], f, members, months)
+    c05 = ks3[ks3["symbol"] == "C05USDT"].set_index("miesiac")["ma_funding"]
+    assert c05.to_dict() == {"2026-08": True, "2026-09": False}
+    # jedno rozliczenie na granicy: dzień przed m liczy się, dzień m już nie
+    f2 = f.copy()
+    f2.loc[sep, "C05USDT"] = 1e-4
+    ks4 = lj.basket_rows(live["volume"], f2, members, months)
+    assert not ks4.loc[
+        (ks4["symbol"] == "C05USDT") & (ks4["miesiac"] == "2026-09"), "ma_funding"
+    ].any()
+    last = f.index[in_win][-1]
+    f2.loc[last, "C05USDT"] = 1e-4
+    ks5 = lj.basket_rows(live["volume"], f2, members, months)
+    assert ks5.loc[(ks5["symbol"] == "C05USDT") & (ks5["miesiac"] == "2026-09"), "ma_funding"].all()
 
 
 def test_basket_months_from_journal_start_month():
@@ -971,7 +993,11 @@ def test_p11_errors_do_not_stop_journal_nor_touch_other_files(tmp_path, monkeypa
     monkeypatch.setattr(lj, "basket_rows", boom)
     text, bad = _p11_run(tmp_path, monkeypatch, "blad")
     assert "mnożniki R1" in text and "rozbicie BŁĄD RuntimeError" in text
+    # komunikat błędu w wydruku (jak X1 i opisy strategii), log zostaje krótki
+    assert "BŁĄD rozbicie/fazy: RuntimeError: test" in text
+    assert "BŁĄD koszyk: RuntimeError: test" in text
     log = (bad / "przebiegi.log").read_text(encoding="utf-8")
+    assert "RuntimeError: test" not in log
     assert log.rstrip().endswith(
         "| rozbicie BŁĄD RuntimeError | fazy BŁĄD RuntimeError | koszyk BŁĄD RuntimeError"
         " | historia zmieniona: 0"
@@ -982,3 +1008,79 @@ def test_p11_errors_do_not_stop_journal_nor_touch_other_files(tmp_path, monkeypa
     assert len(others) >= 9
     for f in others:
         assert (ok / f).read_bytes() == (bad / f).read_bytes(), f
+
+
+def test_x1_breakdown_error_keeps_trend_and_coinbase_then_backfills(tmp_path, monkeypatch):
+    """
+    Błąd tylko w rozbiciu X1 → trend i premia zapisane w tym przebiegu, w logu „(x1 BŁĄD <typ>)”,
+    komunikat w wydruku; następny udany przebieg dopisuje X1 — zbiór wierszy jak w przebiegu bez błędu.
+    """
+    _, ok = _p11_run(tmp_path, monkeypatch, "ok")
+    real = lj.x1_panels
+
+    def boom(*a, **k):
+        raise ValueError("x1: 6 faz z wynikiem < 7")
+
+    monkeypatch.setattr(lj, "x1_panels", boom)
+    text, jdir = _p11_run(tmp_path, monkeypatch, "x1blad")
+    rb = pd.read_csv(jdir / "rozbicie.csv")
+    assert set(rb["skladowa"]) == {"trend", "coinbase"}
+    assert set(pd.read_csv(jdir / "fazy.csv")["skladowa"]) == {"trend", "coinbase"}
+    assert "BŁĄD rozbicie/fazy x1: ValueError: x1: 6 faz z wynikiem < 7" in text
+    line = (jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()[-1]
+    n_rb, n_fz = len(rb), len(pd.read_csv(jdir / "fazy.csv"))
+    assert f"| rozbicie +{n_rb} (x1 BŁĄD ValueError) | fazy +{n_fz} (x1 BŁĄD ValueError) |" in line
+    assert line.endswith("historia zmieniona: 0")
+    # x1_wyniki i pozostałe pliki bez wpływu
+    assert (ok / "x1_wyniki.csv").read_bytes() == (jdir / "x1_wyniki.csv").read_bytes()
+    # następny przebieg bez błędu: X1 dopisany, zbiór wierszy = przebieg bez błędu
+    monkeypatch.setattr(lj, "x1_panels", real)
+    _, jdir = _p11_run(tmp_path, monkeypatch, "x1blad")
+    for f, key in (("rozbicie.csv", lj.BREAKDOWN_KEY), ("fazy.csv", lj.PHASE_KEY)):
+        a = pd.read_csv(ok / f).sort_values(key).reset_index(drop=True)
+        b = pd.read_csv(jdir / f).sort_values(key).reset_index(drop=True)
+        pd.testing.assert_frame_equal(a, b)
+    last = (jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()[-1]
+    assert "BŁĄD" not in last and last.endswith("historia zmieniona: 0")
+
+
+def test_breakdown_and_phases_isolates_components_only_on_request(live, tmp_path, monkeypatch):
+    """Bez `errors` błąd składowej przerywa; z `errors` pomija tylko ją (reszta = wynik bez błędu)."""
+    as_of = live["close"].index[-2]
+    eng, res, res_x1 = _p11(live, as_of, tmp_path, monkeypatch)
+    rb_ok, fz_ok = lj.breakdown_and_phases(eng, res, res_x1)
+    broken = {**eng, "coinbase": eng["coinbase"].iloc[:-1]}  # brak ostatniego dnia premii
+    with pytest.raises(ValueError, match="coinbase: brak dni silnika"):
+        lj.breakdown_and_phases(broken, res, res_x1)
+    errors: dict = {}
+    rb, fz = lj.breakdown_and_phases(broken, res, res_x1, errors)
+    assert list(errors) == ["coinbase"] and isinstance(errors["coinbase"], ValueError)
+    pd.testing.assert_frame_equal(rb, rb_ok[rb_ok["skladowa"] != "coinbase"].reset_index(drop=True))
+    pd.testing.assert_frame_equal(fz, fz_ok[fz_ok["skladowa"] != "coinbase"].reset_index(drop=True))
+    # wszystkie składowe z błędem → puste ramki z kolumnami (zapis +0, nie wyjątek)
+    errors = {}
+    none = {k: v for k, v in eng.items() if k not in ("trend", "coinbase", "x1_phases")}
+    rb0, fz0 = lj.breakdown_and_phases(none, res, res_x1, errors)
+    assert sorted(errors) == ["coinbase", "trend", "x1"]
+    assert rb0.empty and list(rb0.columns) == lj.BREAKDOWN_COLS
+    assert fz0.empty and list(fz0.columns) == lj.PHASE_COLS
+
+
+def test_p11_texts_errors_and_details():
+    assert lj.with_errors("+8", {}) == "+8"
+    assert lj.with_errors("+5", {"x1": ValueError("a")}) == "+5 (x1 BŁĄD ValueError)"
+    assert lj.with_errors("BŁĄD KeyError", {"x1": ValueError("a")}) == "BŁĄD KeyError"
+    assert lj.error_text(ValueError("x" * 300)) == "ValueError: " + "x" * 120
+    one = lj.summarize_p11("+8", "+56", "+50")
+    assert "\n" not in one and one.endswith("rozbicie +8, fazy +56, koszyk +50")
+    two = lj.summarize_p11("BŁĄD ValueError", "+0", "+50", ["koszyk: ValueError: top-20"])
+    assert two.splitlines()[1] == "    BŁĄD koszyk: ValueError: top-20"
+
+
+def test_append_safe_write_error_message_goes_to_details(tmp_path):
+    rows = pd.DataFrame({"date": ["2026-09-25"], "x": [1.0]})
+    (tmp_path / "katalog.csv").mkdir()
+    details: list = []
+    txt, ch = lj.append_safe(tmp_path / "katalog.csv", rows, ["date"], ["x"], None, details)
+    assert txt.startswith("BŁĄD ") and ch == [] and len(details) == 1
+    assert details[0].startswith("zapis katalog.csv: ") and txt.split()[1] in details[0]

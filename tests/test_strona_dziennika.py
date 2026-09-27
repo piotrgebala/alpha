@@ -80,6 +80,15 @@ def test_every_record_of_repo_log_parses():
             "+0",
         ),  # poprawka 11: błąd liczenia nowych plików
         (
+            HEAD
+            + X1
+            + " | stan rynku +0 | F&G +0 | transakcje +0 | opisy strategii 4"
+            + " | rozbicie +2 (x1 BŁĄD ValueError) | fazy +14 (x1 BŁĄD ValueError) | koszyk +0"
+            + TAIL,
+            "sygnały +70 wyniki +1 kapitał 1.0221 obsunięcie 3.7% OK",
+            "+0",
+        ),  # poprawka 11: błąd jednej składowej (X1), trend i premia zapisane
+        (
             HEAD + X1 + " | stan rynku BŁĄD ValueError | F&G BŁĄD KeyError | nowe pole 7" + TAIL,
             None,
             "BŁĄD ValueError",
@@ -93,6 +102,7 @@ def test_every_record_of_repo_log_parses():
         "transakcje-opisy",
         "rozbicie-fazy-koszyk",
         "rozbicie-bledy",
+        "rozbicie-blad-x1",
         "bledy-nowe-pole",
     ],
 )

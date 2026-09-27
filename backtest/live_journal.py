@@ -32,7 +32,12 @@ Zasady zapisu (`dziennik/`):
   składników = netto = wartość w `wyniki.csv` / `x1_wyniki.csv`, sprawdzane przed zapisem); netto każdej
   z 7 faz (średnia faz = netto składowej); ranking obrotu 1–50 na początek miesiąca (top-20 = skład
   koszyka silnika). Liczone z tych samych ramek silnika co wynik (bez drugiego przeliczenia); błąd
-  nie zatrzymuje dziennika („rozbicie/fazy/koszyk BŁĄD <typ>” w `przebiegi.log`).
+  nie zatrzymuje dziennika („rozbicie/fazy/koszyk BŁĄD <typ>” w `przebiegi.log`, pełny komunikat
+  w wydruku). Rozbicie i fazy liczone OSOBNO dla każdej składowej: błąd X1 nie blokuje zapisu trendu
+  i premii („rozbicie +N (x1 BŁĄD <typ>)”); brakujące dni dopisuje następny udany przebieg (liczy od
+  startu), więc kolejność wierszy w pliku nie musi być chronologiczna — czytać po kluczu. Netto
+  porównywane jest z wynikiem TEGO przebiegu (to samo, co trafia do `wyniki.csv` przy nowym dniu);
+  równość z zapisanym plikiem jest ścisła, gdy „historia zmieniona” = 0.
 
     PYTHONUTF8=1 py -m backtest.live_journal              # pobranie danych + zapis
     PYTHONUTF8=1 py -m backtest.live_journal --bez-pobierania
@@ -840,8 +845,10 @@ def _expected(expected: dict[str, pd.Series], name: str, dates: pd.Series) -> np
 def check_breakdown(rows: pd.DataFrame, expected: dict[str, pd.Series], tol: float = TOL) -> None:
     """
     Kontrola przed zapisem `rozbicie.csv`: cena + funding + koszt = netto i netto = wynik składowej
-    (`expected`: składowa → seria po dacie z `wyniki.csv` / `x1_wyniki.csv`), oba do `tol`;
-    każdy dzień wyniku ma wiersz rozbicia. Niezgodność = ValueError (nic nie jest zapisane).
+    (`expected`: składowa → seria po dacie z `expected_results`, czyli wynik TEGO przebiegu, który
+    przy nowym dniu trafia do `wyniki.csv` / `x1_wyniki.csv`), oba do `tol`; każdy dzień wyniku ma
+    wiersz rozbicia. Niezgodność = ValueError (nic nie jest zapisane). Równość z PLIKIEM wyników jest
+    ścisła, gdy przebieg zgłasza „historia zmieniona: 0” (inaczej plik trzyma starszy zapis).
     """
     total = rows["cena"] + rows["funding"] + rows["koszt"]
     bad = ~((total - rows["netto"]).abs() <= tol)
@@ -872,7 +879,11 @@ def check_phases(rows: pd.DataFrame, expected: dict[str, pd.Series], tol: float 
 
 
 def expected_results(res: pd.DataFrame, res_x1: pd.DataFrame | None) -> dict[str, pd.Series]:
-    """Wynik składowych po dacie (tekst) — to, co przebieg zapisuje w `wyniki.csv` / `x1_wyniki.csv`."""
+    """
+    Wynik składowych po dacie (tekst) z przeliczenia TEGO przebiegu — to, co przebieg dopisuje do
+    `wyniki.csv` / `x1_wyniki.csv` przy nowym dniu. Dla dni już zapisanych plik ma pierwszeństwo
+    (append-only), więc przy „historia zmieniona” > 0 plik może się różnić od tej serii.
+    """
     days = res["date"].to_numpy()
     out = {
         "trend": pd.Series(res["r_trend"].to_numpy(dtype=float), index=days),
@@ -883,32 +894,66 @@ def expected_results(res: pd.DataFrame, res_x1: pd.DataFrame | None) -> dict[str
     return out
 
 
+def component_breakdown(
+    engines: dict, name: str, res: pd.DataFrame, res_x1: pd.DataFrame | None, expected: dict
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    (`rozbicie.csv`, `fazy.csv`) jednej składowej (`trend` / `coinbase` na dni `res`, `x1` na dni
+    `res_x1`) z ramek silnika tego przebiegu; obie kontrole przed zwrotem — niezgodność = ValueError.
+    """
+    if name == "x1":
+        panels = x1_panels(engines["x1_phases"])
+        rb = x1_breakdown(panels, res_x1["date"])
+        fz = phase_rows(dict(panels["r_net"].items()), "x1", res_x1["date"])
+    else:
+        rb = ts_breakdown(engines[name], name, res["date"])
+        per = {ph: f["net"] for ph, f in enumerate(engines[f"{name}_phases"])}
+        fz = phase_rows(per, name, res["date"])
+    rb = rb.astype({c: float for c in BREAKDOWN_VALUES if c != "likwidacje"})
+    own = {name: expected[name]}
+    check_breakdown(rb, own)
+    check_phases(fz, own)
+    return rb, fz
+
+
 def breakdown_and_phases(
-    engines: dict, res: pd.DataFrame, res_x1: pd.DataFrame | None
+    engines: dict,
+    res: pd.DataFrame,
+    res_x1: pd.DataFrame | None,
+    errors: dict[str, Exception] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     (`rozbicie.csv`, `fazy.csv`) z ramek silnika zebranych w tym przebiegu (`components`, `run_x1`)
-    na dni wyniku: trend i premia od `JOURNAL_START`, X1 od `X1_START` (gdy X1 policzone). Obie
-    kontrole (`check_breakdown`, `check_phases`) przed zwrotem — niezgodność = ValueError.
+    na dni wyniku: trend i premia od `JOURNAL_START`, X1 od `X1_START` (gdy X1 policzone). Każda
+    składowa liczona i sprawdzana osobno (`component_breakdown`). Bez `errors` pierwszy błąd
+    przerywa (ValueError); z `errors` (słownik) błąd składowej trafia do niego (składowa → wyjątek),
+    a ta składowa jest pominięta — pozostałe zapisują się normalnie (błąd X1 nie blokuje trendu).
     """
     expected = expected_results(res, res_x1)
+    names = ["trend", "coinbase"] + (["x1"] if res_x1 is not None else [])
     rb, fz = [], []
-    for name in ("trend", "coinbase"):
-        rb.append(ts_breakdown(engines[name], name, res["date"]))
-        per = {ph: f["net"] for ph, f in enumerate(engines[f"{name}_phases"])}
-        fz.append(phase_rows(per, name, res["date"]))
-    if res_x1 is not None:
-        panels = x1_panels(engines["x1_phases"])
-        rb.append(x1_breakdown(panels, res_x1["date"]))
-        fz.append(phase_rows(dict(panels["r_net"].items()), "x1", res_x1["date"]))
-    rows_rb = pd.concat([r for r in rb if len(r)] or [rb[0]], ignore_index=True)
-    rows_fz = pd.concat([r for r in fz if len(r)] or [fz[0]], ignore_index=True)
-    rows_rb = rows_rb.astype({c: float for c in BREAKDOWN_VALUES if c != "likwidacje"})
+    for name in names:
+        try:
+            r, f = component_breakdown(engines, name, res, res_x1, expected)
+        except Exception as exc:  # noqa: BLE001 — izolacja składowej tylko na życzenie (`errors`)
+            if errors is None:
+                raise
+            errors[name] = exc
+            continue
+        if len(r):
+            rb.append(r)
+        if len(f):
+            fz.append(f)
+    rows_rb = pd.concat(rb, ignore_index=True) if rb else pd.DataFrame(columns=BREAKDOWN_COLS)
+    rows_fz = pd.concat(fz, ignore_index=True) if fz else pd.DataFrame(columns=PHASE_COLS)
     rows_rb = rows_rb.sort_values(BREAKDOWN_KEY, kind="stable").reset_index(drop=True)
     rows_fz = rows_fz.sort_values(PHASE_KEY, kind="stable").reset_index(drop=True)
-    check_breakdown(rows_rb, expected)
-    check_phases(rows_fz, expected)
     return rows_rb, rows_fz
+
+
+def error_text(exc: Exception, limit: int = 120) -> str:
+    """Opis błędu do wydruku: „<typ>: <komunikat>” (komunikat skrócony do `limit` znaków)."""
+    return f"{type(exc).__name__}: {str(exc)[:limit]}"
 
 
 def basket_rows(
@@ -963,26 +1008,41 @@ def append_safe(
     key: list[str],
     value_cols: list[str],
     error: str | None = None,
+    details: list[str] | None = None,
 ) -> tuple[str, list[str]]:
     """
     `append_rows` dla plików tylko do zapisu (poprawka 11): zwraca (tekst do logu, „historia
-    zmieniona”). Błąd liczenia (`error`) albo zapisu → („BŁĄD <typ>”, []) — dziennik idzie dalej.
+    zmieniona”). Błąd liczenia (`error`) albo zapisu → („BŁĄD <typ>”, []) — dziennik idzie dalej;
+    komunikat błędu zapisu trafia do `details` (wydruk), log zostaje krótki.
     """
     if error is not None:
         return error, []
     try:
         n, changed = append_rows(path, rows, key, value_cols)
     except Exception as exc:  # noqa: BLE001 — plik tylko do zapisu nie zatrzymuje dziennika
+        if details is not None:
+            details.append(f"zapis {path.name}: {error_text(exc)}")
         return f"BŁĄD {type(exc).__name__}", []
     return f"+{n}", changed
 
 
-def summarize_p11(rb_txt: str, fz_txt: str, ks_txt: str) -> str:
-    """Jedna linia do wydruku (poprawka 11, tylko zapis)."""
-    return (
+def summarize_p11(rb_txt: str, fz_txt: str, ks_txt: str, details: list[str] | None = None) -> str:
+    """
+    Linia do wydruku (poprawka 11, tylko zapis) + po jednej linii na błąd z komunikatem (`details`:
+    „gdzie: <typ>: <komunikat>”) — log ma tylko „BŁĄD <typ>”, komunikat jest tu (jak X1 i opisy).
+    """
+    line = (
         f"  Rozbicie zwrotu, fazy, koszyk (poprawka 11, tylko zapis): rozbicie {rb_txt}, "
         f"fazy {fz_txt}, koszyk {ks_txt}"
     )
+    return "\n".join([line] + [f"    BŁĄD {d}" for d in details or []])
+
+
+def with_errors(txt: str, errors: dict[str, Exception]) -> str:
+    """Pole logu + składowe pominięte przez błąd: „+N (x1 BŁĄD ValueError)”; bez błędów bez zmian."""
+    if not errors or txt.startswith("BŁĄD"):
+        return txt
+    return f"{txt} (" + ", ".join(f"{n} BŁĄD {type(e).__name__}" for n, e in errors.items()) + ")"
 
 
 # ------------------------------------------------------------------ przebieg
@@ -1097,16 +1157,24 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         text_str = f"  STRATEGIE AKTYWNE: BŁĄD opisu {type(exc).__name__}: {str(exc)[:120]}"
         str_txt = f"BŁĄD {type(exc).__name__}"
     # rozbicie zwrotu, fazy, koszyk (poprawka 11): tylko zapis, każdy plik osobno; błąd tylko do logu
+    # (każda składowa rozbicia osobno: błąd X1 nie blokuje trendu i premii; komunikat → wydruk)
+    p11_err: list[str] = []
+    comp_err: dict[str, Exception] = {}
     try:
-        rows_rb, rows_fz = breakdown_and_phases(engines, res, engines.get("x1_res"))
+        rows_rb, rows_fz = breakdown_and_phases(engines, res, engines.get("x1_res"), comp_err)
         err_rf = None
     except Exception as exc:  # noqa: BLE001 — rozbicie nie zatrzymuje dziennika
         rows_rb = rows_fz = None
         err_rf = f"BŁĄD {type(exc).__name__}"
+        p11_err.append(f"rozbicie/fazy: {error_text(exc)}")
+    p11_err += [f"rozbicie/fazy {n}: {error_text(e)}" for n, e in comp_err.items()]
     rb_txt, ch_rb = append_safe(
-        journal_dir / "rozbicie.csv", rows_rb, BREAKDOWN_KEY, BREAKDOWN_VALUES, err_rf
+        journal_dir / "rozbicie.csv", rows_rb, BREAKDOWN_KEY, BREAKDOWN_VALUES, err_rf, p11_err
     )
-    fz_txt, ch_fz = append_safe(journal_dir / "fazy.csv", rows_fz, PHASE_KEY, ["netto"], err_rf)
+    fz_txt, ch_fz = append_safe(
+        journal_dir / "fazy.csv", rows_fz, PHASE_KEY, ["netto"], err_rf, p11_err
+    )
+    rb_txt, fz_txt = with_errors(rb_txt, comp_err), with_errors(fz_txt, comp_err)
     try:
         d_now = truncate(data, as_of)
         rows_ks = basket_rows(
@@ -1115,8 +1183,9 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         err_ks = None
     except Exception as exc:  # noqa: BLE001 — rejestr koszyka nie zatrzymuje dziennika
         rows_ks, err_ks = None, f"BŁĄD {type(exc).__name__}"
+        p11_err.append(f"koszyk: {error_text(exc)}")
     ks_txt, ch_ks = append_safe(
-        journal_dir / "koszyk.csv", rows_ks, BASKET_KEY, BASKET_VALUES, err_ks
+        journal_dir / "koszyk.csv", rows_ks, BASKET_KEY, BASKET_VALUES, err_ks, p11_err
     )
     dd = float(res["drawdown"].iloc[-1]) if len(res) else 0.0
     eq = float(res["equity"].iloc[-1]) if len(res) else 1.0
@@ -1134,7 +1203,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         + "\n"
         + text_str
         + "\n"
-        + summarize_p11(rb_txt, fz_txt, ks_txt)
+        + summarize_p11(rb_txt, fz_txt, ks_txt, p11_err)
     )
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
