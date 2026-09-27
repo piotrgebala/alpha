@@ -1,9 +1,13 @@
 """Testy skryptu nadzoru `tools/likwidacje.sh` — na katalogach tymczasowych z FAŁSZYWYM pythonem
 (nigdy prawdziwy kolektor, nigdy prawdziwe `~/likwidacje`): kopia skryptu w piaskownicy, w której
-`.venv/bin/python` tylko zapisuje wywołanie w swoim katalogu `--dir` i czeka `FAKE_HOLD` s.
+`.venv/bin/python` tylko zapisuje wywołanie i swój pid w katalogu `--dir` i czeka `FAKE_HOLD` s
+(Bybit: `FAKE_HOLD_BYBIT`, jeśli ustawione) — przez `exec sleep`, więc jak prawdziwy kolektor nie
+zbiera statusów cudzych procesów potomnych.
 
 Sprawdza: start obu kolektorów, gdy żaden nie działa; natychmiastowe wyjście, gdy oba działają;
-niezależne blokady (Bybit nie dziedziczy blokady Binance); część Binance bez zmian w działaniu.
+niezależne blokady (Bybit nie dziedziczy blokady Binance — także gdy oba startują w jednym przebiegu
+i Binance kończy się pierwszy); brak procesu-zombie po wyjściu kolektora Bybit; wyłącznik
+`WYLACZONY`; część Binance bez zmian w działaniu.
 """
 
 from __future__ import annotations
@@ -25,15 +29,20 @@ pytestmark = pytest.mark.skipif(
 )
 
 FAKE_PY = """#!/usr/bin/env bash
-# fałszywy python: zapisuje argumenty w <--dir>/wywolania.txt i czeka FAKE_HOLD s
+# fałszywy python: zapisuje argumenty w <--dir>/wywolania.txt, pid w <--dir>/pid i czeka
 d=""; prev=""
 for a in "$@"; do [ "$prev" = "--dir" ] && d="$a"; prev="$a"; done
 echo "$*|PYTHONUTF8=$PYTHONUTF8" >> "$d/wywolania.txt"
-sleep "${FAKE_HOLD:-0}"
+echo "$$" > "$d/pid"
+case "$*" in
+  *collect_liquidations_bybit*) h="${FAKE_HOLD_BYBIT:-${FAKE_HOLD:-0}}" ;;
+  *) h="${FAKE_HOLD:-0}" ;;
+esac
+exec sleep "$h"
 """
 
 
-def _sandbox(tmp_path: Path, hold: float = 0.0):
+def _sandbox(tmp_path: Path, hold: float = 0.0, hold_bybit: float | None = None):
     repo = tmp_path / "repo"
     (repo / "tools").mkdir(parents=True)
     shutil.copy(ROOT / "tools" / "likwidacje.sh", repo / "tools" / "likwidacje.sh")
@@ -50,6 +59,8 @@ def _sandbox(tmp_path: Path, hold: float = 0.0):
         "CLAS5_LIKWIDACJE_BYBIT_DIR": str(bb),
         "FAKE_HOLD": str(hold),
     }
+    if hold_bybit is not None:
+        env["FAKE_HOLD_BYBIT"] = str(hold_bybit)
     return repo / "tools" / "likwidacje.sh", env, bn, bb
 
 
@@ -157,3 +168,56 @@ def test_second_run_does_not_start_second_bybit(tmp_path):
         lock.close()
     assert len((bb / "wywolania.txt").read_text(encoding="utf-8").splitlines()) == 1
     _wait_unlocked(bb / ".lock")
+
+
+def test_bybit_outliving_binance_does_not_keep_binance_lock(tmp_path):
+    # Strażnik kolejności w skrypcie: gdyby blok Bybit stał ZA `exec 9>…/.lock`, kolektor Bybit
+    # odziedziczyłby deskryptor blokady Binance i po padnięciu Binance dalej ją trzymał — cron już
+    # nigdy nie wznowiłby Binance. Tu oba startują w jednym przebiegu; Binance kończy się pierwszy.
+    script, env, bn, bb = _sandbox(tmp_path, hold=0.5, hold_bybit=4.0)
+    rc, _ = _run(script, env)  # wraca po wyjściu (fałszywego) kolektora Binance
+    assert rc == 0
+    assert _wait_for(bb / "wywolania.txt")
+    assert _is_locked(bb / ".lock"), "kolektor Bybit powinien jeszcze żyć i trzymać swoją blokadę"
+    assert not _is_locked(bn / ".lock"), "Bybit trzyma blokadę Binance"
+    _wait_unlocked(bb / ".lock")
+
+
+def _proc_state(pid: int) -> str | None:
+    try:
+        for line in Path(f"/proc/{pid}/status").read_text(encoding="utf-8").splitlines():
+            if line.startswith("State:"):
+                return line.split()[1]
+    except OSError:
+        return None
+    return None
+
+
+@pytest.mark.skipif(not Path("/proc/self/status").exists(), reason="potrzebne /proc (Linux)")
+def test_finished_bybit_is_not_left_as_zombie(tmp_path):
+    # Bybit kończy się po 0,2 s, Binance żyje 4 s. Bez podwójnego forka rodzicem Bybit byłby proces
+    # Binance (powłoka po `exec`), który nie zbiera statusów — zostałby proces-zombie (stan Z).
+    script, env, bn, bb = _sandbox(tmp_path, hold=4.0, hold_bybit=0.2)
+    proc = subprocess.Popen(["bash", str(script)], env=env)
+    try:
+        assert _wait_for(bb / "pid")
+        pid = int((bb / "pid").read_text(encoding="utf-8"))
+        end = time.monotonic() + 3.0
+        while time.monotonic() < end and _proc_state(pid) is not None:
+            time.sleep(0.05)
+        assert proc.poll() is None, "test wymaga, by Binance jeszcze żył"
+        assert (
+            _proc_state(pid) is None
+        ), f"kolektor Bybit został jako proces w stanie {_proc_state(pid)}"
+    finally:
+        proc.wait(timeout=30)
+
+
+def test_off_switch_file_skips_bybit_only(tmp_path):
+    script, env, bn, bb = _sandbox(tmp_path)
+    bb.mkdir()
+    (bb / "WYLACZONY").write_text("", encoding="utf-8")
+    rc, _ = _run(script, env)
+    time.sleep(0.5)  # czas na ewentualny start podprocesu Bybit
+    assert rc == 0 and (bn / "wywolania.txt").exists()
+    assert not (bb / "wywolania.txt").exists()

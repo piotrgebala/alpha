@@ -20,3 +20,13 @@ zlikwidowane longi (S=SELL): 10, shorty (S=BUY): 52
 nominał (q x ap) ≈ 416,703 USD
 najczęstsze symbole: ENAUSDT 13, QNTUSDT 6, ZECUSDT 5, ARXUSDT 5, NEARUSDT 4
 === kod wyjścia: 0 ===
+
+=== Kontrola naprawy nieudanej subskrypcji (żywy Bybit, 15 s, bez zapisu): PYTHONUTF8=1 .venv/bin/python runs/2026-09-27_lb0-kolektor-bybit/kontrola_subskrypcji.py (serwer Linux, poprawki po przeglądzie na bazie d791b98; start 2026-09-27T19:18:30Z) ===
+połączono #0 wss://stream.bybit.com/v5/public/linear: 3 tematów w 1 żądaniach
+subskrypcja NIEUDANA na #0: {'success': False, 'ret_msg': 'error:handler not found,topic:allLiquidation.NIEMATAKIEGOUSDT', 'conn_id': 'da7tobm15sdsqbrhtj90-9secj', 'req_id': '0-0', 'op': 'subscribe'}
+temat odrzucony przez Bybit (do odświeżenia listy): allLiquidation.NIEMATAKIEGOUSDT
+ponowiono 2 tematów w 1 żądaniach
+powód: koniec okna (odświeżenie listy symboli albo koniec próby); błąd: False
+subskrypcje nieudane: 1, udane: 1, ponowione tematy: 2, odrzucone: ['allLiquidation.NIEMATAKIEGOUSDT']; likwidacji w 15 s: 0
+wynik: ZGODNY z oczekiwaniem
+=== kod wyjścia: 0 ===

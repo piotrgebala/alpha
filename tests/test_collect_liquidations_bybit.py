@@ -1,8 +1,11 @@
 """Testy kolektora pełnych likwidacji Bybit (`data/collect_liquidations_bybit.py`) — bez sieci:
 parser (w tym mapowanie strony POZYCJI), odrzucanie złych symboli/liczb/czasów, plan subskrypcji
 (≤ 10 tematów na żądanie, limit znaków na połączenie — właściwości w hypothesis), lista instrumentów
-z paginacją, pętla z fałszywym połączeniem (zapis per dzień UTC, liczniki, ping, ponowne łączenie
-po ciszy, odświeżenie listy symboli), kontrola pozytywna bez zapisu na dysk.
+z paginacją i limitem rozmiaru, naprawa nieudanej subskrypcji (`after_sub_fail` — także jako
+właściwość na symulowanym Bybit), pętla z fałszywym połączeniem (zapis per dzień UTC, liczniki, ping,
+ponowne łączenie po ciszy mimo pongów, odświeżenie listy symboli i ponowna próba po błędzie,
+odczekanie przy połączeniu, które pada przed otwarciem), kontrola pozytywna bez zapisu na dysk
+i jej kod wyjścia.
 """
 
 from __future__ import annotations
@@ -131,6 +134,10 @@ def test_subscribe_batches_properties(symbols, per_request, max_chars):
         assert conn and all(1 <= len(req) <= per_request for req in conn)
         assert sum(clb.topic_chars(t) for req in conn for t in req) <= max_chars
     assert len(plan) <= max(1, len(flat))
+    sizes = [sum(len(req) for req in conn) for conn in plan]
+    assert not sizes or max(sizes) - min(sizes) <= 1  # po równo — żadnego „ogona” z kilku monet
+    total = sum(clb.topic_chars(t) for t in flat)
+    assert len(plan) >= -(-total // max_chars)  # nie mniej połączeń, niż wymaga budżet
 
 
 def test_subscribe_batches_real_scale_fits_bybit_limit():
@@ -138,6 +145,7 @@ def test_subscribe_batches_real_scale_fits_bybit_limit():
     symbols = [f"SYM{i:04d}X{'Y' * (i % 9)}USDT" for i in range(777)]
     plan = clb.subscribe_batches(symbols)
     assert len(plan) == 2
+    assert [sum(len(r) for r in conn) for conn in plan] == [389, 388]  # po równo, nie 688 + 89
     for conn in plan:
         topics = [t for req in conn for t in req]
         compact = json.dumps(topics, separators=(",", ":"))
@@ -166,6 +174,7 @@ def test_parse_instruments_filters_and_returns_cursor():
     rows = [
         _inst("BTCUSDT"),
         _inst("ETHUSDC", settle="USDC"),
+        _inst("XUSDT", settle="USDC"),  # nazwa pasuje do wzorca — odrzuca go dopiero rozliczenie
         _inst("BTCUSDT-26DEC26", kind="LinearFutures"),
         _inst("OLDUSDT", status="Closed"),
         _inst("NEWUSDT", status="PreLaunch"),
@@ -260,12 +269,24 @@ class FakeConn:
         return None  # koniec strumienia
 
 
+@dataclass
+class ConnectFail:
+    """Połączenie, które pada PRZED otwarciem, po `s` sekundach (np. limit czasu TCP/TLS)."""
+
+    s: float
+
+
 def _fake_connect(scripts, clock, conns):
     it = iter(scripts)
 
     @contextlib.asynccontextmanager
     async def connect():
-        conn = FakeConn(next(it), clock)
+        script = next(it)
+        if isinstance(script, ConnectFail):
+            await asyncio.sleep(0)
+            clock.t += script.s
+            raise ConnectionError("nie udało się połączyć")
+        conn = FakeConn(script, clock)
         conns.append(conn)
         yield conn
 
@@ -354,16 +375,19 @@ def test_run_writes_by_utc_day_counts_and_pings(tmp_path):
 
 
 def test_run_reconnects_after_silence_with_backoff(tmp_path):
+    # Bybit odpowiada na każdy ping (pong co ~20 s), ale likwidacji brak: pong NIE jest znakiem
+    # życia danych — po 15 min i tak ponowne połączenie (strażnik „połączenie żyje, dane nie płyną”).
     scripts = [
-        [SUB_OK, _msg(T0 + 1), Wait(2000)],  # 15 min bez likwidacji → ponowne połączenie
+        [SUB_OK, _msg(T0 + 1), *([Wait(20), PONG] * 60)],
         [SUB_OK, _msg(T0 + 2), ConnectionError("x")],
     ]
     state, conns, delays, logs = _run(tmp_path, scripts, max_cycles=2)
     assert state["reconnects"] == 2 and state["events"] == 2 and len(conns) == 2
+    assert state["pongs"] >= 40
     assert delays == [1.0]  # po drugim rozłączeniu pętla kończy się (max_cycles) bez odczekania
     assert any("cisza > 900 s" in x for x in logs)
     pings = sum(1 for m in conns[0].sent if m == {"op": "ping"})
-    assert pings >= 40  # ping co 20 s przez ~900 s ciszy
+    assert 40 <= pings <= 46  # ping co 20 s (nie częściej) przez ~900 s ciszy
 
 
 def test_run_backoff_grows_for_quick_failures_and_resets_after_stable_cycle(tmp_path):
@@ -574,3 +598,187 @@ def test_main_arguments(tmp_path, capsys):
 
 def test_default_dir_is_outside_repo():
     assert clb.DEFAULT_DIR.name == "likwidacje_bybit" and clb.DEFAULT_DIR.is_absolute()
+
+
+# ------------------------------------------------------------------ nieudana subskrypcja
+TOPIC = clb.TOPIC_PREFIX
+NOT_FOUND = "error:handler not found,topic:"
+
+
+def test_after_sub_fail_drops_named_topic_and_resends_rest():
+    args = [TOPIC + "BTCUSDT", TOPIC + "BADUSDT", TOPIC + "ETHUSDT"]
+    resend, rejected = clb.after_sub_fail(args, NOT_FOUND + TOPIC + "BADUSDT")
+    assert resend == [[TOPIC + "BTCUSDT", TOPIC + "ETHUSDT"]] and rejected == [TOPIC + "BADUSDT"]
+    assert clb.after_sub_fail([TOPIC + "BADUSDT"], NOT_FOUND + TOPIC + "BADUSDT") == (
+        [],
+        [TOPIC + "BADUSDT"],
+    )
+
+
+def test_after_sub_fail_already_subscribed_is_not_rejected():
+    # odpowiedź żywego Bybit 2026-09-27: `error:already subscribed,topic:allLiquidation.ETHUSDT`
+    args = [TOPIC + "BTCUSDT", TOPIC + "ETHUSDT"]
+    resend, rejected = clb.after_sub_fail(args, "error:already subscribed,topic:" + args[1])
+    assert resend == [[TOPIC + "BTCUSDT"]] and rejected == []
+
+
+@pytest.mark.parametrize(
+    "ret_msg", ["error:handler not found", None, "topic:" + TOPIC + "OBCYUSDT"]
+)
+def test_after_sub_fail_without_usable_topic_splits_into_singles(ret_msg):
+    args = [TOPIC + "AUSDT", TOPIC + "BUSDT"]
+    assert clb.after_sub_fail(args, ret_msg) == ([[TOPIC + "AUSDT"], [TOPIC + "BUSDT"]], [])
+    assert clb.after_sub_fail(args[:1], ret_msg) == ([], args[:1])  # jeden temat → odrzucony
+
+
+@settings(max_examples=150, deadline=None)
+@given(
+    symbols=st.lists(symbol_st, min_size=1, max_size=15, unique=True),
+    data=st.data(),
+    names_topic=st.booleans(),
+)
+def test_after_sub_fail_converges_on_simulated_bybit(symbols, data, names_topic):
+    # Symulowany Bybit: żądanie z choćby jednym złym tematem jest odrzucane w całości; odpowiedź
+    # podaje PIERWSZY zły temat (albo — wariant ostrożny — żadnego). Po naprawie: każdy dobry temat
+    # subskrybowany, każdy zły odrzucony, liczba żądań ograniczona.
+    args = [TOPIC + s for s in symbols]
+    bad = set(data.draw(st.lists(st.sampled_from(args), unique=True)))
+    subscribed, rejected, queue, steps = set(), set(), [args], 0
+    while queue:
+        steps += 1
+        assert steps <= 2 * len(args) + 2
+        req = queue.pop()
+        first_bad = next((t for t in req if t in bad), None)
+        if first_bad is None:
+            assert not subscribed & set(req)  # nic nie jest subskrybowane dwa razy
+            subscribed.update(req)
+            continue
+        msg = NOT_FOUND + first_bad if names_topic else "error:handler not found"
+        resend, rej = clb.after_sub_fail(req, msg)
+        assert all(1 <= len(r) <= len(req) for r in resend)
+        rejected.update(rej)
+        queue.extend(resend)
+    assert subscribed == set(args) - bad and rejected == bad
+
+
+def _sub_fail(req_id: str, topic: str) -> dict:
+    return {
+        "success": False,
+        "ret_msg": NOT_FOUND + TOPIC + topic,
+        "conn_id": "c",
+        "req_id": req_id,
+        "op": "subscribe",
+    }
+
+
+def test_run_repairs_failed_subscription_and_skips_bad_topic_until_refresh(tmp_path):
+    scripts = [
+        [
+            _sub_fail("0-0", "BADUSDT"),  # całe żądanie odrzucone przez jeden zły temat
+            {**SUB_OK, "req_id": "0-r1"},
+            _msg(T0 + 1, "ETHUSDT"),
+            ConnectionError("zerwane"),
+        ],
+        [{**SUB_OK, "req_id": "0-0"}, ConnectionError("znowu")],
+    ]
+    state, conns, _, logs = _run(
+        tmp_path, scripts, symbols=(["BADUSDT", "BTCUSDT", "ETHUSDT"],), max_cycles=2
+    )
+    good = [TOPIC + "BTCUSDT", TOPIC + "ETHUSDT"]
+    assert conns[0].sent[0]["args"] == [TOPIC + "BADUSDT", *good]
+    assert {"op": "subscribe", "req_id": "0-r1", "args": good} in conns[0].sent  # od razu
+    assert conns[1].sent[0]["args"] == good  # po ponownym połączeniu zły temat już nie wraca
+    assert state["sub_fail"] == 1 and state["resubscribed"] == 2 and state["events"] == 1
+    assert state["rejected_topics"] == [TOPIC + "BADUSDT"] and state["rejected_count"] == 1
+    assert state["symbols"] == 2
+    assert any("odrzucony przez Bybit" in x for x in logs)
+    assert "tematy odrzucone 1" in clb.status_text(tmp_path)
+
+
+def test_run_gives_rejected_topic_new_chance_after_refresh(tmp_path):
+    scripts = [
+        [_sub_fail("0-0", "BADUSDT"), Wait(10**6)],
+        [SUB_OK, ConnectionError("koniec testu")],
+    ]
+    state, conns, _, _ = _run(
+        tmp_path,
+        scripts,
+        symbols=(["BADUSDT", "BTCUSDT"],),
+        max_cycles=2,
+        refresh_s=100.0,
+        silence_s=10**7,
+    )
+    assert conns[0].sent[1] == {"op": "subscribe", "req_id": "0-r1", "args": [TOPIC + "BTCUSDT"]}
+    assert conns[1].sent[0]["args"] == [TOPIC + "BADUSDT", TOPIC + "BTCUSDT"]
+    assert state["refreshes"] == 1 and state["rejected_count"] == 0
+
+
+def test_run_retries_failed_refresh_after_retry_interval_not_full_period(tmp_path):
+    clock, conns, calls = Clock(), [], []
+    answers = [["BTCUSDT"], OSError("sieć"), ["ETHUSDT"]]
+
+    async def get_json(params):
+        calls.append(clock.t)
+        a = answers.pop(0)
+        if isinstance(a, Exception):
+            raise a
+        return _page([_inst(s) for s in a])
+
+    async def fake_sleep(s):
+        pass
+
+    scripts = [
+        [SUB_OK, Wait(10**6)],
+        [SUB_OK, Wait(10**6)],
+        [SUB_OK, ConnectionError("koniec testu")],
+    ]
+    asyncio.run(
+        clb.run(
+            tmp_path,
+            connect=_fake_connect(scripts, clock, conns),
+            get_json=get_json,
+            sleep=fake_sleep,
+            clock=clock,
+            wall=lambda: WALL0,
+            log=[].append,
+            max_cycles=3,
+            refresh_s=1000.0,
+            refresh_retry_s=100.0,
+            silence_s=10**7,
+        )
+    )
+    # lista: start, nieudane odświeżenie po 1000 s, ponowna próba po 100 s (nie po kolejnych 1000)
+    assert [t - calls[0] for t in calls] == pytest.approx([0, 1000, 1100], abs=1.0)
+    assert conns[1].sent[0]["args"] == [TOPIC + "BTCUSDT"]
+    assert conns[2].sent[0]["args"] == [TOPIC + "ETHUSDT"]
+
+
+def test_run_backoff_keeps_growing_when_connection_fails_before_opening(tmp_path):
+    # połączenie wisi 70 s i pada przed otwarciem: cykl > 60 s, ale nic się nie połączyło —
+    # odczekanie NIE może się zerować (limit 500 połączeń / 5 min na IP)
+    scripts = [ConnectFail(70), ConnectFail(70), ConnectFail(70)]
+    state, conns, delays, _ = _run(tmp_path, scripts, max_cycles=3)
+    assert delays == [1.0, 2.0] and conns == [] and state["reconnects"] == 3
+
+
+@pytest.mark.parametrize("events,error,code", [(3, False, 0), (0, False, 1), (3, True, 1)])
+def test_main_probe_exit_code(monkeypatch, events, error, code):
+    seen = []
+
+    async def fake_probe(seconds, out=print, **kw):
+        seen.append(seconds)
+        return {"events": events, "error": error}
+
+    monkeypatch.setattr(clb, "probe", fake_probe)
+    assert clb.main(["--probe", "5"]) == code and seen == [5.0]
+
+
+def test_read_limited_rejects_oversized_body():
+    async def chunks(parts):
+        for part in parts:
+            yield part
+
+    assert asyncio.run(clb.read_limited(chunks([b"ab", b"cd"]), limit=4)) == b"abcd"
+    with pytest.raises(ValueError, match="większa"):
+        asyncio.run(clb.read_limited(chunks([b"ab", b"cde"]), limit=4))
+    assert clb.MAX_REST_BYTES >= 8 * 1024 * 1024  # lista 2026-09-27 ma ~0,8 MB

@@ -32,11 +32,19 @@ Zasady:
   teksty; `pos` — kierunek zlikwidowanej pozycji; `ts` — czas wysłania wiadomości przez Bybit;
   `rcv` — czas odbioru na serwerze, ms), plik per dzień UTC czasu `T`;
 - lista symboli z REST co 24 h (nowe listingi) — wtedy wszystkie połączenia są zamykane i otwierane
-  od nowa z nowym planem subskrypcji; cisza > 15 min bez żadnej likwidacji na połączeniu = ponowne
-  połączenie; każdy błąd transportu = ponowne połączenie po odczekaniu 1 s → 60 s (odczekanie
-  zeruje się dopiero po cyklu dłuższym niż 60 s — chroni limit 500 połączeń / 5 min);
+  od nowa z nowym planem subskrypcji; tematy dzielone PO RÓWNO między połączenia (żadne nie dostaje
+  garstki rzadkich monet); cisza > 15 min bez żadnej likwidacji na połączeniu = ponowne połączenie
+  (pong NIE jest znakiem życia — ten strażnik łapie „połączenie żyje, dane nie płyną”); każdy błąd
+  transportu = ponowne połączenie po odczekaniu 1 s → 60 s (odczekanie zeruje się dopiero po
+  cyklu dłuższym niż 60 s — chroni limit 500 połączeń / 5 min);
 - wiadomość o nieznanym schemacie albo zła likwidacja (symbol, liczba, czas) jest POMIJANA i liczona
-  (nie zrywa połączenia); nieudana subskrypcja jest liczona i logowana.
+  (nie zrywa połączenia);
+- nieudana subskrypcja (Bybit odrzuca CAŁE żądanie, gdy jeden temat jest zły, i podaje tylko
+  pierwszy zły temat — sprawdzone na żywo 2026-09-27) jest liczona, logowana i NAPRAWIANA od razu:
+  zły temat (`handler not found`) wypada z planu do najbliższego udanego odświeżenia listy,
+  pozostałe tematy żądania są wysyłane ponownie (`after_sub_fail`); odpowiedź bez tematu → tematy
+  żądania po jednym;
+- odpowiedź REST z listą instrumentów ma limit rozmiaru (`MAX_REST_BYTES`), jak wiadomości wss.
 
     PYTHONUTF8=1 py -m data.collect_liquidations_bybit                       # kolektor (w tle, cron)
     PYTHONUTF8=1 py -m data.collect_liquidations_bybit --status
@@ -73,6 +81,8 @@ STABLE_CYCLE_S = 60.0  # cykl krótszy = odczekanie rośnie dalej (limit połąc
 STATUS_EVERY_S = 30.0
 MAX_PAGES = 20
 MAX_MSG_BYTES = 4 * 1024 * 1024
+MAX_REST_BYTES = 8 * 1024 * 1024  # lista instrumentów 2026-09-27: ~0,8 MB (777 monet) — zapas ~10×
+FAILED_TOPIC_RE = re.compile(r"topic:([^,\s]+)")  # `error:handler not found,topic:allLiquidation.X`
 SYMBOL_RE = re.compile(r"[A-Z0-9]{1,40}USDT")
 NUM_RE = re.compile(r"\d+(\.\d+)?([eE][-+]?\d+)?")
 SIDE_TO_POSITION = {"Buy": "long", "Sell": "short"}  # Bybit: S = strona zlikwidowanej POZYCJI
@@ -167,8 +177,10 @@ def subscribe_batches(
 ) -> list[list[list[str]]]:
     """
     Symbole → plan subskrypcji: połączenia → żądania (≤ `per_request` tematów) → tematy.
-    Nowe połączenie, gdy łączna długość tematów przekroczyłaby `max_chars`. Symbole bez
-    powtórzeń, posortowane (plan deterministyczny); pusta lista → brak połączeń.
+    Najmniejsza liczba połączeń `k`, przy której tematy podzielone PO RÓWNO (kolejne bloki po
+    ⌈N/k⌉ lub ⌊N/k⌋ tematów) mieszczą się w `max_chars` na połączenie — żadne połączenie nie
+    dostaje samego ogona alfabetu (kilku rzadkich monet, które 15 min ciszy rozłączałoby w kółko).
+    Symbole bez powtórzeń, posortowane (plan deterministyczny); pusta lista → brak połączeń.
     """
     if per_request < 1:
         raise ValueError("likwidacje bybit: per_request < 1")
@@ -176,18 +188,39 @@ def subscribe_batches(
     for t in topics:
         if topic_chars(t) > max_chars:
             raise ValueError(f"likwidacje bybit: temat dłuższy niż budżet połączenia: {t[:60]}")
+    n = len(topics)
     conns: list[list[str]] = []
-    cur: list[str] = []
-    used = 0
-    for t in topics:
-        if cur and used + topic_chars(t) > max_chars:
-            conns.append(cur)
-            cur, used = [], 0
-        cur.append(t)
-        used += topic_chars(t)
-    if cur:
-        conns.append(cur)
+    k = max(1, math.ceil(sum(topic_chars(t) for t in topics) / max_chars)) if n else 0
+    while k:  # k = n zawsze się mieści (każdy temat osobno), więc pętla się kończy
+        size, extra = divmod(n, k)
+        bounds = [i * size + min(i, extra) for i in range(k + 1)]
+        conns = [topics[bounds[i] : bounds[i + 1]] for i in range(k)]
+        if all(sum(topic_chars(t) for t in c) <= max_chars for c in conns):
+            break
+        k += 1
     return [[c[i : i + per_request] for i in range(0, len(c), per_request)] for c in conns]
+
+
+def after_sub_fail(args: list[str], ret_msg) -> tuple[list[list[str]], list[str]]:
+    """
+    Nieudane żądanie subskrypcji → (żądania do ponownego wysłania, tematy odrzucone).
+    Bybit odrzuca całe żądanie i w `ret_msg` podaje PIERWSZY zły temat
+    (`error:handler not found,topic:allLiquidation.X`). Ten temat wypada, reszta idzie ponownie
+    jednym żądaniem (kolejny zły temat wyjdzie w następnej odpowiedzi). `already subscribed` —
+    temat już działa, więc nie jest odrzucany, tylko nie wysyła się go drugi raz. Brak tematu
+    w odpowiedzi → tematy po jednym (każdy dostanie własną odpowiedź); pojedynczy temat bez
+    wskazania → odrzucony. Każdy krok zmniejsza żądanie, więc ponawianie się kończy.
+    """
+    args = list(dict.fromkeys(args))
+    m = FAILED_TOPIC_RE.search(ret_msg) if isinstance(ret_msg, str) else None
+    bad = m.group(1) if m else None
+    if bad in args:
+        rest = [t for t in args if t != bad]
+        rejected = [] if "already subscribed" in ret_msg else [bad]
+        return ([rest] if rest else []), rejected
+    if len(args) > 1:
+        return [[t] for t in args], []
+    return [], args
 
 
 def parse_instruments(payload) -> tuple[list[str], str]:
@@ -295,8 +328,18 @@ async def _connect(url: str = STREAM_URL):
                 await conn.close()
 
 
-async def _get_json(params: dict, url: str = INSTRUMENTS_URL):
-    """GET listy instrumentów (publiczny REST Bybit, tylko https, limit czasu 30 s)."""
+async def read_limited(chunks, limit: int = MAX_REST_BYTES) -> bytes:
+    """Kawałki treści odpowiedzi → bajty; `ValueError`, gdy treść przekracza `limit` bajtów."""
+    buf = bytearray()
+    async for chunk in chunks:
+        buf += chunk
+        if len(buf) > limit:
+            raise ValueError(f"likwidacje bybit: odpowiedź REST większa niż {limit} B")
+    return bytes(buf)
+
+
+async def _get_json(params: dict, url: str = INSTRUMENTS_URL, limit: int = MAX_REST_BYTES):
+    """GET listy instrumentów (publiczny REST Bybit, tylko https, limit czasu 30 s i rozmiaru)."""
     import aiohttp
 
     if not url.startswith("https://"):
@@ -305,7 +348,9 @@ async def _get_json(params: dict, url: str = INSTRUMENTS_URL):
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url, params=params) as resp:
             resp.raise_for_status()
-            return await resp.json(content_type=None)
+            if resp.content_length is not None and resp.content_length > limit:
+                raise ValueError(f"likwidacje bybit: odpowiedź REST większa niż {limit} B")
+            return json.loads(await read_limited(resp.content.iter_chunked(65_536), limit))
 
 
 # ------------------------------------------------------------------ sesja i cykl połączeń
@@ -317,6 +362,7 @@ def new_stats() -> dict:
         "pongs": 0,
         "sub_ok": 0,
         "sub_fail": 0,
+        "resubscribed": 0,
     }
 
 
@@ -335,14 +381,23 @@ async def _session(
     ping_s: float,
     tick,
     connected: list,
+    rejected_topics: set,
 ) -> str:
-    """Jedno połączenie: subskrypcja, ping co `ping_s`, odbiór do `deadline` albo do błędu."""
+    """
+    Jedno połączenie: subskrypcja, ping co `ping_s`, odbiór do `deadline` albo do błędu.
+    Nieudane żądanie subskrypcji jest naprawiane od razu (`after_sub_fail`): zły temat trafia do
+    `rejected_topics` (wspólne dla cykli — `run` pomija je w planie do udanego odświeżenia listy),
+    reszta tematów żądania jest wysyłana ponownie z nowym `req_id`.
+    """
     async with connect() as conn:
         connected.append(conn_id)
         n_topics = sum(len(r) for r in requests)
         log(f"połączono #{conn_id} {STREAM_URL}: {n_topics} tematów w {len(requests)} żądaniach")
+        pending: dict[str, list[str]] = {}  # req_id → tematy żądania bez odpowiedzi
         for i, args in enumerate(requests):
+            pending[f"{conn_id}-{i}"] = list(args)
             await conn.send({"op": "subscribe", "req_id": f"{conn_id}-{i}", "args": args})
+        n_retry = 0
         last_ping = last_data = clock()
         while True:
             now = clock()
@@ -387,9 +442,26 @@ async def _session(
                 stats["pongs"] += 1
             elif kind == "sub_ok":
                 stats["sub_ok"] += 1
+                pending.pop(str(msg.get("req_id")), None)
             elif kind == "sub_fail":
                 stats["sub_fail"] += 1
                 log(f"subskrypcja NIEUDANA na #{conn_id}: {str(msg)[:300]}")
+                args = pending.pop(str(msg.get("req_id")), None)
+                if args is None:
+                    log(f"nieznane req_id {str(msg.get('req_id'))[:40]!r} — nie ma czego ponowić")
+                    tick()
+                    continue
+                resend, bad = after_sub_fail(args, msg.get("ret_msg"))
+                for t in bad:
+                    rejected_topics.add(t)
+                    log(f"temat odrzucony przez Bybit (do odświeżenia listy): {t[:80]}")
+                for retry in resend:
+                    n_retry += 1
+                    req_id = f"{conn_id}-r{n_retry}"
+                    pending[req_id] = retry
+                    stats["resubscribed"] += len(retry)
+                    await conn.send({"op": "subscribe", "req_id": req_id, "args": retry})
+                log(f"ponowiono {sum(map(len, resend))} tematów w {len(resend)} żądaniach")
             else:
                 stats["skipped"] += 1
                 if stats["skipped"] <= 5 or stats["skipped"] % 1000 == 0:
@@ -430,11 +502,14 @@ async def run(
     refresh_s: float = REFRESH_SYMBOLS_S,
     silence_s: float = SILENCE_S,
     ping_s: float = PING_EVERY_S,
+    refresh_retry_s: float = REFRESH_RETRY_S,
 ) -> dict:
     """
     Pętla kolektora: lista symboli → plan subskrypcji → cykl połączeń → zapis → po błędzie
-    odczekanie i ponowne połączenie; po 24 h świeża lista symboli i nowy plan. `max_cycles`
-    (testy) kończy pętlę po n cyklach; produkcyjnie `None` = zawsze.
+    odczekanie i ponowne połączenie; po 24 h świeża lista symboli i nowy plan (nieudane
+    odświeżenie → stara lista, następna próba za `refresh_retry_s`). Tematy odrzucone przez
+    Bybit przy subskrypcji wypadają z planu do najbliższego udanego odświeżenia listy.
+    `max_cycles` (testy) kończy pętlę po n cyklach; produkcyjnie `None` = zawsze.
     """
     connect = _connect if connect is None else connect
     get_json = _get_json if get_json is None else get_json
@@ -458,9 +533,12 @@ async def run(
         "last_error": None,
     }
     last_status = [-math.inf]
+    rejected_topics: set[str] = set()
 
     def status() -> None:
         state.update(stats, events=writer.count, last_event_ms=writer.last_event_ms)
+        state["rejected_topics"] = sorted(rejected_topics)[:20]
+        state["rejected_count"] = len(rejected_topics)
         cl.write_status(root, **state)
         last_status[0] = clock()
 
@@ -491,7 +569,7 @@ async def run(
                         await sleep(delay)
                         continue
                     log(f"{reason}; zostaje stara lista ({len(symbols)} symboli)")
-                    fetched_at = clock() - refresh_s + REFRESH_RETRY_S
+                    fetched_at = clock() - refresh_s + refresh_retry_s
                 else:
                     added = sorted(set(new) - set(symbols or []))
                     removed = sorted(set(symbols or []) - set(new))
@@ -500,8 +578,13 @@ async def run(
                         f"usunięte {len(removed)}: {' '.join(removed[:10])})"
                     )
                     symbols, fetched_at = new, clock()
-            plan = subscribe_batches(symbols)
-            state.update(symbols=len(symbols), connections=len(plan))
+                    rejected_topics.clear()  # świeża lista — odrzucone tematy dostają nową szansę
+            live = [s for s in symbols if TOPIC_PREFIX + s not in rejected_topics]
+            if not live:  # wszystko odrzucone (nie powinno się zdarzyć) — wróć do pełnej listy
+                rejected_topics.clear()
+                live = symbols
+            plan = subscribe_batches(live)
+            state.update(symbols=len(live), connections=len(plan))
             connected: list = []
             started = clock()
             reason, is_error = await _cycle(
@@ -517,6 +600,7 @@ async def run(
                 ping_s=ping_s,
                 tick=tick,
                 connected=connected,
+                rejected_topics=rejected_topics,
             )
             cycles += 1
             if len(connected) == len(plan) and clock() - started >= STABLE_CYCLE_S:
@@ -572,6 +656,7 @@ async def probe(
         f"(znaki tematów na połączenie: {chars}; limit Bybit {ARGS_CHARS_LIMIT})"
     )
     records: list[dict] = []
+    rejected: set[str] = set()
     stats = new_stats()
     start_ms = int(wall() * 1000)
     out(f"start próby: {cl._now_iso()} ({start_ms} ms), czas {seconds:.0f} s")
@@ -588,13 +673,22 @@ async def probe(
         ping_s=PING_EVERY_S,
         tick=lambda: None,
         connected=[],
+        rejected_topics=rejected,
     )
     end_ms = int(wall() * 1000)
     out(f"koniec próby: {cl._now_iso()} ({end_ms} ms); powód: {reason}; błąd: {is_error}")
     summary = summarize(records, seconds)
-    summary.update(stats, window_ms=[start_ms, end_ms], error=is_error, reason=reason)
+    summary.update(
+        stats,
+        window_ms=[start_ms, end_ms],
+        error=is_error,
+        reason=reason,
+        rejected_topics=sorted(rejected),
+    )
     out(
-        f"subskrypcje udane: {stats['sub_ok']} / {n_req}, nieudane: {stats['sub_fail']}; "
+        f"subskrypcje udane: {stats['sub_ok']} / {n_req}, nieudane: {stats['sub_fail']} "
+        f"(ponowione tematy: {stats['resubscribed']}, odrzucone: {len(rejected)} "
+        f"{' '.join(sorted(rejected)[:10])}); "
         f"pongi: {stats['pongs']}; wiadomości z likwidacjami: {stats['messages']}; "
         f"pominięte: {stats['skipped']}"
     )
@@ -661,7 +755,8 @@ def status_text(root: Path) -> str:
     st = json.loads(p.read_text(encoding="utf-8"))
     return (
         f"{base}; symboli {st.get('symbols')} w {st.get('connections')} połączeniach; "
-        f"subskrypcje udane {st.get('sub_ok')}, nieudane {st.get('sub_fail')}; "
+        f"subskrypcje udane {st.get('sub_ok')}, nieudane {st.get('sub_fail')}, "
+        f"tematy odrzucone {st.get('rejected_count', 0)}; "
         f"odświeżeń listy {st.get('refreshes')}"
     )
 

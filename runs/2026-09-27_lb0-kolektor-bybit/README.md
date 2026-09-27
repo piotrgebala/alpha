@@ -1,7 +1,8 @@
 # LB0 — kolektor PEŁNYCH likwidacji Bybit: druga brama danych rodziny E1 (2026-09-27)
 
-> **STATUS: KOD GOTOWY, KONTROLA POZYTYWNA ZALICZONA (2026-09-27).** Kolektor na stałe (cron) uruchamia koordynator po
-> scaleniu. **0 wariantów — POZA licznikami:** to zbieranie danych, nie pomiar. Żadnej hipotezy nie odczytano i nie wolno
+> **STATUS: KOD GOTOWY, KONTROLA POZYTYWNA ZALICZONA, POPRAWKI PO PRZEGLĄDZIE NANIESIONE (2026-09-27).**
+> **Scalenie do `master` = start kolektora** (istniejąca linia crona LK0 uruchomi go sama — patrz „Nadzór”).
+> **0 wariantów — POZA licznikami:** to zbieranie danych, nie pomiar. Żadnej hipotezy nie odczytano i nie wolno
 > jej odczytać, dopóki rachunek mocy na REALNEJ częstości zdarzeń nie powie „mierzalna”. **Jeden licznik E1** dla LK0 i LB0.
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
@@ -24,11 +25,13 @@ w Binance — szczegóły niżej).
   (sekcja 3, „Kolektor pełnych likwidacji Bybit”, status **ok**; sekcja 6, krok 1) + decyzja użytkownika „wykonaj wszystkie”.
 - **Kod:** `data/collect_liquidations_bybit.py`; nadzór: `tools/likwidacje.sh` (ten sam cron co LK0, osobna blokada `flock`
   w katalogu Bybit); `DayWriter` z LK0 dostał parametr `time_key` (domyślnie `"E"`, więc LK0 działa bez zmian).
-- **Testy:** `tests/test_collect_liquidations_bybit.py` (44, bez sieci: parser i mapowanie strony, odrzucanie złych symboli,
-  liczb i czasów, plan subskrypcji — właściwości w `hypothesis`: ≤ 10 tematów na żądanie, limit znaków, żaden symbol nie ginie
-  ani się nie powtarza; lista instrumentów z paginacją; pętla z fałszywym połączeniem: zapis per dzień UTC, liczniki, ping,
-  ponowne łączenie po ciszy, rosnące odczekanie, odświeżenie listy symboli, kilka połączeń naraz; próba bez zapisu na dysk)
-  + `tests/test_likwidacje_sh.py` (5, skrypt nadzoru na katalogach tymczasowych z fałszywym pythonem).
+- **Testy:** `tests/test_collect_liquidations_bybit.py` (58, bez sieci: parser i mapowanie strony, odrzucanie złych symboli,
+  liczb i czasów, plan subskrypcji — właściwości w `hypothesis`: ≤ 10 tematów na żądanie, limit znaków, podział po równo,
+  żaden symbol nie ginie ani się nie powtarza; naprawa nieudanej subskrypcji — także jako właściwość na symulowanym Bybit;
+  lista instrumentów z paginacją i limitem rozmiaru; pętla z fałszywym połączeniem: zapis per dzień UTC, liczniki, ping,
+  ponowne łączenie po ciszy mimo pongów, rosnące odczekanie, odświeżenie listy symboli i ponowna próba po błędzie, kilka
+  połączeń naraz; próba bez zapisu na dysk i jej kod wyjścia) + `tests/test_likwidacje_sh.py` (8, skrypt nadzoru na
+  katalogach tymczasowych z fałszywym pythonem: m.in. Bybit nie trzyma blokady Binance, brak procesu-zombie, wyłącznik).
 - **Źródło:** `wss://stream.bybit.com/v5/public/linear`, temat `allLiquidation.{symbol}` (push co 500 ms, wszystkie likwidacje).
   Lista monet: `https://api.bybit.com/v5/market/instruments-info?category=linear` (status `Trading`, `LinearPerpetual`,
   rozliczenie USDT; kursor stron). Publiczne, bez klucza, adresy stałe w kodzie, tylko `wss://` i `https://`.
@@ -37,13 +40,21 @@ w Binance — szczegóły niżej).
 - **Wiersz = jedna likwidacja:** `T` (ms), `s` symbol, `S` strona (surowo, jak w JSON), `v` wielkość w monetach, `p` cena
   upadłości (tekst, bez przeliczeń), `pos` — kierunek ZLIKWIDOWANEJ pozycji (`long`/`short`), `ts` — czas wysłania
   wiadomości przez Bybit (ms), `rcv` — czas odbioru na serwerze (ms). Odczyt: `collect_liquidations_bybit.load_day`.
-- **Plan połączeń (2026-09-27):** 777 monet → 2 połączenia (688 + 89 tematów), 78 żądań subskrypcji. Limit Bybit to
-  21 000 znaków tematów na połączenie; nasz budżet to 18 000 (zapas ~14 %), liczony ostrożnie — z cudzysłowami
-  i przecinkami. Tak liczone 777 tematów to ~20 300 znaków; same nazwy to ~17 900, czyli jedno połączenie zmieściłoby się
-  tuż pod limitem Bybit, bez zapasu na nowe listingi. Stąd dwa połączenia.
-- **Pętla:** ping co 20 s; lista monet co 24 h (nowe listingi — wtedy oba połączenia otwierane od nowa); cisza > 15 min bez
-  likwidacji na połączeniu = ponowne połączenie; błąd = odczekanie 1 → 60 s (zeruje się dopiero po cyklu > 60 s, żeby nie
+- **Plan połączeń (2026-09-27):** 777 monet → 2 połączenia, 78 żądań subskrypcji. Limit Bybit to 21 000 znaków tematów
+  na połączenie; nasz budżet to 18 000 (zapas ~14 %), liczony ostrożnie — z cudzysłowami i przecinkami. Tak liczone
+  777 tematów to ~20 300 znaków; same nazwy to ~17 900, czyli jedno połączenie zmieściłoby się tuż pod limitem Bybit, bez
+  zapasu na nowe listingi. Stąd dwa połączenia. Od poprawek po przeglądzie tematy dzielone są **po równo**: 389 + 388
+  (10 184 + 10 094 znaków; przeliczone na żywej liście 2026-09-27 ~19:20 UTC). Kontrola pozytywna niżej szła jeszcze na
+  starym podziale 688 + 89 (pierwsze połączenie wypełnione do granicy budżetu).
+- **Pętla:** ping co 20 s; lista monet co 24 h (nowe listingi — wtedy oba połączenia otwierane od nowa; nieudane
+  odświeżenie → stara lista i ponowna próba za 1 h); cisza > 15 min bez likwidacji na połączeniu = ponowne połączenie
+  (odpowiedź na ping, czyli pong, NIE liczy się jako znak życia — ten strażnik łapie „połączenie żyje, a dane nie płyną”);
+  błąd = odczekanie 1 → 60 s (zeruje się dopiero po cyklu > 60 s, w którym otwarto wszystkie połączenia — żeby nie
   zbliżyć się do limitu 500 połączeń na 5 min z jednego IP).
+- **Nieudana subskrypcja jest naprawiana od razu.** Bybit odrzuca CAŁE żądanie (do 10 tematów), gdy choć jeden temat jest
+  zły, i w odpowiedzi podaje tylko pierwszy zły temat (sprawdzone na żywo 2026-09-27). Kolektor usuwa ten temat z planu
+  do najbliższego udanego odświeżenia listy i od razu wysyła pozostałe tematy żądania jeszcze raz. Odpowiedź bez tematu →
+  tematy po jednym. Liczniki `sub_fail`, `resubscribed`, `rejected_count` są w `status.json` i w `--status`.
 
 ## Poprzedzające wyniki
 
@@ -51,28 +62,42 @@ LK0 (kolektor Binance, próbka ≤ 1/s/symbol, od 2026-09-25; wniosek 102), P3 (
 `quant-strategy-catalog` E1 = WYKLUCZONE-danymi, `docs/rag/11` sekcja 3 (rachunek mocy przyszłej karty E1, patrz niżej)
 i sekcja 6 krok 1 („zabezpieczyć dane, których nie da się odtworzyć”).
 
-## Pre-rejestracja (treść z `docs/rag/11`, zapisana PRZED napisaniem kodu; 0 wariantów)
+## Pre-rejestracja (0 wariantów)
 
-- **Co zbieramy:** wszystkie likwidacje z tematu `allLiquidation` dla wszystkich perpetuali liniowych USDT na Bybit, surowo,
+Pochodzenie treści (uczciwie wobec historii w git): punkty oznaczone **[rag/11]** pochodzą z `docs/rag/11` (zapisanego przed
+kodem, commit `987d9e4`); zostały przepisane do tego README razem z wynikiem próby (commit `d791b98`), a nie przed nią.
+Punkty oznaczone **[implementacja]** dopisano przy pisaniu kodu, też razem z wynikiem. Przy 0 wariantach i 0 odczytach nie
+zmienia to żadnego wniosku.
+
+- **[rag/11] Co zbieramy:** wszystkie likwidacje z tematu `allLiquidation` dla wszystkich perpetuali liniowych USDT na Bybit, surowo,
   plik per dzień UTC.
-- **Czego NIE robimy:** żadnego odczytu hipotezy E1 (ani innej) na tych danych. Najpierw, za 4–6 tygodni, rachunek mocy
+- **[rag/11] Czego NIE robimy:** żadnego odczytu hipotezy E1 (ani innej) na tych danych. Najpierw, za 4–6 tygodni, rachunek mocy
   z realnej częstości kaskad — **z samych liczników, bez cen**. Założenie z `docs/rag/11` do sprawdzenia: 150–300
   niezależnych epizodów rocznie. Liczone przez `expected_trades` z częstości zdarzeń (zasada 18), nie ze świec.
-- **Rachunek mierzalności przyszłej karty (z `docs/rag/11`, sekcja 3):** horyzont 24 h, rozrzut 5 % na zdarzenie →
+- **[rag/11] Rachunek mierzalności przyszłej karty (sekcja 3):** horyzont 24 h, rozrzut 5 % na zdarzenie →
   najmniejszy wykrywalny efekt (MDE) 0,99 % na epizod po roku, 0,70 % po 2 latach; przy rozrzucie 8 %: 1,58 / 1,12 %.
   Koszt wejścia i wyjścia w kaskadzie na małych monetach to 0,3–1 %, więc efekt musi przekraczać ~1 %. Wniosek dla decyzji:
   pierwsza karta E1 najwcześniej ~2027-09; dziś nie ma czego mierzyć.
-- **Jeden licznik E1** dla LK0 i LB0: przyszły odczyt obu źródeł to jedna hipoteza, nie dwie. Stan licznika: 0 odczytów.
-- **Porównanie z LK0** tylko opisowe (liczby zdarzeń w tym samym oknie), bez cen i bez żadnego wniosku o hipotezie.
-- **Kryterium „działa”:** kontrola pozytywna > 0 likwidacji i 0 nieudanych subskrypcji; potem proces żyje 24/7 (cron co
-  5 min), `--status` pokazuje ostatnią likwidację sprzed minut, dziury tylko przy restartach.
-- **Ścieżka odwrotu:** usunąć część Bybit z `tools/likwidacje.sh` (albo zabić proces) i skasować `$HOME/likwidacje_bybit`.
-  Kod nie wpływa na żadną rundę ani na dziennik papierowy (dziennik go nie importuje — poprawka dziennika niepotrzebna).
+- **[rag/11] Jeden licznik E1** dla LK0 i LB0: przyszły odczyt obu źródeł to jedna hipoteza, nie dwie. Stan licznika: 0 odczytów.
+- **[zadanie rundy] Porównanie z LK0** tylko opisowe (liczby zdarzeń w tym samym oknie), bez cen i bez żadnego wniosku o hipotezie.
+- **[implementacja] Kryterium „działa”:** kontrola pozytywna > 0 likwidacji i 0 nieudanych subskrypcji; potem proces
+  żyje 24/7 (cron co 5 min), `--status` pokazuje ostatnią likwidację sprzed minut, dziury tylko przy restartach.
+- **[implementacja] Ścieżka odwrotu:** utworzyć plik `$HOME/likwidacje_bybit/WYLACZONY` (cron przestaje startować
+  kolektor Bybit), zakończyć działający proces, a przy rezygnacji na stałe usunąć część Bybit z `tools/likwidacje.sh`.
+  Samo zabicie procesu nie wystarczy — cron wznowi go w ≤ 5 min. Kasowanie `$HOME/likwidacje_bybit` to usuwanie danych,
+  więc decyzja użytkownika. Kod nie wpływa na żadną rundę ani na dziennik papierowy (dziennik go nie importuje — poprawka
+  dziennika niepotrzebna).
 
 ## Wynik — kontrola pozytywna (pełny zapis w `raw_output.txt`)
 
-Polecenie: `PYTHONUTF8=1 .venv/bin/python -m data.collect_liquidations_bybit --probe 180` (serwer Linux, commit `557d8fb`).
-Próba łączy się, subskrybuje wszystko, liczy likwidacje przez 180 s i nic nie zapisuje na dysk.
+Polecenia (wszystkie wyniki w `raw_output.txt`, w tej kolejności):
+
+- `PYTHONUTF8=1 .venv/bin/python -m data.collect_liquidations_bybit --probe 180` — kontrola pozytywna (serwer Linux,
+  commit `557d8fb`). Próba łączy się, subskrybuje wszystko, liczy likwidacje przez 180 s i nic nie zapisuje na dysk.
+- `PYTHONUTF8=1 .venv/bin/python runs/2026-09-27_lb0-kolektor-bybit/porownanie_lk0.py` — liczniki LK0 (Binance) w tym
+  samym oknie; tylko odczyt `~/likwidacje`.
+- `PYTHONUTF8=1 .venv/bin/python runs/2026-09-27_lb0-kolektor-bybit/kontrola_subskrypcji.py` — naprawa nieudanej
+  subskrypcji na żywym Bybit (dopisana po przeglądzie; 15 s, bez zapisu).
 
 | wielkość | Bybit (LB0, pełne) | Binance (LK0, próbka), to samo okno |
 |---|---|---|
@@ -88,8 +113,9 @@ Próba łączy się, subskrybuje wszystko, liczy likwidacje przez 180 s i nic ni
 Co z tego wynika:
 
 1. **Źródło działa pod adresem z dokumentacji.** Inaczej niż w LK0 (tam dokumentowany adres milczał), tu 0 zdarzeń nie
-   wymagało diagnozy: adres i temat z dokumentacji nadają od pierwszej sekundy. 20-sekundowa próba dymna przed testami
-   dała 2 likwidacje; próba właściwa — 58.
+   wymagało diagnozy: adres i temat z dokumentacji nadają od pierwszej sekundy. Próba właściwa dała 58 likwidacji.
+   (Wcześniejszej 20-sekundowej próby dymnej z 2 likwidacjami NIE zapisano — nie ma jej w `raw_output.txt`, więc nie jest
+   dowodem.)
 2. **Kierunek czytamy dobrze — sprawdzone drugą drogą.** W Bybit `S = "Buy"` znaczy „zlikwidowano pozycję LONG” (strona
    pozycji). W Binance `S = "SELL"` znaczy to samo (strona zlecenia likwidacyjnego). Po naszym mapowaniu oba źródła pokazują
    w tym oknie wyraźną przewagę zlikwidowanych shortów (44 z 58 i 52 z 62) i te same główne monety (ENA, QNT, ZEC, ARX).
@@ -100,13 +126,40 @@ Co z tego wynika:
 4. **Liczby Bybit i Binance nie są porównywalne 1:1.** Binance ma kilkukrotnie większy rynek (nominał ~8× większy), a jego
    liczba zdarzeń jest zaniżona próbkowaniem. Dlatego podobna liczba zdarzeń (58 vs 62) nic nie mówi o „pokryciu” — to tylko
    znak, że oba źródła widzą ten sam rynek w tym samym czasie.
-5. **Rozmiar danych (szacunek z próby):** wiersz ~120 bajtów, ~20 likwidacji/min w spokojnym oknie → ~3–4 MB na dobę bez
+5. **Naprawa nieudanej subskrypcji działa na żywym Bybit.** Jedno żądanie: BTCUSDT + nieistniejący temat + ETHUSDT.
+   Bybit odrzucił całe żądanie i wskazał zły temat. Kolektor odrzucił ten temat i od razu wysłał ponownie BTCUSDT
+   i ETHUSDT — subskrypcja przyjęta (liczniki: nieudane 1, udane 1, ponowione tematy 2, odrzucony 1). Bez tej poprawki
+   9 sąsiednich monet z tej samej paczki nie byłoby zbieranych do następnego odświeżenia listy (do 24 h).
+6. **Rozmiar danych (szacunek z próby):** wiersz ~120 bajtów, ~20 likwidacji/min w spokojnym oknie → ~3–4 MB na dobę bez
    kompresji. W dniach kaskad wielokrotnie więcej. To jedno okno w niedzielę wieczorem — częstości z niego nie wolno
    uogólniać; realny profil dopiero po 4–6 tygodniach.
 
 **Werdykt bramki 16a (Claude, agent gałęzi): Caveats** — źródło potwierdzone kontrolą pozytywną, mapowanie strony zgodne
 z drugim źródłem; zastrzeżenia: jedno krótkie okno, przegląd bezpieczeństwa i przegląd kodu (bramka 16c) robi koordynator
 przed scaleniem.
+
+**Bramka 16c (przegląd diffu przed scaleniem): UZUPEŁNIA KOORDYNATOR** — werdykt jednym zdaniem. Stan na dziś: przegląd
+recenzentów (poprawność, testy i dane, zasady i bezpieczeństwo) dał 13 uwag; poprawki naniesiono w commicie „Poprawki po
+przeglądzie: …” na gałęzi `etap6-bybit` (lista niżej).
+
+**security-review (nowe połączenie sieciowe, zasada 19): UZUPEŁNIA KOORDYNATOR** — wynik jednym zdaniem. Stan kodu: tylko
+publiczne dane, bez kluczy; adresy stałe, tylko `wss://` i `https://`; limit rozmiaru wiadomości wss (4 MB) i odpowiedzi
+REST (8 MB; lista 2026-09-27 ma ~0,8 MB); limit czasu REST 30 s.
+
+### Poprawki po przeglądzie (2026-09-27)
+
+1. Nieudana subskrypcja: zły temat wypada z planu do odświeżenia listy, reszta żądania jest wysyłana od razu ponownie
+   (test na fałszywym połączeniu, właściwość na symulowanym Bybit, kontrola na żywym Bybit — punkt 5 wyżej).
+2. Tematy dzielone po równo między połączenia (389 + 388 zamiast 688 + 89) — połączenie z samym ogonem alfabetu (kilka
+   rzadkich monet) nie wywołuje już rozłączeń całego kolektora co 15 min ciszy. Pong nadal NIE liczy się jako znak życia.
+3. `tools/likwidacje.sh`: podwójny fork przy starcie Bybit (rodzicem jest init — brak procesu-zombie po awarii);
+   wyłącznik `WYLACZONY`; nowe testy: Bybit nie trzyma blokady Binance, gdy oba startują razem i Binance kończy się
+   pierwszy; brak zombie.
+4. Limit rozmiaru odpowiedzi REST z listą instrumentów (8 MB).
+5. Testy zabijające mutanty, które wcześniej przeżywały: filtr `settleCoin`, odstęp ponownej próby po nieudanym
+   odświeżeniu listy, połączenie padające przed otwarciem, górny limit liczby pingów, cisza mimo pongów, kod wyjścia
+   `--probe`.
+6. To README: pochodzenie pre-rejestracji, niezapisana próba dymna, komendy wszystkich skryptów rundy.
 
 ## Co na plus (+) / Co na minus (−)
 
@@ -122,11 +175,14 @@ przed scaleniem.
 - **Kogo nie ma w zbiorze:** likwidacji sprzed 2026-09-27; kontraktów USDC, kwartalnych futures i inverse (tylko perpetuale
   USDT); innych giełd poza Binance (LK0, próbka) i Bybit (OKX — „nie teraz”, `docs/rag/11`); minut, gdy proces nie żył
   (restart serwera, błąd — dziury widać w `status.json` i logu); monet wprowadzonych w ciągu doby przed najbliższym
-  odświeżeniem listy (do 24 h opóźnienia).
+  odświeżeniem listy (do 24 h opóźnienia); monet, których temat Bybit odrzucił przy subskrypcji — do najbliższego
+  udanego odświeżenia listy (liczba w `status.json`: `rejected_count`; sąsiednie monety z tej samej paczki są
+  subskrybowane ponownie od razu, więc nie giną).
 - **`p` to cena upadłości, nie cena wykonania.** Nominał `v × p` jest przybliżeniem; do analizy „przestrzelenia” ceny trzeba
   będzie cen z rynku (osobne źródło).
 - **Jeden proces, dwa połączenia.** Błąd jednego połączenia otwiera od nowa oba (kilka sekund dziury także na zdrowym).
-  To świadome uproszczenie — w zamian jedna prosta pętla.
+  To świadome uproszczenie — w zamian jedna prosta pętla. Dlatego tematy są dzielone po równo: każde połączenie ma pół
+  rynku, więc 15 min bez żadnej likwidacji na jednym z nich zdarza się rzadko.
 - **Dane rosną szybciej niż LK0** (pełna lista) — rozmiar i kopia zapasowa do sprawdzenia po pierwszym tygodniu
   (kopia LK0 i LB0 poza serwerem — osobne zadanie z `docs/rag/11`, decyzja użytkownika o miejscu kopii).
 
@@ -134,8 +190,13 @@ przed scaleniem.
 
 - Stan: `PYTHONUTF8=1 .venv/bin/python -m data.collect_liquidations_bybit --status` — „ostatnie” powinno być sprzed minut;
   „subskrypcje nieudane” = 0; „symboli … w 2 połączeniach”.
-- Cron — ta sama linia co dla LK0 (`*/5 * * * * bash $HOME/alpha-dziennik/tools/likwidacje.sh`); po scaleniu do `master`
-  i pobraniu w klonie dziennika skrypt sam wystartuje kolektor Bybit w tle przy najbliższym przebiegu crona.
+- Cron — ta sama linia co dla LK0 (`*/5 * * * * bash $HOME/alpha-dziennik/tools/likwidacje.sh`). **Scalenie do `master`
+  JEST startem kolektora:** klon dziennika pobiera `master`, więc przy najbliższym przebiegu crona skrypt sam wystartuje
+  kolektor Bybit w tle. Nikt nie wykonuje osobnego kroku. Krok „linię crona dodaje użytkownik” z `docs/rag/11` (sekcja 2
+  i sekcja 6, krok 1) zastępuje więc istniejąca linia LK0 — do zapisania jednym zdaniem w `STATUS.md` przy scaleniu
+  (koordynator). Kto chce scalić bez startu: najpierw `mkdir -p ~/likwidacje_bybit && touch ~/likwidacje_bybit/WYLACZONY`.
+- Wyłącznik: plik `$HOME/likwidacje_bybit/WYLACZONY` — gdy istnieje, cron nie startuje kolektora Bybit (Binance działa
+  dalej bez zmian). Działający proces trzeba wtedy zakończyć ręcznie.
 - Ręczny start z dowolnego klonu: `nohup bash tools/likwidacje.sh >/dev/null 2>&1 &` (blokady wspólne — druga instancja
   żadnego kolektora nie wystartuje; działający kolektor Binance nie jest dotykany).
 - Katalog danych: `$HOME/likwidacje_bybit` (zmiana: zmienna `CLAS5_LIKWIDACJE_BYBIT_DIR`).
@@ -148,7 +209,10 @@ odczyt E1 najwcześniej po ~roku, po rachunku mocy z realnej częstości kaskad.
 
 ## Rekomendacja
 
-1. Scalić po przeglądzie kodu i bezpieczeństwa; kolektor wystartuje z crona (ta sama linia co LK0).
+1. Scalić po przeglądzie kodu i bezpieczeństwa, świadomie traktując scalenie jako start kolektora (ta sama linia crona
+   co LK0); przy scaleniu: wiersz LB0 w `runs/INDEX.md` (0 wariantów, poza licznikami, jeden licznik E1 dla LK0 i LB0)
+   i wniosek skumulowany, `porownanie_lk0.py` i `kontrola_subskrypcji.py` do `runs/ZAMROZONE.txt`, zdanie w `STATUS.md`
+   o linii crona. Po starcie: `--status` po kilku minutach (subskrypcje nieudane 0, tematy odrzucone 0).
 2. Po tygodniu: `--status` + rozmiar plików; potem kopia LK0 i LB0 poza serwerem (decyzja użytkownika o miejscu).
 3. Po 4–6 tygodniach: profil danych (`data:explore-data`) z samych liczników — zdarzeń na dobę, epizody kaskad, dziury,
    porównanie z LK0 — i rachunek mocy przyszłej karty E1. Bez cen, bez odczytu hipotezy.
