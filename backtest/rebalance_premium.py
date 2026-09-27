@@ -91,6 +91,34 @@ def monthly_members(
     return members
 
 
+def monthly_ranking(
+    volume: pd.DataFrame,
+    month_starts: list[pd.Timestamp],
+    depth: int = 50,
+    lookback_days: int = VOLUME_LOOKBACK_DAYS,
+    min_history_days: int = MIN_HISTORY_DAYS,
+) -> dict[pd.Timestamp, list[tuple[str, float]]]:
+    """
+    Ranking obrotu na początek miesiąca (poprawka 11 dziennika, tylko zapis `koszyk.csv`):
+    pierwsze `depth` miejsc [(symbol, średni obrót w oknie)], ta sama miara, okno, próg historii
+    i remis (alfabetycznie) co `monthly_members` — jej wynik to posortowane pierwsze `TOP_N`
+    miejsc tego rankingu (test na syntetyce i na prawdziwym panelu). `monthly_members` celowo
+    NIE woła tej funkcji: silnik dziennika zostaje bajt w bajt taki jak przed poprawką 11.
+    Mniej kandydatów niż `depth` = krótszy ranking (bez błędu; brak top-20 zgłasza silnik).
+    """
+    cols = eligible_symbols(list(volume.columns))
+    out: dict[pd.Timestamp, list[tuple[str, float]]] = {}
+    for m in month_starts:
+        window = volume.loc[
+            (volume.index >= m - pd.Timedelta(days=lookback_days)) & (volume.index < m), cols
+        ]
+        ok = window.notna().sum() >= min_history_days
+        mean_vol = window.mean()[ok].dropna()
+        ranked = sorted(mean_vol.items(), key=lambda kv: (-kv[1], kv[0]))
+        out[m] = [(s, float(v)) for s, v in ranked[:depth]]
+    return out
+
+
 def _month_days(
     index: pd.DatetimeIndex, start: pd.Timestamp, end: pd.Timestamp | None
 ) -> pd.DatetimeIndex:

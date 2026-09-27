@@ -6,6 +6,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from backtest import live_journal as lj
 from backtest.negative_control import synthetic_ohlc, synthetic_returns
@@ -457,6 +459,9 @@ def test_x1_error_does_not_stop_main_journal(tmp_path, monkeypatch):
     assert len(pd.read_csv(jdir / "wyniki.csv")) > 0
     assert not (jdir / "x1_wyniki.csv").exists()
     assert "BŁĄD ValueError" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
+    # poprawka 11: rozbicie i fazy zapisane dla trendu i premii, bez X1 (jego wynik nie powstał)
+    assert set(pd.read_csv(jdir / "rozbicie.csv")["skladowa"]) == {"trend", "coinbase"}
+    assert set(pd.read_csv(jdir / "fazy.csv")["skladowa"]) == {"trend", "coinbase"}
 
 
 def _btc(n=260, seed=7):
@@ -706,3 +711,274 @@ def test_run_writes_strategy_descriptions(tmp_path, monkeypatch):
         f"{k} — " in text for k in ("TS1", "CP1", "R1", "X1")
     )
     assert "| opisy strategii 4 |" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
+
+
+# ------------------------------------------------------------------ poprawka 11: rozbicie, fazy, koszyk
+def _p11(live, as_of, tmp_path, monkeypatch, start="2026-06-01"):
+    """Ramki silnika jednego przebiegu (jak w `run`) + wiersze wyniku R1 i X1."""
+    monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp(start, tz="UTC"))
+    monkeypatch.setattr(lj, "X1_START", pd.Timestamp(start, tz="UTC"))
+    eng: dict = {}
+    _, _, hist, rets = lj.positions(live, as_of, FEE, eng)
+    lj.run_x1(live, as_of, FEE, tmp_path, eng)
+    return eng, lj.journal_rows(hist, rets), eng["x1_res"]
+
+
+def _engine_phases(live, as_of):
+    """Trend policzony NIEZALEŻNIE od dziennika (druga droga): `portfolio` z likwidacją 2×."""
+    d = lj.truncate(live, as_of)
+    members = lj.monthly_members(d["volume"], lj._months(as_of))
+    liq = {"high": d["high"], "low": d["low"], "lev": lj.LEV_TREND, "mmr": lj.MMR}
+    end = as_of + pd.Timedelta(days=1)
+    return portfolio(d["close"], d["funding"], members, lj.ENGINE_START, end, FEE, liq=liq)
+
+
+def test_breakdown_sums_to_net_and_equals_journal_results(live, tmp_path, monkeypatch):
+    """cena + funding + koszt = netto = r_trend / r_coinbase / r_x1 dziennika (1e-9), dni jak wynik."""
+    as_of = live["close"].index[-2]
+    eng, res, res_x1 = _p11(live, as_of, tmp_path, monkeypatch)
+    rb, _ = lj.breakdown_and_phases(eng, res, res_x1)
+    assert list(rb.columns) == lj.BREAKDOWN_COLS and len(res) > 30
+    assert set(rb["skladowa"]) == {"trend", "coinbase", "x1"}
+    assert (rb["cena"] + rb["funding"] + rb["koszt"] - rb["netto"]).abs().max() <= 1e-9
+    for name, e in lj.expected_results(res, res_x1).items():
+        g = rb[rb["skladowa"] == name]
+        assert g["date"].tolist() == list(e.index)
+        assert np.abs(g["netto"].to_numpy() - e.to_numpy()).max() <= 1e-9
+    x1 = rb[rb["skladowa"] == "x1"]
+    assert np.allclose(x1["cena"], 0.5 * (x1["r_long"] - x1["r_short"]), rtol=0, atol=1e-12)
+    assert (x1["likwidacje"] == 0).all()
+    assert rb.loc[rb["skladowa"] != "x1", ["r_long", "r_short"]].isna().all().all()
+    assert (rb["koszt"] <= 0).all() and (rb["obrot"] >= 0).all() and (rb["likwidacje"] >= 0).all()
+    assert np.allclose(
+        -rb["koszt"], FEE * rb["obrot"], rtol=0, atol=1e-15
+    )  # koszt = opłata × obrót
+    # druga droga: trend z niezależnego wywołania silnika
+    avg, _ = _engine_phases(live, as_of)
+    a = avg.set_index("date").loc[pd.to_datetime(res["date"], utc=True)]
+    tr = rb[rb["skladowa"] == "trend"]
+    for col, eng_col, sign in (
+        ("cena", "gross", 1),
+        ("funding", "funding", 1),
+        ("koszt", "cost", -1),
+    ):
+        assert np.allclose(tr[col], sign * a[eng_col].to_numpy(), rtol=0, atol=1e-15)
+    assert tr["likwidacje"].tolist() == (a["liquidations"] * PHASES).round().astype(int).tolist()
+
+
+def test_phase_rows_mean_equals_component_and_engine_phases(live, tmp_path, monkeypatch):
+    """fazy.csv: 7 faz na dzień, średnia faz = wynik składowej (1e-9), faza trendu = faza silnika."""
+    as_of = live["close"].index[-2]
+    eng, res, res_x1 = _p11(live, as_of, tmp_path, monkeypatch)
+    _, fz = lj.breakdown_and_phases(eng, res, res_x1)
+    assert list(fz.columns) == lj.PHASE_COLS
+    g = fz.groupby(["skladowa", "date"])["netto"]
+    assert (g.size() == PHASES).all()
+    mean = g.mean()
+    for name, e in lj.expected_results(res, res_x1).items():
+        assert np.abs(mean.loc[name].reindex(e.index).to_numpy() - e.to_numpy()).max() <= 1e-9
+    _, per_phase = _engine_phases(live, as_of)
+    days = pd.to_datetime(res["date"], utc=True)
+    for ph in range(PHASES):
+        f = fz[(fz["skladowa"] == "trend") & (fz["faza"] == ph)]
+        assert np.array_equal(f["netto"].to_numpy(), per_phase[ph].loc[days, "net"].to_numpy())
+
+
+def _rows(n, vals, days=None):
+    days = days or [f"2026-10-{i + 1:02d}" for i in range(n)]
+    c, f, k = (np.array([v[i] for v in vals]) for i in range(3))
+    rows = pd.DataFrame(
+        {
+            "date": days,
+            "skladowa": "trend",
+            "cena": c,
+            "funding": f,
+            "koszt": -k,
+            "netto": c + f - k,
+            "obrot": k / FEE,
+            "likwidacje": 0,
+            "r_long": np.nan,
+            "r_short": np.nan,
+        }
+    )
+    return rows, {"trend": pd.Series(rows["netto"].to_numpy(), index=days)}
+
+
+@settings(max_examples=60, deadline=None)
+@given(
+    vals=st.lists(
+        st.tuples(st.floats(-0.3, 0.3), st.floats(-0.01, 0.01), st.floats(0.0, 0.01)),
+        min_size=1,
+        max_size=12,
+    ),
+    bump=st.floats(1e-7, 0.05),
+    which=st.integers(0, 1_000),
+    col=st.sampled_from(["cena", "funding", "koszt", "netto"]),
+)
+def test_check_breakdown_accepts_consistent_rejects_perturbed(vals, bump, which, col):
+    rows, expected = _rows(len(vals), vals)
+    lj.check_breakdown(rows, expected)  # spójne — bez błędu
+    bad = rows.copy()
+    bad.loc[which % len(vals), col] += bump
+    with pytest.raises(ValueError):
+        lj.check_breakdown(bad, expected)
+
+
+def test_check_breakdown_and_phases_reject_gaps():
+    rows, expected = _rows(3, [(0.01, 0.0, 0.001)] * 3)
+    with pytest.raises(ValueError, match="brak dni"):
+        lj.check_breakdown(rows.iloc[:2], expected)  # dzień wyniku bez rozbicia
+    wrong = {"trend": expected["trend"] + 1e-6}
+    with pytest.raises(ValueError, match="netto ≠ wynik"):
+        lj.check_breakdown(rows, wrong)
+    nan = rows.assign(netto=np.nan)
+    with pytest.raises(ValueError, match="suma składników"):
+        lj.check_breakdown(nan, expected)
+    per = {ph: pd.Series(0.01, index=pd.to_datetime(rows["date"], utc=True)) for ph in range(7)}
+    fz = lj.phase_rows(per, "trend", rows["date"])
+    exp_fz = {"trend": pd.Series(0.01, index=rows["date"].to_numpy())}
+    lj.check_phases(fz, exp_fz)
+    with pytest.raises(ValueError, match="kompletu 7 faz"):
+        lj.check_phases(fz[fz["faza"] != 3], exp_fz)
+    with pytest.raises(ValueError, match="średnia faz"):
+        lj.check_phases(fz, {"trend": exp_fz["trend"] + 1e-6})
+    with pytest.raises(ValueError, match="fazy"):
+        lj.phase_rows({ph: per[ph] for ph in range(6)}, "trend", rows["date"])
+    with pytest.raises(ValueError, match="faza 0 bez wyniku"):
+        lj.phase_rows({**per, 0: per[0].iloc[1:]}, "trend", rows["date"])
+    assert list(lj.phase_rows(per, "trend", []).columns) == lj.PHASE_COLS
+
+
+def test_basket_rows_top20_is_engine_basket_and_ranks(live):
+    """koszyk.csv: pozycje 1–N, top-20 = monthly_members, obrót = średnia 30 dni, flaga fundingu."""
+    months = [pd.Timestamp("2026-08-01", tz="UTC"), pd.Timestamp("2026-09-01", tz="UTC")]
+    members = lj.monthly_members(live["volume"], months)
+    ks = lj.basket_rows(live["volume"], live["funding"], members, months)
+    assert list(ks.columns) == lj.BASKET_COLS
+    for m in months:
+        g = ks[ks["miesiac"] == m.strftime("%Y-%m")]
+        assert g["pozycja"].tolist() == list(range(1, len(g) + 1)) and len(g) == 22
+        assert sorted(g.loc[g["czlonek_top20"], "symbol"]) == members[m]
+        assert g["czlonek_top20"].tolist() == [True] * 20 + [False] * 2
+        win = live["volume"][(live["volume"].index >= m - pd.Timedelta(days=30))]
+        win = win[win.index < m]
+        assert g["sredni_obrot_30d"].tolist() == [int(round(win[s].mean())) for s in g["symbol"]]
+        assert g["ma_funding"].all()
+    no_f = live["funding"].drop(columns=["C05USDT"])
+    ks2 = lj.basket_rows(live["volume"], no_f, members, months)
+    assert not ks2.loc[ks2["symbol"] == "C05USDT", "ma_funding"].any()
+    bad = {m: sorted([*members[m][1:], "C99USDT"]) for m in months}
+    with pytest.raises(ValueError, match="top-20"):
+        lj.basket_rows(live["volume"], live["funding"], bad, months)
+
+
+def test_basket_months_from_journal_start_month():
+    start = pd.Timestamp("2026-09-24", tz="UTC")
+    got = lj.basket_months(pd.Timestamp("2026-11-03", tz="UTC"), start)
+    assert [m.strftime("%Y-%m-%d") for m in got] == ["2026-09-01", "2026-10-01", "2026-11-01"]
+    assert lj.basket_months(pd.Timestamp("2026-09-30", tz="UTC"), start) == [
+        pd.Timestamp("2026-09-01", tz="UTC")
+    ]
+
+
+def test_append_safe_reports_errors_without_raising(tmp_path):
+    rows = pd.DataFrame({"date": ["2026-09-25"], "x": [1.0]})
+    assert lj.append_safe(tmp_path / "a.csv", rows, ["date"], ["x"]) == ("+1", [])
+    assert lj.append_safe(tmp_path / "a.csv", rows, ["date"], ["x"]) == ("+0", [])
+    assert lj.append_safe(tmp_path / "a.csv", None, ["date"], ["x"], "BŁĄD KeyError") == (
+        "BŁĄD KeyError",
+        [],
+    )
+    (tmp_path / "katalog.csv").mkdir()
+    txt, ch = lj.append_safe(tmp_path / "katalog.csv", rows, ["date"], ["x"])
+    assert txt.startswith("BŁĄD ") and ch == []
+
+
+def _p11_run(tmp_path, monkeypatch, name="dziennik"):
+    src = tmp_path / "live"
+    if not src.exists():
+        src.mkdir()
+        _write_live(src)
+        (src / "C21USDT_funding.parquet").unlink()  # moneta bez fundingu → ma_funding False
+    monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp("2026-08-01", tz="UTC"))
+    monkeypatch.setattr(lj, "X1_START", pd.Timestamp("2026-08-01", tz="UTC"))
+    jdir = tmp_path / name
+    return lj.run(fetch=False, live_dir=src, journal_dir=jdir), jdir
+
+
+def test_run_writes_p11_files_consistent_and_idempotent(tmp_path, monkeypatch):
+    text, jdir = _p11_run(tmp_path, monkeypatch)
+    rb, fz = pd.read_csv(jdir / "rozbicie.csv"), pd.read_csv(jdir / "fazy.csv")
+    ks = pd.read_csv(jdir / "koszyk.csv")
+    wy, x1 = pd.read_csv(jdir / "wyniki.csv"), pd.read_csv(jdir / "x1_wyniki.csv")
+    assert list(rb.columns) == lj.BREAKDOWN_COLS and list(fz.columns) == lj.PHASE_COLS
+    assert list(ks.columns) == lj.BASKET_COLS
+    # z plików (tak jak odczyt po 3 mies.): suma = netto = wynik; średnia faz = wynik
+    assert (rb["cena"] + rb["funding"] + rb["koszt"] - rb["netto"]).abs().max() <= 1e-9
+    exp = {
+        "trend": wy.set_index("date")["r_trend"],
+        "coinbase": wy.set_index("date")["r_coinbase"],
+        "x1": x1.set_index("date")["r_x1"],
+    }
+    for name, e in exp.items():
+        g = rb[rb["skladowa"] == name].set_index("date")["netto"]
+        assert g.index.tolist() == e.index.tolist() and e.index[0] == "2026-08-01"
+        assert (g - e).abs().max() <= 1e-9
+        m = fz[fz["skladowa"] == name].groupby("date")["netto"].agg(["size", "mean"])
+        assert (m["size"] == PHASES).all() and (m["mean"] - e).abs().max() <= 1e-9
+    assert sorted(ks["miesiac"].unique()) == ["2026-08", "2026-09"]
+    d = lj.load_live(tmp_path / "live")
+    months = [pd.Timestamp(f"{m}-01", tz="UTC") for m in ("2026-08", "2026-09")]
+    members = lj.monthly_members(d["volume"], months)
+    for m in months:
+        g = ks[ks["miesiac"] == m.strftime("%Y-%m")]
+        assert sorted(g.loc[g["czlonek_top20"], "symbol"]) == members[m]
+    assert ks.loc[ks["symbol"] == "C21USDT", "ma_funding"].eq(False).all()
+    assert "poprawka 11, tylko zapis): rozbicie +" in text
+    # powtórka: 0 nowych wierszy, 0 zmian historii
+    text2, _ = _p11_run(tmp_path, monkeypatch)
+    assert "HISTORIA ZMIENIONA" not in text2
+    log = (jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()
+    assert log[0].endswith(
+        f"| rozbicie +{len(rb)} | fazy +{len(fz)} | koszyk +{len(ks)} | historia zmieniona: 0"
+    )
+    assert log[1].endswith("| rozbicie +0 | fazy +0 | koszyk +0 | historia zmieniona: 0")
+    for f, n in (("rozbicie.csv", len(rb)), ("fazy.csv", len(fz)), ("koszyk.csv", len(ks))):
+        assert len(pd.read_csv(jdir / f)) == n
+    # zmieniony zapis → „historia zmieniona”, stary wiersz zostaje (jak wyniki.csv / transakcje.csv)
+    rb.loc[0, "netto"] += 0.01
+    rb.to_csv(jdir / "rozbicie.csv", index=False)
+    text3, _ = _p11_run(tmp_path, monkeypatch)
+    key = f"{rb['date'][0]}|{rb['skladowa'][0]}:netto"
+    assert "HISTORIA ZMIENIONA w 1 polach" in text3 and key in text3
+    assert pd.read_csv(jdir / "rozbicie.csv")["netto"].iloc[0] == pytest.approx(rb["netto"][0])
+    assert (
+        (jdir / "przebiegi.log")
+        .read_text(encoding="utf-8")
+        .splitlines()[2]
+        .endswith("historia zmieniona: 1")
+    )
+
+
+def test_p11_errors_do_not_stop_journal_nor_touch_other_files(tmp_path, monkeypatch):
+    """Błąd rozbicia i koszyka → „BŁĄD <typ>” w logu; wszystkie pozostałe pliki bajt w bajt jak bez błędu."""
+    _, ok = _p11_run(tmp_path, monkeypatch, "ok")
+
+    def boom(*a, **k):
+        raise RuntimeError("test")
+
+    monkeypatch.setattr(lj, "breakdown_and_phases", boom)
+    monkeypatch.setattr(lj, "basket_rows", boom)
+    text, bad = _p11_run(tmp_path, monkeypatch, "blad")
+    assert "mnożniki R1" in text and "rozbicie BŁĄD RuntimeError" in text
+    log = (bad / "przebiegi.log").read_text(encoding="utf-8")
+    assert log.rstrip().endswith(
+        "| rozbicie BŁĄD RuntimeError | fazy BŁĄD RuntimeError | koszyk BŁĄD RuntimeError"
+        " | historia zmieniona: 0"
+    )
+    p11 = {"rozbicie.csv", "fazy.csv", "koszyk.csv"}
+    assert not any((bad / f).exists() for f in p11)
+    others = sorted(p.name for p in ok.glob("*.csv") if p.name not in p11)
+    assert len(others) >= 9
+    for f in others:
+        assert (ok / f).read_bytes() == (bad / f).read_bytes(), f

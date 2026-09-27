@@ -181,6 +181,73 @@ w `journal_strategies.py` = czerwony test. Moduł jest odtąd częścią kodu dz
 Próba na kopii dziennika 2026-09-26: nowe tylko `strategie.csv` (4 wiersze) i linia w `przebiegi.log`; reszta bez zmian,
 historia zmieniona 0. Nie wpływa na pozycje ani wynik; błąd opisu nie zatrzymuje dziennika.
 
+## Poprawka 11 (2026-09-27, decyzja użytkownika — rozbicie zwrotu, fazy, skład koszyka)
+
+Decyzja użytkownika 2026-09-27: „wykonaj wszystkie” propozycje z przeglądu kandydatów (`docs/rag/11_przeglad_kandydatow_2026-09-27.md`,
+sekcje 2 i 6, krok 3). **Trzy nowe pliki TYLKO DO ZAPISU.** Pozycje, mnożniki, wynik i progi — bez zmian.
+
+**Po co.** Dziennik zapisywał dotąd tylko wynik netto każdej składowej. Silnik przy każdym przebiegu ma w pamięci więcej:
+ile dała sama cena, ile funding (opłata co 8 h między longami i shortami), ile koszt transakcji i jaki był obrót (ile
+kapitału wymieniono). `data/raw/live` jest nadpisywany co noc, więc tego, co dziennik faktycznie policzył, nie da się
+później odtworzyć. Teraz zapisujemy to od razu.
+
+**Pliki i kolumny** (append-only jak `wyniki.csv`: istniejących wierszy przebieg nie zmienia; inna wartość przy
+przeliczeniu = „historia zmieniona”, stary zapis zostaje):
+- **`rozbicie.csv`** — klucz `date` + `skladowa` (`trend`, `coinbase`, `x1`); zakres dat jak w wynikach (trend i premia od
+  2026-09-24, X1 od 2026-09-25). Kolumny: `cena` (zwrot cenowy brutto; przy trendzie i premii zawiera też stratę
+  z likwidacji), `funding`, `koszt` (**ujemny** — to wkład kosztu do zwrotu, = opłata × obrót), `netto`, `obrot` (w kapitale
+  składowej, średnia 7 faz), `likwidacje` (liczba pozycji zlikwidowanych tego dnia we wszystkich fazach; X1: 0 z konstrukcji),
+  dla X1 także `r_long` i `r_short` (zwrot nogi long i short na jednostkę nogi; `cena` X1 = 0,5 · (r_long − r_short)).
+  Wszystko przy k = 1, czyli w jednostkach kapitału składowej — tak jak `r_trend` / `r_coinbase` w `wyniki.csv`.
+  **Zasada:** `cena + funding + koszt = netto` i `netto` = `r_trend` / `r_coinbase` (`wyniki.csv`) albo `r_x1`
+  (`x1_wyniki.csv`), oba do 1e-9 — sprawdzane w przebiegu PRZED zapisem; niezgodność = błąd w logu i brak zapisu.
+- **`fazy.csv`** — klucz `date` + `skladowa` + `faza` (0–6): `netto` jednej fazy (fazy = 7 kopii strategii startujących
+  w kolejne dni tygodnia, każda z 1/7 kapitału). **Zasada:** średnia 7 faz = netto składowej (1e-9), sprawdzane przed zapisem.
+- **`koszyk.csv`** — klucz `miesiac` + `symbol`, od miesiąca startu dziennika (2026-09): `pozycja` w rankingu obrotu 1–50
+  (ta sama miara co skład koszyka: średni obrót z 30 dni przed początkiem miesiąca, co najmniej 30 dni notowań; remis →
+  alfabetycznie), `sredni_obrot_30d` (USDT, zaokrąglony do 1 USDT), `czlonek_top20` (moneta w koszyku silnika), `ma_funding`
+  (czy dane przebiegu mają choć jedno rozliczenie fundingu tej monety w tym 30-dniowym oknie). Skład top-20 jest **ten sam
+  co do bajtu** co `rebalance_premium.monthly_members` (kontrola w przebiegu + testy). `ma_funding` opisuje stan pobrania
+  w dniu zapisu (funding pobieramy tylko dla członków koszyka), więc jego późniejsza zmiana NIE liczy się jako „historia
+  zmieniona”; pozostałe kolumny tak.
+
+**Kod.** Nowy ranking `rebalance_premium.monthly_ranking` (obok `monthly_members`, która zostaje bez zmian — silnik dziennika
+jej nie zmienia). `live_journal`: `components` / `positions` / `x1_component` / `run_x1` dostały opcjonalny argument, który
+tylko zbiera ramki silnika z tego samego przeliczenia (domyślnie nic nie robi); nowe funkcje `ts_breakdown`, `x1_breakdown`,
+`phase_rows`, `check_breakdown`, `check_phases`, `basket_rows`. W `przebiegi.log` przed „historia zmieniona” doszły pola
+`rozbicie +N | fazy +N | koszyk +N`; błąd liczenia albo zapisu któregokolwiek pliku to „BŁĄD <typ>” w tym polu, a dziennik
+idzie dalej (jak opisy strategii w poprawce 10). Wydruk ma jedną nową linię „Rozbicie zwrotu, fazy, koszyk (poprawka 11…)”.
+Parser strony (`tools/strona_dziennika.py`) czyta nowe pola bez zmian (test z nowym formatem).
+
+**Testy** (`tests/test_live_journal.py`, `tests/test_rebalance_premium.py`, `tests/test_strona_dziennika.py`): suma składników
+= netto = wynik dziennika; średnia faz = wynik; trend z rozbicia = drugie, niezależne wywołanie silnika (cena, funding, koszt,
+likwidacje, każda faza); kontrole odrzucają każde zaburzenie > 1e-9 (test właściwości w `hypothesis`), brak dnia i brak fazy;
+top-20 rankingu = `monthly_members` (test właściwości z remisami, dziurami i stablecoinami + prawdziwe panele: `data/raw/live`
+dziennika od 2025-09 i archiwum `universe_full` 2021-02 → 2026-06, 65 miesięcy, co do bajtu); powtórka dopisuje 0 wierszy;
+ręcznie zmieniony wiersz → „historia zmieniona: 1”, stary zapis zostaje; błąd rozbicia i koszyka → „BŁĄD RuntimeError”
+w logu, a **wszystkie pozostałe pliki bajt w bajt takie same jak w przebiegu bez błędu**; błąd X1 → rozbicie tylko dla
+trendu i premii.
+
+**Próba na kopii dziennika 2026-09-27** (kopia `dziennik/` z klonu dziennika, dane `data/raw/live` z przebiegu 02:30,
+`as_of` 2026-09-26, bez pobierania): nowe tylko `rozbicie.csv` (+8: trend 3, premia 3, X1 2), `fazy.csv` (+56 = 8 × 7) i
+`koszyk.csv` (+50, miesiąc 2026-09: 20 w koszyku, 35 z fundingiem); w `przebiegi.log` nowa linia „… | rozbicie +8 | fazy +56 |
+koszyk +50 | historia zmieniona: 0”. Wszystkie dotychczasowe pliki CSV **bajt w bajt bez zmian**, stare linie logu bez zmian.
+Kontrole na prawdziwych danych: |cena + funding + koszt − netto| ≤ 9·10⁻¹⁷, |netto − wyniki.csv / x1_wyniki.csv| = 0,
+|średnia faz − wynik| ≤ 5·10⁻¹⁷, top-20 = `monthly_members`. Druga droga: likwidacje w rozbiciu (trend: 1 w dniu 25.09,
+2 w dniu 26.09) = likwidacje w `transakcje.csv` według daty wyjścia. Czas przebiegu 5,9 s (nowe pliki: ~0,1 s). Drugi przebieg
+na tej samej kopii: „rozbicie +0 | fazy +0 | koszyk +0 | historia zmieniona: 0”.
+
+**Co wolno odczytać i kiedy** (zapisane przed jakimkolwiek odczytem):
+- **Rozbicie po ~3 miesiącach** (odczyt 25.12): tylko mechanika — czy obrót i koszt zgadzają się z założeniami KO1 (oczekiwany
+  obrót TS1 ≈ 11, CP1 ≈ 21, X1 ≈ 47 kapitałów na rok, czyli koszt w kwartale ≈ 0,2 / 0,4 / 0,8 %). Odchylenie > 30 % = błąd
+  mechaniki do wyjaśnienia. **Po ~12 miesiącach:** poziom fundingu (dokładność ±2–3 pp/rok). Rozbicie **nie rozstrzyga**, skąd
+  bierze się wynik X1 (cena X1 ma po roku rozrzut ±32 %/rok) — żadna decyzja o regule nie zapada na podstawie nóg X1.
+- **Fazy — tylko diagnostyka:** różnica faz ≳ 3–5 % kapitału w tygodniu wskazuje błąd silnika albo jedno zdarzenie w jednej
+  monecie. **Nigdy nie wybieramy fazy ani nie zmieniamy wag faz po wyniku** — mierzonym obiektem zostaje średnia 7 faz.
+- **Koszyk — rejestr uniwersum:** do sprawdzianu „dane na żywo vs archiwum” (STATUS, termin 22.10–05.11) i do odtworzenia,
+  co było w top-50 danego miesiąca. Monety wycofane widać tylko od dnia startu, nie wstecz. Miejsca 21–50 nie są strategią
+  (cień TR1 odtwarza się z archiwum).
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
@@ -257,6 +324,11 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
   status progów.
 - `stan_rynku.csv` — etykieta stanu rynku per dzień (poprawka 7): zmienność 30 dni BTC i jej tercyl,
   zwrot 90 dni i jego znak. Tylko zapis, bez wpływu na pozycje.
+- `rozbicie.csv` (poprawka 11) — dzienny zwrot każdej składowej rozbity na cenę, funding, koszt i obrót
+  (+ liczba likwidacji; X1 także noga long i short); suma składników = netto = wynik w `wyniki.csv` / `x1_wyniki.csv`.
+- `fazy.csv` (poprawka 11) — dzienne netto każdej z 7 faz każdej składowej; średnia faz = wynik składowej.
+- `koszyk.csv` (poprawka 11) — ranking obrotu 1–50 na początek każdego miesiąca od 2026-09: pozycja, średni obrót
+  30 dni, członek top-20 (= skład koszyka silnika), czy jest funding. Wszystkie trzy tylko do zapisu, bez wpływu na pozycje.
 
 ## Progi (zapisane z góry)
 
