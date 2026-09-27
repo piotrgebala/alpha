@@ -332,6 +332,16 @@ def test_history_change_after_first_result_is_flagged(tmp_path):
 
 
 @needs_git
+def test_history_change_before_any_result_is_not_counted(tmp_path):
+    """Bez żadnego wyniku (same „wyniki +0”) zdarzenie jest sprzed pierwszego wyniku."""
+    files = dict(FILES)
+    files["przebiegi.log"] = HEAD.replace("wyniki +1", "wyniki +0") + " | historia zmieniona: 3\n"
+    state, _ = sd.build_state(str(_repo(tmp_path, files)), NOW)
+    assert state["criteria"]["consistency"] == {"events": 1, "after_first_result": 0}
+    assert state["health"]["history_events"][0]["before_first_result"] is True
+
+
+@needs_git
 def test_main_writes_json_and_verdict(tmp_path, capsys):
     out = tmp_path / "stan.json"
     assert sd.main([str(_repo(tmp_path, FILES)), str(out)]) == 0
