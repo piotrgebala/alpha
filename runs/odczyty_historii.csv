@@ -1,0 +1,56 @@
+nr,data,runda,katalog,baza,rodzaj,odczyt_programu,wariantow,uwagi
+1,2026-09-23,T4,2026-09-23_t4-kalibracja-early-stopping,stara-baza,bez-wyniku,nie,0,"Kalibracja early stopping na BTC 4h od 2019-09; zero etykiet z danych testowych, poza licznikami (wn. 41)."
+2,2026-09-23,W1,2026-09-23_w1-wykonanie-po-cenie,stara-baza,werdykt,tak,3,"Seria W 3/3. Dane BTC 4h 2019-09 → 2026-07 zawierają całą historię 2021–2026, dlatego AU4 liczy W = 3 (wn. 42–44)."
+3,2026-09-23,N1,2026-09-23_n1-nowy-cel-czesciowe-tp,krypto-2021-2026,werdykt,tak,1,Seria N 1/1; pierwsza runda na bazie od 2021-01-01 (wn. 45–46).
+4,2026-09-23,A1,2026-09-23_a1-formacje-swiecowe,krypto-2021-2026,werdykt,tak,2,Seria A (formacje) 2/2 (wn. 48–50).
+5,2026-09-23,A2,2026-09-23_a2-rodziny-at,krypto-2021-2026,werdykt,tak,5,Seria A 7/7 po A2: 5 ramion z werdyktem (wn. 51–53).
+6,2026-09-23,C1,2026-09-23_c1-cash-and-carry,krypto-2021-2026,werdykt,tak,2,"Seria C 2/2: C1a POZYTYWNY (carry), C1b NEGATYWNY (wn. 54–56)."
+7,2026-09-23,R1,2026-09-23_r1-premia-rebalansowa,krypto-2021-2026,werdykt,tak,1,Seria R 1/1 (wn. 57–58).
+8,2026-09-23,P3,2026-09-23_p3-sonda-zrodel-ii,inna,bez-wyniku,nie,0,"Sonda źródeł: pobranie i profil 13 zbiorów, 0 korelacji ze zwrotem (wn. 59–60)."
+9,2026-09-23,D1,2026-09-23_d1-produkt-carry,krypto-2021-2026,opis-z-wynikiem,tak,0,"0 wariantów reguł, ale drukuje zwrot na historii (COIN-M +9,1 %/rok, USDT-M, basis) = odczyt 0-wariantowy; AU4 go nie liczy (wn. 61–63)."
+10,2026-09-23,X1,2026-09-23_x1-momentum-przekrojowe,krypto-2021-2026,werdykt,tak,1,Seria X 1/1 (wn. 64–65).
+11,2026-09-23,O1,2026-09-23_o1-pozycjonowanie,krypto-2021-2026,werdykt,tak,1,Seria O 1/1 (wn. 66).
+12,2026-09-23,L1,2026-09-23_l1-onchain-podaz,krypto-2021-2026,werdykt,tak,1,Seria L 1/1; L1/V1/G1 w jednym commicie pre-rejestracji (wn. 67).
+13,2026-09-23,V1,2026-09-23_v1-premia-zmiennosci,krypto-2021-2026,werdykt,tak,1,Seria V 1/1 (wn. 67).
+14,2026-09-23,G1,2026-09-23_g1-strach-chciwosc,krypto-2021-2026,werdykt,tak,1,Seria G 1/1 (wn. 67).
+15,2026-09-23,X2,2026-09-23_x2-momentum-top50,krypto-2021-2026,werdykt,tak,1,Seria X2 1/1; drugi odczyt rodziny B1 (wn. 68).
+16,2026-09-23,Y1,2026-09-23_y1-horyzont-1h,krypto-2021-2026,werdykt,tak,1,"Baza 1h od 2021-01-01 (osobny licznik, ta sama historia krypto); AU4 liczy Y1/Y2 (wn. 69)."
+17,2026-09-23,Y2,2026-09-23_y2-horyzont-1d,krypto-2021-2026,werdykt,tak,1,"Baza 1d od 2021-01-01 (osobny licznik, ta sama historia krypto) (wn. 69)."
+18,2026-09-24,TS1,2026-09-24_ts1-trend-koszyk,krypto-2021-2026,werdykt,tak,1,Seria TS 1/1 (wn. 70).
+19,2026-09-24,NL1,2026-09-24_nl1-nowe-listingi,krypto-2021-2026,werdykt,tak,1,Seria NL 1/1 (wn. 71).
+20,2026-09-24,TR1/TP1,2026-09-24_ts-poza-proba,krypto-2021-2026,werdykt,tak,2,Seria TS uzupełnienie 2/2 wg INDEX i AU4 (README: TP1 za 0); TP1 na danych 2026-07 → 09 (wn. 74).
+21,2026-09-24,CP1,2026-09-24_cp1-premia-coinbase,krypto-2021-2026,werdykt,tak,1,Seria CP 1/1; w tym rejestrze 28. odczyt (README CP1 i AU4: ~28) (wn. 72).
+22,2026-09-24,TF1,2026-09-24_tf1-trend-filtr-tloku,krypto-2021-2026,werdykt,tak,1,Seria TF 1/1 (wn. 73).
+23,2026-09-24,CP1P,2026-09-24_cp1-poza-proba,krypto-na-żywo,opis-z-wynikiem,tak,0,"Reguła CP1 na danych 2026-07-08 → 09-23 (za bazą, wstecz), drukuje zwrot = odczyt 0-wariantowy (przegląd docs/rag/11; jak TP1 w AU4) (wn. 87g)."
+24,2026-09-24,TL1,2026-09-24_tl1-tlok-przekrojowy,krypto-2021-2026,werdykt,tak,1,Seria TL 1/1 (wn. 75).
+25,2026-09-24,LQ1,2026-09-24_lq1-likwidacje,krypto-2021-2026,werdykt,tak,0,"Poprawka TS1 (likwidacja 3×), 0 wariantów; drukuje zwrot i t (t 1,34) = odczyt 0-wariantowy (wn. 76)."
+26,2026-09-24,SZ1,2026-09-24_sz1-wielkosc-pozycji,krypto-2021-2026,opis-z-wynikiem,tak,0,"Opisowo: CAGR reguł R0/R1/R2 na historii, R1 wybrana potem do dziennika = odczyt 0-wariantowy (wn. 77)."
+27,2026-09-24,SC1,2026-09-24_sc1-sila-sygnalu,krypto-2021-2026,bez-wyniku,nie,0,"NIEMIERZALNA, nie wystartowała; policzony tylko rozrzut (moc.txt) (wn. 78)."
+28,2026-09-24,NC1,2026-09-24_nc1-kontrola-negatywna,krypto-2021-2026,bez-wyniku,nie,0,"Kontrola negatywna na danych bez informacji o przyszłości: kalibracja przyrządu, żadna reguła nie odczytana (wn. 79)."
+29,2026-09-24,CP2,2026-09-24_cp2-premia-coinbase-eth-sol,krypto-2021-2026,bez-wyniku,nie,0,"NIEMIERZALNA, nie wystartowała; tylko rozrzut H0 i zgodność sygnałów (wn. 80)."
+30,2026-09-24,RU1,2026-09-24_ru1-pelne-uniwersum,krypto-2021-2026,werdykt,tak,0,"Korekta danych: TS1, X1, SZ1 przeliczone na pełnym uniwersum (X1 t 1,86) = odczyt 0-wariantowy (wn. 82)."
+31,2026-09-24,SH1,2026-09-24_sh1-sonda-hipotez,krypto-2021-2026,bez-wyniku,nie,0,"Sonda 15 hipotez: tylko rozrzut portfeli H0, bez średniej sygnału (wn. 81)."
+32,2026-09-24,RU2,2026-09-24_ru2-korekta-pozostalych,krypto-2021-2026,werdykt,tak,0,"Korekta danych: TR1, X2, LQ1, TF1, R1 przeliczone = odczyt 0-wariantowy (wn. 83)."
+33,2026-09-24,TX1,2026-09-24_tx1-trend-inne-rynki,tradfi-1990-2026,werdykt,nie,1,"Seria TX 1/1 na innej bazie (19 rynków FRED); własny licznik, poza N krypto, jak w AU4 (wn. 84)."
+34,2026-09-24,WF1,2026-09-24_wf1-okno-uczenia,krypto-2021-2026,werdykt,tak,2,Seria WF 2/2 (wn. 85).
+35,2026-09-24,HC1,2026-09-24_hc1-cykl-halvingowy,inna,opis-z-wynikiem,tak,0,"BTC Coinbase 2015–2026 (wyjątek od zasady 20); zwroty BTC i trendu per faza cyklu, obejmuje 2021–2026 = odczyt 0-wariantowy, liczony zachowawczo (wn. 86)."
+36,2026-09-24,AU1,2026-09-24_au1-audyt-metodologii,krypto-2021-2026,opis-z-wynikiem,tak,0,"Audyt, 0 wariantów, ale drukuje nowe t na historii (TR1 od 2021-02 t 1,99; X1 bez MYX; TS1+X1+CP1 t 2,44) = odczyt 0-wariantowy (wn. 87)."
+37,2026-09-24,RU3,2026-09-24_ru3-data-startu,krypto-2021-2026,werdykt,tak,0,"Korekta startu TR1/X2 (TR1 t 1,99, znany z AU1) = odczyt 0-wariantowy (wn. 88)."
+38,2026-09-24,X1F,2026-09-24_x1f-siedem-faz,krypto-2021-2026,opis-z-wynikiem,tak,0,"Zapis porządkowy: X1 jako średnia 7 faz (t 0,61) = odczyt 0-wariantowy (wn. 89)."
+39,2026-09-24,SW,2026-09-24_sw-cechy-spoza-wykresu,krypto-2021-2026,werdykt,tak,9,Seria SW 9/9: 8 reguł i 1 model (wn. 90).
+40,2026-09-25,KP1,2026-09-25_kp1-premia-koreanska,krypto-2021-2026,bez-wyniku,nie,0,"NIEMIERZALNA; tylko rozrzut i zgodność znaku z CP1, zysków nie liczono (wn. 91)."
+41,2026-09-25,AU2-krok0,2026-09-25_au2-moc-przekrojowa,krypto-2021-2026,bez-wyniku,nie,0,"Kalibracja: szerokość efektywna i szum rank IC, bez średniej żadnego sygnału (wn. 92)."
+42,2026-09-25,AU2-kroki1-2,2026-09-25_au2-kroki-1-2,krypto-2021-2026,bez-wyniku,nie,0,Moc ML na sygnałach wstrzykniętych i ramieniu negatywnym; żadna reguła rynkowa nie odczytana (wn. 93).
+43,2026-09-25,AU3,2026-09-25_au3-audyt-neff,krypto-2021-2026,opis-z-wynikiem,nie,0,"Audyt N_eff: przeliczenie zamrożonych rund, wydruki identyczne, 0 nowych liczb wyniku (wn. 94)."
+44,2026-09-25,KR1,2026-09-25_kr1-korelacje-nog,krypto-2021-2026,opis-z-wynikiem,nie,0,Korelacje zwrotów nóg już odczytanych; bez nowej średniej zwrotu (wn. 95).
+45,2026-09-25,AU4,2026-09-25_au4-dsr-cp1,krypto-2021-2026,opis-z-wynikiem,nie,0,DSR znanego szeregu CP1; źródło N = 28 (przy CP1) i 40 (w dniu AU4) (wn. 96).
+46,2026-09-25,RU4,2026-09-25_ru4-tl1-pelne-oi,krypto-2021-2026,werdykt,tak,0,"TL1 na pełnym panelu OI (t 0,62, znak odwrócony) = odczyt 0-wariantowy (wn. 97)."
+47,2026-09-25,P4,2026-09-25_p4-pokrycie-onchain,inna,bez-wyniku,nie,0,Brama danych on-chain: tylko pokrycie koszyka (wn. 98).
+48,2026-09-25,KO1,2026-09-25_ko1-koszty-wykonania,krypto-2021-2026,opis-z-wynikiem,nie,0,"Koszt = funkcja obrotu nóg już odczytanych; zysk z limitów to model wypełnień, nie związek sygnału z przyszłym zwrotem (wn. 99)."
+49,2026-09-25,KR2,2026-09-25_kr2-korelacje-tradfi,inna,opis-z-wynikiem,nie,0,"Korelacje z rynkami tradycyjnymi w tym samym tygodniu, nie prognoza (wn. 100)."
+50,2026-09-25,PR1,2026-09-25_pr1-portfel,krypto-2021-2026,opis-z-wynikiem,tak,0,"Profil portfela (CAGR, obsunięcie) dla 6 reguł alokacji bez wyboru = odczyt 0-wariantowy, liczony za 1 (wn. 101)."
+51,2026-09-25,LK0,2026-09-25_lk0-kolektor-likwidacji,krypto-na-żywo,bez-wyniku,nie,0,"Kolektor likwidacji: zbieranie danych, 0 odczytów (wn. 102)."
+52,2026-09-25,MX1,2026-09-25_mx1-macd-ema-1h,krypto-2021-2026,bez-wyniku,nie,0,"NIEMIERZALNA, nie wystartowała; tylko częstość sygnałów i próg (wn. 103)."
+53,2026-09-25,MX2,2026-09-25_mx2-filtry-1h,krypto-2021-2026,bez-wyniku,nie,0,"Wszystkie 5 filtrów NIEMIERZALNE, nie wystartowała (wn. 104)."
+54,2026-09-26,TP1,2026-09-26_tp1-cel-zysku,krypto-2021-2026,bez-wyniku,nie,0,"NIEMIERZALNA, 0/4; żadnej średniej wyniku nie obejrzano. ID inne niż TP1 z rundy TR1/TP1 (wn. 105)."
+55,2026-09-27,LB0,2026-09-27_lb0-kolektor-bybit,krypto-na-żywo,bez-wyniku,nie,0,"Kolektor likwidacji Bybit, 0 odczytów; wiersz dodany z góry, runda powstaje na gałęzi równoległej (docs/rag/11 §3)."
