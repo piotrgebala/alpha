@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # likwidacje_kopia.sh — kopia zapasowa likwidacji (data/liquidation_backup.py) pod cronem; linię crona
 # dodaje koordynator/użytkownik (tu jej NIE instalujemy), np.:
-#   */5 * * * * bash $HOME/alpha-dziennik/tools/likwidacje_kopia.sh
+#   (wywołuje go tools/likwidacje.sh co 5 min — osobna linia crona niepotrzebna)
 # Wywołanie co 5 min robi pracę raz na dobę (pierwsze po 00:15 UTC; znacznik .ostatni_przebieg);
 # ręcznie od razu:  bash tools/likwidacje_kopia.sh --teraz
 # flock trzyma JEDNĄ instancję (blokada w katalogu kopii). Kopia tylko CZYTA katalogi kolektorów

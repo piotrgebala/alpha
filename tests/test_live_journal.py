@@ -863,14 +863,14 @@ def test_basket_rows_top20_is_engine_basket_and_ranks(live):
         win = live["volume"][(live["volume"].index >= m - pd.Timedelta(days=30))]
         win = win[win.index < m]
         assert g["sredni_obrot_30d"].tolist() == [int(round(win[s].mean())) for s in g["symbol"]]
-        assert g["ma_funding"].all()
+        assert g["funding_pobrany"].all()
     no_f = live["funding"].drop(columns=["C05USDT"])
     ks2 = lj.basket_rows(live["volume"], no_f, members, months)
-    assert not ks2.loc[ks2["symbol"] == "C05USDT", "ma_funding"].any()
+    assert not ks2.loc[ks2["symbol"] == "C05USDT", "funding_pobrany"].any()
     bad = {m: sorted([*members[m][1:], "C99USDT"]) for m in months}
     with pytest.raises(ValueError, match="top-20"):
         lj.basket_rows(live["volume"], live["funding"], bad, months)
-    # ma_funding patrzy TYLKO na okno [m − 30 dni, m): funding usunięty wyłącznie w oknie września
+    # funding_pobrany patrzy TYLKO na okno [m − 30 dni, m): funding usunięty wyłącznie w oknie września
     # (przed i po oknie zostaje) → wrzesień False, sierpień True (okno sierpnia nietknięte)
     sep = months[1]
     f = live["funding"].copy()
@@ -879,19 +879,19 @@ def test_basket_rows_top20_is_engine_basket_and_ranks(live):
     assert f.loc[f.index < sep - pd.Timedelta(days=30), "C05USDT"].notna().any()
     assert f.loc[f.index >= sep, "C05USDT"].notna().any()
     ks3 = lj.basket_rows(live["volume"], f, members, months)
-    c05 = ks3[ks3["symbol"] == "C05USDT"].set_index("miesiac")["ma_funding"]
+    c05 = ks3[ks3["symbol"] == "C05USDT"].set_index("miesiac")["funding_pobrany"]
     assert c05.to_dict() == {"2026-08": True, "2026-09": False}
     # jedno rozliczenie na granicy: dzień przed m liczy się, dzień m już nie
     f2 = f.copy()
     f2.loc[sep, "C05USDT"] = 1e-4
     ks4 = lj.basket_rows(live["volume"], f2, members, months)
     assert not ks4.loc[
-        (ks4["symbol"] == "C05USDT") & (ks4["miesiac"] == "2026-09"), "ma_funding"
+        (ks4["symbol"] == "C05USDT") & (ks4["miesiac"] == "2026-09"), "funding_pobrany"
     ].any()
     last = f.index[in_win][-1]
     f2.loc[last, "C05USDT"] = 1e-4
     ks5 = lj.basket_rows(live["volume"], f2, members, months)
-    assert ks5.loc[(ks5["symbol"] == "C05USDT") & (ks5["miesiac"] == "2026-09"), "ma_funding"].all()
+    assert ks5.loc[(ks5["symbol"] == "C05USDT") & (ks5["miesiac"] == "2026-09"), "funding_pobrany"].all()
 
 
 def test_basket_months_from_journal_start_month():
@@ -921,7 +921,7 @@ def _p11_run(tmp_path, monkeypatch, name="dziennik"):
     if not src.exists():
         src.mkdir()
         _write_live(src)
-        (src / "C21USDT_funding.parquet").unlink()  # moneta bez fundingu → ma_funding False
+        (src / "C21USDT_funding.parquet").unlink()  # moneta bez fundingu → funding_pobrany False
     monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp("2026-08-01", tz="UTC"))
     monkeypatch.setattr(lj, "X1_START", pd.Timestamp("2026-08-01", tz="UTC"))
     jdir = tmp_path / name
@@ -955,7 +955,7 @@ def test_run_writes_p11_files_consistent_and_idempotent(tmp_path, monkeypatch):
     for m in months:
         g = ks[ks["miesiac"] == m.strftime("%Y-%m")]
         assert sorted(g.loc[g["czlonek_top20"], "symbol"]) == members[m]
-    assert ks.loc[ks["symbol"] == "C21USDT", "ma_funding"].eq(False).all()
+    assert ks.loc[ks["symbol"] == "C21USDT", "funding_pobrany"].eq(False).all()
     assert "poprawka 11, tylko zapis): rozbicie +" in text
     # powtórka: 0 nowych wierszy, 0 zmian historii
     text2, _ = _p11_run(tmp_path, monkeypatch)

@@ -407,3 +407,12 @@ def test_losowe_linie_nie_wywracaja_agregatu():
     ]
     idx = li.aggregate("bybit", "2026-09-25", junk + [bb(D0)])
     assert len(idx.rows) == 1
+
+
+def test_absurd_notional_is_a_bad_line_not_a_failed_day():
+    """Przegląd bezpieczeństwa 2026-09-27: v = p = 1e20 wysadzało Decimal.quantize w sumie dnia."""
+    good = json.dumps({"T": 1790532228154, "s": "BTCUSDT", "S": "Buy", "v": "0.5", "p": "100000"})
+    huge = json.dumps({"T": 1790532228155, "s": "BTCUSDT", "S": "Buy", "v": "1e20", "p": "1e20"})
+    idx = li.aggregate("bybit", "2026-09-27", [good, huge])
+    assert idx.bad_lines == 1
+    assert [r["zdarzenia"] for r in idx.rows] == ["1"]

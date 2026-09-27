@@ -208,11 +208,11 @@ przeliczeniu = „historia zmieniona”, stary zapis zostaje):
   w kolejne dni tygodnia, każda z 1/7 kapitału). **Zasada:** średnia 7 faz = netto składowej (1e-9), sprawdzane przed zapisem.
 - **`koszyk.csv`** — klucz `miesiac` + `symbol`, od miesiąca startu dziennika (2026-09): `pozycja` w rankingu obrotu 1–50
   (ta sama miara co skład koszyka: średni obrót z 30 dni przed początkiem miesiąca, co najmniej 30 dni notowań; remis →
-  alfabetycznie), `sredni_obrot_30d` (USDT, zaokrąglony do 1 USDT), `czlonek_top20` (moneta w koszyku silnika), `ma_funding`
+  alfabetycznie), `sredni_obrot_30d` (USDT, zaokrąglony do 1 USDT), `czlonek_top20` (moneta w koszyku silnika), `funding_pobrany`
   (czy dane przebiegu mają choć jedno rozliczenie fundingu tej monety w tym 30-dniowym oknie). Skład top-20 jest **ten sam
-  co do bajtu** co `rebalance_premium.monthly_members` (kontrola w przebiegu + testy). `ma_funding` opisuje stan pobrania
+  co do bajtu** co `rebalance_premium.monthly_members` (kontrola w przebiegu + testy). `funding_pobrany` opisuje stan pobrania
   w dniu zapisu (funding pobieramy tylko dla członków koszyka), więc jego późniejsza zmiana NIE liczy się jako „historia
-  zmieniona”; pozostałe kolumny tak. **`ma_funding` = False znaczy „fundingu tej monety nie pobraliśmy”, a nie „moneta
+  zmieniona”; pozostałe kolumny tak. **`funding_pobrany` = False znaczy „fundingu tej monety nie pobraliśmy”, a nie „moneta
   nie ma fundingu”** (każdy perpetual ma funding; np. w 2026-09 miejsce 21 BLESSUSDT ma False, miejsce 22 WLDUSDT True —
   z 50 monet True ma 35).
 
@@ -237,7 +237,7 @@ dziennika od 2025-09 i archiwum `universe_full` 2021-02 → 2026-06, 65 miesięc
 ręcznie zmieniony wiersz → „historia zmieniona: 1”, stary zapis zostaje; błąd rozbicia i koszyka → „BŁĄD RuntimeError”
 w logu, a **wszystkie pozostałe pliki bajt w bajt takie same jak w przebiegu bez błędu**; komunikat błędu w wydruku,
 nie w logu; błąd X1 → rozbicie tylko dla trendu i premii; błąd samego rozbicia X1 → trend i premia zapisane, w logu
-„(x1 BŁĄD ValueError)”, a następny udany przebieg dopisuje X1 (zbiór wierszy jak bez błędu); `ma_funding` liczone tylko
+„(x1 BŁĄD ValueError)”, a następny udany przebieg dopisuje X1 (zbiór wierszy jak bez błędu); `funding_pobrany` liczone tylko
 z 30 dni przed początkiem miesiąca (funding usunięty wyłącznie w tym oknie → False).
 
 **Próba na kopii dziennika 2026-09-27** (kopia `dziennik/` z klonu dziennika, dane `data/raw/live` z przebiegu 02:30,

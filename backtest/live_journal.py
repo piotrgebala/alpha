@@ -156,8 +156,8 @@ BREAKDOWN_COLS = [*BREAKDOWN_KEY, *BREAKDOWN_VALUES]
 PHASE_KEY = ["date", "skladowa", "faza"]
 PHASE_COLS = [*PHASE_KEY, "netto"]
 BASKET_KEY = ["miesiac", "symbol"]
-BASKET_COLS = [*BASKET_KEY, "pozycja", "sredni_obrot_30d", "czlonek_top20", "ma_funding"]
-# `ma_funding` = stan pobrania w dniu zapisu (funding pobierany tylko dla członków koszyka od
+BASKET_COLS = [*BASKET_KEY, "pozycja", "sredni_obrot_30d", "czlonek_top20", "funding_pobrany"]
+# `funding_pobrany` = stan pobrania w dniu zapisu (funding pobierany tylko dla członków koszyka od
 # ENGINE_START) — późniejsze dociągnięcie pliku to nie zmiana historii, więc poza porównaniem.
 BASKET_VALUES = ["pozycja", "sredni_obrot_30d", "czlonek_top20"]
 BASKET_DEPTH = 50
@@ -966,7 +966,7 @@ def basket_rows(
     """
     Rejestr uniwersum (`koszyk.csv`): na początek każdego miesiąca z `months` ranking obrotu
     1–`depth` (`rebalance_premium.monthly_ranking` — miara `monthly_members`: średni obrót 30 dni,
-    ≥ 30 dni historii), `czlonek_top20` = w koszyku silnika (`members`), `ma_funding` = ≥ 1
+    ≥ 30 dni historii), `czlonek_top20` = w koszyku silnika (`members`), `funding_pobrany` = ≥ 1
     rozliczenie fundingu w oknie 30 dni przed początkiem miesiąca w danych przebiegu.
     `sredni_obrot_30d` w pliku zaokrąglony do 1 USDT: liczba całkowita przechodzi przez CSV bez
     błędu ostatniego bitu (float rzędu 1e8 nie — powtórka dałaby fałszywą „historię zmienioną”).
@@ -989,7 +989,7 @@ def basket_rows(
                     "pozycja": pos,
                     "sredni_obrot_30d": int(round(vol)),
                     "czlonek_top20": sym in members[m],
-                    "ma_funding": bool(sym in win.columns and win[sym].notna().any()),
+                    "funding_pobrany": bool(sym in win.columns and win[sym].notna().any()),
                 }
             )
     return pd.DataFrame(rows, columns=BASKET_COLS)

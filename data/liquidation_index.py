@@ -65,6 +65,7 @@ GIELDY = ("binance", "bybit")
 INDEX_VERSION = 1
 WINDOW_MS = 5 * 60 * 1000
 CENT = Decimal("0.01")
+MAX_NOTIONAL_USDT = Decimal("1e12")  # sufit jednej likwidacji (przegląd bezpieczeństwa 2026-09-27)
 DAY_FILE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.jsonl$")
 # COIN-M Binance (`st` = 2, symbole `BTCUSD_PERP`, `ETHUSD_261225`): `q` to liczba KONTRAKTÓW
 CM_CONTRACT_USD = {"BTCUSD": Decimal(100)}
@@ -201,6 +202,10 @@ def parse_line(gielda: str, line: str) -> Event:
         nom = notional(gielda, rec)
     except KeyError as exc:
         raise ValueError(f"indeks likwidacji: brak pola {exc}") from None
+    # Sufit nominału jednej likwidacji: realne zdarzenia to < 1e9 USDT; wartość absurdalna (np. v = p = 1e20)
+    # wysadziłaby formatowanie sumy dnia (Decimal.quantize) i zatrzymała kopię CAŁEGO dnia — to zła linia.
+    if not nom.is_finite() or nom > MAX_NOTIONAL_USDT:
+        raise ValueError(f"indeks likwidacji: nominał poza zakresem ({str(nom)[:40]})")
     return Event(
         symbol=symbol,
         market=market_of(gielda, rec),

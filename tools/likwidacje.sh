@@ -34,6 +34,13 @@ if [ ! -e "$BDIR/WYLACZONY" ]; then
     fi
 fi
 
+# 1b) Kopia zapasowa + dzienny indeks (tools/likwidacje_kopia.sh, ETAP 6): wywołanie co 5 min, praca raz
+#     na dobę po 00:15 UTC; własna blokada w katalogu kopii. Ten sam podwójny fork co Bybit i PRZED
+#     `exec 9>` — kopia nie dziedziczy blokady Binance i nie zatrzymuje kolektorów.
+if [ -f tools/likwidacje_kopia.sh ]; then
+    ( setsid bash tools/likwidacje_kopia.sh </dev/null >/dev/null 2>&1 & )
+fi
+
 DIR="${CLAS5_LIKWIDACJE_DIR:-$HOME/likwidacje}"
 mkdir -p "$DIR"
 exec 9>"$DIR/.lock"

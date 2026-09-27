@@ -138,13 +138,9 @@ Co z tego wynika:
 z drugim źródłem; zastrzeżenia: jedno krótkie okno, przegląd bezpieczeństwa i przegląd kodu (bramka 16c) robi koordynator
 przed scaleniem.
 
-**Bramka 16c (przegląd diffu przed scaleniem): UZUPEŁNIA KOORDYNATOR** — werdykt jednym zdaniem. Stan na dziś: przegląd
-recenzentów (poprawność, testy i dane, zasady i bezpieczeństwo) dał 13 uwag; poprawki naniesiono w commicie „Poprawki po
-przeglądzie: …” na gałęzi `etap6-bybit` (lista niżej).
+**Bramka 16c (przegląd diffu przed scaleniem): APPROVE** — trzej recenzenci (poprawność, testy i dane, zasady i bezpieczeństwo) dali 16 uwag bez krytycznych, poprawki naniesiono i sprawdzono mutantami; po scaleniu całego ETAP 6 pełny zestaw testów zielony, a część Binance w `tools/likwidacje.sh` działa bez zmian (test blokady).
 
-**security-review (nowe połączenie sieciowe, zasada 19): UZUPEŁNIA KOORDYNATOR** — wynik jednym zdaniem. Stan kodu: tylko
-publiczne dane, bez kluczy; adresy stałe, tylko `wss://` i `https://`; limit rozmiaru wiadomości wss (4 MB) i odpowiedzi
-REST (8 MB; lista 2026-09-27 ma ~0,8 MB); limit czasu REST 30 s.
+**security-review (nowe połączenie sieciowe, zasada 19): 0 podatności średnich i wysokich** (przegląd całego ETAP 6, 2026-09-27): adresy stałe, tylko `wss://`/`https://` z domyślną weryfikacją certyfikatu, nazwy plików tylko z zweryfikowanego czasu `T`, symbole przez `[A-Z0-9]{1,40}USDT`, zapis przez `json.dumps`, git bez powłoki, klucz w `GIT_SSH_COMMAND` przez `shlex.quote`, `BatchMode` bez `StrictHostKeyChecking=no`. Jedna uwaga odporności (poza zakresem podatności): absurdalny nominał z sieci wysadzał indeks dnia w kopii — naprawione sufitem `MAX_NOTIONAL_USDT` (zła linia zamiast błędu dnia) z testem regresji.
 
 ### Poprawki po przeglądzie (2026-09-27)
 
@@ -220,6 +216,29 @@ odczyt E1 najwcześniej po ~roku, po rachunku mocy z realnej częstości kaskad.
 
 ## Użyte skille (CLAUDE.md zasada 19)
 
-UZUPEŁNIA KOORDYNATOR (agent gałęzi `etap6-bybit` nie wczytywał skilli — zrobił to koordynator na gałęzi `etap6-wykonanie`;
-do uzupełnienia: wynik `py tools/skill_audit.py raport --galaz …`, `security-review` dla nowego połączenia sieciowego,
-`engineering:code-review` przed scaleniem).
+### Użyte skille — gałąź `etap6-wykonanie` (rejestr automatyczny)
+
+| czas | kto | skill | argumenty (skrót) |
+|---|---|---|---|
+| 2026-09-27T18:33:08+00:00 | claude | `anthropic-skills:clas5-runda` | ETAP 6 — wykonanie decyzji użytkownika „wykonaj wszystkie” (2026-09-27): LB0 kolektor pełnych likwidacji Bybit (nowe źródło, 0 wariantów, kontrola pozytywna jak LK0), kopia + dzienny indeks likwidacj… |
+| 2026-09-27T18:33:13+00:00 | claude | `anthropic-skills:clas5-quant` | ETAP 6: nowe źródło danych (pełne likwidacje Bybit allLiquidation — kontrola pozytywna, rachunek mocy E1 dopiero po danych), próg obalenia odczytu dziennika (μ − z·σ/√(n/365), z = 2,39 na 3 odczyty),… |
+| 2026-09-27T18:33:15+00:00 | claude | `engineering:testing-strategy` | ETAP 6 nowe moduły: data/collect_liquidations_bybit.py (parser, podział subskrypcji po 10, testy bez sieci), data/liquidation_index.py + kopia (agregat dzienny, idempotencja), backtest/odczyt_dzienni… |
+| 2026-09-27T18:49:03+00:00 | claude (agent: workflow-subagent) | `engineering:code-review` |  |
+| 2026-09-27T18:57:05+00:00 | claude (agent: workflow-subagent) | `engineering:code-review` |  |
+| 2026-09-27T18:57:07+00:00 | claude (agent: workflow-subagent) | `engineering:code-review` | git diff etap6-wykonanie...etap6-poprawka11 (Poprawka 11 dziennika) — soczewka: zasady projektu i bezpieczeństwo |
+| 2026-09-27T18:57:10+00:00 | claude (agent: workflow-subagent) | `engineering:code-review` | diff etap6-wykonanie...etap6-poprawka11, soczewka poprawność |
+| 2026-09-27T19:58:03+00:00 | claude | `security-review` |  |
+
+Razem: 8 wczytań, 5 różnych skilli: `anthropic-skills:clas5-quant`, `anthropic-skills:clas5-runda`, `engineering:code-review`, `engineering:testing-strategy`, `security-review`.
+
+- **`anthropic-skills:clas5-runda`** — procedura rundy: pre-rejestracja 0 wariantów, kontrola pozytywna źródła, wiersz w INDEX
+  i wniosek 106.
+- **`anthropic-skills:clas5-quant`** — nowe źródło danych: żadnego odczytu E1 przed rachunkiem mocy z realnej częstości
+  (za 4–6 tyg., bez cen); jeden licznik E1 dla LK0 i LB0.
+- **`engineering:testing-strategy`** — plan testów bez sieci (parser, plan subskrypcji z hypothesis, pętla na fałszywym
+  połączeniu, skrypt nadzoru w piaskownicy).
+- **`engineering:code-review`** (wczytany przez recenzentów workflow na tej gałęzi) — bramka 16c, werdykt wyżej.
+- **`security-review`** — obowiązkowy przy nowym połączeniu sieciowym; wynik wyżej.
+- Momenty z tabeli zasady 19 bez skilla: `data:explore-data` (nowy zbiór danych) — **odłożone**: profil dziur i duplikatów ma
+  sens dopiero po 4–6 tyg. zbierania, razem z rachunkiem mocy; `data:validate-data` / `data:statistical-analysis` — runda nie
+  ma wyniku ani przedziałów (0 odczytów), werdykt 16a wpisał autor gałęzi ręcznie według `docs/skills/bramki-jakosci.md`.

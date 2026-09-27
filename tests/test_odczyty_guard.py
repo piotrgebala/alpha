@@ -25,7 +25,7 @@ DIR_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_[a-z0-9][a-z0-9.\-]*$")
 OD_DATY = "2026-09-23"
 # Rundy z gałęzi równoległych, dopisane do rejestru z góry (katalog pojawi się po scaleniu).
 # Po scaleniu takiej gałęzi wpis trzeba usunąć — pilnuje test_oczekiwane_not_stale.
-OCZEKIWANE = {"2026-09-27_lb0-kolektor-bybit"}
+OCZEKIWANE: set[str] = set()  # katalogi scalane równolegle; pusty po scaleniu
 
 ROWS = dsr.load_registry()
 

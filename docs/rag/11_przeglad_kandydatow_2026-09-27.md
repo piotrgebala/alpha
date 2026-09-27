@@ -22,6 +22,12 @@ Pozostałe skróty:
 - **DSR** (Sharpe skorygowany o liczbę prób) mówi, czy najlepszy wynik nie jest tylko najszczęśliwszym z wielu pustych pomysłów.
 - **STOP** to seria zamknięta w `runs/INDEX.md`. Kolejny wariant takiej serii wymaga decyzji użytkownika.
 
+
+> **Wykonanie (2026-09-27, decyzja użytkownika „wykonaj wszystkie”):** kroki 1–4 z sekcji 6 zrobione — kolektor Bybit (LB0),
+> kopia i indeks likwidacji (zdalna kopia czeka na repo i klucz), skrypt odczytu z z = 2,31 (nie 2,39 — dokładny rachunek
+> z korelacją odczytów) i kryterium 4b, Poprawka 11 dziennika, rejestr odczytów (`py -m backtest.dsr` drukuje próg t z
+> sekcji 4E; obowiązuje metoda AU4). Szczegóły: STATUS.md, ETAP 6 — wykonanie.
+
 ---
 
 ## 1. Odpowiedź w skrócie
