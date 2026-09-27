@@ -15,11 +15,18 @@ Co liczy:
 
 Zasady: czyta WYŁĄCZNIE `<repo>@origin/master:dziennik/*` (przez `strona_dziennika`) i niczego nie
 zapisuje. Jest reporterem: pisze „próg przekroczony / nieprzekroczony”; werdykt o strategii podpisuje
-Claude w dokumentacji (CLAUDE.md). Brak obalenia NIE jest potwierdzeniem przewagi. Wiąże tylko odczyt
-w oknie planowym (n od 92 − 2 do 92 + 7 dni itd.); przy n < 90 wydruk to „ZA WCZEŚNIE — tylko podgląd”.
+Claude w dokumentacji (CLAUDE.md). Brak obalenia NIE jest potwierdzeniem przewagi.
 `--as-of` odtwarza stan dziennika z ostatniego commita „Dziennik: przebieg …” z datą ≤ as_of + 1 dzień.
 
-    PYTHONUTF8=1 py -m backtest.odczyt_dziennika [--repo .] [--as-of RRRR-MM-DD] [--json]
+Który wydruk wiąże (status liczony RAZ z kalendarza, wspólny dla wszystkich nóg — braki w nodze
+zmniejszają tylko jej n w SE): WYŁĄCZNIE wydruk z `--as-of` równym dacie planu (PLAN_DATES:
+2026-12-24, 2027-03-24, 2027-09-23), gdy migawka zawiera wynik R1 za ten dzień. Zapas: gdy migawka na
+datę planu jest niepełna (przebieg nie doszedł), wiąże pierwsza data w ciągu 7 dni po planie z pełną
+migawką — skrypt sprawdza to sam, więc wynik nie zależy od tego, kto i kiedy uruchomi. Ta sama
+migawka daje ten sam wydruk: kolejne uruchomienia to kopie, nie nowe odczyty. Każdy inny wydruk to
+„ZA WCZEŚNIE — tylko podgląd” (przed pierwszą datą planu), „podgląd” albo „NIE WIĄŻE”.
+
+    git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika [--repo .] [--as-of RRRR-MM-DD] [--json]
 
 Testy: `tests/test_odczyt_dziennika.py`. Stałe μ, σ: `backtest/odczyt_dziennika_stale.py`.
 """
@@ -43,8 +50,12 @@ DAYS_PER_YEAR = 365
 # Plan odczytów (decyzja użytkownika 2026-09-27): ~3, 6 i 12 miesięcy wyniku R1 od 2026-09-24,
 # czyli ostatni dzień wyniku 2026-12-24, 2027-03-24, 2027-09-23 (odczyt dzień później).
 READ_DAYS = (92, 182, 365)
-READ_TOL_BEFORE, READ_TOL_AFTER = 2, 7  # okno odczytu wiążącego: [dni − 2; dni + 7]
-MIN_BINDING_DAYS = READ_DAYS[0] - READ_TOL_BEFORE  # 90 — wcześniej tylko podgląd
+R1_START = date.fromisoformat(sd.R1_START)
+# daty planu = ostatni dzień wyniku R1 odczytu k: 2026-12-24, 2027-03-24, 2027-09-23 (--as-of)
+PLAN_DATES = tuple(R1_START + timedelta(days=d - 1) for d in READ_DAYS)
+# zapas: gdy migawka na datę planu nie zawiera tego dnia, wiąże pierwsza pełna w ciągu 7 dni po planie
+READ_FALLBACK_DAYS = 7
+STALE_DAYS = 2  # ostatni przebieg starszy niż 2 dni = alarm świeżości (CLAUDE.md)
 ALPHA = 0.025  # łączna jednostronna szansa fałszywego obalenia jednej nogi przez 3 odczyty
 # Z_READ: `simulate_z(READ_DAYS, ALPHA, n_sim=10_000_000, seed=20260927)` = 2,3102 (błądzenie losowe,
 # odczyty zagnieżdżone, korelacja √(n_i/n_j)); druga droga — dokładna całka normalna 3-wymiarowa
@@ -186,33 +197,90 @@ def refutation(mu: float, sigma: float, n: int, z: float = Z_READ) -> dict:
     }
 
 
-def reading_status(n: int) -> dict:
-    """Status odczytu dla n dni wyniku: za wcześnie / odczyt wiążący k / podgląd między odczytami."""
-    if n < MIN_BINDING_DAYS:
-        return {"binding": False, "reading": 0, "label": "ZA WCZEŚNIE — tylko podgląd"}
-    for k, d in enumerate(READ_DAYS, start=1):
-        if d - READ_TOL_BEFORE <= n <= d + READ_TOL_AFTER:
-            return {
-                "binding": True,
-                "reading": k,
-                "label": f"odczyt wiążący {k} z 3 (plan {d} dni)",
-            }
-    if n > READ_DAYS[-1] + READ_TOL_AFTER:
-        label = "po planie 3 odczytów — z nie kontroluje dalszych odczytów, tylko podgląd"
+def plan_slot(day: date) -> tuple[int, date] | None:
+    """Odczyt planowy (k, data planu), do którego okna [plan; plan + 7 dni] należy `day`."""
+    fallback = timedelta(days=READ_FALLBACK_DAYS)
+    for k, plan in enumerate(PLAN_DATES, start=1):
+        if plan <= day <= plan + fallback:
+            return k, plan
+    return None
+
+
+def reading_status(as_of: date | None, last: str | None, bound_at: str | None = None) -> dict:
+    """Status odczytu — RAZ dla całego wydruku, z kalendarza (data planu), nie z liczby dni danych.
+
+    as_of: data z `--as-of` (None = podgląd bez obcięcia); last: ostatni dzień wyniku R1 w migawce;
+    bound_at: wcześniejsza data z okna tego odczytu, dla której migawka była już pełna — wtedy odczyt
+    już się odbył i bieżący wydruk go nie zastępuje. Wiąże tylko `--as-of` = data planu przy pełnej
+    migawce albo (zapas) pierwsza pełna migawka w ciągu 7 dni po planie.
+    """
+    day = as_of if as_of is not None else (date.fromisoformat(last) if last else None)
+    out = {
+        "binding": False,
+        "reading": 0,
+        "planned_as_of": None,
+        "days": (day - R1_START).days + 1 if day else 0,  # dni kalendarzowe wyniku R1
+    }
+    if day is None or day < PLAN_DATES[0]:
+        return {**out, "label": "ZA WCZEŚNIE — tylko podgląd"}
+    if as_of is None:
+        return {
+            **out,
+            "label": "podgląd bez --as-of — nie wiąże (wiąże tylko --as-of <data planu>)",
+        }
+    slot = plan_slot(as_of)
+    if slot is None:
+        if as_of > PLAN_DATES[-1] + timedelta(days=READ_FALLBACK_DAYS):
+            label = "po planie 3 odczytów — z nie kontroluje dalszych odczytów, tylko podgląd"
+        else:
+            label = "podgląd między odczytami planowymi — nie wiąże (z liczone na 3 odczyty)"
+        return {**out, "label": label}
+    k, plan = slot
+    out["planned_as_of"] = plan.isoformat()
+    if last != as_of.isoformat():
+        label = (
+            f"NIE WIĄŻE — migawka kończy się na {last}, a nie na {as_of} (git fetch albo przebieg "
+            f"{as_of + timedelta(days=1)} nie doszedł); zapas: pierwsza data do "
+            f"{plan + timedelta(days=READ_FALLBACK_DAYS)} z pełną migawką"
+        )
+    elif bound_at is not None:
+        label = (
+            f"NIE WIĄŻE — odczyt {k} odbył się przy --as-of {bound_at} "
+            "(pierwsza pełna migawka w oknie); ten wydruk to tylko podgląd"
+        )
+    elif as_of == plan:
+        return {**out, "binding": True, "reading": k, "label": f"odczyt wiążący {k} z 3"}
     else:
-        label = "podgląd między odczytami planowymi — nie wiąże (z liczone na 3 odczyty)"
-    return {"binding": False, "reading": 0, "label": label}
+        return {
+            **out,
+            "binding": True,
+            "reading": k,
+            "label": (
+                f"odczyt wiążący {k} z 3 — zapas: migawka na datę planu {plan} niepełna, "
+                f"pierwsza pełna {as_of}"
+            ),
+        }
+    return {**out, "label": label}
 
 
-def leg_reading(leg: Leg, values, z: float = Z_READ) -> dict:
-    """Kryterium 5 dla jednej nogi: średnia roczna vs próg obalenia μ − z·SE."""
+PREVIEW = {"binding": False, "reading": 0, "planned_as_of": None, "label": "podgląd"}
+
+
+def leg_reading(leg: Leg, values, status: dict = PREVIEW, z: float = Z_READ) -> dict:
+    """Kryterium 5 dla jednej nogi: średnia roczna vs próg obalenia μ − z·SE.
+
+    `status` (z `reading_status`) jest wspólny dla wszystkich nóg wydruku; n ważnych wartości nogi
+    wchodzi tylko do SE i średniej, braki są liczone osobno (`missing`).
+    """
     xs, missing = clean(values)
     n = len(xs)
-    out = {**asdict(leg), "n": n, "missing": missing, "z": z, **reading_status(n)}
+    keep = ("binding", "reading", "planned_as_of", "label")
+    out = {**asdict(leg), "n": n, "missing": missing, "z": z, **{k: status[k] for k in keep}}
     if n == 0:
-        out.update(mean=None, sd=None, total=None, crossed=None, verdict="brak danych")
+        out.update(mean=None, sd=None, ci95=None, total=None, crossed=None, verdict="brak danych")
         return out
     mean = statistics.fmean(xs) * DAYS_PER_YEAR
+    sd_ann = statistics.stdev(xs) * math.sqrt(DAYS_PER_YEAR) if n > 1 else None
     ref = refutation(leg.mu, leg.sigma, n, z)
     crossed = mean < ref["threshold"]
     if out["binding"]:
@@ -224,9 +292,12 @@ def leg_reading(leg: Leg, values, z: float = Z_READ) -> dict:
     else:
         verdict = "podgląd: średnia " + ("poniżej progu" if crossed else "nad progiem")
         verdict += " (nie wiąże)"
+    # przedział 95 % zrealizowanej średniej (zmienność zrealizowana, nie zakładana; bramka 16b)
+    half = None if sd_ann is None else 1.96 * sd_ann / math.sqrt(n / DAYS_PER_YEAR)
     out.update(
         mean=mean,
-        sd=statistics.stdev(xs) * math.sqrt(DAYS_PER_YEAR) if n > 1 else None,
+        sd=sd_ann,
+        ci95=None if half is None else [mean - half, mean + half],
         total=math.fsum(xs),  # Σ dziennych zwrotów = średnia roczna × n/365 (skala progu)
         **ref,
         threshold_period=ref["threshold"] * n / DAYS_PER_YEAR,
@@ -295,6 +366,23 @@ def snapshot_ref(repo: str, as_of: date) -> str:
     raise ValueError(f"brak commita dziennika z datą ≤ {limit}")
 
 
+def first_full_snapshot(repo: str, start: date, end: date) -> str | None:
+    """Najwcześniejszy dzień d z [start; end), którego migawka (`snapshot_ref`) ma wynik R1 za d."""
+    d = start
+    while d < end:
+        try:
+            ref = snapshot_ref(repo, d)
+        except ValueError:
+            ref = None
+        if ref is not None:
+            with _ref(ref):
+                days = {r.get("date") for r in sd.rows(repo, "wyniki.csv")}
+            if d.isoformat() in days:
+                return d.isoformat()
+        d += timedelta(days=1)
+    return None
+
+
 @contextmanager
 def _ref(ref: str):
     """Tymczasowo czytaj `strona_dziennika` z innego refu (tylko odczyt, przywracane zawsze)."""
@@ -324,33 +412,59 @@ def reading(repo: str = ".", as_of: date | None = None, now: datetime | None = N
     with _ref(ref):
         state, n_runs = sd.build_state(repo, now)
         files = {name: _cut(sd.rows(repo, name), as_of) for name in {g.file for g in LEGS}}
+    r1 = files["wyniki.csv"]
+    first = r1[0]["date"] if r1 else None
+    last = r1[-1]["date"] if r1 else None
+    # status RAZ, z kalendarza; przy dacie zapasowej — czy odczyt nie odbył się już wcześniej w oknie
+    slot = plan_slot(as_of) if as_of is not None else None
+    bound_at = None
+    if slot is not None and as_of > slot[1] and last == as_of.isoformat():
+        bound_at = first_full_snapshot(repo, slot[1], as_of)
+    status = reading_status(as_of, last, bound_at)
     legs = []
     for leg in LEGS:
         rows = files[leg.file]
         if not rows or leg.column not in rows[0]:
             continue  # noga nieobecna w dzienniku (np. X1 przed Poprawką 3) — pomijana
-        legs.append(leg_reading(leg, [r[leg.column] for r in rows]))
-    r1 = files["wyniki.csv"]
+        legs.append(leg_reading(leg, [r[leg.column] for r in rows], status))
     band = vol_band([r.get("r_port") for r in r1])
-    n_r1 = band["n"]
-    first = r1[0]["date"] if r1 else None
-    last = r1[-1]["date"] if r1 else None
+    last_run = state["health"]["last_journal_date"]
+    warnings = []
+    if as_of is None:
+        age = (now.date() - date.fromisoformat(last_run)).days if last_run else None
+        if age is None or age > STALE_DAYS:
+            warnings.append(
+                f"dziennik starszy niż {STALE_DAYS} dni (ostatni przebieg {last_run}) "
+                "— zrób git fetch"
+            )
+    else:
+        want = (as_of + timedelta(days=1)).isoformat()
+        if last_run is None or last_run < want:
+            warnings.append(
+                f"migawka z przebiegu {last_run}, a nie {want} — git fetch albo przebieg nie doszedł"
+            )
+        if as_of >= R1_START and last != as_of.isoformat():  # przed startem R1 wyników brak
+            warnings.append(f"migawka kończy się na dniu {last}, a nie na {as_of}")
     return {
         "v": 1,
         "generated_at": now.isoformat(timespec="minutes"),
         "ref": ref,
+        "snapshot": {"commit_ts": state["repo"]["head_ts"], "last_run": last_run},
         "as_of": as_of.isoformat() if as_of else None,
-        "window": {"first": first, "last": last, "n": n_r1},
-        "status": reading_status(n_r1),
-        "plan": {"days": list(READ_DAYS), "z": Z_READ, "alpha": ALPHA},
+        "window": {"first": first, "last": last, "n": band["n"], "days": status["days"]},
+        "status": status,
+        "warnings": warnings,
+        "plan": {
+            "days": list(READ_DAYS),
+            "as_of": [d.isoformat() for d in PLAN_DATES],
+            "z": Z_READ,
+            "alpha": ALPHA,
+        },
         "runs": n_runs,
         "log_unparsed": state["log_unparsed"],
         "mechanics": mechanics(state),
-        # pasmo [13; 31] zapisano dla ~92 dni; dłuższe okno (6/12 mies.) — tylko opis
-        "vol_band": {
-            **band,
-            "binding": MIN_BINDING_DAYS <= n_r1 <= READ_DAYS[0] + READ_TOL_AFTER,
-        },
+        # pasmo [13; 31] zapisano dla odczytu 1 (~92 dni); odczyty 2 i 3 — tylko opis
+        "vol_band": {**band, "binding": status["binding"] and status["reading"] == 1},
         "legs": legs,
     }
 
@@ -375,12 +489,17 @@ def render(rep: dict) -> str:
     """Raport tekstowy (prosty język, zasada 17)."""
     w, st = rep["window"], rep["status"]
     m = rep["mechanics"]
+    snap = rep["snapshot"]
     lines = [
         "=" * 100,
-        f"ODCZYT DZIENNIKA (szczebel 3 ADR-09) — wynik R1 {w['first']} → {w['last']}, {w['n']} dni",
+        f"ODCZYT DZIENNIKA (szczebel 3 ADR-09) — wynik R1 {w['first']} → {w['last']}, "
+        f"{w['days']} dni kalendarzowych ({w['n']} z wynikiem)",
         f"STATUS: {st['label']}",
-        f"ref {_short(rep['ref'])}, przebiegi {rep['runs']} (nieczytelne {rep['log_unparsed']}), "
-        f"plan odczytów {'/'.join(map(str, rep['plan']['days']))} dni, z = {rep['plan']['z']:.2f}",
+        *(f"UWAGA: {x}" for x in rep["warnings"]),
+        f"migawka {_short(rep['ref'])} (commit {snap['commit_ts']}, ostatni przebieg "
+        f"{snap['last_run']}), przebiegi {rep['runs']} (nieczytelne {rep['log_unparsed']})",
+        f"plan: --as-of {' / '.join(rep['plan']['as_of'])} "
+        f"({'/'.join(map(str, rep['plan']['days']))} dni), z = {rep['plan']['z']:.2f}",
         "=" * 100,
         "Kryteria mechaniki (definicje: tools/strona_dziennika.build_state; progi: dziennik/README.md)",
     ]
@@ -406,10 +525,10 @@ def render(rep: dict) -> str:
     vb = rep["vol_band"]
     if vb["binding"]:
         tag = ""
-    elif vb["n"] < MIN_BINDING_DAYS:
-        tag = " [podgląd, n < 90]"
+    elif st["binding"]:
+        tag = " [tylko opis: pasmo zapisane dla odczytu 1, ~92 dni]"
     else:
-        tag = " [tylko opis: pasmo zapisane dla ~92 dni]"
+        tag = " [podgląd]"
     if vb["ok"] is None:
         res = "—"
     elif vb["binding"]:
@@ -430,7 +549,13 @@ def render(rep: dict) -> str:
             continue
         lines += [
             f"  {g['key']:<4} {g['name']}: n {g['n']} dni (braki {g['missing']}) — {g['label']}",
-            f"       średnia {_pct(g['mean'])}/rok (Σ za okres {_pct(g['total'])}); zakładane "
+            f"       średnia {_pct(g['mean'])}/rok"
+            + (
+                f" (przedział 95 % {_pct(g['ci95'][0])} … {_pct(g['ci95'][1])})"
+                if g["ci95"]
+                else ""
+            )
+            + f"; Σ za okres {_pct(g['total'])}; zakładane "
             f"μ {_pct(g['mu'])}, σ {100 * g['sigma']:.1f} %; SE {100 * g['se']:.1f} %/rok",
             f"       próg obalenia {_pct(g['threshold'])}/rok (Σ za okres "
             f"{_pct(g['threshold_period'])}) → {g['verdict']}",

@@ -8,6 +8,7 @@ import json
 import math
 import re
 import shutil
+import statistics
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -24,6 +25,9 @@ from tools import strona_dziennika as sd
 ROOT = Path(__file__).resolve().parents[1]
 needs_git = pytest.mark.skipif(shutil.which("git") is None, reason="brak gita")
 LEG = od.Leg("T", "test", "wyniki.csv", "r_port", 0.10, 0.20, "ręcznie")
+D = date.fromisoformat
+BIND1 = od.reading_status(D("2026-12-24"), "2026-12-24")  # odczyt wiążący 1
+EARLY = od.reading_status(None, "2026-10-01")  # za wcześnie
 
 
 # ------------------------------------------------------------------ próg obalenia
@@ -44,8 +48,8 @@ def test_refutation_matches_hand_computation():
 def test_leg_reading_crosses_only_below_threshold_at_binding_reading():
     # n = 92: SE = 0,2/√(92/365) = 0,398366; próg = 0,1 − 2,31·0,398366 = −0,820226 /rok
     thr_daily = -0.820226 / 365
-    below = od.leg_reading(LEG, [-0.003] * 92)  # −1,095/rok < próg
-    above = od.leg_reading(LEG, [-0.002] * 92)  # −0,730/rok > próg
+    below = od.leg_reading(LEG, [-0.003] * 92, BIND1)  # −1,095/rok < próg
+    above = od.leg_reading(LEG, [-0.002] * 92, BIND1)  # −0,730/rok > próg
     assert -0.003 < thr_daily < -0.002
     assert below["threshold"] == pytest.approx(-0.820226, abs=1e-6)
     assert below["binding"] and below["reading"] == 1
@@ -54,45 +58,65 @@ def test_leg_reading_crosses_only_below_threshold_at_binding_reading():
     assert above["verdict"] == "próg obalenia nieprzekroczony (brak obalenia)"
     assert below["mean"] == pytest.approx(-1.095) and below["total"] == pytest.approx(-0.276)
     assert below["threshold_period"] == pytest.approx(-0.820226 * 92 / 365, abs=1e-6)
+    assert below["ci95"] == [pytest.approx(-1.095), pytest.approx(-1.095)]  # sd = 0
+
+
+def test_leg_ci95_hand_computed():
+    # ±0,01 na przemian przez 4 dni: średnia 0, sd (ddof=1) = 0,01·√(4/3) dziennie
+    g = od.leg_reading(LEG, [0.01, -0.01, 0.01, -0.01])
+    sd_ann = 0.01 * math.sqrt(4 / 3) * math.sqrt(365)
+    half = 1.96 * sd_ann / math.sqrt(4 / 365)
+    assert g["sd"] == pytest.approx(sd_ann)
+    assert g["ci95"] == [pytest.approx(-half), pytest.approx(half)]
+    assert od.leg_reading(LEG, [0.01])["ci95"] is None
 
 
 def test_too_early_is_only_a_preview():
-    g = od.leg_reading(LEG, [-0.05] * 89)
+    g = od.leg_reading(LEG, [-0.05] * 89, EARLY)
     assert not g["binding"] and g["label"] == "ZA WCZEŚNIE — tylko podgląd"
     assert g["crossed"] and g["verdict"] == "podgląd: średnia poniżej progu (nie wiąże)"
     assert "obalona" not in g["verdict"]
 
 
 @pytest.mark.parametrize(
-    "n, binding, reading",
+    "as_of, last, bound_at, binding, reading, label",
     [
-        (0, False, 0),
-        (89, False, 0),
-        (90, True, 1),
-        (92, True, 1),
-        (99, True, 1),
-        (100, False, 0),
-        (179, False, 0),
-        (180, True, 2),
-        (189, True, 2),
-        (190, False, 0),
-        (363, True, 3),
-        (372, True, 3),
-        (373, False, 0),
+        (None, "2026-10-01", None, False, 0, "ZA WCZEŚNIE"),
+        (None, "2026-12-24", None, False, 0, "podgląd bez --as-of"),  # bez --as-of nie wiąże
+        ("2026-12-23", "2026-12-23", None, False, 0, "ZA WCZEŚNIE"),  # dzień przed planem
+        ("2026-12-24", "2026-12-24", None, True, 1, "odczyt wiążący 1 z 3"),
+        ("2026-12-24", "2026-12-23", None, False, 0, "NIE WIĄŻE — migawka kończy się"),
+        ("2026-12-25", "2026-12-25", None, True, 1, "odczyt wiążący 1 z 3 — zapas"),
+        ("2026-12-25", "2026-12-25", "2026-12-24", False, 0, "NIE WIĄŻE — odczyt 1 odbył"),
+        ("2026-12-31", "2026-12-31", None, True, 1, "odczyt wiążący 1 z 3 — zapas"),  # plan + 7
+        ("2027-01-01", "2027-01-01", None, False, 0, "podgląd między odczytami"),
+        ("2027-03-23", "2027-03-23", None, False, 0, "podgląd między odczytami"),
+        ("2027-03-24", "2027-03-24", None, True, 2, "odczyt wiążący 2 z 3"),
+        ("2027-09-23", "2027-09-23", None, True, 3, "odczyt wiążący 3 z 3"),
+        ("2027-09-30", "2027-09-30", None, True, 3, "odczyt wiążący 3 z 3 — zapas"),
+        ("2027-10-01", "2027-10-01", None, False, 0, "po planie 3 odczytów"),
     ],
 )
-def test_reading_status_windows(n, binding, reading):
-    s = od.reading_status(n)
+def test_reading_status_is_calendar_based(as_of, last, bound_at, binding, reading, label):
+    s = od.reading_status(as_of and D(as_of), last, bound_at)
     assert (s["binding"], s["reading"]) == (binding, reading)
-    if n > 372:
-        assert s["label"].startswith("po planie 3 odczytów")
-    elif 100 <= n <= 179:
-        assert s["label"].startswith("podgląd między odczytami")
+    assert s["label"].startswith(label), s["label"]
+    assert s["days"] == (D(as_of or last) - D("2026-09-24")).days + 1
+
+
+def test_status_is_shared_by_legs_with_missing_values_and_late_start():
+    """Uwaga z przeglądu: X1 (start dzień później) i noga z brakami wiążą razem z R1."""
+    ts1 = od.leg_reading(LEG, [0.0003] * 87 + [""] * 5, BIND1)  # 92 dni, 5 braków
+    x1 = od.leg_reading(LEG, [0.0003] * 89, BIND1)  # X1 z 2 brakami ponad start
+    for g in (ts1, x1):
+        assert g["binding"] and g["reading"] == 1 and g["label"] == "odczyt wiążący 1 z 3"
+        assert g["verdict"].startswith("próg obalenia")
+    assert (ts1["n"], ts1["missing"]) == (87, 5)
+    assert ts1["se"] == pytest.approx(0.20 / math.sqrt(87 / 365))  # SE z n ważnych wartości
 
 
 def test_first_reading_date_is_christmas_eve_result():
-    last = date.fromisoformat(sd.R1_START) + timedelta(days=od.READ_DAYS[0] - 1)
-    assert last.isoformat() == "2026-12-24"
+    assert [d.isoformat() for d in od.PLAN_DATES] == ["2026-12-24", "2027-03-24", "2027-09-23"]
     assert sd.READING == "2026-12-25"
 
 
@@ -230,17 +254,37 @@ def test_mechanics_names_failing_criterion(kw, key):
 START = date(2026, 9, 24)
 
 
-def _journal(n_days: int, r_port: float = 0.0005, x1: bool = True) -> dict[str, str]:
-    """Dziennik n dni wyniku od 24.09: sygnały od 23.09, log przebiegu każdego dnia."""
+def _rt(i: int) -> float:  # trend: +0,004 co trzeci dzień, inaczej −0,001
+    return 0.004 if i % 3 == 0 else -0.001
+
+
+def _rc(i: int) -> float:  # premia: −0,002 w dni parzyste, +0,003 w nieparzyste
+    return -0.002 if i % 2 == 0 else 0.003
+
+
+def _rp(i: int) -> float:  # portfel: +0,0005 / −0,00025 na przemian
+    return 0.0005 if i % 2 == 0 else -0.00025
+
+
+def _rx(i: int) -> float:  # X1: +0,002 co czwarty dzień, inaczej −0,0005
+    return 0.002 if i % 4 == 0 else -0.0005
+
+
+def _journal(n_days: int, x1: bool = True, blanks: tuple[int, ...] = ()) -> dict[str, str]:
+    """Dziennik n dni wyniku od 24.09: sygnały od 23.09, log przebiegu każdego dnia.
+
+    Kolumny nóg są od siebie niezależne (różne wzory), żeby test widział pomyloną kolumnę;
+    `blanks` — dni (indeksy) z pustym r_trend.
+    """
     days = [START + timedelta(days=i) for i in range(n_days)]
     asofs = [START - timedelta(days=1)] + days[:-1] + [days[-1]]
     res = ["date,r_trend,r_coinbase,k_trend,k_coinbase,r_port,equity,drawdown"]
     xr = ["date,r_x1,equity,drawdown"]
     for i, d in enumerate(days):
-        rp = r_port if i % 2 == 0 else -r_port / 2
-        res.append(f"{d},{2 * rp},{rp},1.5,0.5,{rp},1.0,0.0")
+        rt = "" if i in blanks else _rt(i)
+        res.append(f"{d},{rt},{_rc(i)},1.5,0.5,{_rp(i)},1.0,0.0")
         if d > START:
-            xr.append(f"{d},{-rp},1.0,0.0")
+            xr.append(f"{d},{_rx(i)},1.0,0.0")
     sig = ["as_of,component,symbol,exposure,margin,k,today"]
     log = []
     for a in sorted(set(asofs)):
@@ -269,25 +313,75 @@ def _now(n_days: int) -> datetime:
     )
 
 
+def _repo_at(tmp_path: Path, commits: list[tuple[str, int]], **kw) -> Path:
+    """Repo z commitami „Dziennik: przebieg <data>” — każdy z dziennikiem `_journal(n)`."""
+    (day0, n0), *rest = commits
+    repo = _repo(tmp_path, _journal(n0, **kw))
+    _git(repo, "commit", "-q", "--amend", "-m", f"Dziennik: przebieg {day0} (host1)")
+    for day, n in rest:
+        for name, body in _journal(n, **kw).items():
+            (repo / "dziennik" / name).write_text(body, encoding="utf-8")
+        _git(repo, "commit", "-q", "-am", f"Dziennik: przebieg {day} (host1)")
+    _git(repo, "update-ref", "refs/remotes/origin/master", "HEAD")
+    return repo
+
+
 @needs_git
 def test_reading_on_first_planned_day_is_binding(tmp_path):
-    repo = _repo(tmp_path, _journal(92))
-    rep = od.reading(str(repo), now=_now(92))
-    assert rep["window"] == {"first": "2026-09-24", "last": "2026-12-24", "n": 92}
-    assert rep["status"]["binding"] and rep["status"]["reading"] == 1
+    blanks = (10, 20, 30, 40, 50)  # 5 braków r_trend (30 — dzień „+0,004”, reszta „−0,001”)
+    repo = _repo_at(tmp_path, [("2026-12-25", 92)], blanks=blanks)
+    rep = od.reading(str(repo), as_of=date(2026, 12, 24))
+    assert rep["window"] == {"first": "2026-09-24", "last": "2026-12-24", "n": 92, "days": 92}
+    assert rep["status"]["binding"] and rep["status"]["reading"] == 1 and rep["warnings"] == []
     assert all(v["ok"] for v in rep["mechanics"].values()), rep["mechanics"]
     assert rep["mechanics"]["1_kompletnosc"]["days"] == 93  # as_of 23.09 → 24.12
     assert rep["mechanics"]["4_zgodnosc_sz1"]["margin"]["median"] == pytest.approx(0.22)
-    assert [g["key"] for g in rep["legs"]] == ["TS1", "CP1", "R1", "X1"]
-    x1 = rep["legs"][-1]
-    assert x1["n"] == 91 and x1["binding"]  # X1 od 25.09
-    r1 = next(g for g in rep["legs"] if g["key"] == "R1")
-    assert r1["mean"] == pytest.approx((46 * 0.0005 - 46 * 0.00025) / 92 * 365)
-    assert r1["verdict"] == "próg obalenia nieprzekroczony (brak obalenia)"
-    assert rep["vol_band"]["binding"] and rep["vol_band"]["ok"] is False  # ~1 %/rok < 13 %
+    legs = {g["key"]: g for g in rep["legs"]}
+    assert list(legs) == ["TS1", "CP1", "R1", "X1"]
+    # ręcznie, dni i = 0…91: trend 31 dni „+0,004” i 61 „−0,001” minus braki (1 „+”, 4 „−”)
+    exp = {
+        "TS1": (87, 30 * 0.004 - 57 * 0.001),
+        "CP1": (92, 46 * -0.002 + 46 * 0.003),
+        "R1": (92, 46 * 0.0005 - 46 * 0.00025),
+        "X1": (91, 22 * 0.002 - 69 * 0.0005),  # i = 1…91: 22 dni podzielnych przez 4
+    }
+    for key, (n, total) in exp.items():
+        g = legs[key]
+        assert g["n"] == n and g["binding"] and g["reading"] == 1, key
+        assert g["total"] == pytest.approx(total), key
+        assert g["mean"] == pytest.approx(total / n * 365), key
+    assert legs["TS1"]["missing"] == 5 and legs["TS1"]["column"] == "r_trend"
+    assert legs["R1"]["verdict"] == "próg obalenia nieprzekroczony (brak obalenia)"
+    r_port = [_rp(i) for i in range(92)]
+    assert rep["vol_band"]["vol"] == pytest.approx(statistics.stdev(r_port) * math.sqrt(365))
+    assert rep["vol_band"]["binding"] and rep["vol_band"]["ok"] is False  # ~0,7 %/rok < 13 %
     txt = od.render(rep)
-    assert "odczyt wiążący 1 z 3" in txt and "Brak obalenia ≠ potwierdzenie" in txt
-    assert "ZA WCZEŚNIE" not in txt
+    assert "STATUS: odczyt wiążący 1 z 3" in txt and "Brak obalenia ≠ potwierdzenie" in txt
+    assert "ZA WCZEŚNIE" not in txt and "UWAGA" not in txt and "przedział 95 %" in txt
+
+
+@needs_git
+def test_preview_without_as_of_never_binds_and_warns_when_stale(tmp_path):
+    repo = _repo_at(tmp_path, [("2026-12-25", 92)])
+    fresh = od.reading(str(repo), now=datetime(2026, 12, 27, 6, 30, tzinfo=timezone.utc))
+    assert not fresh["status"]["binding"] and fresh["warnings"] == []
+    assert fresh["status"]["label"].startswith("podgląd bez --as-of")
+    assert not any(g["binding"] for g in fresh["legs"]) and not fresh["vol_band"]["binding"]
+    stale = od.reading(str(repo), now=datetime(2026, 12, 28, 6, 30, tzinfo=timezone.utc))
+    assert stale["warnings"] == [
+        "dziennik starszy niż 2 dni (ostatni przebieg 2026-12-25) — zrób git fetch"
+    ]
+    assert "UWAGA: dziennik starszy niż 2 dni" in od.render(stale)
+
+
+@needs_git
+def test_vol_band_binds_only_at_first_reading(tmp_path):
+    repo = _repo_at(tmp_path, [("2027-03-25", 182)])
+    rep = od.reading(str(repo), as_of=date(2027, 3, 24))
+    assert rep["status"]["binding"] and rep["status"]["reading"] == 2
+    assert rep["window"]["days"] == 182 and rep["vol_band"]["n"] == 182
+    assert not rep["vol_band"]["binding"]
+    assert "[tylko opis: pasmo zapisane dla odczytu 1" in od.render(rep)
 
 
 @needs_git
@@ -303,20 +397,52 @@ def test_reading_short_journal_says_too_early_and_skips_absent_x1(tmp_path):
 
 @needs_git
 def test_as_of_reads_journal_snapshot(tmp_path):
-    repo = _repo(tmp_path, _journal(92))  # commit „Dziennik: przebieg 2026-09-26 (host1)”
-    _git(repo, "commit", "-q", "--amend", "-m", "Dziennik: przebieg 2026-12-25 (host1)")
-    first = sd.git(str(repo), "rev-parse", "HEAD").strip()
-    for name, body in _journal(95).items():
-        (repo / "dziennik" / name).write_text(body, encoding="utf-8")
-    _git(repo, "commit", "-q", "-am", "Dziennik: przebieg 2026-12-28 (host1)")
-    _git(repo, "update-ref", "refs/remotes/origin/master", "HEAD")
+    # commit „12-25” ma już wynik za 12-25 (obcinany), „12-26” leży za granicą as_of + 1
+    repo = _repo_at(tmp_path, [("2026-12-25", 93), ("2026-12-26", 94), ("2026-12-28", 96)])
+    shas = sd.git(str(repo), "log", "--format=%H", "origin/master").split()[::-1]
     rep = od.reading(str(repo), as_of=date(2026, 12, 24))
-    assert rep["ref"] == first and rep["as_of"] == "2026-12-24"
-    assert rep["window"]["n"] == 92 and rep["mechanics"]["1_kompletnosc"]["share"] == 1.0
+    assert rep["ref"] == shas[0] and rep["as_of"] == "2026-12-24"
+    assert rep["window"]["n"] == 92 and rep["window"]["last"] == "2026-12-24"  # obcięte
+    # zegar odczytu = as_of + 1 dzień (nie bieżąca data): as_of 23.09 → 24.12 = 93 dni
+    assert rep["mechanics"]["1_kompletnosc"]["days"] == 93
+    assert rep["mechanics"]["1_kompletnosc"]["share"] == 1.0
+    assert rep["status"]["binding"] and rep["warnings"] == []
     assert sd.REF == "origin/master"  # ref przywrócony
-    assert od.reading(str(repo))["window"]["n"] == 95
+    assert od.reading(str(repo))["window"]["n"] == 96
+    # 12-25: odczyt 1 już się odbył przy 12-24 → ten wydruk nie wiąże
+    later = od.reading(str(repo), as_of=date(2026, 12, 25))
+    assert later["ref"] == shas[1] and not later["status"]["binding"]
+    assert later["status"]["label"].startswith("NIE WIĄŻE — odczyt 1 odbył się przy --as-of 2026")
     with pytest.raises(ValueError, match="brak commita dziennika"):
         od.snapshot_ref(str(repo), date(2026, 12, 20))
+
+
+@needs_git
+def test_as_of_fallback_when_plan_snapshot_is_incomplete(tmp_path):
+    # przebieg 25.12 nie dopisał wyniku za 24.12; pierwsza pełna migawka — 26.12 (wynik za 25.12)
+    repo = _repo_at(tmp_path, [("2026-12-25", 91), ("2026-12-26", 93)])
+    plan = od.reading(str(repo), as_of=date(2026, 12, 24))
+    assert not plan["status"]["binding"] and plan["window"]["last"] == "2026-12-23"
+    assert plan["status"]["label"].startswith("NIE WIĄŻE — migawka kończy się na 2026-12-23")
+    assert plan["warnings"] == ["migawka kończy się na dniu 2026-12-23, a nie na 2026-12-24"]
+    fb = od.reading(str(repo), as_of=date(2026, 12, 25))
+    assert fb["status"]["binding"] and fb["status"]["reading"] == 1
+    assert fb["status"]["planned_as_of"] == "2026-12-24" and fb["window"]["days"] == 93
+    assert all(g["binding"] for g in fb["legs"])
+    assert od.first_full_snapshot(str(repo), date(2026, 12, 24), date(2026, 12, 26)) == (
+        "2026-12-25"
+    )
+    # migawka starsza niż as_of + 1 (brak commita „12-28”) → ostrzeżenie
+    old = od.reading(str(repo), as_of=date(2026, 12, 27))
+    assert "migawka z przebiegu 2026-12-26, a nie 2026-12-28" in old["warnings"][0]
+
+
+@needs_git
+def test_as_of_before_r1_start_has_no_false_warning(tmp_path):
+    repo = _repo_at(tmp_path, [("2026-09-24", 1)])  # wynik za 24.09 obcięty przez --as-of 23.09
+    rep = od.reading(str(repo), as_of=date(2026, 9, 23))
+    assert rep["window"]["last"] is None and rep["window"]["days"] == 0
+    assert rep["status"]["label"] == "ZA WCZEŚNIE — tylko podgląd" and rep["warnings"] == []
 
 
 @needs_git
@@ -350,7 +476,7 @@ def test_mu_sigma_hand_computed():
 def test_readme_records_the_same_constants():
     """Umowa odczytu w dziennik/README.md i stałe skryptu nie mogą się rozjechać."""
     text = (ROOT / "dziennik" / "README.md").read_text(encoding="utf-8")
-    sec = text.split("Zmiana kryteriów odczytu", 1)[1].split("\n## ", 1)[0]
+    sec = text.split("### Zmiana kryteriów odczytu", 1)[1].split("\n## ", 1)[0]
     fmt = lambda x: f"{100 * x:.2f}".replace(".", ",")  # noqa: E731
     for g in od.LEGS:
         row = next(line for line in sec.splitlines() if line.startswith(f"| {g.key} "))
@@ -359,3 +485,9 @@ def test_readme_records_the_same_constants():
     assert re.search(r"\[13; 31\]", sec) and "python -m backtest.odczyt_dziennika" in sec.replace(
         "py -m", "python -m"
     )
+    # umowa: wiąże tylko --as-of = data planu; każda komenda odczytu i podglądu odświeża origin
+    assert "WYŁĄCZNIE wydruk z `--as-of` równym dacie planu" in " ".join(sec.split())
+    cmds = [line for line in sec.splitlines() if "-m backtest.odczyt_dziennika " in line]
+    assert len(cmds) == 4 and all(line.startswith("git fetch && ") for line in cmds), cmds
+    for d in od.PLAN_DATES:
+        assert f"--as-of {d.isoformat()}" in sec

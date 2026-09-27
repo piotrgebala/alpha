@@ -271,7 +271,8 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
 3. **Terminowość:** dane z poprzedniego dnia dostępne przy przebiegu w ≥ 95 % dni.
 4. **Zgodność z założeniami SZ1:** depozyt w medianie 15–35 % kapitału, mnożniki w granicach sufitu.
 5. **Wynik (opisowo, bez werdyktu):** zwrot z przedziałem, dopisany do wspólnego rachunku „poza
-   próbą” razem z CP1P i TP1. Nie jest testem przewagi.
+   próbą” razem z CP1P i TP1. Nie jest testem przewagi. *(Zastąpione 2026-09-27 progiem obalenia —
+   patrz „Zmiana kryteriów odczytu” niżej.)*
 
 ### Zmiana kryteriów odczytu (decyzja użytkownika 2026-09-27, przed pierwszym odczytem)
 
@@ -285,7 +286,7 @@ skrypt odczytu tylko czyta pliki). Kryteria 1–4 zostają jak wyżej.
 włącznie). Reguła R1 celuje w 20 %/rok, więc wynik poza pasmem oznacza raczej błąd mechaniki (np. zły mnożnik,
 błąd rzędu ≥ 1,5×) niż pecha: na historii R1 poza pasmem leży 5,1 % okien 92-dniowych (sprawdzone drugą
 drogą, `docs/rag/11` sekcja 8). Pasmo zapisano tylko dla ~92 dni; przy odczytach po 6 i 12 miesiącach
-zmienność jest podawana opisowo.
+zmienność jest podawana opisowo (pasmo wiąże tylko w odczycie 1).
 
 **Nowe brzmienie kryterium 5 — próg obalenia (szczebel 3 ADR-09), zamiast „opisowo”.** Dla każdej nogi osobno:
 TS1 (`wyniki.csv: r_trend`), CP1 (`r_coinbase`), R1 (`r_port`) i X1 (`x1_wyniki.csv: r_x1`):
@@ -297,16 +298,24 @@ TS1 (`wyniki.csv: r_trend`), CP1 (`r_coinbase`), R1 (`r_port`) i X1 (`x1_wyniki.
   **Brak obalenia nie jest potwierdzeniem przewagi** — przy tej długości danych próg odrzuca tylko wyniki
   wyraźnie gorsze od założeń;
 - **odczyty wiążące: 3** — po ~3, 6 i 12 miesiącach, czyli przy 92, 182 i 365 dniach wyniku R1 (ostatni dzień
-  wyniku 2026-12-24, 2027-03-24, 2027-09-23; odczyt dzień później). Wiąże wydruk w oknie od 2 dni przed
-  do 7 dni po planie; przy n < 90 skrypt pisze „ZA WCZEŚNIE — tylko podgląd”, a między odczytami — „podgląd”;
+  wyniku 2026-12-24, 2027-03-24, 2027-09-23; odczyt dzień później). **Wiąże WYŁĄCZNIE wydruk z `--as-of` równym
+  dacie planu**, gdy migawka dziennika zawiera wynik R1 za ten dzień. Okno 7 dni po planie to tylko zapas: gdy
+  migawka na datę planu jest niepełna (przebieg nie doszedł), wiąże pierwsza data w oknie z pełną migawką —
+  skrypt sprawdza to sam i pisze „NIE WIĄŻE” przy każdej innej dacie. Ta sama migawka daje ten sam wydruk:
+  kolejne uruchomienia to kopie, nie nowe odczyty. Status liczy się raz, z kalendarza, i jest wspólny dla
+  wszystkich nóg: X1 (start dzień później) i noga z brakami wiążą razem z R1, a braki zmniejszają tylko ich n
+  w SE. Przed pierwszą datą planu skrypt pisze „ZA WCZEŚNIE — tylko podgląd”, bez `--as-of` i między
+  odczytami — „podgląd”. Wydruk ostrzega („UWAGA”), gdy migawka nie sięga dnia `--as-of` albo gdy dziennik
+  jest starszy niż 2 dni;
 - **z = 2,31 na każdym z 3 odczytów** (jeden stały próg). Dobór: łączna jednostronna szansa fałszywego
   obalenia nogi, która naprawdę ma zakładane μ, przez wszystkie 3 odczyty = **2,5 %** — tyle, ile daje
   pojedynczy odczyt przy 1,96. Metoda: symulacja błądzenia losowego (kroki dzienne N(0, 1), statystyka
   odczytu k to suma po n_k dniach / √n_k; odczyty są zagnieżdżone, więc skorelowane: √(n_i/n_j)),
   `simulate_z()` w skrypcie, 10 mln powtórzeń, ziarno 20260927 → 2,3102; druga droga — dokładna całka
   normalna trójwymiarowa (`scipy.stats.multivariate_normal`) → 2,3113. Dla porównania: stałe 1,96 dałoby
-  5,7 % fałszywych obaleń, a Bonferroni (bez korelacji; liczba 2,39 z przeglądu) — 2,394, czyli próg
-  łagodniejszy niż trzeba. Przy 4 nogach łączna szansa fałszywego obalenia którejkolwiek wynosi do ~10 %
+  5,7 % fałszywych obaleń. Bonferroni 2,394 (liczba 2,39 z przeglądu) pomija korelację odczytów: łączna
+  szansa fałszywego obalenia wyszłaby 2,0 % zamiast 2,5 %, czyli próg obalenia niższy (nogę trudniej obalić),
+  niż wymaga założenie. Przy 4 nogach łączna szansa fałszywego obalenia którejkolwiek wynosi do ~10 %
   (nogi są skorelowane, bo R1 składa się z TS1 i CP1).
 
 **Stałe μ i σ** (roczne, arytmetyczne: średnia dzienna × 365, σ dzienna × √365) — konfiguracja dziennika na
@@ -325,6 +334,8 @@ w `backtest/odczyt_dziennika.py::LEGS`, zgodność tabeli ze skryptem pilnuje te
   średnią arytmetyczną, więc potrzebna jest arytmetyczna — ta sama historia daje 18,17 %. (18,6 z SZ1 to stary
   CAGR na obciętym uniwersum.) TS1 w dzienniku to trend **z likwidacją 2×** — dlatego 10,69, a nie 11,1 z RU1
   (bez likwidacji).
+- **Przedział:** obok średniej wydruk podaje przedział 95 % zrealizowanej średniej (średnia ± 1,96 × zrealizowane
+  odchylenie / √(n/365)) — opis efektu (bramka 16b), nie część progu.
 - **Co to znaczy dla decyzji:** progi są bardzo niskie (np. R1 po kwartale −20,5 % sumy zwrotów), bo 3 miesiące
   to mało danych. Odczyt 25.12 rozstrzyga więc mechanikę (1–4b), a przewagi nie rozstrzyga. Szansa, że noga
   **bez żadnej przewagi** (prawdziwe μ = 0) zostanie obalona w którymś z 3 odczytów: TS1 ~7 %, CP1 ~11 %,
@@ -344,13 +355,14 @@ Wydruk komendy stałych (2026-09-27):
 ```
 
 **Komenda odczytu** (czyta tylko `origin/master:dziennik/*`, niczego nie zapisuje; `--as-of` odtwarza stan
-z ostatniego commita „Dziennik: przebieg” z datą ≤ as_of + 1 dzień):
+z ostatniego commita „Dziennik: przebieg” z datą ≤ as_of + 1 dzień; `git fetch` przed każdym wydrukiem, bo
+skrypt czyta lokalny `origin/master`):
 
 ```
 git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2026-12-24          # odczyt 1
-PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-03-24                        # odczyt 2
-PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-09-23                        # odczyt 3
-PYTHONUTF8=1 py -m backtest.odczyt_dziennika [--repo .] [--json]                       # podgląd
+git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-03-24          # odczyt 2
+git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-09-23          # odczyt 3
+git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika [--repo .] [--json]         # podgląd
 ```
 
 Skrypt jest reporterem („próg przekroczony / nieprzekroczony”); werdykt o każdej nodze podpisuje Claude
