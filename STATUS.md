@@ -3002,3 +3002,22 @@ ETH/SOL (80), on-chain na BTC (P4, 91), Glassnode bez sprawdzenia pokrycia (98),
 (reguła po reżimie na 3 obserwacjach); (b) płatni dostawcy on-chain — decyzja 2026-09-25: NIE na razie (rekomendacja: nie bez katalogu
 pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) kolektor likwidacji — decyzja 2026-09-25: TAK, URUCHOMIONY (LK0; cron do dodania przez użytkownika); (e) PR1 wykonana — decyzja przy szczeblu 4: depozyt 5 % liczony górnym oszacowaniem Σ k/dźwignia (≈ 10 % kapitału na strategię; rekomendacja PR1);
 (f) nowa wersja skilla katalogu — decyzja 2026-09-25: TAK, PACZKA GOTOWA (wgranie po stronie użytkownika); (g) `black --check .` — porządki na 15 starych plikach.
+
+### ETAP 6 — przegląd kandydatów (2026-09-27): co jeszcze przetestować i co dopisać do dziennika
+
+> Prośba użytkownika: „sprawdź cały projekt, co można jeszcze przetestować, czy są nowe niezauważone kombinacje
+> do testów i do dodania do dziennika”. Pełny raport: [`docs/rag/11`](docs/rag/11_przeglad_kandydatow_2026-09-27.md)
+> (przegląd, 0 odczytów). **Decyzje należą do użytkownika.**
+
+- **Wynik:** 35 kandydatów — 3 ok, 18 wątpliwych, 14 odrzuconych (lista z powodami w raporcie, sekcja 5 — nie proponować ponownie).
+  Historia 2021–2026 nie rozstrzygnie nowej hipotezy: 41. odczyt, puste pomysły dają t ≈ 2,2, dowód (DSR 0,95) wymaga t ≈ 3,84.
+- **Propozycje (kolejność):** (1) kopia `~/likwidacje` poza serwerem + kolektor pełnych likwidacji Bybit + dzienny indeks LK0 —
+  decyzja: gdzie kopia, security-review, cron; (2) skrypt odczytu 25.12 z progami z góry + kryterium 4b (zmienność R1 w [13; 31] %/rok) —
+  decyzja: kryterium 5 „opisowo” → „próg obalenia”; (3) Poprawka 11 dziennika: `rozbicie.csv` (cena/funding/koszt/obrót), opcjonalnie
+  `fazy.csv`, `koszyk.csv`; (4) rejestr odczytów historii + `required_t(N, dsr)` (0 wariantów, bez decyzji);
+  (5) przed szczeblem 4 — opisowy pomiar kosztu spóźnionego wejścia na archiwum 1h.
+- **Nowej nogi dziennika nie proponuję** — żaden kandydat przekrojowy nie przeszedł filtra; pakiet przekrojowy na historii = 0 odczytów,
+  dopóki użytkownik nie zdejmie STOP serii X/B1.
+- **Do poprawienia w skillu `quant-strategy-catalog`** (nowa wersja przy następnej aktualizacji): brak rodziny low-vol/BAB w `families.md`,
+  opis D1 „TL1 jako forma fundingu” (TL1 używał OI).
+
