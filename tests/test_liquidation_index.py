@@ -234,9 +234,67 @@ def test_csv_naglowek_i_pusty_dzien():
 
 
 def test_csv_odrzuca_przecinek_w_symbolu():
-    idx = li.aggregate("bybit", "2026-09-25", [bb(D0, sym="A,B")])
+    """Druga linia obrony: wiersz z przecinkiem złożony z pominięciem `parse_line` → błąd CSV."""
+    idx = li.aggregate("bybit", "2026-09-25", [bb(D0, sym="AB")])
+    idx.rows[0]["symbol"] = "A,B"
     with pytest.raises(ValueError):
         li.index_csv(idx)
+
+
+# ------------------------------------------------------------------ złe pola z sieci = zła linia
+@pytest.mark.parametrize(
+    "t", [10**17, 10**18, 10**30, -(10**16), -1, 0, li.MIN_EVENT_MS - 1, li.MAX_EVENT_MS + 1]
+)
+def test_czas_poza_zakresem_to_zla_linia_nie_blad_dnia(t):
+    """T spoza 2019…2100 (np. 10**17 → „year 3170843 is out of range”) liczy się w `zle_linie`."""
+    for gielda, line in (("binance", bn(t)), ("bybit", bb(t))):
+        idx = li.aggregate(gielda, "2026-09-25", [line, bn(D0) if gielda == "binance" else bb(D0)])
+        assert idx.bad_lines == 1 and len(idx.rows) == 1
+        assert li.index_csv(idx).count(b"\n") == 2  # nagłówek + 1 wiersz
+
+
+@pytest.mark.parametrize("t", ["1e400", "true", "null", '"abc"', "1.5e300"])
+def test_czas_niecalkowity_lub_nieskonczony_to_zla_linia(t):
+    line = bb(D0).replace(f'"T": {D0}', f'"T": {t}')
+    assert line != bb(D0)
+    idx = li.aggregate("bybit", "2026-09-25", [line, bb(D0)])
+    assert idx.bad_lines == 1 and len(idx.rows) == 1
+
+
+def test_czas_na_granicach_zakresu_przyjety():
+    idx = li.aggregate("bybit", "2019-01-01", [bb(li.MIN_EVENT_MS), bb(li.MAX_EVENT_MS)])
+    assert idx.bad_lines == 0
+    assert idx.rows[0]["pierwsze_utc"] == "2019-01-01T00:00:00.000Z"
+    assert idx.rows[0]["ostatnie_utc"] == "2100-01-01T00:00:00.000Z"
+
+
+@pytest.mark.parametrize(
+    "sym", ["X,Y", 'A"B', "A B", "A\nB", "A\tB", "=CMD()", "+1", "-1USDT", "@SUM", "", "A" * 41]
+)
+def test_symbol_niebezpieczny_dla_csv_to_zla_linia(sym):
+    idx = li.aggregate("bybit", "2026-09-25", [bb(D0, sym=sym), bb(D0 + 1)])
+    assert idx.bad_lines == 1 and [r["symbol"] for r in idx.rows] == ["BTCUSDT"]
+    li.index_csv(idx)  # nie rzuca
+
+
+@pytest.mark.parametrize(
+    "sym", ["1000PEPEUSDT", "BTCUSDT_261225", "BTCUSD_PERP", "龙虾USDT", "币安人生USDT", "A" * 40]
+)
+def test_prawdziwe_symbole_przyjete(sym):
+    """Symbole spoza ASCII to prawdziwe kontrakty Binance (LK0 2026-09-25…27) — nie odrzucamy."""
+    idx = li.aggregate("binance", "2026-09-25", [bn(D0, sym)])
+    assert idx.bad_lines == 0 and idx.rows[0]["symbol"] == sym
+    assert sym.encode() in li.index_csv(idx)
+
+
+def test_coin_m_rozpoznany_po_st_2_takze_przy_nazwie_spoza_wzorca():
+    """`st` = 2 wystarcza (symbol bez `_PERP` / daty) — obie reguły `market_of` są potrzebne."""
+    rec = {"s": "BTCUSD", "st": 2, "q": "7", "p": "83000", "ap": "83100"}
+    assert li.market_of("binance", rec) == "CM"
+    assert li.notional("binance", rec) == Decimal("700")  # 7 × 100 USD, nie 7 × 83 100
+    rec_str = {**rec, "st": "2", "s": "ETHUSD", "q": "5"}
+    assert li.notional("binance", rec_str) == Decimal("50")
+    assert li.market_of("binance", {**rec, "st": 1}) == "UM"
 
 
 def _gen_lines(draw_rows):

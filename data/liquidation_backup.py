@@ -13,38 +13,57 @@ Co robi jeden przebieg (dla każdego ZAMKNIĘTEGO dnia obu katalogów; dzień UT
    inaczej: gzip deterministyczny (`mtime=0`, stała nazwa `YYYY-MM-DD.jsonl` w nagłówku, poziom 9)
    → `<kopia>/<gielda>/YYYY-MM-DD.jsonl.gz`, weryfikacja (rozpakowane archiwum == źródło bajt w bajt,
    ta sama liczba linii), indeks `<kopia>/indeks/<gielda>_YYYY-MM-DD.csv` (`data/liquidation_index.py`);
-   źródło zmienione po fakcie albo uszkodzone archiwum → przeliczenie i wpis w `kopia.log`;
+   źródło zmienione po fakcie (DOPISANE zdarzenia) albo uszkodzone archiwum → przeliczenie i wpis
+   w `kopia.log`; źródło SKRÓCONE albo z innym początkiem niż archiwum (pliki kolektorów są tylko
+   dopisywane, więc to uszkodzenie, nie nowe dane) → archiwum, indeks i manifest ZOSTAJĄ, wpis
+   „ŹRÓDŁO SKRÓCONE/NADPISANE” w logu i pole `alarmy` w `status.json` (nie jest błędem — nie
+   wywołuje ponowień); świadome przyjęcie nowej wersji: `--przyjmij-skrocone`;
 3. `manifest.csv` (dzień, giełda, linie, złe linie, bajty i sha256 źródła i archiwum, wersja
    i sha256 indeksu — nowa `INDEX_VERSION` albo uszkodzony indeks → przeliczenie indeksu);
 4. `git add` + commit tylko przy zmianach (dwa przebiegi bez nowych danych → 0 nowych commitów);
 5. push na `origin` z `GIT_SSH_COMMAND="ssh -i ${CLAS5_KOPIA_KEY:-~/.ssh/likwidacje_deploy}
-   -o IdentitiesOnly=yes -o BatchMode=yes"`; brak `origin` albo błąd push → wpis
-   „BRAK ZDALNEJ KOPII: …” w `kopia.log` i kod wyjścia 0 (kopia nigdy nie zatrzymuje kolektorów).
+   -o IdentitiesOnly=yes -o BatchMode=yes"` (ścieżka klucza cytowana `shlex.quote` — git wykonuje
+   tę wartość przez powłokę); brak `origin` albo błąd push → wpis „BRAK ZDALNEJ KOPII: …”
+   w `kopia.log` i kod wyjścia 0 (kopia nigdy nie zatrzymuje kolektorów). Pierwszy push przez ssh
+   wymaga hosta w `~/.ssh/known_hosts` (`BatchMode=yes` nie zapyta) — `ssh-keyscan` przed cronem.
 
 Tryb dzienny: wywołanie co 5 min (cron przez `tools/likwidacje_kopia.sh`) robi pracę raz na dobę —
 pierwsze po 00:15 UTC (spóźnione zdarzenia z poprzedniej doby zdążą się dopisać); znacznik
 `.ostatni_przebieg` = dzień UTC ostatniego udanego przebiegu. `--teraz` wymusza przebieg.
-Pliki bieżącego dnia NIGDY nie są kopiowane (są w trakcie zapisu). W katalogu kopii poza gitem:
-`kopia.log`, `status.json`, `.ostatni_przebieg`, `.lock`, `kopia.out` (`.gitignore`).
+Ponowienia ograniczone: przebieg z błędem (kod 1) zapisuje `.ostatni_blad` i następny pełny
+przebieg rusza najwcześniej po `RETRY_AFTER` (60 min), nie co 5 min; nieudany push na
+skonfigurowany `origin` zapisuje `.push_zalegly` i kolejne wywołania (co `RETRY_AFTER`) robią
+TYLKO tani `git push`, bez przeliczania dni — zdalna kopia dogania po awarii sieci w godzinę,
+nie w dobę. Pliki bieżącego dnia NIGDY nie są kopiowane (są w trakcie zapisu). W katalogu kopii
+poza gitem: `kopia.log`, `status.json`, `.ostatni_przebieg`, `.ostatni_blad`, `.push_zalegly`,
+`.lock`, `kopia.out` (`.gitignore`).
 
 Zasady:
 - czyste funkcje (`gzip_bytes`, `verify_archive`, `is_due`, `manifest_csv`/`parse_manifest`)
   testowane bez sieci (`tests/test_liquidation_backup.py`, push na lokalne `git init --bare`);
-- git przez `subprocess` z listą argumentów (bez powłoki), `GIT_TERMINAL_PROMPT=0`, limit czasu push;
+- git przez `subprocess` z listą argumentów (bez powłoki), `GIT_TERMINAL_PROMPT=0`, limit czasu push
+  (po przekroczeniu zabijana cała grupa procesów — także zawieszony `ssh`); jawne `--git-dir`
+  i `--work-tree` katalogu kopii, a ze środowiska usuwane zmienne `GIT_*` sterujące repozytorium
+  i tożsamością (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_AUTHOR_*`, …) — wywołanie
+  z hooka innego repo nie może commitować do cudzego repozytorium ani zmienić jego konfiguracji;
 - jedyne połączenie sieciowe to `git push` na skonfigurowany ręcznie `origin` (security-review).
 
     PYTHONUTF8=1 py -m data.liquidation_backup                 # tryb dzienny (katalogi domyślne)
     PYTHONUTF8=1 py -m data.liquidation_backup --teraz --kopia /tmp/kopia --binance ~/likwidacje
+    PYTHONUTF8=1 py -m data.liquidation_backup --teraz --przyjmij-skrocone   # po decyzji człowieka
 """
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import gzip
 import hashlib
 import io
 import json
 import os
+import shlex
+import signal
 import subprocess
 import sys
 import zlib
@@ -55,13 +74,21 @@ from data import liquidation_index as li
 
 DAILY_AFTER = dt.time(0, 15)
 MARKER = ".ostatni_przebieg"
+ERROR_MARKER = ".ostatni_blad"
+PUSH_MARKER = ".push_zalegly"
+RETRY_AFTER = dt.timedelta(minutes=60)
 LOG_NAME = "kopia.log"
 STATUS_NAME = "status.json"
 MANIFEST_NAME = "manifest.csv"
 BRANCH = "main"
 GIT_USER = "clas5-kopia"
 PUSH_TIMEOUT_S = 300
-GITIGNORE = "kopia.log\nkopia.out\nstatus.json\n.ostatni_przebieg\n.lock\n*.tmp\n"
+GITIGNORE = (
+    "kopia.log\nkopia.out\nstatus.json\n.ostatni_przebieg\n.ostatni_blad\n.push_zalegly\n"
+    ".lock\n*.tmp\n"
+)
+# zmienne GIT_* przepuszczane do gita (reszta GIT_* usuwana — docstring, „Zasady”)
+GIT_ENV_KEEP = frozenset({"GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_SYSTEM"})
 MANIFEST_COLUMNS = (
     "dzien",
     "gielda",
@@ -126,12 +153,46 @@ def verify_archive(archive: bytes, source: bytes) -> list[str]:
     return problems
 
 
-def is_due(now: dt.datetime, marker_day: str | None, teraz: bool = False) -> bool:
-    """Czy przebieg dzienny ma dziś pracować: `--teraz` albo (po 00:15 UTC i nie było go dziś)."""
+def is_due(
+    now: dt.datetime,
+    marker_day: str | None,
+    teraz: bool = False,
+    last_error: dt.datetime | None = None,
+) -> bool:
+    """Czy przebieg dzienny ma teraz pracować: `--teraz` albo (po 00:15 UTC, nie było go dziś
+    i od ostatniego błędu minęło `RETRY_AFTER` — trwały błąd nie daje 288 przebiegów na dobę)."""
     if teraz:
         return True
     now = now.astimezone(dt.timezone.utc)
-    return now.time() >= DAILY_AFTER and marker_day != now.date().isoformat()
+    if now.time() < DAILY_AFTER or marker_day == now.date().isoformat():
+        return False
+    return last_error is None or now - last_error >= RETRY_AFTER
+
+
+def read_time_marker(path: Path) -> dt.datetime | None:
+    """Znacznik z czasem ISO (`.ostatni_blad`, `.push_zalegly`) → datetime UTC; brak/zły → None."""
+    try:
+        t = dt.datetime.fromisoformat(Path(path).read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+    return t.astimezone(dt.timezone.utc) if t.tzinfo else t.replace(tzinfo=dt.timezone.utc)
+
+
+def write_time_marker(path: Path, now: dt.datetime) -> None:
+    stamp = now.astimezone(dt.timezone.utc).isoformat(timespec="seconds")
+    li.write_if_changed(Path(path), (stamp + "\n").encode("utf-8"))
+
+
+def ssh_command(key: Path) -> str:
+    """Wartość `GIT_SSH_COMMAND` (git wykonuje ją przez powłokę → ścieżka klucza cytowana)."""
+    return f"ssh -i {shlex.quote(str(key))} -o IdentitiesOnly=yes -o BatchMode=yes"
+
+
+def git_env(base: dict, extra: dict | None = None) -> dict:
+    """Środowisko dla gita: bez `GIT_*` spoza `GIT_ENV_KEEP` (np. `GIT_DIR` z hooka innego repo),
+    z `GIT_TERMINAL_PROMPT=0` i `extra` (np. `GIT_SSH_COMMAND`)."""
+    env = {k: v for k, v in base.items() if not k.startswith("GIT_") or k in GIT_ENV_KEEP}
+    return {**env, "GIT_TERMINAL_PROMPT": "0", **(extra or {})}
 
 
 def manifest_csv(rows: dict[tuple[str, str], dict]) -> bytes:
@@ -163,16 +224,35 @@ def parse_manifest(data: bytes) -> dict[tuple[str, str], dict]:
 
 # ------------------------------------------------------------------ git (cienka warstwa)
 def _git(repo: Path, *args: str, env: dict | None = None, timeout: float = 120):
-    full_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", **(env or {})}
-    return subprocess.run(
-        ["git", *args],
+    """git w katalogu kopii: jawne `--git-dir`/`--work-tree` (poza `init`), oczyszczone środowisko;
+    po `timeout` zabija całą grupę procesów (zawieszony `ssh` nie trzyma potoków) i rzuca
+    `subprocess.TimeoutExpired`."""
+    repo = Path(repo)
+    cmd = ["git", *args]
+    if args[:1] != ("init",):
+        cmd = ["git", f"--git-dir={repo / '.git'}", f"--work-tree={repo}", *args]
+    posix = hasattr(os, "killpg")
+    proc = subprocess.Popen(
+        cmd,
         cwd=repo,
-        env=full_env,
-        capture_output=True,
+        env=git_env(dict(os.environ), env),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        timeout=timeout,
-        check=False,
+        start_new_session=posix,
     )
+    try:
+        out, err = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        if posix:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(proc.pid, signal.SIGKILL)
+        else:  # pragma: no cover — Windows: bez grup procesów
+            proc.kill()
+        proc.communicate()
+        raise
+    return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
 
 
 def _git_ok(repo: Path, *args: str) -> str:
@@ -213,7 +293,7 @@ def push(kopia: Path, key: Path) -> tuple[str, str]:
     """Push na `origin` → (`ok` | `brak remote` | `błąd push`, opis)."""
     if _git(kopia, "remote", "get-url", "origin").returncode != 0:
         return "brak remote", "brak skonfigurowanego remote origin"
-    ssh = f'ssh -i "{key}" -o IdentitiesOnly=yes -o BatchMode=yes'
+    ssh = ssh_command(key)
     try:
         r = _git(
             kopia,
@@ -239,6 +319,7 @@ class Summary:
     changed: int = 0  # źródło zmienione po fakcie albo archiwum/indeks odtworzone ze źródła
     unchanged: int = 0
     errors: list[str] = field(default_factory=list)
+    alarms: list[str] = field(default_factory=list)  # źródło skrócone/nadpisane — kopia zachowana
     missing_sources: list[str] = field(default_factory=list)
     commit: str | None = None
     remote: str = "-"
@@ -254,8 +335,38 @@ def _logger(kopia: Path, now_fn):
     return log
 
 
-def backup_day(kopia: Path, gielda: str, dzien: str, src: Path, prev: dict | None, log) -> dict:
-    """Jeden zamknięty dzień: archiwum + weryfikacja + indeks → wiersz manifestu z polem `_stan`."""
+def _int(x) -> int:
+    try:
+        return int(x)
+    except (TypeError, ValueError):
+        return 0
+
+
+def shrink_problem(data: bytes, prev: dict, old_source: bytes | None) -> str | None:
+    """Czy nowe źródło NIE jest dopisaniem do poprzedniego (pliki kolektorów są append-only)?
+    Opis problemu albo None. `old_source` = rozpakowane poprzednie archiwum (None = nieznane —
+    wtedy tylko porównanie liczby linii i bajtów z manifestu)."""
+    lines, old_lines = count_lines(data), _int(prev.get("linie"))
+    if lines < old_lines:
+        return f"linie {old_lines} → {lines}"
+    if len(data) < _int(prev.get("bajty_zrodla")):
+        return f"bajty {prev.get('bajty_zrodla')} → {len(data)}"
+    if old_source is not None and not data.startswith(old_source):
+        return "początek pliku inny niż w archiwum"
+    return None
+
+
+def backup_day(
+    kopia: Path,
+    gielda: str,
+    dzien: str,
+    src: Path,
+    prev: dict | None,
+    log,
+    accept_shrink: bool = False,
+) -> dict:
+    """Jeden zamknięty dzień: archiwum + weryfikacja + indeks → wiersz manifestu z polem `_stan`
+    (`nowy` / `zmieniony` / `naprawiony` / `bez zmian` / `alarm`; przy `alarm` także `_alarm`)."""
     data = src.read_bytes()
     src_sha = sha256(data)
     arch_path = kopia / gielda / f"{dzien}.jsonl.gz"
@@ -273,7 +384,18 @@ def backup_day(kopia: Path, gielda: str, dzien: str, src: Path, prev: dict | Non
     )
     state = "nowy" if prev is None else "naprawiony"
     if prev is not None and prev["sha256_zrodla"] != src_sha:
+        old_source = gzip.decompress(arch_path.read_bytes()) if arch_ok else None
+        problem = shrink_problem(data, prev, old_source)
+        if problem and not accept_shrink:
+            msg = (
+                f"ŹRÓDŁO SKRÓCONE/NADPISANE: {gielda} {dzien} — {problem}; archiwum, indeks "
+                "i manifest BEZ ZMIAN (przyjęcie nowej wersji: --przyjmij-skrocone)"
+            )
+            log(msg)
+            return {**prev, "_stan": "alarm", "_alarm": msg}
         state = "zmieniony"
+        if problem:
+            log(f"PRZYJĘTO SKRÓCONE ŹRÓDŁO: {gielda} {dzien} — {problem} (--przyjmij-skrocone)")
         log(
             f"ZMIENIONY PO FAKCIE: {gielda} {dzien} — sha256 źródła {prev['sha256_zrodla'][:12]} → "
             f"{src_sha[:12]}, linie {prev['linie']} → {count_lines(data)}; przeliczam"
@@ -291,13 +413,14 @@ def backup_day(kopia: Path, gielda: str, dzien: str, src: Path, prev: dict | Non
     elif prev is not None:
         what = "USZKODZONY INDEKS" if idx_path.exists() else "BRAK INDEKSU"
         log(f"{what}: {gielda} {dzien} — odtwarzam ze źródła")
+    # najpierw wszystko w pamięci (błąd indeksu nie zostawia archiwum bez wiersza manifestu)
+    idx = li.aggregate(gielda, dzien, data.decode("utf-8", errors="replace").split("\n"))
+    idx_bytes = li.index_csv(idx)
     archive = gzip_bytes(data, f"{dzien}.jsonl")
     li.write_if_changed(arch_path, archive)
     problems = verify_archive(arch_path.read_bytes(), data)
     if problems:
         raise RuntimeError(f"weryfikacja {gielda} {dzien}: {'; '.join(problems)}")
-    idx = li.aggregate(gielda, dzien, data.decode("utf-8", errors="replace").split("\n"))
-    idx_bytes = li.index_csv(idx)
     li.write_if_changed(idx_path, idx_bytes)
     if idx.bad_lines:
         log(f"UWAGA: {gielda} {dzien} — {idx.bad_lines} złych linii pominiętych w indeksie")
@@ -322,6 +445,7 @@ def run_backup(
     now: dt.datetime | None = None,
     key: Path | None = None,
     now_fn=None,
+    accept_shrink: bool = False,
 ) -> Summary:
     """Pełny przebieg (bez bramki dziennej): archiwa, indeksy, manifest, commit, push."""
     now_fn = now_fn or (lambda: dt.datetime.now(tz=dt.timezone.utc))
@@ -341,12 +465,17 @@ def run_backup(
             continue
         for dzien, path in li.closed_days(src_dir, today):
             try:
-                row = backup_day(kopia, gielda, dzien, path, manifest.get((gielda, dzien)), log)
+                row = backup_day(
+                    kopia, gielda, dzien, path, manifest.get((gielda, dzien)), log, accept_shrink
+                )
             except Exception as exc:  # noqa: BLE001 — błąd dnia nie zatrzymuje pozostałych
                 s.errors.append(f"{gielda} {dzien}: {type(exc).__name__}: {exc}")
                 log(f"BŁĄD: {gielda} {dzien}: {type(exc).__name__}: {exc}")
                 continue
             state = row.pop("_stan")
+            if state == "alarm":
+                s.alarms.append(row.pop("_alarm"))
+                continue  # wiersz manifestu bez zmian
             manifest[(gielda, dzien)] = row
             s.days.append({**row, "stan": state})
             if state == "nowy":
@@ -362,15 +491,64 @@ def run_backup(
     s.remote, s.remote_msg = push(kopia, key or default_key())
     if s.remote != "ok":
         log(f"BRAK ZDALNEJ KOPII: {s.remote_msg}")
+    if s.remote == "błąd push":  # remote jest, sieć/serwer nie — ponowienie samego push
+        write_time_marker(kopia / PUSH_MARKER, now)
+    else:
+        (kopia / PUSH_MARKER).unlink(missing_ok=True)
     log(
         f"przebieg: nowe {s.new}, zmienione {s.changed}, bez zmian {s.unchanged}, "
-        f"błędy {len(s.errors)}, commit {s.commit or '-'}, zdalna kopia: {s.remote}"
+        f"alarmy {len(s.alarms)}, błędy {len(s.errors)}, commit {s.commit or '-'}, "
+        f"zdalna kopia: {s.remote}"
     )
     return s
 
 
+def retry_push(kopia: Path, now: dt.datetime, key: Path, log) -> tuple[str, str] | None:
+    """Zaległy push (`.push_zalegly` starszy niż `RETRY_AFTER`) → tylko `git push`, bez
+    przeliczania dni. None = nic do zrobienia; inaczej wynik `push`."""
+    marker = kopia / PUSH_MARKER
+    last = read_time_marker(marker)
+    if last is None or now.astimezone(dt.timezone.utc) - last < RETRY_AFTER:
+        return None
+    ahead = _git(kopia, "rev-list", "--count", f"refs/remotes/origin/{BRANCH}..{BRANCH}")
+    if ahead.returncode == 0 and ahead.stdout.strip() == "0":
+        marker.unlink(missing_ok=True)
+        log("zaległy push: origin już ma wszystkie commity — znacznik usunięty")
+        return "ok", "origin aktualny"
+    remote, msg = push(kopia, key)
+    if remote == "ok":
+        marker.unlink(missing_ok=True)
+        log("zaległy push: zdalna kopia dogoniona")
+    elif remote == "błąd push":
+        write_time_marker(marker, now)
+        log(f"BRAK ZDALNEJ KOPII (ponowienie): {msg}")
+    else:
+        marker.unlink(missing_ok=True)
+        log(f"BRAK ZDALNEJ KOPII (ponowienie): {msg}")
+    status_path = kopia / STATUS_NAME
+    try:
+        payload = json.loads(status_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        payload = {}
+    payload.update(
+        {
+            "zdalna_kopia": remote,
+            "zdalna_kopia_opis": msg,
+            "push_ponowiony_utc": now.astimezone(dt.timezone.utc).isoformat(timespec="seconds"),
+        }
+    )
+    li.write_if_changed(
+        status_path, json.dumps(payload, ensure_ascii=False, indent=1).encode("utf-8")
+    )
+    return remote, msg
+
+
 def write_status(kopia: Path, now: dt.datetime, s: Summary) -> None:
-    head = _git(kopia, "rev-parse", "--short", "HEAD")
+    head = (
+        _git(kopia, "rev-parse", "--short", "HEAD")
+        if (kopia / ".git").exists()
+        else subprocess.CompletedProcess([], 1, "", "")
+    )
     payload = {
         "przebieg_utc": now.astimezone(dt.timezone.utc).isoformat(timespec="seconds"),
         "dni_w_przebiegu": len(s.days),
@@ -378,6 +556,7 @@ def write_status(kopia: Path, now: dt.datetime, s: Summary) -> None:
         "zmienione": s.changed,
         "bez_zmian": s.unchanged,
         "bledy": s.errors,
+        "alarmy": s.alarms,
         "brak_zrodla": s.missing_sources,
         "commit": s.commit,
         "head": head.stdout.strip() if head.returncode == 0 else None,
@@ -399,19 +578,23 @@ def summary_text(s: Summary) -> str:
         )
     lines.append(
         f"razem dni {len(s.days)} (nowe {s.new}, zmienione {s.changed}, bez zmian {s.unchanged}); "
-        f"błędy {len(s.errors)}; brak źródła: {', '.join(s.missing_sources) or '-'}; "
+        f"alarmy {len(s.alarms)}; błędy {len(s.errors)}; "
+        f"brak źródła: {', '.join(s.missing_sources) or '-'}; "
         f"commit {s.commit or '-'}; zdalna kopia: {s.remote} ({s.remote_msg})"
     )
+    lines.extend(f"ALARM: {a}" for a in s.alarms)
     return "\n".join(lines)
 
 
 def main(argv: list[str], now_fn=None) -> int:
     now_fn = now_fn or (lambda: dt.datetime.now(tz=dt.timezone.utc))
-    kopia, sources, teraz = default_kopia_dir(), default_sources(), False
+    kopia, sources, teraz, accept = default_kopia_dir(), default_sources(), False, False
     it = iter(argv)
     for a in it:
         if a == "--teraz":
             teraz = True
+        elif a == "--przyjmij-skrocone":
+            accept = True
         elif a == "--kopia":
             kopia = Path(next(it)).expanduser()
         elif a in ("--binance", "--bybit"):
@@ -422,21 +605,33 @@ def main(argv: list[str], now_fn=None) -> int:
     kopia.mkdir(parents=True, exist_ok=True)
     marker = kopia / MARKER
     marker_day = marker.read_text(encoding="utf-8").strip() if marker.exists() else None
+    err_marker = kopia / ERROR_MARKER
     now = now_fn()
-    if not is_due(now, marker_day, teraz):
+    if not is_due(now, marker_day, teraz, read_time_marker(err_marker)):
+        if (kopia / ".git").exists():
+            try:
+                retry_push(kopia, now, default_key(), _logger(kopia, now_fn))
+            except Exception as exc:  # noqa: BLE001 — ponowienie push nigdy nie daje kodu ≠ 0
+                _logger(kopia, now_fn)(f"BRAK ZDALNEJ KOPII (ponowienie): {exc}")
         return 0
     try:
-        s = run_backup(kopia, sources, now=now, now_fn=now_fn)
+        s = run_backup(kopia, sources, now=now, now_fn=now_fn, accept_shrink=accept)
     except (
         Exception
     ) as exc:  # noqa: BLE001 — błąd całego przebiegu: log + kod 1, znacznik bez zmian
-        _logger(kopia, now_fn)(f"BŁĄD przebiegu: {type(exc).__name__}: {exc}")
-        print(f"BŁĄD przebiegu: {type(exc).__name__}: {exc}", file=sys.stderr)
+        msg = f"BŁĄD przebiegu: {type(exc).__name__}: {exc}"
+        _logger(kopia, now_fn)(msg)
+        print(msg, file=sys.stderr)
+        write_time_marker(err_marker, now)
+        write_status(kopia, now, Summary(errors=[msg]))
         return 1
     write_status(kopia, now, s)
     print(summary_text(s))
     if s.errors:
-        return 1  # znacznik nie powstaje → następne wywołanie (za 5 min) ponawia
+        # znacznik dnia nie powstaje → ponowienie, ale najwcześniej za RETRY_AFTER (nie co 5 min)
+        write_time_marker(err_marker, now)
+        return 1
+    err_marker.unlink(missing_ok=True)
     marker.write_text(now.astimezone(dt.timezone.utc).date().isoformat() + "\n", encoding="utf-8")
     return 0
 
