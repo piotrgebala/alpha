@@ -273,6 +273,90 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
 5. **Wynik (opisowo, bez werdyktu):** zwrot z przedziałem, dopisany do wspólnego rachunku „poza
    próbą” razem z CP1P i TP1. Nie jest testem przewagi.
 
+### Zmiana kryteriów odczytu (decyzja użytkownika 2026-09-27, przed pierwszym odczytem)
+
+Decyzja użytkownika 2026-09-27: „wykonaj wszystkie” (propozycje z `docs/rag/11_przeglad_kandydatow_2026-09-27.md`,
+sekcje 2 i 6). Zapis powstał **przed pierwszym odczytem**, przy 3 dniach wyniku R1 i 2 dniach X1 — liczby niżej
+nie zależą od wyniku dziennika. Reguły handlu, pozycje i kod dziennika — bez zmian (to nie jest Poprawka N:
+skrypt odczytu tylko czyta pliki). Kryteria 1–4 zostają jak wyżej.
+
+**Nowe kryterium 4b — zmienność R1 w paśmie.** Zrealizowana zmienność portfela R1 od pierwszego wyniku
+(odchylenie standardowe dziennego `r_port` × √365) po ~92 dniach mieści się w **[13; 31] %/rok** (granice
+włącznie). Reguła R1 celuje w 20 %/rok, więc wynik poza pasmem oznacza raczej błąd mechaniki (np. zły mnożnik,
+błąd rzędu ≥ 1,5×) niż pecha: na historii R1 poza pasmem leży 5,1 % okien 92-dniowych (sprawdzone drugą
+drogą, `docs/rag/11` sekcja 8). Pasmo zapisano tylko dla ~92 dni; przy odczytach po 6 i 12 miesiącach
+zmienność jest podawana opisowo.
+
+**Nowe brzmienie kryterium 5 — próg obalenia (szczebel 3 ADR-09), zamiast „opisowo”.** Dla każdej nogi osobno:
+TS1 (`wyniki.csv: r_trend`), CP1 (`r_coinbase`), R1 (`r_port`) i X1 (`x1_wyniki.csv: r_x1`):
+
+- średnia roczna = średnia dzienna × 365 z n dni wyniku (braki pomijane i liczone osobno);
+- SE (błąd standardowy średniej) = σ / √(n/365), gdzie σ to zmienność **zakładana** (tabela niżej);
+- **próg obalenia = μ − z·SE**; średnia poniżej progu = próg przekroczony, czyli noga obalona
+  (ADR-09: obalenie wyłącza strategię z drabiny); średnia nad progiem = brak obalenia.
+  **Brak obalenia nie jest potwierdzeniem przewagi** — przy tej długości danych próg odrzuca tylko wyniki
+  wyraźnie gorsze od założeń;
+- **odczyty wiążące: 3** — po ~3, 6 i 12 miesiącach, czyli przy 92, 182 i 365 dniach wyniku R1 (ostatni dzień
+  wyniku 2026-12-24, 2027-03-24, 2027-09-23; odczyt dzień później). Wiąże wydruk w oknie od 2 dni przed
+  do 7 dni po planie; przy n < 90 skrypt pisze „ZA WCZEŚNIE — tylko podgląd”, a między odczytami — „podgląd”;
+- **z = 2,31 na każdym z 3 odczytów** (jeden stały próg). Dobór: łączna jednostronna szansa fałszywego
+  obalenia nogi, która naprawdę ma zakładane μ, przez wszystkie 3 odczyty = **2,5 %** — tyle, ile daje
+  pojedynczy odczyt przy 1,96. Metoda: symulacja błądzenia losowego (kroki dzienne N(0, 1), statystyka
+  odczytu k to suma po n_k dniach / √n_k; odczyty są zagnieżdżone, więc skorelowane: √(n_i/n_j)),
+  `simulate_z()` w skrypcie, 10 mln powtórzeń, ziarno 20260927 → 2,3102; druga droga — dokładna całka
+  normalna trójwymiarowa (`scipy.stats.multivariate_normal`) → 2,3113. Dla porównania: stałe 1,96 dałoby
+  5,7 % fałszywych obaleń, a Bonferroni (bez korelacji; liczba 2,39 z przeglądu) — 2,394, czyli próg
+  łagodniejszy niż trzeba. Przy 4 nogach łączna szansa fałszywego obalenia którejkolwiek wynosi do ~10 %
+  (nogi są skorelowane, bo R1 składa się z TS1 i CP1).
+
+**Stałe μ i σ** (roczne, arytmetyczne: średnia dzienna × 365, σ dzienna × √365) — konfiguracja dziennika na
+historii 2021–2026, zamrożone silniki, statystyka opisowa już raportowana (**0 wariantów, 0 nowych odczytów**).
+Komenda: `PYTHONUTF8=1 py -m backtest.odczyt_dziennika_stale` (wydruk z 2026-09-27 poniżej); stałe
+w `backtest/odczyt_dziennika.py::LEGS`, zgodność tabeli ze skryptem pilnuje test.
+
+| noga | konfiguracja | μ %/rok | σ %/rok | okres, dni | sprawdzenie drugą drogą | próg obalenia %/rok (Σ za okres) przy 92 / 182 / 365 dniach | lata do wykrycia μ przy 2·SE |
+|---|---|---|---|---|---|---|---|
+| TS1 | trend 2× z likwidacją izolowaną, pełne uniwersum (silnik RU1 `run_sz1`) | 10,69 | 18,12 | 2021-02-08 → 2026-06-30, 1 969 | CAGR 9,47 %; w oknie wspólnym z CP1 (1 880 dni) CAGR 7,1 / zmienność 18,2 = `runs/2026-09-24_ru1-pelne-uniwersum/raw_output_sz1.txt` l. 5 | −72,7 (−18,3) / −48,6 (−24,2) / −31,2 (−31,2) | 11,5 |
+| CP1 | premia Coinbase na BTC, 3× z likwidacją | 31,04 | 35,11 | 2021-05-08 → 2026-06-30, 1 880 | CAGR 28,2 / zmienność 35,1 = RU1 `raw_output_sz1.txt` l. 6 | −130,5 (−32,9) / −83,8 (−41,8) / −50,1 (−50,1) | 5,1 |
+| R1 | portfel: budżet ryzyka 1/σ, cel 20 %/rok, sufit 2 | 18,17 | 21,66 | 2021-05-08 → 2026-06-30, 1 880 | CAGR 17,1 / zmienność 21,7 = RU1 `raw_output_sz1.txt` l. 8 | −81,5 (−20,5) / −52,7 (−26,3) / −31,9 (−31,9) | 5,7 |
+| X1 | momentum przekrojowe, średnia 7 faz (silnik X1F) | 9,49 | 36,26 | 2021-02-08 → 2026-06-30, 1 969 | +9,5 %/rok = `runs/2026-09-24_x1f-siedem-faz/raw_output.txt` l. 14 | −157,3 (−39,7) / −109,1 (−54,4) / −74,3 (−74,3) | 58,4 |
+
+- **Dlaczego R1 μ = 18,17, a nie 17,1:** 17,1 %/rok w RU1 to CAGR (średnia geometryczna). Próg obalenia porównuje
+  średnią arytmetyczną, więc potrzebna jest arytmetyczna — ta sama historia daje 18,17 %. (18,6 z SZ1 to stary
+  CAGR na obciętym uniwersum.) TS1 w dzienniku to trend **z likwidacją 2×** — dlatego 10,69, a nie 11,1 z RU1
+  (bez likwidacji).
+- **Co to znaczy dla decyzji:** progi są bardzo niskie (np. R1 po kwartale −20,5 % sumy zwrotów), bo 3 miesiące
+  to mało danych. Odczyt 25.12 rozstrzyga więc mechanikę (1–4b), a przewagi nie rozstrzyga. Szansa, że noga
+  **bez żadnej przewagi** (prawdziwe μ = 0) zostanie obalona w którymś z 3 odczytów: TS1 ~7 %, CP1 ~11 %,
+  R1 ~10 %, X1 ~4 % (ta sama symulacja). Potwierdzenie zakładanego zysku wymagałoby 5–58 lat (ostatnia kolumna).
+- Założenie symulacji: dzienne zwroty niezależne, a średnia z ~90+ dni w przybliżeniu normalna. Grube ogony
+  (np. X1) sprawiają, że rzeczywista szansa fałszywego obalenia może się nieco różnić od 2,5 %.
+
+Wydruk komendy stałych (2026-09-27):
+
+```
+μ, σ nóg dziennika na historii 2021–2026 (arytmetycznie; opisowo, 0 wariantów)
+  TS1 trend 2× (własne okno)          1969 dni 2021-02-08 → 2026-06-30 | μ +10.69 %/rok | σ 18.12 %/rok | CAGR  +9.47 %
+  TS1 trend 2× (okno wspólne z CP1)   1880 dni 2021-05-08 → 2026-06-30 | μ  +8.50 %/rok | σ 18.20 %/rok | CAGR  +7.08 %
+  CP1 premia Coinbase 3×              1880 dni 2021-05-08 → 2026-06-30 | μ +31.04 %/rok | σ 35.11 %/rok | CAGR +28.25 %
+  R1 portfel (budżet ryzyka)          1880 dni 2021-05-08 → 2026-06-30 | μ +18.17 %/rok | σ 21.66 %/rok | CAGR +17.14 %
+  X1 średnia 7 faz                    1969 dni 2021-02-08 → 2026-06-30 | μ  +9.49 %/rok | σ 36.26 %/rok | CAGR  +2.63 %
+```
+
+**Komenda odczytu** (czyta tylko `origin/master:dziennik/*`, niczego nie zapisuje; `--as-of` odtwarza stan
+z ostatniego commita „Dziennik: przebieg” z datą ≤ as_of + 1 dzień):
+
+```
+git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2026-12-24          # odczyt 1
+PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-03-24                        # odczyt 2
+PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-09-23                        # odczyt 3
+PYTHONUTF8=1 py -m backtest.odczyt_dziennika [--repo .] [--json]                       # podgląd
+```
+
+Skrypt jest reporterem („próg przekroczony / nieprzekroczony”); werdykt o każdej nodze podpisuje Claude
+w dokumentacji odczytu, a decyzja o szczeblu 4 należy do użytkownika. Kryteria 1–4 skrypt liczy tymi samymi
+definicjami co strona dziennika (`tools/strona_dziennika.build_state`). Testy: `tests/test_odczyt_dziennika.py`.
+
 ## Sprawdzian przed startem (2026-09-24)
 
 - **Zgodność z backtestem** na wspólnym okresie 2025-10-15 → 2026-06-29 (258 dni), dane świeże vs
