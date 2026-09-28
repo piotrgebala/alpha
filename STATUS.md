@@ -3061,9 +3061,10 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   źródło `docs/mapa_projektu.html`). Odświeżanie strony tokenów — wariant B (decyzja użytkownika): cron serwera
   04:30 UTC wypycha `stan.json` na gałąź `tokeny-dane`, rutyna Cowork 05:00 UTC przepisuje go na stronę.
   **Do zrobienia przez użytkownika:** założyć rutynę w Cowork (instrukcja w [docs/rag/12](docs/rag/12_zuzycie_tokenow.md)).
-- **Zadanie na nową sesję (2026-09-28):** strażnik kontekstu (hook 150/250 tys.), uwaga na starcie tury, linia statusu,
-  nota przekazania, ciężka praca w subagentach — plan i lekcja z 28.09 w [docs/rag/12](docs/rag/12_zuzycie_tokenow.md)
-  („Zarządzanie kontekstem”). Progi i brak twardej blokady do potwierdzenia przez użytkownika.
+- **Wdrożone 2026-09-28 (polecenie użytkownika):** strażnik kontekstu `tools/straznik_kontekstu.py` — hooki `PostToolUse`
+  (150 tys. uwaga, 250 tys. nota przekazania + `/clear`, co 50 tys. ponownie) i `UserPromptSubmit`, linia statusu
+  z rozmiarem kontekstu; bez twardej blokady, progi jak w planie (zmiana = stałe w pliku) —
+  [docs/rag/12](docs/rag/12_zuzycie_tokenow.md) („Wdrożenie”). Do sprawdzenia na Windows: linia statusu.
 - **Do decyzji użytkownika:** rejestracja skilla w zasadzie 19 bez ponownego wczytania, gdy treść jest nadal w kontekście;
   odchudzenie `clas5-quant` SKILL.md przy następnej wersji. Praktyka po stronie użytkownika: nowa sesja na zadanie
   i po przerwie > 1 h; tryb ultracode tylko na duże przeglądy.

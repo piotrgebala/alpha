@@ -60,7 +60,7 @@ w kontekście; po streszczeniu rozmowy harness dokleja treść wszystkich wczyta
   Opusa — realny udział w kosztach jeszcze większy), Haiku 0,3 %. Jednostki monitora nie uwzględniają ceny
   modelu. Wniosek: Fable tylko do wyjątkowych zadań; Opus na poziomie medium do badań; Sonnet/opusplan do rutyny.
 - **Obserwacja:** skill `update-config` (obowiązkowy przy zmianach konfiguracji, zasada 19) niesie cały
-  schemat ustawień — jedno wczytanie to kilkadziesiąt tys. tokenów; wczytywać go tylko przy realnej zmianie.
+  schemat ustawień — jedno wczytanie to ok. 93 tys. tokenów (pomiar 28.09 przy wdrożeniu strażnika); wczytywać go tylko przy realnej zmianie.
 
 ## Strona „Tokeny CLAS-5” (2026-09-28)
 
@@ -141,7 +141,7 @@ właśnie takich sytuacji unikać … bez spadku jakości analizy”. Przyczyny:
    przyczyny nie sprawdzono.
 Zasada „nowa sesja na zadanie” istniała, ale nic jej nie pilnowało w trakcie tury.
 
-Plan do wdrożenia w NOWEJ sesji (konfiguracja Claude Code → skill `update-config`, zasada 19):
+Plan (wdrożony 2026-09-28 — patrz „Wdrożenie” niżej; konfiguracja Claude Code → skill `update-config`, zasada 19):
 1. **Strażnik kontekstu** — hook `PostToolUse` (`tools/straznik_kontekstu.py`): czyta z zapisu rozmowy rozmiar
    kontekstu ostatniego wywołania. Przy 150 tys. jednorazowa uwaga dla Claude: domknij etap, następny duży krok
    w subagencie albo w nowej sesji. Przy 250 tys. polecenie: zapisz notę przekazania i poproś użytkownika
@@ -158,3 +158,29 @@ Plan do wdrożenia w NOWEJ sesji (konfiguracja Claude Code → skill `update-con
    subagenta zostaje, ale główny kontekst nie rośnie, więc każde następne wywołanie jest tańsze.
 Szacunek jak wyżej (−25–35 % całości), z tą różnicą, że strażnik pilnuje progu także w długich turach.
 
+### Wdrożenie (2026-09-28, polecenie użytkownika: „wdróż strażnika według sekcji”)
+
+- **Strażnik** `tools/straznik_kontekstu.py`, progi w jednym miejscu (stałe na górze pliku): **150 tys.** =
+  jednorazowa uwaga (domknij etap, duży krok w subagencie albo w nowej sesji); **250 tys.** = polecenie (bez nowego
+  etapu, nota przekazania, prośba o `/clear`) plus komunikat dla użytkownika, ponawiane **co 50 tys.** Hooki
+  w `.claude/settings.json`: `PostToolUse` bez matchera (każde narzędzie) i `UserPromptSubmit` (przypomnienie przy
+  każdym poleceniu ponad 150 tys.). Bez blokady narzędzi.
+- **Linia statusu:** model (wysiłek) · kontekst N tys., kolor zielony / żółty / czerwony według progów. Liczy
+  z `context_window.current_usage` od Claude Code, a gdy go brak — z zapisu rozmowy.
+- **Subagenci pomijani.** Sprawdzone na Claude Code 2.1.282: hook narzędzia subagenta dostaje `agent_id` i ścieżkę
+  zapisu GŁÓWNEJ sesji — bez tego filtra uwaga trafiałaby do subagenta, który nie może zrobić `/clear`.
+- **„Jednorazowo”** pilnują pliki-znaczniki w katalogu tymczasowym systemu (`clas5-straznik/<sesja>/`), tworzone
+  atomowo; spadek kontekstu poniżej 150 tys. (streszczenie rozmowy) uzbraja progi na nowo.
+- **Nota przekazania:** `nota-przekazania.md` w pamięci projektu + wiersz w `MEMORY.md`; ≤ 15 linii (co zrobione,
+  pliki, decyzje, następny krok), z datą. Jedna naraz — kolejne przekazanie ją nadpisuje; nowa sesja korzysta z niej,
+  gdy dotyczy jej zadania, a po domknięciu wątku usuwa notę i wiersz.
+- **Ciężka praca w subagencie** — praktyka (treść uwagi przy 150 tys. i `CLAUDE.md`), nie automat.
+- **Pomiar przy wdrożeniu:** samo wczytanie `update-config` podniosło kontekst tej sesji z ~71 do ~165 tys. (≈ +93
+  tys., cały schemat ustawień). Strażnik odpalił na żywo w tej sesji przy 207 tys. Testy:
+  `tests/test_straznik_kontekstu.py` (syntetyczny zapis rozmowy; właściwość w `hypothesis`: odczyt blokami = pełny
+  skan) i `tests/test_project_settings.py`.
+- **Przegląd kodu (bramka 16c, `engineering:code-review`): Approve** — hook bez skutków ubocznych poza katalogiem
+  tymczasowym, znaczniki atomowe, odczyt blokami sprawdzony własnością; w przeglądzie naprawione: liczba jako
+  `transcript_path` otwierała cudzy deskryptor pliku, model podany tekstem znikał z linii statusu.
+- **Niesprawdzone:** linia statusu na Windows (polecenie jak w hookach: `py || python3` przez bash); przyczyna, dla
+  której `autoCompactWindow` 300 tys. nie zadziałał w długiej turze 28.09.
