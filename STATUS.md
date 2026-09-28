@@ -3105,6 +3105,6 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   (Opus). **T3:** `/usage` pokazuje tylko procent limitów, bez podziału — porównanie z monitorem niemożliwe; przelicznik:
   limit 5 h ≈ 83 USD po cenniku, tydzień ≈ 590 USD, tydzień Fable ≈ 200 USD; **przy tempie 28.09 tygodniowy limit
   starczy na ok. 2 dni (reset 3.10)**. Otwarte: `cost-state` o 30–39 % wyżej niż monitor przy subagentach. Do decyzji:
-  na serwerze brak polecenia `py` i trzech wtyczek z GitHuba (security-guidance, claude-code-setup, discernment-nudge);
+  na serwerze brak polecenia `py` (trzy wtyczki z GitHuba są już zainstalowane i wczytane — sprawdzone 28.09);
   wdrożenie T5 (Sonnet w wywołaniach subagentów do prac mechanicznych albo osobny agent Sonnet/low).
 
