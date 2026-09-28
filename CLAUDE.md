@@ -93,7 +93,7 @@ handlu, cel zwrotów, rynek przed 2022) → `docs/rag/10_preferencje_uzytkownika
     Przegląd kodu = `engineering:code-review` (wbudowany `/code-review` to droższy dodatek, nie
     zamiennik); wykres = `dataviz`. **Rejestr:** hook uruchamia `tools/skill_audit.py`, który
     dopisuje każde wczytanie do `runs/skille/<gałąź>.jsonl` (plików nie edytuje się ręcznie;
-    commituje się je z pracą gałęzi) i do lokalnego monitora `runs/skille/uzycie_skilli.csv`.
+    commituje się je z pracą gałęzi) i do lokalnego monitora `runs/skille/uzycie_skilli.csv`. Skill wczytany już w głównej rozmowie TEJ sesji (bez streszczenia po drodze) dostaje wpis na nowej gałęzi przez `py tools/skill_audit.py zarejestruj <skill>` zamiast ponownego wczytania — program sprawdza to w zapisie rozmowy (decyzja użytkownika 2026-09-28).
     **README rundy — sekcja „Użyte skille”:** wynik `py tools/skill_audit.py raport --galaz
     <gałąź>` + jedno zdanie, co wniósł każdy skill + skille z tabeli, których moment runda
     obejmowała, a których nie ma w rejestrze — z powodem. Skill niedostępny w sesji → „niedostępny
@@ -174,6 +174,7 @@ py -m pytest -q                                   # cały zestaw testów (DoD, z
 py -m ruff check . && py -m black --check .       # lint/format; zamrożone skrypty omijane w pyproject.toml
 py -m backtest.run_checkpoint_v2                  # kanoniczny checkpoint v2 (zasada 12)
 py tools/skill_audit.py raport --galaz <gałąź>    # sekcja „Użyte skille” README rundy (zasada 19)
+py tools/skill_audit.py zarejestruj <skill>       # zasada 19: skill już w kontekście sesji → wpis bez ponownego wczytania
 py tools/frozen_guard.py lista                    # lista zamrożonych skryptów (zasada 13)
 ```
 

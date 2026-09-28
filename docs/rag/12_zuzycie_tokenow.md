@@ -44,9 +44,9 @@ w kontekście; po streszczeniu rozmowy harness dokleja treść wszystkich wczyta
 3. **Wąskie wyjścia narzędzi**: `grep`/`head`/`tail` zamiast całych plików i diffów; duże wyniki do pliku,
    do kontekstu tylko podsumowanie.
 4. **Pomiar co tydzień** albo po dużym zadaniu: `tools/zuzycie_tokenow.py --od <data>`; porównanie z tabelą wyżej.
-5. **Do decyzji użytkownika:** zasada 19 — gdy skill wczytano w tej samej sesji i jego treść jest nadal
+5. **Wdrożone 2026-09-28 (decyzja użytkownika):** zasada 19 — gdy skill wczytano w tej samej sesji i jego treść jest nadal
    w kontekście (bez streszczenia po drodze), rejestracja na nowej gałęzi bez ponownego wczytania
-   (osobne polecenie w `tools/skill_audit.py`). Oszczędność: część z ~23 % treści skilli w głównej sesji.
+   (`py tools/skill_audit.py zarejestruj <skill>`; dowód z zapisu rozmowy). Oszczędność: część z ~23 % treści skilli w głównej sesji.
 
 ## Wdrożone 2026-09-28 (decyzja użytkownika „tak”)
 
