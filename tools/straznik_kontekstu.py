@@ -150,7 +150,7 @@ def uwaga_dla_claude(tokeny: int, poz: int) -> str:
         return (
             f"{naglowek} (próg uwagi {tys(PROG_UWAGI)} tys.). Domknij bieżący etap. Następny duży "
             "krok — duże pliki, przegląd, długie odczyty — zleć subagentowi, który odda ścieżkę "
-            "i krótkie podsumowanie, albo zaproponuj użytkownikowi nową sesję. Rozpoczętej "
+            "i krótkie podsumowanie. Nową sesję proponuj tylko przy nowym, niezwiązanym zadaniu (T2). Rozpoczętej "
             "analizy nie przerywaj w połowie."
         )
     return (

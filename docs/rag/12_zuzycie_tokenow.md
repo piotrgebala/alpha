@@ -167,7 +167,8 @@ Szacunek jak wyżej (−25–35 % całości), z tą różnicą, że strażnik pi
   w `.claude/settings.json`: `PostToolUse` bez matchera (każde narzędzie) i `UserPromptSubmit` (przypomnienie przy
   każdym poleceniu ponad 150 tys.). Bez blokady narzędzi.
 - **Linia statusu:** model (wysiłek) · kontekst N tys., kolor zielony / żółty / czerwony według progów. Liczy
-  z `context_window.current_usage` od Claude Code, a gdy go brak — z zapisu rozmowy.
+  z `context_window.current_usage` od Claude Code, a gdy go brak — z zapisu rozmowy. Od T7 także „cache zimny: nowa sesja”, gdy cache
+  wygasł (pole `prompt_cache`).
 - **Subagenci pomijani.** Sprawdzone na Claude Code 2.1.282: hook narzędzia subagenta dostaje `agent_id` i ścieżkę
   zapisu GŁÓWNEJ sesji — bez tego filtra uwaga trafiałaby do subagenta, który nie może zrobić `/clear`.
 - **„Jednorazowo”** pilnują pliki-znaczniki w katalogu tymczasowym systemu (`clas5-straznik/<sesja>/`), tworzone
@@ -207,14 +208,14 @@ tydzień do tygodnia, ze świadomością, że inne zadania dają inne liczby).
 | instrukcje streszczenia w CLAUDE.md (`# Compact instructions`) | brak | T4 |
 | model do zadania (Sonnet do większości, Opus do złożonych, Haiku do prostych subagentów) | częściowo: `lokalizator` na Haiku; decyzja użytkownika „lepsze modele, bez przesady” | T5 |
 | niższy wysiłek (effort) do prostych zadań; Opus 5.5 i Fable zawsze rozumują, rozumowanie liczy się jak wyjście | brak pomiaru (pkt B1 noty) | T5 |
-| wyłączyć nieużywane serwery MCP; CLI zamiast MCP | 14 serwerów MCP z wtyczek bez związku z projektem | T1 |
+| wyłączyć nieużywane serwery MCP; CLI zamiast MCP | 14 serwerów MCP z wtyczek bez związku z projektem; wtyczki spoza projektu wyłączone 28.09 (B2) | T1 |
 | CLAUDE.md poniżej 200 linii, instrukcje szczegółowe do skilli | ok. 150 linii, ale długich | T1 (ile tokenów kosztuje) |
 | hook filtrujący wyjścia (przykład: testy tylko z błędami) | brak | T6 |
 | głośne operacje w subagencie; tańszy model subagenta | praktyka (wyżej) | wskaźniki |
 | propozycje następnego polecenia = dodatkowe zapytanie po każdej odpowiedzi | włączone (domyślnie) | T3 |
 | cache żyje 1 h w subskrypcji, 5 min przy kredytach za użycie | główna sesja 1 h; subagenci i workflow zawsze 5 min (pomiar 24–28.09) | — |
 | `/usage`: podział na skille, subagentów, wtyczki, MCP; flagi zachowań ≥ 10 % | nieużywane | T3 (druga droga dla monitora) |
-| linia statusu z `prompt_cache` (cache ciepły / zimny) | brak | T7 |
+| linia statusu z `prompt_cache` (cache ciepły / zimny) | zrobione 28.09 | T7 |
 | Fable: do 50 % tygodniowego limitu | 16 % jednostek 24–28.09 (bez ceny modelu) | wskaźniki |
 | jeden limit dla wszystkich powierzchni | monitor widzi tylko serwer (bez Cowork i claude.ai) | ograniczenie pomiaru |
 
@@ -243,6 +244,11 @@ systemowy, więcej narzędzi, pierwsza wiadomość), więc liczby bezwzględne s
 wtyczek, `skillOverrides: "off"` — działa, V4); to punkt B2 noty (zgoda użytkownika), wdrożenie przez `update-config`
 na początku świeżej sesji. Zysk mały, ale darmowy (ok. 0,5 USD dziennie według cennika niżej). CLAUDE.md (7,6 tys.,
 23 % startu) projekt używa → bez zmian; skracanie długich linii to osobna decyzja użytkownika.
+*Wdrożone 28.09 (B2, decyzja użytkownika „tak”):* `enabledPlugins: false` dla finance, langfuse, productivity;
+`skillOverrides: "user-invocable-only"` dla 6 skilli konta spoza projektu (analiza-wydatkow, trening-zdrowie,
+doradca-inwestycyjny, computer-use, built-in-browser, chrome-browser) — daje to samo co `"off"` (31 558 wobec
+31 558), a ręczne `/nazwa` działa. Start 33 950 → 31 558 (−2 392, jak w T1). Uwaga do pomiarów: start rośnie z każdą
+linią `git status` (trafia do promptu) — porównywać tylko przy tym samym stanie gita.
 
 *Druga droga i odkrycie:* `total_cost_usd` z `claude -p` rozkłada się dokładnie na 8 USD/mln za zapis 1 h
 i 0,20 USD/mln za odczyt — zgodnie z cennikiem (platform.claude.com/docs/en/about-claude/pricing, 28.09; USD za mln
@@ -258,6 +264,37 @@ wagę zapisów (start sesji, przepisania po przerwie) i wyjścia (rozumowania). 
 `stan.json` zgodny wstecz, rutyna sprawdza `wersja == 1`). Sprawdzenie drugą drogą: sesja `claude -p` z zapisem
 rozmowy — `total_cost_usd` z JSON wobec kosztu policzonego przez monitor z zapisu tej sesji, zgodność ±1 %.
 Potem T2 przeliczone w USD; **decyzja o progach strażnika czeka na T8.**
+
+*Wynik T8 (28.09):* monitor liczy koszt w USD po cenie katalogowej modelu każdego wywołania. Ceny stoją
+w jednym miejscu: `CENNIK_USD_ZA_MLN` w `tools/zuzycie_tokenow.py`, cennik z 28.09 (źródło jak w T1).
+Model spoza cennika ma koszt „nieznany”: raport wypisuje osobno jego wywołania i tokeny, nigdy nie liczy
+go jako 0. Jednostki zostają obok — dla ciągłości historii i strony. Plik stanu jest zgodny wstecz:
+`wersja` 1, stare klucze i tablice bez zmian. Nowe klucze: `usd` (dzień × model; `null` = model bez
+ceny), `usd_z` (dzień × źródło) i `cennik`. Dni sprzed okna przeliczania (14 dni), policzone przed T8,
+zostają w historii bez kluczy USD — strona i tak ich nie czyta.
+
+Sprawdzenie drugą drogą (reguła: zgodność ±1 %). Dwie sesje `claude -p` z zapisem rozmowy: przeczytaj
+plik i policz linie `wc -l` (`--effort low`, 3 tury). Potem monitor na katalogu zapisów tej sesji:
+
+| sesja | `total_cost_usd` z API | monitor z zapisu | różnica |
+|---|---|---|---|
+| Opus 5.5 (`51d0036c`) | 0,0676882 USD | 0,0676882 USD | 0,0 % |
+| Sonnet 5 (`afeeefdc`) | 0,0513648 USD | 0,0513648 USD | 0,0 % |
+
+Zgodność co do cyfry. `modelUsage` ma po jednym modelu — w trybie `-p` nie ma zapytań pobocznych.
+**Reguła spełniona:** monitor liczy USD tak samo jak API.
+
+*Trzecia droga — ostrzeżenie.* Claude Code zapisuje w pliku sesji własny rachunek (rekord `cost-state`,
+też po cenniku). Dla samej głównej sesji zgadza się z monitorem (sesja `bb045247`: Opus 13,55 USD tu
+i tu). Ale w 5 z 8 sesji z takim rekordem monitor pokazuje o 30–39 % mniej niż Claude Code. Różnica idzie
+za subagentami w tle: rachunek Claude Code ≈ główna sesja + 1,8–2,5 × koszt subagentów z ich zapisów
+(w sesji z workflow 1,2 ×). Nie wiemy, czy to zapytania, których zapis nie pokazuje, czy podwójne
+liczenie w `cost-state`. **Co z tego wynika:** USD z monitora to dolna granica kosztu; rozstrzygnie T3
+(`/usage`).
+
+Pierwszy obraz w USD (24–28.09 do 15:45 UTC, serwer): 503 USD po cenniku. Fable to 34 % kosztu w USD,
+a 15 % w jednostkach (370 z 3,9 tys. wywołań). Workflow to 40 % USD. Czyli koszt robią Fable i długie
+workflow, nie sama liczba wywołań.
 
 **T2 — progi strażnika (pkt D noty).** Metoda: `tools/zuzycie_tokenow.py --progi` — symulacja na zapisach: gdy
 kontekst sesji przekracza X, sesja zaczyna od nowa z kontekstem R i jednorazowym kosztem K (R, K = mediany z pierwszych
@@ -277,6 +314,57 @@ symulacji): spadki kontekstu przy przełączeniu Opus ↔ Fable i drugi strumie�
 czytane jak streszczenia (6 z 21 czyszczeń przy 250 tys. w dużej sesji); w zapisie jest poziom wysiłku (effort).
 Wniosek wstępny: progi strażnika bronią przed sesją-olbrzymem, nie przed kosztem zwykłej sesji — ostateczna decyzja po T8.
 
+*T2 przeliczone w USD (28.09, po T8):* ta sama symulacja z trzema zmianami.
+1. Koszt w USD po cenie modelu każdego wywołania (dawne jednostki: `--progi --jednostki`).
+2. Pomijamy sesje, które mogą jeszcze trwać (wywołanie w ostatnich 60 min): bieżąca `bf0ce318`.
+3. Symulacja idzie po łańcuchu rozmowy (`parentUuid`), nie po czasie. To usuwa dwa artefakty zapisu:
+   - drugi strumień zapytań w jednym pliku sesji: 25.09 o 07:34 drugi proces tej samej sesji (drugie
+     okno, stał od 05:56 z kontekstem 372 tys.) pracował obok głównego (514 tys.). Stara symulacja przy
+     każdym przeskoku widziała „streszczenie” i liczyła nowe czyszczenie;
+   - przełączenie Opus ↔ Fable: z kontekstu wypadają bloki rozumowania drugiego modelu (np. 945 → 825
+     tys.). To nie streszczenie — wcześniejsze czyszczenie działa dalej.
+
+Prawdziwe streszczenia (2) zerują czyszczenie jak dotąd; gałąź po wznowieniu rozmowy z wcześniejszego
+miejsca (1) bierze stan od tego miejsca. Rozpoznanie usunęło 7 z 26 czyszczeń przy 250 tys.: 4 z drugiego
+strumienia, 3 z przełączeń modelu.
+
+Dane: 8 zakończonych sesji z co najmniej 12 wywołaniami, 254,72 USD. Nowa sesja: R = 87 tys. tokenów
+(70–152 tys.), K = 0,79 USD (0,73–1,56 USD).
+
+Oszczędność w % kosztu tych sesji przy K ×0,5 / ×1 / ×2:
+
+| próg X | czyszczeń | wszystkie sesje | bez największej (7 sesji, 47,72 USD) |
+|---|---|---|---|
+| 150 tys. | 56 / 17 | +36,5 / +27,9 / +10,6 % | −0,1 / −14,1 / −42,1 % |
+| 200 tys. | 29 / 8 | +37,8 / +33,3 / +24,3 % | +4,7 / −1,9 / −15,1 % |
+| 250 tys. | 19 / 5 | +35,9 / +33,0 / +27,1 % | +1,8 / −2,3 / −10,5 % |
+| 300 tys. | 13 / 2 | +32,2 / +30,2 / +26,2 % | +3,1 / +1,4 / −1,9 % |
+| 400 tys. | 7 / 1 | +27,8 / +26,7 / +24,6 % | +0,5 / −0,3 / −2,0 % |
+
+W dolarach przy K ×1: +71 / +85 / +84 / +77 / +68 USD dla wszystkich sesji, a bez największej −6,7 /
+−0,9 / −1,1 / +0,7 / −0,2 USD.
+
+Zwrot z jednego czyszczenia: n* = K / (0,20 USD za mln · (X − R)) = 63 / 35 / 24 / 19 / 13 wywołań przy
+X = 150 / 200 / 250 / 300 / 400 tys. Tyle wywołań musi jeszcze zostać w sesji, żeby czyszczenie się
+zwróciło. Naprawdę zostało (mediana): 39 / 31 / 11 / 44 / 326; ponad progiem było 8 / 7 / 5 / 3 / 2 z 8
+sesji. W jednostkach n* wynosi 36 / 20 / 14 / 11 / 7 — w USD czyszczenie zwraca się mniej więcej dwa razy
+wolniej, bo odczyt Opusa kosztuje 0,05 ceny wejścia, a nie 0,1.
+
+Płaski odcinek (reguła: do 5 pkt proc. od najlepszego X przy K ×1 i ×2): wszystkie sesje — **200–300
+tys.** (najlepszy X: 200 tys. przy K ×1, 250 tys. przy K ×2); bez największej sesji — 300–400 tys.
+Progi strażnika: 250 tys. leży na płaskim odcinku wszystkich sesji; 150 tys. — nie (5,4 pkt proc. poniżej
+najlepszego przy K ×1, 16,5 pkt proc. przy K ×2).
+**Decyzja według reguły:** progi zostają. 250 tys. (nota przekazania i `/clear`) leży na płaskim odcinku wszystkich sesji (0,3 i 0 pkt proc.
+od najlepszego X). 150 tys. nie czyści sesji — każe domknąć etap i delegować; jako próg czyszczenia byłby poza
+płaskim odcinkiem, a w zwykłej sesji traciłby 14 % przy K ×1. Dlatego z komunikatu 150 tys. zdjęto „albo zaproponuj
+nową sesję”: nowa sesja tylko przy nowym, niezwiązanym zadaniu. Wrażliwość: bez sesji-olbrzyma płaski odcinek
+to 300–400 tys., ale 250 tys. traci wobec 300 tys. ok. 1,8 USD na 47,72 USD w 4 dni — za mało, żeby osłabiać
+ochronę przed olbrzymem..
+
+Co z tego wynika: całą oszczędność nadal daje jedna sesja wielodniowa (81 % kosztu tych sesji). Bez niej
+czyszczenie przy K ×1 daje od −14 do +1 % — zwykła sesja nic nie zyskuje, a przy 150 tys. traci.
+Wniosek wstępny T2 zostaje: progi bronią przed sesją-olbrzymem, nie obniżają kosztu zwykłej sesji.
+
 **T3 — zużycie poza zapisami rozmów (druga droga dla monitora).** Użytkownik uruchamia `/usage` i przełącza na
 7 dni (`w`); porównujemy udziały skilli, subagentów i wtyczek z monitorem za ten sam okres. Różnica = zużycie, którego
 zapisy nie widzą (np. propozycje następnego polecenia, streszczenia w tle). Reguła: niewidoczne dla monitora
@@ -294,6 +382,38 @@ Opusie, plus Sonnet. Miary: tokeny wyjścia, koszt w jednostkach, poprawność. 
 gdy różnica kosztu ≥ 30 % przy tej samej poprawności. Koszt testu 3–8 mln jednostek — osobna sesja, za zgodą użytkownika.
 *Decyzja użytkownika 28.09:* T5 w nowej sesji (koszt liczony wprost z `total_cost_usd`, więc nie czeka na T8).
 
+*Pre-rejestracja T5 (28.09, przed pierwszym przebiegiem; narzędzie `tools/pomiar_wysilku.py` — prompty i klucze
+odpowiedzi są w pliku):*
+- **Z1 — wskazanie miejsca w repo:** „która funkcja liczy, ile transakcji da okno testowe; plik:linia, nazwa, argument
+  abstynencji”. Klucz: `backtest/metrics.py:648` (linie 648–652 sygnatury), `expected_trades`, `abstention_rate`.
+- **Z2 — mała poprawka z testem regresji:** piaskownica z kopią czterech funkcji mierzalności, w `expected_trades`
+  wstawiony błąd (abstynencja zamiast 1 − abstynencja); zgłoszenie „(1000, 0.8) daje 800, ma być 200”. Poprawnie =
+  testy ukryte przechodzą (także pozostałe funkcje bez zmian) + własne testy przechodzą + własne testy NIE przechodzą
+  na kodzie z błędem (test regresji łapie błąd) + dawne testy zostały.
+- **Z3 — rachunek z metodologii:** mierzalność wg zasady 18 (trafność 0,56; C = 0,12 %, B = 1,5 %; 20 000 świec,
+  abstynencja 0,85, admission 0,6). Klucz (funkcje repo): p* = 0,54; n = 1800; p_det = 0,5631 (±0,0005); werdykt
+  NIEMIERZALNA (o 0,31 pkt). Typowy błąd — pominięte admission_rate — daje n = 3000 i MIERZALNA, więc zadanie odsiewa.
+- **Konfiguracje:** Opus 5.5 × wysiłek low / medium / high / xhigh / max, Sonnet 5 × low / high; 2 powtórzenia;
+  42 przebiegi + 14 rozgrzewek. Kolejność: rozgrzewki, potem bloki zadanie × powtórzenie, w bloku konfiguracje losowo
+  (ziarno 20260928). Sonda przyrządu przed pre-rejestracją: zmiana wysiłku zmienia ok. 3,7 tys. tokenów prefiksu
+  cache (pierwsze wywołanie płaci zapis) — stąd rozgrzewka każdej konfiguracji.
+- **Warunki:** `claude -p --output-format json --no-session-persistence`, bez skilli i subagentów (Skill, Agent
+  zablokowane: skill to stały koszt niezależny od wysiłku, a wpis brudziłby rejestr skilli); bez narzędzia Skill Claude Code nie wysyła
+  listy skilli, więc start przebiegu jest o ok. 5,5 tys. tokenów niższy niż w zwykłej sesji — pomiar przy B2: 28 488
+  wobec 33 950; porównania wysiłków to nie zmienia, koszty bezwzględne są dolną granicą), Z1 i Z3 tylko do
+  odczytu w kopii repo (git worktree na commicie tej pre-rejestracji — równoległa praca w repo zmienia prompt
+  systemowy i psuje cache), Z2 w piaskownicy pod stałą ścieżką; podkładka `py` (na serwerze brak tego polecenia).
+- **Miary:** koszt USD (`total_cost_usd`), tokeny wyjścia (z rozumowaniem), tury, czas; poprawność z klucza.
+- **Reguła (doprecyzowanie reguły planu):** odniesienie = Opus max (ustawienie głównej sesji 28.09). Konfiguracja jest
+  „tańsza przy tej samej poprawności”, gdy ma 2/2 poprawne przy 2/2 odniesienia i średni koszt ≤ 0,70 kosztu
+  odniesienia na tym zadaniu. Zalecenie dla typu pracy = najtańsza taka konfiguracja (osobno dla każdego typu).
+  Ograniczenia zapisane z góry: 2 powtórzenia widzą tylko duże różnice kosztu; 2/2 to sito, nie dowód równej jakości
+  na trudniejszych zadaniach. **Czerwona flaga:** wszystkie konfiguracje 2/2 na wszystkich zadaniach = zadania nie
+  różnicują jakości; zalecenie obejmuje wtedy tylko prace tej trudności (wskazanie miejsca, mała poprawka, rachunek
+  wg gotowej funkcji), nie projekt ani diagnozę.
+- **Koszt:** szacunek 5–15 USD według cennika; limity: przebieg 3 USD, seria 30 USD. Wynik wpływa na: wysiłek
+  subagentów (pole `effort` w definicji agenta), zalecenie modelu do prac mechanicznych, pkt B1 noty.
+
 **T6 — hook filtrujący wyniki testów.** Reguła zapisana przed pomiarem: jeśli wyniki `pytest` to < 2 % treści
 dopisywanej do kontekstu głównej sesji, hooka nie robimy.
 *Wynik (zapisy 24–28.09):* `pytest` = 5,4 % znaków wyników Bash (188 wywołań), a wyniki Bash = ok. 20 % dopisanej
@@ -303,6 +423,10 @@ treści → ok. 1 %. **Decyzja: bez hooka** (`-q` już skraca wyjście). Większ
 **T7 — stan cache w linii statusu.** Linia statusu pokazuje „cache zimny” po wygaśnięciu (1 h bez aktywności):
 następna wiadomość przepisze cały kontekst po podwójnej cenie — lepiej wtedy nowa sesja z notą. Sprawdzenie: test
 jednostkowy na przykładowym wejściu linii statusu. Zmiana linii statusu = konfiguracja (skill `update-config`).
+*Wynik T7 (28.09, decyzja użytkownika „tak jak ty uważasz”):* wdrożone. Claude Code (od 2.1.251) podaje linii
+statusu obiekt `prompt_cache` (`warm`, `ttl`, `expires_at`) i sam ją odświeża w chwili wygaśnięcia ciepłego cache —
+napis „cache zimny: nowa sesja” (żółty) pojawia się w czasie przerwy, zanim padnie następna wiadomość. Bez zmian
+w `settings.json`; `cache_zimny()` w `tools/straznik_kontekstu.py`, testy: ciepły / zimny / brak danych + 2 właściwości.
 
 **Wskaźniki tygodniowe (monitor, cele zapisane z góry):** mediana kontekstu głównej sesji ≤ 150 tys. (28.09: 209 tys.);
 przepisania po przerwie ≤ 3 % kosztu (24–28.09: 6,9 %); workflow tylko na wyraźne życzenie (udział raportowany);

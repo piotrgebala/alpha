@@ -3094,4 +3094,12 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **Wdrożone 2026-09-28 (decyzja użytkownika):** rejestracja skilla bez ponownego wczytania — `py tools/skill_audit.py
   zarejestruj <skill>` (zasada 19, dowód z zapisu rozmowy). **Do decyzji użytkownika:** odchudzenie `clas5-quant` SKILL.md przy następnej wersji. Praktyka po stronie użytkownika: nowa sesja na zadanie
   i po przerwie > 1 h; tryb ultracode tylko na duże przeglądy.
+- **Zadanie E (2026-09-28, gałąź `tokeny-testy`) — testy optymalizacji tokenów** ([docs/rag/12](docs/rag/12_zuzycie_tokenow.md),
+  „Testy optymalizacji”): T1 start sesji zmierzony (CLAUDE.md 7,6 tys.); **B2** wtyczki finance, langfuse, productivity
+  wyłączone i 6 skilli konta ukrytych (−2,4 tys. startu); T4 instrukcje streszczenia w CLAUDE.md; T6 bez hooka; **T7**
+  „cache zimny” w linii statusu; **T8** monitor liczy USD po cenniku (zgodność z API 0,0 %); **T2** w USD — progi
+  150/250 tys. zostają (oszczędność daje tylko unikanie sesji wielodniowych), z komunikatu 150 tys. zdjęto
+  „zaproponuj nową sesję”. Otwarte: T3 (`/usage` wobec monitora; rachunek `cost-state` Claude Code pokazuje o 30–39 %
+  więcej niż monitor w sesjach z subagentami), T5 (wysiłek i model — w toku). Do decyzji: na serwerze brak polecenia
+  `py` i trzech wtyczek z GitHuba (security-guidance, claude-code-setup, discernment-nudge).
 
