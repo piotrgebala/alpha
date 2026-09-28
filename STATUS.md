@@ -3105,7 +3105,7 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   (Opus). **T3:** `/usage` pokazuje tylko procent limitów, bez podziału — porównanie z monitorem niemożliwe; przelicznik:
   limit 5 h ≈ 83 USD po cenniku, tydzień ≈ 590 USD, tydzień Fable ≈ 200 USD; **przy tempie 28.09 tygodniowy limit
   starczy na ok. 2 dni (reset 3.10)**. Otwarte: `cost-state` o 30–39 % wyżej niż monitor przy subagentach. Do decyzji:
-  na serwerze brak polecenia `py` (trzy wtyczki z GitHuba są już zainstalowane i wczytane — sprawdzone 28.09);
+  [zrobione 28.09, decyzja użytkownika: polecenie `py` na serwerze = skrypt `~/.local/bin/py` z `exec /home/dantey1/alpha/.venv/bin/python "$@"` — samo dowiązanie uruchamiało systemowego Pythona (numpy 1.26.4 zamiast 2.4.4 z lock); trzy wtyczki z GitHuba zainstalowane i wczytane];
   **wdrożenie T5 — decyzja użytkownika 28.09:** „Bierz opusta cały czas tylko do prostszych zadań z medium effort” — agenci `lokalizator` (dotąd Haiku)
   i nowy `wykonawca` na Opusie z wysiłkiem medium.
 
