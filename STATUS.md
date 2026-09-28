@@ -3051,6 +3051,8 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - Pomiar 4 dni: 104 mln jednostek; główna sesja 57 % (kontekst 0,5–0,8 mln na wywołanie; 9 przepisań po przerwie = 9 %),
   workflow 43 %. Monitor: `PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py [--od RRRR-MM-DD]`.
 - Headroom: NIE (wyjścia narzędzi ≈ 5 % kosztu; kompresja na drodze liczb łamie drugą drogę bramki 16a).
+- Nowy skill konta `explain-usage` (2026-09-28): paczka przekazana użytkownikowi do wgrania na claude.ai; w środku kopia
+  `tools/zuzycie_tokenow.py` (wersja kanoniczna zostaje w repo) + tłumaczenie wyniku i odesłanie do `/usage`, `/context`, `/insights`.
 - **Do decyzji użytkownika:** rejestracja skilla w zasadzie 19 bez ponownego wczytania, gdy treść jest nadal w kontekście;
   odchudzenie `clas5-quant` SKILL.md przy następnej wersji. Praktyka po stronie użytkownika: nowa sesja na zadanie
   i po przerwie > 1 h; tryb ultracode tylko na duże przeglądy.
