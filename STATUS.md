@@ -3061,6 +3061,15 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   źródło `docs/mapa_projektu.html`). Odświeżanie strony tokenów — wariant B (decyzja użytkownika): cron serwera
   04:30 UTC wypycha `stan.json` na gałąź `tokeny-dane`, rutyna Cowork 05:00 UTC przepisuje go na stronę.
   **Do zrobienia przez użytkownika:** założyć rutynę w Cowork (instrukcja w [docs/rag/12](docs/rag/12_zuzycie_tokenow.md)).
+- **Pulpit CLAS-5 (2026-09-28):** Dziennik, Tokeny i Mapa scalone w jedną stronę z zakładkami pod adresem dziennika
+  (https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b, #dziennik / #tokeny / #mapa); plik do publikacji składa `tools/pulpit_clas5.py`. Rutyna dziennika
+  bez zmian. Stare artefakty Tokeny i Mapa już nie istnieją (28.09 nadzór artefaktów: „nie znaleziono”). Kurs Tokenomia (dokument Claude
+  Docs) i System projektowy (typ Design System) zostają osobno, jako linki w nagłówku. Rutyny Cowork dla tokenów jeszcze
+  nie ma — do założenia przez użytkownika wg [docs/rag/12](docs/rag/12_zuzycie_tokenow.md) (zapis już do bazy pulpitu).
+  Ścieżka odwrotu: ponowna publikacja `docs/strona_dziennik.html` pod adres dziennika.
+  Przegląd kodu przed scaleniem (bramka 16c, `engineering:code-review`, 28.09): **gotowe do scalenia** — dwie uwagi
+  nieblokujące: testy JS pomijają się bez `node` (CI nie instaluje go jawnie), błąd `JSON.parse` zakładki bez ponownej
+  próby (w praktyce nieosiągalny); most `window.claude` i motyw sprawdza się ręcznie na tablecie.
 - **Wdrożone 2026-09-28 (polecenie użytkownika):** strażnik kontekstu `tools/straznik_kontekstu.py` — hooki `PostToolUse`
   (150 tys. uwaga, 250 tys. nota przekazania + `/clear`, co 50 tys. ponownie) i `UserPromptSubmit`, linia statusu
   z rozmiarem kontekstu; bez twardej blokady, progi jak w planie (zmiana = stałe w pliku) —

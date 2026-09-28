@@ -454,8 +454,7 @@ Pełna, zawsze aktualna mapa wszystkich dokumentów: [`docs/INDEX.md`](docs/INDE
 | `CLAUDE.md` | Claude Code — krótkie, stabilne zasady, czytane na starcie każdej sesji |
 | `STATUS.md` | Plan, historia rund, ryzyka, zadania z ID i statusem, backlog — zmienia się często |
 | `runs/INDEX.md` | Księga eksperymentów: co uruchomiono, z jakim wynikiem, ile wariantów zużyto |
-| `docs/mapa_projektu.html` | [Mapa CLAS-5](https://claude.ai/artifact/VpBRJm2vtQBxtujJBYgG1h) — przepływ od pomysłu do kapitału, automaty, mapa myśli i stan wiedzy na jednej stronie |
-| `tools/strona_tokeny.html` | [Tokeny CLAS-5](https://claude.ai/artifact/NJZddUpkpWYKAyWXZXcpSb) — dzienne zużycie tokenów Claude Code według modelu i źródła (`docs/rag/12`) |
+| `tools/pulpit_clas5.py` | [Pulpit CLAS-5](https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b) — jedna strona z zakładkami [#dziennik](https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#dziennik) (stan dziennika papierowego), [#tokeny](https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#tokeny) (dzienne zużycie tokenów Claude Code według modelu i źródła, `docs/rag/12`) i [#mapa](https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#mapa) (przepływ od pomysłu do kapitału, automaty, mapa myśli, stan wiedzy). Skrypt składa publikowany plik `tools/pulpit_clas5.html` ze źródeł zakładek: `docs/strona_dziennik.html`, `tools/strona_tokeny.html`, `docs/mapa_projektu.html` |
 | `docs/rag/01_hipoteza_i_architektura.md` | Dlaczego regime-gated, dlaczego LLM offline, dlaczego nie deep learning |
 | `docs/rag/02_cechy_i_leakage.md` | Definicje cech, metodologia testowania leakage, multi-repo extraction |
 | `docs/rag/03_ryzyko_i_sizing.md` | Triple-barrier labeling, sizing, walk-forward, checkpoint go/no-go |

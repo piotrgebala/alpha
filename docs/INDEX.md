@@ -14,7 +14,8 @@
 | [`CLAUDE.md`](../CLAUDE.md) | Krótkie, stabilne instrukcje/zasady dla Claude Code, czytane automatycznie na starcie sesji |
 | [`STATUS.md`](../STATUS.md) | Plan, historia rund, ryzyka (§7), zadania z ID i statusem, backlog — żywy dokument (scalone IMPLEMENTATION_PLAN+TASKS, 2026-09-22) |
 | [`runs/INDEX.md`](../runs/INDEX.md) | Księga eksperymentów: wyniki rund, wnioski skumulowane, liczniki budżetu multiple-testing |
-| [`mapa_projektu.html`](mapa_projektu.html) | Źródło strony „Mapa CLAS-5” (https://claude.ai/artifact/VpBRJm2vtQBxtujJBYgG1h): przepływ od pomysłu do kapitału, automaty dnia, mapa myśli i stan wiedzy — widok; przy sprzeczności wygrywają pliki źródłowe |
+| [`mapa_projektu.html`](mapa_projektu.html) | Źródło zakładki „Mapa” strony „Pulpit CLAS-5” (https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#mapa; składa `tools/pulpit_clas5.py`): przepływ od pomysłu do kapitału, automaty dnia, mapa myśli i stan wiedzy — widok; przy sprzeczności wygrywają pliki źródłowe |
+| [`strona_dziennik.html`](strona_dziennik.html) | Źródło zakładki „Dziennik” strony „Pulpit CLAS-5” (https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#dziennik): stan dziennika papierowego z dokumentu bazy `dziennik/stan` (rutyna Cowork, 06:30 UTC); odtworzone 2026-09-28 z opublikowanej strony |
 
 ## `docs/rag/` — pełne uzasadnienia decyzji
 
