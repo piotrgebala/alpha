@@ -1,0 +1,34 @@
+[fetch] 50000 świec, ostatnia: 2023-11-08T15:30:00.000Z
+świece 30m: 96336 od 2021-01-01 00:00:00+00:00 do 2026-06-30 23:30:00+00:00; brakujących w siatce: 0
+dni robocze (pon–pt): 1433; koszt obrotu: taker/taker 0.1400%, maker wejście 0.0900%
+
+[tokio] otwarcia w UTC: {'00:00': 1433}
+  F1 okno 60 min: dni z pełnym oknem 1433, transakcji 1368; odchylenie 0.7335%, średni ruch bez znaku 0.4791%, mediana bez znaku 0.3085%
+  F2 trzymanie 3,5 h: dni z pełnym oknem 1433, transakcji 1433; odchylenie 1.2935%, średni ruch bez znaku 0.8448%, mediana bez znaku 0.5097%
+
+[londyn] otwarcia w UTC: {'07:00': 832, '08:00': 601}
+  F1 okno 60 min: dni z pełnym oknem 1433, transakcji 1368; odchylenie 0.6926%, średni ruch bez znaku 0.3940%, mediana bez znaku 0.2465%
+  F2 trzymanie 3,5 h: dni z pełnym oknem 1433, transakcji 1433; odchylenie 1.1264%, średni ruch bez znaku 0.7011%, mediana bez znaku 0.4291%
+
+[nowy_jork] otwarcia w UTC: {'13:30': 932, '14:30': 501}
+  F1 okno 60 min: dni z pełnym oknem 1433, transakcji 1368; odchylenie 0.9915%, średni ruch bez znaku 0.6889%, mediana bez znaku 0.4797%
+  F2 trzymanie 3,5 h: dni z pełnym oknem 1433, transakcji 1433; odchylenie 1.6301%, średni ruch bez znaku 1.1276%, mediana bez znaku 0.7810%
+
+=== Rachunek mierzalności (zasada 18; brama z = 1,96; N_eff przyjęte = n — górna granica) ===
+prior F2: ρ 0.120 → trafność 53.83%; prior F1 (0,07 %/h): tokio 53.80%, londyn 54.03%, nowy_jork 52.81%; konwencja 56%
+F1 tokio            taker/taker   n  1368 | B 0.4791% p* 64.61% ±2.65% → wymagana 67.26% | prior 53.80%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.0700%, próg t=1,96 0.1789%, moc 80 % 0.1955%
+F1 tokio            maker wejście n  1368 | B 0.4791% p* 59.39% ±2.65% → wymagana 62.04% | prior 53.80%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.0700%, próg t=1,96 0.1289%, moc 80 % 0.1455%
+F1 londyn           taker/taker   n  1368 | B 0.3940% p* 67.77% ±2.65% → wymagana 70.42% | prior 54.03%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.0700%, próg t=1,96 0.1767%, moc 80 % 0.1924%
+F1 londyn           maker wejście n  1368 | B 0.3940% p* 61.42% ±2.65% → wymagana 64.07% | prior 54.03%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.0700%, próg t=1,96 0.1267%, moc 80 % 0.1424%
+F1 nowy_jork        taker/taker   n  1368 | B 0.6889% p* 60.16% ±2.65% → wymagana 62.81% | prior 52.81%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.0700%, próg t=1,96 0.1925%, moc 80 % 0.2151%
+F1 nowy_jork        maker wejście n  1368 | B 0.6889% p* 56.53% ±2.65% → wymagana 59.18% | prior 52.81%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.0700%, próg t=1,96 0.1425%, moc 80 % 0.1651%
+F1 RAZEM (3 sesje)  taker/taker   n  4104 | B 0.5206% p* 63.44% ±1.53% → wymagana 64.97% | prior 53.55%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.0700%, próg t=1,96 0.1650%, moc 80 % 0.1757%
+F1 RAZEM (3 sesje)  maker wejście n  4104 | B 0.5206% p* 58.64% ±1.53% → wymagana 60.17% | prior 53.55%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.0700%, próg t=1,96 0.1150%, moc 80 % 0.1257%
+F2 tokio            taker/taker   n  1433 | B 0.8448% p* 58.29% ±2.59% → wymagana 60.88% | prior 53.83%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.1238%, próg t=1,96 0.2070%, moc 80 % 0.2357%
+F2 tokio            maker wejście n  1433 | B 0.8448% p* 55.33% ±2.59% → wymagana 57.92% | prior 53.83%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.1238%, próg t=1,96 0.1570%, moc 80 % 0.1857%
+F2 londyn           taker/taker   n  1433 | B 0.7011% p* 59.98% ±2.59% → wymagana 62.57% | prior 53.83%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.1078%, próg t=1,96 0.1983%, moc 80 % 0.2233%
+F2 londyn           maker wejście n  1433 | B 0.7011% p* 56.42% ±2.59% → wymagana 59.01% | prior 53.83%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.1078%, próg t=1,96 0.1483%, moc 80 % 0.1733%
+F2 nowy_jork        taker/taker   n  1433 | B 1.1276% p* 56.21% ±2.59% → wymagana 58.80% | prior 53.83%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.1561%, próg t=1,96 0.2244%, moc 80 % 0.2606%
+F2 nowy_jork        maker wejście n  1433 | B 1.1276% p* 53.99% ±2.59% → wymagana 56.58% | prior 53.83%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.1561%, próg t=1,96 0.1744%, moc 80 % 0.2106%
+F2 RAZEM (3 sesje)  taker/taker   n  4299 | B 0.8912% p* 57.85% ±1.49% → wymagana 59.35% | prior 53.83%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.1308%, próg t=1,96 0.1808%, moc 80 % 0.1983%
+F2 RAZEM (3 sesje)  maker wejście n  4299 | B 0.8912% p* 55.05% ±1.49% → wymagana 56.54% | prior 53.83%: NIEMIERZALNA | 56 %: NIEMIERZALNA | zwrot: brutto z prioru 0.1308%, próg t=1,96 0.1308%, moc 80 % 0.1483%

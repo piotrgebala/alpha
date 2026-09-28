@@ -1,0 +1,35 @@
+parquet po filtrze [2021-01-01, 2026-07-01): 96336 świec; duplikaty 0; poza siatką 0; brakujących w siatce 0; NaN open/close 0; wolumen 0: 1; high == low: 1 (znaczniki: ['2021-03-02 01:30:00+00:00'])
+koszty z settings.yaml: taker/taker 0.1400%, limit na wejściu 0.0900%
+dni kalendarzowe 2007; pon–pt pętlą 1433, numpy.busday_count 1433; weekendy poza zbiorem 574
+
+[tokio] dni 1433; otwarcia UTC {'00:00': 1433} — runda {'00:00': 1433}: zgodne; świec z wolumenem 0 w oknach: 1
+  F1: dni z pełnym oknem 1433, transakcji 1368 (runda 1368: zgodne); B 0.4791% (zgodne), mediana |r| 0.3085% (zgodne), mediana niższa od średniej o 35.6%; pierwsza transakcja F1 2021-04-02
+  F2: dni z pełnym oknem 1433, transakcji 1433 (runda 1433: zgodne); B 0.8448% (zgodne), mediana |r| 0.5097% (zgodne), mediana niższa od średniej o 39.7%
+
+[londyn] dni 1433; otwarcia UTC {'07:00': 832, '08:00': 601} — runda {'07:00': 832, '08:00': 601}: zgodne; świec z wolumenem 0 w oknach: 0
+  F1: dni z pełnym oknem 1433, transakcji 1368 (runda 1368: zgodne); B 0.3940% (zgodne), mediana |r| 0.2465% (zgodne), mediana niższa od średniej o 37.4%; pierwsza transakcja F1 2021-04-02
+  F2: dni z pełnym oknem 1433, transakcji 1433 (runda 1433: zgodne); B 0.7011% (zgodne), mediana |r| 0.4291% (zgodne), mediana niższa od średniej o 38.8%
+
+[nowy_jork] dni 1433; otwarcia UTC {'13:30': 932, '14:30': 501} — runda {'13:30': 932, '14:30': 501}: zgodne; świec z wolumenem 0 w oknach: 0
+  F1: dni z pełnym oknem 1433, transakcji 1368 (runda 1368: zgodne); B 0.6889% (zgodne), mediana |r| 0.4797% (zgodne), mediana niższa od średniej o 30.4%; pierwsza transakcja F1 2021-04-02
+  F2: dni z pełnym oknem 1433, transakcji 1433 (runda 1433: zgodne); B 1.1276% (zgodne), mediana |r| 0.7810% (zgodne), mediana niższa od średniej o 30.7%
+
+=== Rachunek (wzory ręcznie: p* = 0,5·(1 + C/B); ± = 1,96·√(0,25/n); wymagana = p* + ±) ===
+F1 tokio     n  1368 | B 0.4791% | C/B taker 29.2% | p* taker 64.6111% limit 59.3929% | ± 2.6496 pp | wymagana taker 67.2607% limit 62.0425%  [vs runda zgodne/zgodne]
+F1 londyn    n  1368 | B 0.3940% | C/B taker 35.5% | p* taker 67.7683% limit 61.4225% | ± 2.6496 pp | wymagana taker 70.4179% limit 64.0721%  [vs runda zgodne/zgodne]
+F1 nowy_jork n  1368 | B 0.6889% | C/B taker 20.3% | p* taker 60.1614% limit 56.5324% | ± 2.6496 pp | wymagana taker 62.8111% limit 59.1820%  [vs runda zgodne/zgodne]
+F1 RAZEM     n  4104 | B 0.5206% | C/B taker 26.9% | p* taker 63.4449% limit 58.6432% | ± 1.5298 pp | wymagana taker 64.9747% limit 60.1729%
+    vs runda: n zgodne, B zgodne, p* zgodne/zgodne, ± zgodne, wymagana zgodne/zgodne; zaokrąglone do 0,1: p* 63.4/58.6, wymagana 65.0/60.2
+F2 tokio     n  1433 | B 0.8448% | C/B taker 16.6% | p* taker 58.2863% limit 55.3269% | ± 2.5888 pp | wymagana taker 60.8751% limit 57.9157%  [vs runda zgodne/zgodne]
+F2 londyn    n  1433 | B 0.7011% | C/B taker 20.0% | p* taker 59.9844% limit 56.4185% | ± 2.5888 pp | wymagana taker 62.5732% limit 59.0074%  [vs runda zgodne/zgodne]
+F2 nowy_jork n  1433 | B 1.1276% | C/B taker 12.4% | p* taker 56.2079% limit 53.9908% | ± 2.5888 pp | wymagana taker 58.7967% limit 56.5796%  [vs runda zgodne/zgodne]
+F2 RAZEM     n  4299 | B 0.8912% | C/B taker 15.7% | p* taker 57.8550% limit 55.0496% | ± 1.4947 pp | wymagana taker 59.3497% limit 56.5443%
+    vs runda: n zgodne, B zgodne, p* zgodne/zgodne, ± zgodne, wymagana zgodne/zgodne; zaokrąglone do 0,1: p* 57.9/55.0, wymagana 59.3/56.5
+
+=== Priory i „druga miara” (arytmetyka na σ z raw_output.txt; σ NIE liczone tu z danych) ===
+F2 ρ 0.120 → 0,5 + arcsin(ρ)/π = 53.829%
+F1 Φ(0,0007/σ): tokio 53.801%, londyn 54.025%, nowy_jork 52.814%; RAZEM 53.547% (runda 53,55 %, README 53,6 %)
+F1 wrażliwość na grube ogony (Laplace, b = średni |r|: 1 − 0,5·e^(−μ/b)): tokio 56.80%, londyn 58.14%, nowy_jork 54.83%; RAZEM 56.59% (stosunek mediana/średnia |r|: normalny 0,845, Laplace 0,693)
+F2 RAZEM: σ z puli 1.3662%, σ·√(2/π) 1.0900%; brutto z prioru 0.13080% vs próg t=1,96 limit 0.13084% / taker 0.18084%; moc 80 % (2,8·se) 0.1483% / 0.1983%
+
+Kogo nie ma / co się nakłada: najmniejsza przerwa koniec okna Londynu → otwarcie NY 90 min (bez nakładania: True); dni rozjazdu czasu letniego USA/UK (Londyn 08:00 + NY 13:30 UTC) 100; otwarcia w godzinie fundingu Binance (00/08/16 UTC): {'tokio': 1433, 'londyn': 601, 'nowy_jork': 0}
