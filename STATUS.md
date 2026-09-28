@@ -203,6 +203,8 @@
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
 > krok: decyzja o Commit 2b" — była nieaktualna od serii C2.5; poprawiona w porządkach
 > 2026-09-22.)*
+> OS1 (2026-09-28, pomysł użytkownika): otwarcia sesji Tokio / Londyn / Nowy Jork na BTC 30m — NIEMIERZALNE (trzeba 56,5–65 %
+> trafności łącznie, literatura daje ≤ 54 %; Nowy Jork: zmienność +26–45 %, kierunku nie mierzono); runda nie wystartowała, seria OS 0/2 (wniosek 108).
 
 ---
 
