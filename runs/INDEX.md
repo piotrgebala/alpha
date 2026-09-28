@@ -16,7 +16,8 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
   +0,02 … +0,05 %/tr, mniejszy niż koszt 0,08 %.
 - Carry przekrojowy (niemierzalny), przełączanie carry po znaku, premia rebalansowa, short nowych
   listingów (40, 55, 57, 71). Carry z hedgem działa (COIN-M ~+9 %/rok, 61), ale to nie cel
-  użytkownika (zwroty rzędu zakładu o kierunek).
+  użytkownika (zwroty rzędu zakładu o kierunek). Od 2026-09-29 COIN-M w dzienniku papierowym tylko do
+  weryfikacji rozliczeń (Poprawka 12), nie jako kandydat.
 - Skalowanie pozycji siłą sygnału — niemierzalne na 5 latach (78).
 
 **Kandydaci — ślady, nie dowody (każdy wybrany spośród ~30 odczytów na tej samej historii):**

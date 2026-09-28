@@ -8,7 +8,9 @@ Osobny katalog `data/raw/live/` — zamrożone cache rund (`data/raw/universe`, 
 - Coinbase Exchange: BTC-USD 1d (`data.fetch_external.fetch_coinbase_daily`);
 - Binance spot: BTC/USDT 8h (świeca 16:00 = zamknięcie o 24:00 UTC, jak `run_coinbase_cp1.daily_premium`);
 - alternative.me: Fear & Greed dzienny (`data.fetch_external.fetch_fng`, poprawka 8) — TYLKO etykieta do
-  zapisu; awaria tego źródła nie zatrzymuje pobierania ani dziennika (`fetch_fng_safe`).
+  zapisu; awaria tego źródła nie zatrzymuje pobierania ani dziennika (`fetch_fng_safe`);
+- Binance COIN-M: funding `BTCUSD_PERP` od startu nogi carry (`data.fetch_external.fetch_coinm_funding`,
+  poprawka 12) — tylko noga carry; awaria nie zatrzymuje pobierania ani dziennika (`fetch_coinm_funding_safe`).
 Tylko świece ZAMKNIĘTE (open_time + 1 dzień ≤ teraz). Testy bez sieci: `tests/test_live_journal.py`.
 
     PYTHONUTF8=1 py -m data.fetch_live
@@ -151,6 +153,33 @@ def fetch_fng_safe(out_dir: Path) -> Path | None:
         return None
 
 
+def fetch_coinm_funding_safe(out_dir: Path) -> Path | None:
+    """
+    Funding COIN-M `BTCUSD_PERP` do `out_dir` (poprawka 12, noga carry): historia od startu nogi
+    (`journal_carry.CARRY_START`), pobierana od nowa i nadpisywana przy każdym przebiegu — plik rośnie
+    o 3 rozliczenia dziennie (jedno zapytanie na ~330 dni), a późniejsza zmiana stawki po stronie
+    giełdy wychodzi w dzienniku jako pole „carry zmiany N”. Błąd sieci/schematu (wyjątek) → wydruk
+    i `None`; stary plik zostaje, pozostałe nogi liczą się normalnie, a dziennik zgłasza „carry
+    spóźnione”. Pusta odpowiedź giełdy (HTTP 200 z `[]`) to nie wyjątek: plik zostaje nadpisany
+    pustym. Wtedy `carry_wyniki.csv` zostaje nietknięty, ten jeden przebieg zgłasza „carry
+    spóźnione”, a następny pobiera całą historię od nowa i dopisuje zaległe dni.
+    """
+    from backtest.journal_carry import CARRY_START, CARRY_SYMBOL
+    from data.fetch_external import fetch_coinm_funding
+
+    try:
+        return fetch_coinm_funding(
+            CARRY_SYMBOL, CARRY_START.strftime("%Y-%m-%d"), out_dir, force=True
+        )
+    except Exception as exc:  # noqa: BLE001 — noga tylko do zapisu, nie może zatrzymać przebiegu
+        print(
+            f"[live] funding COIN-M {CARRY_SYMBOL} BŁĄD {type(exc).__name__}: {str(exc)[:120]} "
+            "— carry bez aktualizacji",
+            flush=True,
+        )
+        return None
+
+
 def run(out_dir: Path = LIVE_DIR, start: str = LIVE_START) -> dict:
     import ccxt
 
@@ -184,6 +213,7 @@ def run(out_dir: Path = LIVE_DIR, start: str = LIVE_START) -> dict:
     spot = spot[spot["timestamp"] + pd.Timedelta(hours=8) <= now]
     spot.to_parquet(out_dir / "spot_BTC-USDT_8h.parquet", index=False)
     fetch_fng_safe(out_dir)
+    fetch_coinm_funding_safe(out_dir)
     return {"symbols": len(symbols), "fetched_at": now.isoformat()}
 
 

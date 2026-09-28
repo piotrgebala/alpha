@@ -58,6 +58,12 @@ def _write_live(tmp_path, n_days=480, n_coins=22, seed=3):
     pd.DataFrame(
         {"date": r.index, "value": v, "label": np.where(v < 45, "Fear", "Greed")}
     ).to_parquet(tmp_path / lj.FNG_FILE, index=False)
+    # poprawka 12: funding COIN-M jak z `fetch_live.fetch_coinm_funding_safe` (plik jest po każdym pobraniu);
+    # rozliczenia do 24.09 00:00, czyli ostatni zamknięty dzień = ostatnia świeca (23.09)
+    ts_cm = pd.date_range("2026-09-01", "2026-09-24", freq="8h", tz="UTC")
+    pd.DataFrame({"timestamp": ts_cm, "funding_rate": 1e-4}).to_parquet(
+        tmp_path / lj.CARRY_FILE, index=False
+    )
     return lj.load_live(tmp_path)
 
 
@@ -659,7 +665,7 @@ def test_every_journal_component_has_description(live, monkeypatch):
     from backtest import journal_strategies as js
 
     book = {s["id"]: s for s in lj.strategy_book()}
-    assert set(book) == {"trend", "coinbase", "portfel_r1", "x1"}
+    assert set(book) == {"trend", "coinbase", "portfel_r1", "x1", "carry"}  # carry: poprawka 12
     for s in book.values():
         assert s["nazwa"] and s["opis"] and s["status"] and len(s["zalozenia"]) >= 4
     as_of = live["close"].index[-2]
@@ -706,11 +712,13 @@ def test_run_writes_strategy_descriptions(tmp_path, monkeypatch):
         "coinbase",
         "portfel_r1",
         "x1",
+        "carry",
     }
     assert "STRATEGIE AKTYWNE" in text and all(
-        f"{k} — " in text for k in ("TS1", "CP1", "R1", "X1")
+        f"{k} — " in text for k in ("TS1", "CP1", "R1", "X1", "D1")
     )
-    assert "| opisy strategii 4 |" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
+    # poprawka 12: piąty opis (carry) — jedyna zmiana linii logu na ścieżce bez błędów (4 → 5)
+    assert "| opisy strategii 5 |" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
 
 
 # ------------------------------------------------------------------ poprawka 11: rozbicie, fazy, koszyk
