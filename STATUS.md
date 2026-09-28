@@ -208,6 +208,34 @@
 
 ---
 
+## Lista wykonania — czeka na użytkownika (stan 2026-09-28)
+
+Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opisie commita).
+
+1. **Do 30.09, 06:30 UTC — rutyna dziennika w Cowork** (`trig_013XEDboNXSkb6CF17K1eSGf`): wkleić całą treść
+   [`tools/rutyna_dziennika.md`](tools/rutyna_dziennika.md) zamiast starej instrukcji. Bez tego strona nie pokaże
+   carry (pierwszy wiersz 30.09), a stara wersja zapisuje pliki w `/tmp` i zawiesza się na pytaniu o zgodę.
+   Szczegóły: §17, ETAP 6 — wykonanie (Poprawka 12).
+2. **Rutyna tokenów w Cowork (05:00 UTC)** — założyć wg [docs/rag/12](docs/rag/12_zuzycie_tokenow.md). Część na
+   serwerze działa; bez rutyny zakładka Tokeny na pulpicie się nie odświeża.
+3. **Dwie zawieszone sesje rutyn w Cowork** — zamknąć ręcznie (jedna to ręczny przebieg z 28.09, 05:35 UTC, który
+   utknął na pytaniu o `/tmp`).
+4. **Serwer: usunąć `wersje_serwer.txt` i `wersje_windows.txt`** (listy bibliotek z 24.09; oba środowiska są zgodne
+   z `requirements-lock.txt`, sprawdzone 28.09). Decyzja użytkownika „tak” 28.09; tryb auto blokuje usuwanie, więc
+   polecenie wpisuje użytkownik w Claude Code: `! rm ~/alpha/wersje_serwer.txt ~/alpha/wersje_windows.txt`.
+5. **Serwer: usunąć martwy cron `ogranicznik.sh`** (przycina `~/nohup.out` powyżej 1 GB; plik stoi na 1 GB od
+   8.10.2025, więc cron nic nie robi). Decyzja użytkownika „tak” 28.09; w Claude Code:
+   `! crontab -l | grep -v -F '/home/dantey1/ogranicznik.sh' | crontab -`.
+   Powrót: `(crontab -l; echo '0 * * * * /home/dantey1/ogranicznik.sh') | crontab -`.
+6. **Do decyzji: `~/nohup.out`** (1 GB, nic do niego nie pisze od 8.10.2025) — zostawić czy usunąć.
+7. **Do wyjaśnienia: „decyzje o pulpicie” i „watch co 4 h”** — wymienione w notach przekazania bez szczegółów.
+   Przy pulpicie zostało ręczne sprawdzenie na tablecie (połączenie strony z Claude, motyw jasny/ciemny).
+8. **Windows: linia statusu strażnika kontekstu** — sprawdzić, czy się pokazuje
+   ([docs/rag/12](docs/rag/12_zuzycie_tokenow.md), „Wdrożenie”).
+9. **Do decyzji przy następnej wersji skilla:** odchudzenie SKILL.md skilla `clas5-quant`.
+
+---
+
 ## 1. Cel i zasada nadrzędna
 
 Oryginalny PRD (CLAS-5, system 5-agentowy do tradingu BTC/ETH perpetual futures) zakładał, że
