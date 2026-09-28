@@ -369,7 +369,21 @@ Wniosek wstępny T2 zostaje: progi bronią przed sesją-olbrzymem, nie obniżaj�
 7 dni (`w`); porównujemy udziały skilli, subagentów i wtyczek z monitorem za ten sam okres. Różnica = zużycie, którego
 zapisy nie widzą (np. propozycje następnego polecenia, streszczenia w tle). Reguła: niewidoczne dla monitora
 i nieużywane przez użytkownika → propozycja wyłączenia (decyzja użytkownika).
-*Stan:* użytkownik uruchomił `/usage` 28.09; liczby do wklejenia w następnej sesji i porównania z monitorem.
+*Wynik T3 (28.09, ok. 17:10 UTC):* `/usage` w tej wersji (subskrypcja, Claude Code 2.1.28x) pokazuje tylko procent
+limitów: sesja 5 h 53 % (reset 19:50 UTC), tydzień — wszystkie modele 65 %, tydzień — Fable 62 % (reset 3.10, 22:00 UTC).
+Podziału na skille, subagentów i wtyczki nie ma, więc **porównania udziałów nie da się zrobić** — reguła T3 i pytanie
+z T8 (`cost-state` wyżej niż monitor) zostają otwarte. Z procentów wychodzi za to przelicznik limitu na USD po cenniku
+(monitor + przebiegi T5 w tym samym oknie; to dolne granice, jeśli część zużycia jest poza monitorem, np. Cowork):
+
+| limit | zużyte po cenniku | procent | cały limit ≈ |
+|---|---|---|---|
+| sesja 5 h (od 14:50 UTC) | 32,41 + 11,49 (T5) = 43,91 USD | 53 % | 83 USD (82–84 przy zaokrągleniu procentu) |
+| tydzień, wszystkie modele (od 26.09 22:00) | 371,85 + 11,49 = 383,35 USD | 65 % | 590 USD |
+| tydzień, Fable | 123,99 USD | 62 % | 200 USD |
+
+Co z tego wynika: seria T5 (ok. 6 USD) to ok. 7 % okna 5 h. Tygodniowego limitu zostało ok. 207 USD; przy tempie 28.09
+(ok. 110–120 USD dziennie) wystarczy na ok. 2 dni, a reset jest 3.10 — tempo trzeba zmniejszyć albo wybrać, co ważniejsze.
+Przybliżenie zakłada, że limit waży tokeny jak cennik API; osobny limit Fable pokazuje, że modele są liczone osobno.
 
 **T4 — instrukcje streszczenia (jakość, nie tokeny).** Sekcja `# Compact instructions` w CLAUDE.md: przy streszczeniu
 zachować gałąź, ID rundy, licznik wariantów, pre-rejestrację, decyzje, zmienione pliki i następny krok. Sprawdzenie:
@@ -445,12 +459,48 @@ konfiguracje, kolejność (ziarno), limity i reguła — bez zmian. Zmienia się
 - **doprecyzowania:** za przejściowy błąd API uchodzi też 429 (limit zapytań) i zerwane połączenie bez statusu;
   kolumna reguły daje „—” także wtedy, gdy skażony jest przebieg odniesienia; seria 2 idzie wyłącznie na kopii
   `/home/dantey1/t5_kopia` zrobionej przed scaleniem (po scaleniu master ma narzędzie w historii, więc strażnik odrzuci
-  każdą nową kopię — tak ma być). Ryzyko, które zostaje: klucze leżą w głównym repo poza katalogiem przebiegu; model
-  dotarłby do nich tylko przeszukując cały katalog domowy, a flaga skażenia łapie wzmiankę w odpowiedzi.
+  każdą nową kopię — tak ma być). Ryzyko, które zostaje: klucze leżą w głównym repo poza katalogiem przebiegu, a ścieżkę
+  do niego da się w kopii odczytać (reflog klonu „clone: from /home/dantey1/alpha”; `py` i `python3` wskazują `.venv`
+  głównego repo). Flaga skażenia widzi tylko końcową odpowiedź. Przy następnym użyciu narzędzia: `git reflog expire`
+  w podkomendzie `kopia` (powtórny przegląd, uwaga B).
 
 Ustawienia kopii to `master` sprzed scalenia tej gałęzi, więc bez B2 — prompt systemowy przebiegów jest nieco dłuższy niż
 po scaleniu. Porównania konfiguracji to nie zmienia; koszty bezwzględne jak dotąd są przybliżeniem. Koszt serii 2 jak
 serii 1 (ok. 6–7 USD), T5 łącznie ok. 13 USD — w szacunku 5–15 USD.
+
+*Wynik T5 — seria 2 (28.09, 16:58–17:25 UTC; 56 przebiegów, 6,92 USD; T5 łącznie 13,16 USD).* Zero błędów, ponowień
+i przebiegów skażonych. Znacznik zadziałał: oba powtórzenia kosztują tyle samo (Z1 Opus low 0,096 / 0,095 USD). Koszt
+konfiguracji jako ułamek kosztu odniesienia (Opus max), średnia z 2 powtórzeń; poprawność wszędzie 2/2:
+
+| zadanie | Opus max (odn.) | Opus low | Opus medium | Opus high | Opus xhigh | Sonnet low | Sonnet high |
+|---|---|---|---|---|---|---|---|
+| Z1 wskazanie miejsca | 0,157 USD | 0,61 | 0,66 | 0,67 | 0,68 | **0,43** | 0,44 |
+| Z2 mała poprawka z testem | 0,250 USD (0,209–0,290) | 0,28 | 0,29 | 0,31 | 0,35 | **0,24** | 0,31 |
+| Z3 rachunek z metodologii | 0,665 USD (0,491–0,838) | 0,27 | 0,29 | 0,30 | 0,37 | **0,14** | 0,18 |
+
+Liczba porównań: 6 konfiguracji × 3 zadania = 18 wobec odniesienia (seria 1 odrzucona, nie wchodzi). Przy 2 powtórzeniach
+mediana = średnia; rozrzut widać przy odniesieniu (Z3: 0,491–0,838 USD), więc ułamki to rząd wielkości, nie dokładna
+liczba. **Druga droga:** koszt z tokenów × cennik (wejście, zapis 5 min i 1 h, odczyt, wyjście) odtwarza `total_cost_usd`
+co do 0,000001 USD (Z1: Opus max ×2, Sonnet low ×2); stosunek Sonnet low / Opus max w Z1 = 0,427 (tabela 0,43).
+**Czerwona flaga zapalona:** wszystkie konfiguracje 2/2 na wszystkich zadaniach — te zadania nie różnicują jakości.
+
+**Decyzja (zgodnie z regułą i czerwoną flagą):**
+- Prace tej trudności (wskazanie miejsca, mała poprawka z testem, rachunek gotową funkcją): **Sonnet 5, wysiłek low** —
+  najtańszy na każdym zadaniu, 14–43 % kosztu Opus max przy tej samej poprawności. To potwierdza zasadę „prosta mechanika
+  — Sonnet” z decyzji użytkownika 28.09.
+- Gdy taka praca idzie na Opusie: wysiłek low (27–61 % kosztu max). Low, medium i high różnią się mało (do ok. 10 %),
+  xhigh trochę więcej; skok daje dopiero max — 1,7–3,7 × kosztu low.
+- **Nic dla projektu, diagnozy, przeglądu ani tekstu dla użytkownika** — tego T5 nie mierzył; te prace zostają na Opusie
+  (decyzja użytkownika „lepsze modele, ale bez przesady”). Ustawienia głównej sesji T5 nie zmienia.
+- Wdrożenie (do decyzji użytkownika): w wywołaniach subagentów do prac mechanicznych `model: sonnet`; ewentualnie osobny
+  agent projektu z `model: sonnet` i `effort: low` do takich prac.
+
+*Bramki.* 16a (write-up): **Caveats** — czerwona flaga (zadania nie różnicują jakości), 2 powtórzenia widzą tylko duże
+różnice, koszty bezwzględne to dolna granica (bez listy skilli; kopia bez B2). 16c (przegląd przed scaleniem): pierwszy —
+**Revision** (klucze w kopii, cache między powtórzeniami, błędy znikające z tabeli); po poprawce b104d33 — **Caveats**:
+seria 2 ważna pod warunkiem, że nie ponawiano rozgrzewek ani odniesienia (stopka: zero ponowień, zero błędów —
+spełniony); drobne uwagi: reflog kopii (opisany wyżej), wersja CLI zapisana raz na serię (2.1.282), `_liczba("1.800")`
+= 1,8 i znacznik „KLUCZ” łapie „KLUCZOWE” — oba działają tylko na niekorzyść konfiguracji, w serii 2 bez skutku.
 
 **T6 — hook filtrujący wyniki testów.** Reguła zapisana przed pomiarem: jeśli wyniki `pytest` to < 2 % treści
 dopisywanej do kontekstu głównej sesji, hooka nie robimy.

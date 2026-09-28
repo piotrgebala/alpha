@@ -3099,7 +3099,12 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   wyłączone i 6 skilli konta ukrytych (−2,4 tys. startu); T4 instrukcje streszczenia w CLAUDE.md; T6 bez hooka; **T7**
   „cache zimny” w linii statusu; **T8** monitor liczy USD po cenniku (zgodność z API 0,0 %); **T2** w USD — progi
   150/250 tys. zostają (oszczędność daje tylko unikanie sesji wielodniowych), z komunikatu 150 tys. zdjęto
-  „zaproponuj nową sesję”. Otwarte: T3 (`/usage` wobec monitora; rachunek `cost-state` Claude Code pokazuje o 30–39 %
-  więcej niż monitor w sesjach z subagentami), T5 (wysiłek i model — w toku). Do decyzji: na serwerze brak polecenia
-  `py` i trzech wtyczek z GitHuba (security-guidance, claude-code-setup, discernment-nudge).
+  „zaproponuj nową sesję”. **T5** (seria 1 odrzucona po przeglądzie: klucze w kopii repo i cache między
+  powtórzeniami; seria 2 na czystej kopii, 13,16 USD łącznie): wszystko 2/2 — czerwona flaga, więc wniosek tylko dla prac
+  mechanicznych: **Sonnet low** (14–43 % kosztu Opus max), na Opusie wysiłek low; projekt, diagnoza i przegląd bez zmian
+  (Opus). **T3:** `/usage` pokazuje tylko procent limitów, bez podziału — porównanie z monitorem niemożliwe; przelicznik:
+  limit 5 h ≈ 83 USD po cenniku, tydzień ≈ 590 USD, tydzień Fable ≈ 200 USD; **przy tempie 28.09 tygodniowy limit
+  starczy na ok. 2 dni (reset 3.10)**. Otwarte: `cost-state` o 30–39 % wyżej niż monitor przy subagentach. Do decyzji:
+  na serwerze brak polecenia `py` i trzech wtyczek z GitHuba (security-guidance, claude-code-setup, discernment-nudge);
+  wdrożenie T5 (Sonnet w wywołaniach subagentów do prac mechanicznych albo osobny agent Sonnet/low).
 
