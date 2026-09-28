@@ -492,8 +492,10 @@ co do 0,000001 USD (Z1: Opus max ×2, Sonnet low ×2); stosunek Sonnet low / Opu
   xhigh trochę więcej; skok daje dopiero max — 1,7–3,7 × kosztu low.
 - **Nic dla projektu, diagnozy, przeglądu ani tekstu dla użytkownika** — tego T5 nie mierzył; te prace zostają na Opusie
   (decyzja użytkownika „lepsze modele, ale bez przesady”). Ustawienia głównej sesji T5 nie zmienia.
-- Wdrożenie (do decyzji użytkownika): w wywołaniach subagentów do prac mechanicznych `model: sonnet`; ewentualnie osobny
-  agent projektu z `model: sonnet` i `effort: low` do takich prac.
+- **Wdrożenie — decyzja użytkownika 28.09:** „Bierz opusta cały czas tylko do prostszych zadań z medium effort”. Zawsze Opus; proste zadania na wysiłku
+  medium przez agentów projektu: `lokalizator` (dotąd Haiku) i nowy `wykonawca` (prace mechaniczne ze zmianą plików).
+  Sonnet nie wchodzi, choć w T5 był najtańszy. Medium kosztował w T5 29–66 % kosztu Opus max — tyle co low (różnica do
+  ok. 10 %). Decyzji pilnuje test `test_project_agents_run_on_opus_with_medium_effort`.
 
 *Bramki.* 16a (write-up): **Caveats** — czerwona flaga (zadania nie różnicują jakości), 2 powtórzenia widzą tylko duże
 różnice, koszty bezwzględne to dolna granica (bez listy skilli; kopia bez B2). 16c (przegląd przed scaleniem): pierwszy —

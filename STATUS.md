@@ -3106,5 +3106,6 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   limit 5 h ≈ 83 USD po cenniku, tydzień ≈ 590 USD, tydzień Fable ≈ 200 USD; **przy tempie 28.09 tygodniowy limit
   starczy na ok. 2 dni (reset 3.10)**. Otwarte: `cost-state` o 30–39 % wyżej niż monitor przy subagentach. Do decyzji:
   na serwerze brak polecenia `py` (trzy wtyczki z GitHuba są już zainstalowane i wczytane — sprawdzone 28.09);
-  wdrożenie T5 (Sonnet w wywołaniach subagentów do prac mechanicznych albo osobny agent Sonnet/low).
+  **wdrożenie T5 — decyzja użytkownika 28.09:** „Bierz opusta cały czas tylko do prostszych zadań z medium effort” — agenci `lokalizator` (dotąd Haiku)
+  i nowy `wykonawca` na Opusie z wysiłkiem medium.
 

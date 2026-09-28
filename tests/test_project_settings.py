@@ -171,3 +171,15 @@ def test_plugins_with_rule_19_skills_stay_enabled():
     assert prefixes - {ACCOUNT_SKILLS_PREFIX} == {
         p.split("@", 1)[0] for p in MANDATORY_SKILL_PLUGINS
     }
+
+
+def test_project_agents_run_on_opus_with_medium_effort():
+    """Decyzja użytkownika 28.09 (wdrożenie T5, docs/rag/12): zawsze Opus; proste zadania — wysiłek medium."""
+    katalog = Path(__file__).resolve().parents[1] / ".claude" / "agents"
+    for nazwa in ("lokalizator", "wykonawca"):
+        tekst = (katalog / f"{nazwa}.md").read_text(encoding="utf-8")
+        naglowek = tekst.split("---")[1]
+        assert "\nmodel: opus\n" in naglowek, nazwa
+        assert "\neffort: medium\n" in naglowek, nazwa
+    for plik in katalog.glob("*.md"):
+        assert "\nmodel: haiku" not in plik.read_text(encoding="utf-8").split("---")[1], plik.name
