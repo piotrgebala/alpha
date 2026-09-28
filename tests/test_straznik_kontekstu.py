@@ -1,6 +1,6 @@
 """Testy strażnika kontekstu (`tools/straznik_kontekstu.py`, docs/rag/12) na syntetycznym zapisie
 rozmowy: progi, odczyt ogona zapisu blokami, jednorazowe znaczniki, pomijanie subagentów,
-bezpieczeństwo hooka (zawsze kod 0, przy błędzie cisza) i linia statusu."""
+bezpieczeństwo hooka (zawsze kod 0, przy błędzie cisza) i linia statusu (z „cache zimny”, T7)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -292,3 +293,83 @@ def test_skrypt_statusu_drukuje_linie():
         timeout=30,
     )
     assert wynik.returncode == 0 and "kontekst 72 tys." in wynik.stdout.decode("utf-8")
+
+
+# --- stan cache w linii statusu (T7) --------------------------------------------------------------
+
+
+def prompt_cache(warm: bool, wygasa: object, **pola) -> dict:
+    """Pole `prompt_cache` jak w danych linii statusu Claude Code 2.1.282 (czas w sekundach epoki)."""
+    stan = {"warm": warm, "caching_observed": True, "ttl": "1h", "expires_at": wygasa}
+    return {**stan, "requests": 12, "recache_tokens_if_cold": 72_000, **pola}
+
+
+def dane_statusu(**pola) -> str:
+    dane = {
+        "model": {"id": "claude-opus-5-5", "display_name": "Opus 5.5"},
+        "effort": {"level": "max"},
+        "context_window": {"current_usage": {"cache_read_input_tokens": 72_000}},
+    }
+    return json.dumps({**dane, **pola})
+
+
+def test_status_cache_cieply_bez_napisu():
+    linia = sk.linia_statusu(dane_statusu(prompt_cache=prompt_cache(True, time.time() + 1800)))
+    assert linia.startswith("Opus 5.5 (max) · ") and "kontekst 72 tys." in linia
+    assert "cache" not in linia
+
+
+def test_status_cache_zimny_po_wygasnieciu():
+    linia = sk.linia_statusu(dane_statusu(prompt_cache=prompt_cache(False, time.time() - 60)))
+    assert linia.startswith("Opus 5.5 (max) · ") and "kontekst 72 tys." in linia
+    assert linia.endswith(f"· {sk.KOLORY[1]}cache zimny: nowa sesja{sk.RESET}")
+
+
+def test_status_bez_danych_o_cache_bez_napisu():
+    """Przed pierwszą odpowiedzią modelu (i w Claude Code < 2.1.251) pola `prompt_cache` nie ma."""
+    assert "cache" not in sk.linia_statusu(dane_statusu())
+
+
+@pytest.mark.parametrize(
+    "stan, oczekiwany",
+    [
+        (prompt_cache(True, 1_000_000), False),  # ciepły, przed wygaśnięciem
+        (prompt_cache(True, 999_000), True),  # „ciepły”, ale zegar minął expires_at
+        (prompt_cache(False, 999_000), True),  # zimny według Claude Code
+        (prompt_cache(False, None), True),  # ostatnia odpowiedź bez tokenów cache
+        (prompt_cache(True, None), False),  # bez czasu wygaśnięcia nic nie zgadujemy
+        (prompt_cache(True, True), False),  # wartość logiczna to nie czas
+        (prompt_cache(False, 999_000, caching_observed=False), False),  # dostawca bez cache
+        (None, False),
+        ("zepsute", False),
+        ({}, False),
+    ],
+)
+def test_cache_zimny_na_przykladowych_danych(stan, oczekiwany):
+    assert sk.cache_zimny({"prompt_cache": stan}, teraz=999_500) is oczekiwany
+
+
+@given(wygasa=st.integers(0, 2**40), przesuniecie=st.integers(-(10**6), 10**6))
+def test_cieply_cache_zimnieje_dokladnie_w_chwili_wygasniecia(wygasa, przesuniecie):
+    """Właściwość: przy `warm` = true napis pojawia się dokładnie od chwili `expires_at`."""
+    stan = prompt_cache(True, wygasa)
+    oczekiwany = przesuniecie >= 0
+    assert sk.cache_zimny({"prompt_cache": stan}, teraz=wygasa + przesuniecie) is oczekiwany
+
+
+JSON = st.recursive(
+    st.none() | st.booleans() | st.integers() | st.floats(allow_nan=False) | st.text(max_size=5),
+    lambda dzieci: st.lists(dzieci, max_size=3)
+    | st.dictionaries(st.text(max_size=5), dzieci, max_size=3),
+    max_leaves=8,
+)
+
+
+@settings(max_examples=200, deadline=None)
+@given(
+    stan=JSON | st.dictionaries(st.sampled_from(["warm", "caching_observed", "expires_at"]), JSON)
+)
+def test_status_z_dowolnym_prompt_cache_nie_rzuca(stan):
+    """Właściwość: żadna postać pola `prompt_cache` nie psuje linii statusu."""
+    linia = sk.linia_statusu(json.dumps({"model": "m", "prompt_cache": stan}))
+    assert linia.startswith("m · kontekst —")

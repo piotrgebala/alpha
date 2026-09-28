@@ -20,6 +20,11 @@ CLAUDE_MD = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
 CLOUD_MARKETPLACE = "synced"
 # Wartości `skillOverrides`, które Claude Code rozumie (sprawdzone w kodzie 2.1.280).
 SKILL_OVERRIDE_VALUES = {"on", "name-only", "user-invocable-only", "off"}
+# Skille konta spoza tabeli zasady 19, których projekt używa (strony HTML, zużycie tokenów) —
+# ukryć ich nie wolno (decyzja użytkownika 2026-09-28, B2).
+PROTECTED_SKILLS = {"styl-dashbordow", "explain-usage"}
+# Wtyczki konta bez zastosowania w CLAS-5 (B2, pomiar T1 w docs/rag/12).
+DISABLED_ACCOUNT_PLUGINS = ("finance@synced", "langfuse@synced", "productivity@synced")
 
 
 def hooks_for(event: str) -> list[tuple[str, str]]:
@@ -96,14 +101,25 @@ def test_frozen_guard_hook_guards_every_file_editing_tool():
 
 
 def test_skill_overrides_are_valid_and_never_hide_a_rule_19_skill():
-    """Ukrywać przed modelem wolno tylko skille spoza tabeli zasady 19 — inaczej skill
-    obowiązkowy zniknąłby z listy wyboru po cichu. Wartości: te, które Claude Code rozumie."""
-    mandatory = rule_19_skills()
-    assert mandatory, "tabela zasady 19 w CLAUDE.md jest pusta?"
+    """Ukrywać przed modelem wolno tylko skille spoza tabeli zasady 19 i spoza PROTECTED_SKILLS —
+    inaczej skill, którego projekt używa, zniknąłby z listy wyboru po cichu. Wartości: te, które
+    Claude Code rozumie."""
+    assert rule_19_skills(), "tabela zasady 19 w CLAUDE.md jest pusta?"
+    mandatory = rule_19_skills() | PROTECTED_SKILLS
     for name, value in SETTINGS.get("skillOverrides", {}).items():
         assert value in SKILL_OVERRIDE_VALUES, (name, value)
         bare = name.split(":", 1)[-1]
         assert name not in mandatory and bare not in mandatory, name
+
+
+def test_account_plugins_outside_the_project_stay_disabled():
+    """Decyzja użytkownika 2026-09-28 (B2): wtyczki konta `finance`, `langfuse`, `productivity`
+    są w sesjach projektu wyłączone — pomiar T1 (docs/rag/12): razem z 6 skillami konta
+    w `skillOverrides` 2,4 tys. tokenów startu każdej sesji i subagenta, a projekt ich nie używa.
+    Fałsz w ustawieniach projektu przebija włączenie z konta (kolejność: użytkownik < projekt)."""
+    plugins = SETTINGS.get("enabledPlugins", {})
+    for plugin in DISABLED_ACCOUNT_PLUGINS:
+        assert plugins.get(plugin) is False, plugin
 
 
 def test_project_sessions_carry_no_account_connectors():

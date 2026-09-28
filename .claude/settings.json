@@ -23,7 +23,10 @@
     "engineering@synced": true,
     "security-guidance@claude-plugins-official": true,
     "claude-code-setup@claude-plugins-official": true,
-    "discernment-nudge@anthropic-agent-skills": true
+    "discernment-nudge@anthropic-agent-skills": true,
+    "finance@synced": false,
+    "langfuse@synced": false,
+    "productivity@synced": false
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
@@ -43,7 +46,13 @@
     "anthropic-skills:docs": "user-invocable-only",
     "anthropic-skills:import-memory": "user-invocable-only",
     "anthropic-skills:morning": "user-invocable-only",
-    "anthropic-skills:pine-script-v6-bybit": "user-invocable-only"
+    "anthropic-skills:pine-script-v6-bybit": "user-invocable-only",
+    "anthropic-skills:analiza-wydatkow": "user-invocable-only",
+    "anthropic-skills:trening-zdrowie": "user-invocable-only",
+    "anthropic-skills:doradca-inwestycyjny": "user-invocable-only",
+    "anthropic-skills:computer-use": "user-invocable-only",
+    "anthropic-skills:built-in-browser": "user-invocable-only",
+    "anthropic-skills:chrome-browser": "user-invocable-only"
   },
   "hooks": {
     "PreToolUse": [
