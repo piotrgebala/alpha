@@ -18,8 +18,14 @@ Każdy dokument trafia do powłoki jako blok <script type="application/json" id=
 z JSON-em napisu, w którym każdy znak „<” jest zapisany jako \\u003c — w bloku nie może się pojawić
 ani „</script”, ani „<!--”.
 
-    python3 tools/pulpit_clas5.py             # złóż i zapisz tools/pulpit_clas5.html
-    python3 tools/pulpit_clas5.py --sprawdz   # kod 1, gdy zapisany plik różni się od złożenia
+    python3 tools/pulpit_clas5.py             # złóż i zapisz tools/pulpit_clas5.html i instrukcję rutyny
+    python3 tools/pulpit_clas5.py --sprawdz   # kod 1, gdy któryś zapisany plik różni się od złożenia
+
+Instrukcja rutyny Cowork, która co rano zapisuje dane zakładki Dziennik (`tools/rutyna_dziennika.md`), to
+szablon `tools/rutyna_dziennika_szablon.md` z WKLEJONYM `tools/strona_dziennika.py` i jego sumą SHA-256
+(liczoną jak w rutynie: bajty bez końcowych białych znaków, CRLF → LF). Rutyna nie pobiera kodu z repo
+(strażnik uprawnień Cowork blokuje uruchamianie kodu z repo), więc każda zmiana skryptu danych wymaga
+wklejenia nowej instrukcji w Cowork — test aktualności przypomina o tym czerwonym wynikiem.
 
 Tylko biblioteka standardowa. Wynik deterministyczny: te same źródła dają te same bajty; końce
 linii czyta się jako LF (klon z CRLF na Windows daje ten sam plik). Pilnuje tests/test_pulpit_clas5.py
@@ -29,6 +35,7 @@ linii czyta się jako LF (klon z CRLF na Windows daje ten sam plik). Pilnuje tes
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -42,6 +49,10 @@ ZAKLADKI: tuple[tuple[str, Path], ...] = (
     ("mapa", Path("docs/mapa_projektu.html")),
 )
 ZNACZNIK = "<!--@LADUNKI@-->"
+SKRYPT_RUTYNY = Path("tools/strona_dziennika.py")
+SZABLON_RUTYNY = Path("tools/rutyna_dziennika_szablon.md")
+RUTYNA = ROOT / "tools" / "rutyna_dziennika.md"
+KONIEC_SKRYPTU = "=====KONIEC SKRYPTU====="
 LIMIT_STRONY = 16 * 1024 * 1024  # limit platformy dla publikowanej strony
 
 # Szkielet platformy (bajt w bajt z opublikowanych stron): GLOWA + [preludium] + BODY + źródło + KONIEC.
@@ -138,6 +149,24 @@ def zloz(root: Path = ROOT) -> str:
     return szablon.replace(ZNACZNIK, bloki)
 
 
+def suma_skryptu(skrypt: str) -> str:
+    """SHA-256 skryptu tak, jak liczy ją rutyna: bajty UTF-8 bez końcowych białych znaków, CRLF → LF."""
+    return hashlib.sha256(skrypt.encode("utf-8").rstrip().replace(b"\r\n", b"\n")).hexdigest()
+
+
+def instrukcja_rutyny(root: Path = ROOT) -> str:
+    """Instrukcja rutyny zakładki Dziennik: szablon + wklejony skrypt danych + jego suma."""
+    szablon = czytaj(root / SZABLON_RUTYNY)
+    skrypt = czytaj(root / SKRYPT_RUTYNY).rstrip()
+    for znacznik in ("@SUMA@", "@SKRYPT@", KONIEC_SKRYPTU):
+        if szablon.count(znacznik) != 1:
+            raise ValueError(f"{SZABLON_RUTYNY}: znacznik {znacznik} musi wystąpić dokładnie raz")
+    if KONIEC_SKRYPTU in skrypt:
+        raise ValueError(f"{SKRYPT_RUTYNY} zawiera znacznik końca skryptu {KONIEC_SKRYPTU}")
+    # najpierw suma, potem skrypt — treść skryptu nie przechodzi już przez żadną zamianę
+    return szablon.replace("@SUMA@", suma_skryptu(skrypt)).replace("@SKRYPT@", skrypt)
+
+
 def rozmiary(tresc: str, root: Path = ROOT) -> list[str]:
     """Wiersze raportu: rozmiar każdego źródła i jego bloku w pulpicie oraz całej strony (bajty UTF-8)."""
     wiersze = []
@@ -166,24 +195,29 @@ def main(argv: list[str] | None = None) -> int:
         help="nie zapisuj; kod 1, gdy zapisany plik różni się od świeżego złożenia",
     )
     args = ap.parse_args(argv)
-    tresc = zloz()
+    tresc, rutyna = zloz(), instrukcja_rutyny()
     for wiersz in rozmiary(tresc):
         print(wiersz)
+    suma = suma_skryptu(czytaj(ROOT / SKRYPT_RUTYNY))
+    print(f"rutyna    {str(SKRYPT_RUTYNY):32} suma SHA-256 {suma}")
     if len(tresc.encode()) > LIMIT_STRONY:
         print("BŁĄD: strona większa niż limit platformy (16 MiB).", file=sys.stderr)
         return 1
+    pliki = ((WYJSCIE, tresc), (RUTYNA, rutyna))
     if args.sprawdz:
-        if not WYJSCIE.exists() or czytaj(WYJSCIE) != tresc:
+        stare = [p.name for p, t in pliki if not p.exists() or czytaj(p) != t]
+        if stare:
             print(
-                "NIEAKTUALNY: tools/pulpit_clas5.html różni się od złożenia. "
-                "Uruchom: python3 tools/pulpit_clas5.py",
+                f"NIEAKTUALNY: {', '.join(stare)} różni się od złożenia. "
+                "Uruchom: python3 tools/pulpit_clas5.py (nowa instrukcja rutyny = wklejenie w Cowork)",
                 file=sys.stderr,
             )
             return 1
-        print("OK: tools/pulpit_clas5.html jest aktualny.")
+        print("OK: tools/pulpit_clas5.html i tools/rutyna_dziennika.md są aktualne.")
         return 0
-    WYJSCIE.write_text(tresc, encoding="utf-8", newline="\n")
-    print("Zapisano tools/pulpit_clas5.html.")
+    for plik, tekst in pliki:
+        plik.write_text(tekst, encoding="utf-8", newline="\n")
+    print("Zapisano tools/pulpit_clas5.html i tools/rutyna_dziennika.md.")
     return 0
 
 

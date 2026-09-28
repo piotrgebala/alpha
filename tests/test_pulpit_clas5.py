@@ -15,6 +15,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -223,16 +224,22 @@ def test_znacznik_ladunkow_dokladnie_raz(tmp_path):
 
 
 def test_main_zapis_i_sprawdz(tmp_path, monkeypatch, capsys):
-    plik = tmp_path / "pulpit.html"
+    plik, rutyna = tmp_path / "pulpit.html", tmp_path / "rutyna.md"
     monkeypatch.setattr(pc, "WYJSCIE", plik)
-    assert pc.main(["--sprawdz"]) == 1  # brak pliku
+    monkeypatch.setattr(pc, "RUTYNA", rutyna)
+    assert pc.main(["--sprawdz"]) == 1  # brak plików
     assert pc.main([]) == 0
     assert plik.read_bytes() == pc.zloz().encode("utf-8")  # UTF-8, końce linii LF
+    assert rutyna.read_bytes() == pc.instrukcja_rutyny().encode("utf-8")
     assert pc.main(["--sprawdz"]) == 0
     plik.write_text(pc.zloz() + " ", encoding="utf-8")
     assert pc.main(["--sprawdz"]) == 1
+    plik.write_text(pc.zloz(), encoding="utf-8", newline="\n")
+    rutyna.write_text(pc.instrukcja_rutyny() + " ", encoding="utf-8")
+    assert pc.main(["--sprawdz"]) == 1  # sama instrukcja rutyny nieaktualna
     wyjscie = capsys.readouterr()
-    assert "razem" in wyjscie.out and "NIEAKTUALNY" in wyjscie.err
+    assert "razem" in wyjscie.out and "suma SHA-256" in wyjscie.out
+    assert "NIEAKTUALNY: rutyna.md" in wyjscie.err
 
 
 def _skrypt_powloki() -> str:
@@ -299,3 +306,56 @@ def test_skrypty_powloki_i_preludium_poprawne_skladniowo(tmp_path):
         plik.write_text(kod, encoding="utf-8")
         wynik = subprocess.run(["node", "--check", str(plik)], capture_output=True, text=True)
         assert wynik.returncode == 0, wynik.stderr
+
+
+# ------------------------------------------------------------------ instrukcja rutyny zakładki Dziennik
+
+
+def _z_instrukcji(tekst: str) -> tuple[str, str]:
+    """(skrypt między znacznikami, suma z linii „Musi wyjść:”) — tak, jak czyta je rutyna."""
+    skrypt = tekst.split("=====POCZĄTEK SKRYPTU=====\n", 1)[1].split("\n" + pc.KONIEC_SKRYPTU, 1)[0]
+    return skrypt, re.search(r"^Musi wyjść: ([0-9a-f]{64})$", tekst, re.M)[1]
+
+
+def test_zapisana_instrukcja_rutyny_aktualna():
+    rada = (
+        "tools/rutyna_dziennika.md nieaktualna — uruchom python3 tools/pulpit_clas5.py "
+        "i wklej nową instrukcję w rutynę Cowork"
+    )
+    assert pc.RUTYNA.exists(), rada
+    assert pc.czytaj(pc.RUTYNA) == pc.instrukcja_rutyny(), rada
+
+
+@pytest.mark.parametrize("konce", ["\n", "\r\n"])
+def test_instrukcja_niesie_skrypt_danych_i_jego_sume(tmp_path, konce):
+    """Druga droga: plik zapisany jak w kroku 1 rutyny (także z CRLF), suma liczona jej poleceniem."""
+    skrypt, suma = _z_instrukcji(pc.instrukcja_rutyny())
+    assert skrypt == pc.czytaj(ROOT / pc.SKRYPT_RUTYNY).rstrip()
+    (tmp_path / "gen_dziennik.py").write_bytes((skrypt + "\n").replace("\n", konce).encode("utf-8"))
+    polecenie = re.search(r'^python3 -c "(.+)"$', pc.czytaj(ROOT / pc.SZABLON_RUTYNY), re.M)[1]
+    wynik = subprocess.run(
+        [sys.executable, "-c", polecenie], cwd=tmp_path, capture_output=True, text=True, check=True
+    )
+    assert wynik.stdout.strip() == suma == pc.suma_skryptu(skrypt)
+
+
+def test_instrukcja_odrzuca_zly_szablon_i_znacznik_w_skrypcie(tmp_path):
+    for sciezka in (pc.SZABLON_RUTYNY, pc.SKRYPT_RUTYNY):
+        (tmp_path / sciezka).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / sciezka).write_text(pc.czytaj(ROOT / sciezka), encoding="utf-8")
+    assert pc.instrukcja_rutyny(tmp_path) == pc.instrukcja_rutyny()
+    szablon = pc.czytaj(ROOT / pc.SZABLON_RUTYNY)
+    for zly in (szablon.replace("@SUMA@", ""), szablon + "@SKRYPT@", szablon + pc.KONIEC_SKRYPTU):
+        (tmp_path / pc.SZABLON_RUTYNY).write_text(zly, encoding="utf-8")
+        with pytest.raises(ValueError):
+            pc.instrukcja_rutyny(tmp_path)
+    (tmp_path / pc.SZABLON_RUTYNY).write_text(szablon, encoding="utf-8")
+    (tmp_path / pc.SKRYPT_RUTYNY).write_text(f"x = 1\n# {pc.KONIEC_SKRYPTU}\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        pc.instrukcja_rutyny(tmp_path)
+
+
+@settings(max_examples=200, deadline=None)
+@given(st.text().map(lambda t: t.replace("\r", "")))  # st.text() bez samotnych surogatów (UTF-8)
+def test_suma_skryptu_nie_zalezy_od_crlf_ani_koncowych_bialych_znakow(tekst):
+    assert pc.suma_skryptu(tekst.replace("\n", "\r\n") + " \n\t") == pc.suma_skryptu(tekst)

@@ -16,6 +16,7 @@
   --warn: #a15c00; --warn-bg: #fdf1d8;
   --bad: #c62828; --bad-bg: #fde6e6;
   --v1: #cfe3fb; --v2: #7fb0ef; --v3: #1d5fbf;
+  --carry: #27a3b2;
   --shadow: 0 1px 2px rgba(17, 24, 39, .05), 0 4px 16px rgba(17, 24, 39, .05);
 }
 @media (prefers-color-scheme: dark) {
@@ -28,6 +29,7 @@
     --warn: #f4c15d; --warn-bg: #33270d;
     --bad: #ff8a80; --bad-bg: #3a1716;
     --v1: #213652; --v2: #3b6db2; --v3: #8cbcff;
+    --carry: #058d9b;
     --shadow: none;
   }
 }
@@ -40,6 +42,7 @@
   --warn: #f4c15d; --warn-bg: #33270d;
   --bad: #ff8a80; --bad-bg: #3a1716;
   --v1: #213652; --v2: #3b6db2; --v3: #8cbcff;
+  --carry: #058d9b;
   --shadow: none;
 }
 * { box-sizing: border-box; }
@@ -192,6 +195,15 @@ const ICON = {
   bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
 };
 const ddLevel = (dd, th) => dd == null ? "info" : dd >= th.stop ? "bad" : dd >= th.warn ? "warn" : "ok";
+// Odmiana po liczebniku: odm(n, "przebieg", "przebiegi", "przebiegów") — 1 / 2–4 (też 22–24…) / 5+ i 12–14.
+const odm = (n, one, few, many) => n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many;
+// Kłopot nogi carry (poprawka 12) po ludzku. Zwraca zwykły tekst — kto go wstawia do HTML, sam woła esc().
+const CARRY_TROUBLE_TXT = { "spóźnione": "dane o opłatach są spóźnione", "brak pliku": "brak pliku z danymi o opłatach" };
+const carryTrouble = s => (s || "").split(", ").filter(Boolean).map(part => {
+  if (CARRY_TROUBLE_TXT[part]) return CARRY_TROUBLE_TXT[part];
+  const m = /^BŁĄD (.+)$/.exec(part);
+  return m ? `błąd liczenia albo zapisu (${m[1]})` : part;
+}).join(", ");
 
 function status(D) {
   const ageH = (Date.now() - Date.parse(D.generated_at)) / 3600000;
@@ -203,6 +215,10 @@ function status(D) {
   if (C.consistency.after_first_result > 0) return ["bad", "Dziennik zmienił wcześniej zapisane liczby", "Raz zapisane pozycje i wyniki nie powinny się zmieniać.", "trzeba znaleźć przyczynę przed odczytem 25 grudnia."];
   if (r1 === "warn" || x1 === "warn") return ["warn", "Spadek przekroczył próg ostrzeżenia", "Portfel stracił więcej niż w najgorszym okresie w historii testów.", "nic pilnego. Obserwuj; decyzja zapada dopiero przy progu STOP."];
   if (H.hosts_last_day.length > 1) return ["warn", "Wszystko działa, ale dziennik policzyły dwie maszyny", `${longDate(H.last_journal_date)} obliczenie zrobił i serwer, i Twój komputer. Wyniki wyszły takie same.`, "nic, jeśli od następnej nocy liczy już tylko serwer."];
+  const car = D.carry;
+  if (car?.error) return ["warn", "Nie da się odczytać wyników carry", `Plik z wynikami osobnej nogi carry ma nieoczekiwany kształt (${car.error}). Reszta dziennika liczy się normalnie.`, "sprawdź plik carry_wyniki.csv i najbliższe obliczenie."];
+  if (D.last_run?.carry) return ["warn", "Wszystko działa, ale noga carry ma kłopot", `Ostatnie obliczenie zgłosiło: ${carryTrouble(D.last_run.carry)}. Portfele liczą się normalnie.`, "nic pilnego. Jeśli kłopot powtórzy się jutro, sprawdź pobieranie danych o opłatach z Binance."];
+  if (car && car.criteria.consistency.last > car.criteria.consistency.prev) return ["warn", "Noga carry: zapis różni się od przeliczenia", "Ostatnie przeliczenie stawek funding nie zgadza się z tym, co już zapisano w carry_wyniki.csv.", "trzeba wyjaśnić przyczynę przed odczytem 25 grudnia, np. czy giełda poprawiła stawkę."];
   return ["ok", "Wszystko działa", "Dziennik liczy się sam każdej nocy i nic nie wymaga Twojej uwagi.", "nic."];
 }
 
@@ -219,7 +235,7 @@ function spark(dates, eq, color) {
     <path d="M${X(0)},${Y(1)} L${pts.join(" L")} L${X(n)},${Y(1)} Z" fill="${color}" fill-opacity=".12"/>
     <polyline points="${pts.join(" ")}" fill="none" stroke="${color}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
     <circle cx="${X(n)}" cy="${Y(vals[n])}" r="4" fill="${color}" stroke="var(--card)" stroke-width="2" vector-effect="non-scaling-stroke"/>
-  </svg><div class="axis"><span>${short(dates[0])}</span><span>przerywana linia = 100 zł na starcie</span><span>${short(dates[n])}</span></div>`;
+  </svg><div class="axis"><span>${esc(short(dates[0]))}</span><span>przerywana linia = 100 zł na starcie</span><span>${esc(short(dates[n]))}</span></div>`;
 }
 
 function meter(dd, th) {
@@ -241,6 +257,73 @@ function portfolioCard({ name, about, color, s, th, start }) {
     ${has ? `<div class="money">${nf(eq * 100, 2)} zł <small>z każdych 100 zł · ${pct(eq - 1, 2, true)}</small></div>
       ${meter(dd, th)}${spark(s.dates, s.equity, color)}`
       : `<p class="empty">Wynik liczy się od ${longDate(start)}. Pierwsza liczba pojawi się po nocnym obliczeniu, które zamknie ten dzień.</p>`}
+  </div>`;
+}
+
+// Karta nogi carry COIN-M (poprawka 12, tylko zapis — dziennik/README.md). D.carry brak = stary
+// generator jeszcze nie zaktualizowany; D.carry.error = plik carry_wyniki.csv nieczytelny.
+function carryCard(D) {
+  const about = "Na papierze: 1 bitcoin kupiony na giełdzie i taki sam zakład na jego spadek w kontrakcie rozliczanym w bitcoinach. Zmiany ceny się znoszą, zostaje sama opłata funding, którą strony kontraktu płacą sobie co 8 godzin. Bez dźwigni, zawsze w pozycji — tylko do sprawdzenia, czy zapis zgadza się z giełdą.";
+  const swatch = `<span class="swatch" style="background:var(--carry)"></span>`;
+  const c = D.carry;
+
+  if (!c) {
+    return `<div class="card">
+      <div class="row"><h3>${swatch}Carry COIN-M</h3></div>
+      <p class="hint">${about}</p>
+      <p class="empty">Ta część pojawi się po aktualizacji automatu, który odświeża stronę.</p>
+    </div>`;
+  }
+  if (c.error) {
+    return `<div class="card">
+      <div class="row"><h3>${swatch}Carry COIN-M</h3><span class="tag warn">błąd odczytu</span></div>
+      <p class="hint">${about}</p>
+      <p class="empty">Nie udało się odczytać pliku wyników carry (${esc(c.error)}). Reszta strony jest aktualna.</p>
+    </div>`;
+  }
+
+  const last = D.last_run || {};
+  const tim = c.criteria.timeliness, comp = c.criteria.completeness, cons = c.criteria.consistency;
+  let tag;
+  if (last.carry) tag = `<span class="tag warn">kłopot</span>`;
+  else if (cons.last > 0) tag = `<span class="tag warn">różnica w zapisie</span>`;
+  else if (!c.dates.length) tag = `<span class="tag info">czeka na pierwszy wynik</span>`;
+  else tag = `<span class="tag info">tylko zapis</span>`;
+
+  let body;
+  if (c.dates.length) {
+    const eq = 1 + c.cum.at(-1);
+    const eqSeries = c.cum.map(v => v == null ? null : 1 + v);
+    body = `<div class="money">${nf(eq * 100, 2)} zł <small>z każdych 100 zł · ${pct(eq - 1, 2, true)}</small></div>
+      ${spark(c.dates, eqSeries, "var(--carry)")}
+      <p class="hint">Ostatni dzień (${longDate(c.dates.at(-1))}): ${c.settlements.at(-1)} z 3 rozliczeń, opłata ${pct(c.funding.at(-1), 3, true)}.</p>`;
+  } else {
+    body = `<p class="empty">Wynik liczy się od ${longDate(c.start)}. Pierwsza liczba pojawi się po nocnym obliczeniu, które zamknie ten dzień.</p>`;
+  }
+
+  const timOk = tim.runs ? tim.trouble / tim.runs <= 0.05 : null;
+  const compDays = comp.days + comp.missing.length;  // dni od startu: brakujący wiersz = dzień niepełny
+  const compOk = compDays ? comp.complete / compDays >= 0.95 : null;
+  const consOk = cons.runs === 0;
+  let compExtra = "";
+  if (comp.incomplete.length || comp.missing.length) {
+    const bits = [];
+    if (comp.incomplete.length) bits.push(`niepełne: ${comp.incomplete.map(short).join(", ")}`);
+    if (comp.missing.length) bits.push(`brakujące: ${comp.missing.map(short).join(", ")}`);
+    compExtra = `<span class="d" style="display:block">${esc(bits.join(" · "))}</span>`;
+  }
+  const critRow = (k, v, w, ok, extra = "") => `<div class="it"><span><b>${k}</b><span class="d"><span class="num">${esc(v)}</span> · wymóg: ${w}</span>${extra}</span><span class="tag ${ok == null ? "info" : ok ? "ok" : "warn"}">${ok == null ? "czeka" : ok ? "spełnia" : "do sprawdzenia"}</span></div>`;
+  const crit = `<div class="list">
+    ${critRow("Na czas", tim.runs ? `${tim.runs - tim.trouble} z ${tim.runs} ${tim.runs === 1 ? "przebiegu" : "przebiegów"} bez kłopotu` : "—", "kłopot najwyżej w 5 % przebiegów od 30 września", timOk)}
+    ${critRow("Komplet rozliczeń", compDays ? `${comp.complete} z ${compDays} ${compDays === 1 ? "dnia" : "dni"} po 3 rozliczenia` : "—", "co najmniej 95 % dni, każdy brak wyjaśniony", compOk, compExtra)}
+    ${critRow("Zapis zgodny z giełdą", cons.runs ? `${cons.runs} ${odm(cons.runs, "przebieg", "przebiegi", "przebiegów")} z różnicą (najwięcej ${cons.max} ${cons.max === 1 ? "dzień" : "dni"})` : "bez różnic", "zero różnic", consOk)}
+  </div>`;
+
+  return `<div class="card">
+    <div class="row"><h3>${swatch}Carry COIN-M</h3>${tag}</div>
+    <p class="hint">${about}</p>
+    ${body}
+    ${crit}
   </div>`;
 }
 
@@ -272,8 +355,8 @@ function render(D) {
     [srcOk ? "ok" : "warn", "Ceny z giełd są aktualne",
       srcOk ? "Binance i Coinbase dostarczyły ceny z właściwego dnia." : `Binance ma ceny do ${longDate(L?.binance)}, Coinbase do ${longDate(L?.premia)}.`],
     [after ? "bad" : "ok", "Stare zapisy się nie zmieniły",
-      after ? `${after} razy dziennik zmienił coś, co już zapisał. To trzeba wyjaśnić.`
-        : `Raz zapisane pozycje i wyniki zostają bez zmian, tak jak powinny.${pre ? ` (${pre} zmiany z ${longDate(H.history_events[0].ts)} były jeszcze przed pierwszym wynikiem, w czasie przygotowań.)` : ""}`],
+      after ? `${after} ${after === 1 ? "raz" : "razy"} dziennik zmienił coś, co już zapisał. To trzeba wyjaśnić.`
+        : `Raz zapisane pozycje i wyniki zostają bez zmian, tak jak powinny.${pre ? ` (${pre} ${odm(pre, "zmiana", "zmiany", "zmian")} z ${longDate(H.history_events[0].ts)} ${odm(pre, "była", "były", "było")} jeszcze przed pierwszym wynikiem, w czasie przygotowań.)` : ""}`],
     [oneHost ? "ok" : "warn", "Liczy tylko jedna maszyna",
       oneHost ? `Ostatnio policzył: ${hostName(H.hosts_last_day[0])}.`
         : `${longDate(H.last_journal_date)} policzyli: ${H.hosts_last_day.map(hostName).join(" i ")}. Wynik wyszedł ten sam, ale docelowo ma liczyć tylko serwer.`],
@@ -294,7 +377,7 @@ function render(D) {
   const crit = [
     ["Liczył się codziennie", comp.days ? `${comp.covered} z ${comp.days} dni` : "—", "co najmniej 95 % dni", share(comp.covered, comp.days) >= .95],
     ["Ceny były na czas", tim.days ? `${tim.days - tim.late.length} z ${tim.days} dni` : "—", "co najmniej 95 % dni", share(tim.days - tim.late.length, tim.days) >= .95],
-    ["Stare zapisy bez zmian", after ? `${after} zmian` : "bez zmian", "zero niewyjaśnionych zmian", !after],
+    ["Stare zapisy bez zmian", after ? `${after} ${odm(after, "zmiana", "zmiany", "zmian")}` : "bez zmian", "zero niewyjaśnionych zmian", !after],
     ["Zablokowane środki w normie", mg.median == null ? "—" : `średnio ${pct(mg.median, 0)} kapitału`, "od 15 do 35 %", mg.median != null && mg.median >= .15 && mg.median <= .35],
     ["Ryzyko w limicie", `maks. ${nf(Math.max(km.trend ?? 0, km.coinbase ?? 0), 2)}`, `nie więcej niż ${nf(km.cap, 0)}`, Math.max(km.trend ?? 0, km.coinbase ?? 0) <= km.cap],
   ];
@@ -331,6 +414,10 @@ function render(D) {
     </details>`;
   }
 
+  // --- carry (poprawka 12, osobna noga tylko do zapisu)
+  const carrySec = `${carryCard(D)}
+    <p class="hint">Pierwszego dnia wynik obciąża koszt wejścia 0,19 %, więc na początku jest pod kreską. Przy stawkach z lat 2022–2026 (średnio 5,7 % rocznie; bony skarbowe USA dały w tym czasie 3,95 %) koszt odrabia się w około 2 tygodnie, w słabym roku w ponad miesiąc. Po 3 miesiącach sprawdzamy tylko, czy zapis działa — nie to, czy carry się opłaca.</p>`;
+
   // --- rynek
   const M = D.market, mood = { niska: "spokojny", srednia: "normalny", wysoka: "nerwowy" };
   const market = M && M.dates.length ? `<div class="card">
@@ -347,7 +434,7 @@ function render(D) {
   // --- historia
   const runs = [...D.log_tail].reverse();
   const x1note = s => /BŁĄD/.test(s || "") ? "błąd portfela pomocniczego" : "";
-  const note = r => [r.changed ? `zmieniono ${r.changed} starych zapisów` : "", x1note(r.x1), /BŁĄD/.test(r.stan || "") ? "błąd notatki o rynku" : "", r.status !== "OK" ? r.status : ""].filter(Boolean).join(", ") || "w porządku";
+  const note = r => [r.changed ? `zmieniono ${r.changed} ${odm(r.changed, "stary zapis", "stare zapisy", "starych zapisów")}` : "", x1note(r.x1), /BŁĄD/.test(r.stan || "") ? "błąd notatki o rynku" : "", r.status !== "OK" ? r.status : "", r.carry ? `carry: ${carryTrouble(r.carry)}` : "", r.carry_changed ? `carry różni się od zapisu w ${r.carry_changed} ${r.carry_changed === 1 ? "dniu" : "dniach"}` : ""].filter(Boolean).join(", ") || "w porządku";
   const history = `<div class="card" style="padding:6px 6px"><div class="tablewrap"><table><thead><tr><th>Kiedy</th><th>Ceny z dnia</th><th>Portfel główny</th><th>Uwagi</th></tr></thead><tbody>
     ${runs.map(r => `<tr><td class="nw">${when(r.ts)}</td><td class="nw">${short(r.as_of)}</td><td class="num">${r.eq == null ? "—" : nf(r.eq * 100, 2) + " zł"}</td><td style="${r.changed ? "color:var(--bad)" : ""}">${esc(note(r))}</td></tr>`).join("")}
   </tbody></table></div></div>
@@ -363,6 +450,7 @@ function render(D) {
     <div><dt>Premia Coinbase</dt><dd>Różnica między ceną Bitcoina na amerykańskiej giełdzie Coinbase a resztą świata. Gdy w ostatnim tygodniu ta różnica jest wyższa niż średnio z ostatnich 3 miesięcy, system kupuje Bitcoina; gdy niższa, gra na spadek.</dd></div>
     <div><dt>Trend</dt><dd>Moneta, która rosła przez ostatnie 4 tygodnie, dostaje zakład na wzrost; która spadała — na spadek.</dd></div>
     <div><dt>7 części portfela</dt><dd>Portfel jest podzielony na 7 kawałków, a codziennie odnawia się tylko jeden. Dzięki temu wynik nie zależy od jednego dnia tygodnia.</dd></div>
+    <div><dt>Carry (opłata funding)</dt><dd>Kontrakt bez daty wygaśnięcia (kontrakt wieczysty) ma opłatę funding: co 8 godzin jedna strona płaci drugiej. Zwykle płacą grający na wzrost ceny, a dostają grający na spadek. Bitcoin kupiony na giełdzie znosi zmiany jego ceny, więc z całej pozycji zostaje sama ta opłata. Opłata bywa ujemna — wtedy trzeba zapłacić, zamiast dostać.</dd></div>
     <div><dt>Podsumowanie 25 grudnia</dt><dd>Po 3 miesiącach sprawdzamy, czy dziennik działał porządnie. Czy strategia zarabia, będzie można ocenić dopiero po dłuższym czasie.</dd></div>
   </dl></details>`;
 
@@ -373,6 +461,7 @@ function render(D) {
     <section><div class="sec-head"><h2>Ile jest warte 100 zł</h2><p class="hint">Co stałoby się ze 100 zł wpłaconymi na start każdego portfela.</p></div>${portfolios}</section>
     <section><div class="sec-head"><h2>Podsumowanie 25 grudnia</h2><p class="hint">Po 3 miesiącach sprawdzamy, czy dziennik działał porządnie. Tak wygląda to dziś.</p></div>${exam}</section>
     <section><div class="sec-head"><h2>Co portfele trzymają ${P ? "na " + longDate(P.for_day) : ""}</h2><p class="hint">Pozycje wyliczone z cen z końca ${P ? longDate(P.as_of) : "dnia"}.</p></div>${positions}</section>
+    <section><div class="sec-head"><h2>Carry — sprawdzian zapisu</h2><p class="hint">Osobna noga od 29 września: tylko zapis opłaty funding, bez wpływu na portfele.</p></div>${carrySec}</section>
     <section><div class="sec-head"><h2>Nastrój rynku</h2><p class="hint">Krótka notatka o tym, jaki był rynek każdego dnia.</p></div>${market}${marketNote}</section>
     <section><div class="sec-head"><h2>Historia obliczeń</h2><p class="hint">Każde nocne obliczenie dziennika, najnowsze na górze.</p></div>${history}</section>
     ${glossary}
