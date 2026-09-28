@@ -38,6 +38,11 @@ Zasady zapisu (`dziennik/`):
   startu), więc kolejność wierszy w pliku nie musi być chronologiczna — czytać po kluczu. Netto
   porównywane jest z wynikiem TEGO przebiegu (to samo, co trafia do `wyniki.csv` przy nowym dniu);
   równość z zapisanym plikiem jest ścisła, gdy „historia zmieniona” = 0.
+- `carry_wyniki.csv` (poprawka 12) — noga carry COIN-M do weryfikacji, osobno i TYLKO zapis (`journal_carry`):
+  dzień UTC od `CARRY_START` z liczbą rozliczeń fundingu BTCUSD_PERP, sumą stawek, kosztem wejścia (tylko
+  pierwszy dzień), netto i netto skumulowanym; append-only z wykrywaniem „historia zmieniona” jak wyżej. Bez
+  kłopotu linia `przebiegi.log` jest taka jak przed poprawką; pole „carry …” dochodzi tylko przy błędzie,
+  braku pliku albo spóźnionych danych. Błąd carry nie zatrzymuje dziennika.
 
     PYTHONUTF8=1 py -m backtest.live_journal              # pobranie danych + zapis
     PYTHONUTF8=1 py -m backtest.live_journal --bez-pobierania
@@ -54,6 +59,15 @@ import numpy as np
 import pandas as pd
 
 from backtest.checkpoint_lib import load_config
+from backtest.journal_carry import (
+    CARRY_CSV,
+    CARRY_FILE,
+    CARRY_KEY,
+    CARRY_START,
+    CARRY_VALUES,
+    carry_costs,
+    carry_rows,
+)
 from backtest.journal_strategies import build as build_strategies
 from backtest.journal_strategies import summarize as summarize_strategies
 from backtest.journal_strategies import to_rows as strategy_rows
@@ -705,6 +719,7 @@ def strategy_book() -> list[dict]:
         {
             "JOURNAL_START": JOURNAL_START,
             "X1_START": X1_START,
+            "CARRY_START": CARRY_START,
             "LEV_TREND": LEV_TREND,
             "LEV_CB": LEV_CB,
             "MMR": MMR,
@@ -1045,6 +1060,57 @@ def with_errors(txt: str, errors: dict[str, Exception]) -> str:
     return f"{txt} (" + ", ".join(f"{n} BŁĄD {type(e).__name__}" for n, e in errors.items()) + ")"
 
 
+# ------------------------------------------------------------------ poprawka 12: carry COIN-M, tylko zapis
+def run_carry(
+    live_dir: Path, journal_dir: Path, cost_cfg: dict, as_of: pd.Timestamp, details: list[str]
+) -> tuple[str, str | None, list[str], pd.DataFrame | None]:
+    """
+    Noga carry COIN-M (poprawka 12, tylko zapis): wiersze od `CARRY_START` z pliku funding COIN-M
+    (`data.fetch_live.fetch_coinm_funding_safe`) → `carry_wyniki.csv` (append-only, „historia zmieniona”
+    jak w innych plikach). Zwraca (dopisane: „+N” / „BŁĄD <typ>” / „brak pliku”; pole logu albo None;
+    „historia zmieniona”; wiersze albo None). Pole logu jest TYLKO przy kłopocie: „BŁĄD <typ>”, „brak
+    pliku” albo „spóźnione” (ostatni dzień zamknięty w danych jest wcześniejszy niż `as_of`) — bez kłopotu
+    linia `przebiegi.log` jest taka jak przed poprawką 12 (parser strony jest wklejony w rutynę Cowork).
+    Nic tu nie zatrzymuje dziennika; komunikat błędu trafia do `details` (wydruk).
+    """
+    path = Path(live_dir) / CARRY_FILE
+    if not path.exists():
+        return "brak pliku", "brak pliku", [], None
+    try:
+        rows = carry_rows(pd.read_parquet(path), CARRY_START, carry_costs(cost_cfg).switch_cost)
+    except Exception as exc:  # noqa: BLE001 — noga tylko do zapisu nie zatrzymuje dziennika
+        details.append(f"carry: {error_text(exc)}")
+        err = f"BŁĄD {type(exc).__name__}"
+        return err, err, [], None
+    txt, changed = append_safe(
+        journal_dir / CARRY_CSV, rows, CARRY_KEY, CARRY_VALUES, None, details
+    )
+    if txt.startswith("BŁĄD"):
+        return txt, txt, changed, rows
+    last = pd.Timestamp(rows["date"].iloc[-1], tz="UTC") if len(rows) else None
+    late = as_of >= CARRY_START and (last is None or last < as_of)
+    return txt, ("spóźnione" if late else None), changed, rows
+
+
+def summarize_carry(
+    rows: pd.DataFrame | None, txt: str, flag: str | None, details: list[str] | None = None
+) -> str:
+    """Linia do wydruku (poprawka 12): ostatni zamknięty dzień carry i wynik od startu + błędy z komunikatem."""
+    head = f"  Carry COIN-M (poprawka 12, papier, tylko zapis; od {CARRY_START.date()}): dopisane {txt}"
+    if rows is not None and len(rows):
+        r = rows.iloc[-1]
+        head += (
+            f"; {r['date']}: rozliczenia {int(r['rozliczenia'])}/3, suma stawek "
+            f"{100 * r['suma_stawek']:+.4f} %, netto {100 * r['netto']:+.4f} %; od startu {len(rows)} dni "
+            f"(pełnych {int(rows['komplet'].sum())}), netto skumulowane {100 * r['netto_skum']:+.4f} % nominału"
+        )
+    elif rows is not None:
+        head += "; jeszcze żaden dzień od startu nie jest zamknięty w danych"
+    if flag == "spóźnione":
+        head += " — UWAGA: dane carry spóźnione (ostatni zamknięty dzień przed dniem dziennika)"
+    return "\n".join([head] + [f"    BŁĄD {d}" for d in details or []])
+
+
 # ------------------------------------------------------------------ przebieg
 def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURNAL_DIR) -> str:
     started = pd.Timestamp.now(tz="UTC")
@@ -1187,10 +1253,14 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     ks_txt, ch_ks = append_safe(
         journal_dir / "koszyk.csv", rows_ks, BASKET_KEY, BASKET_VALUES, err_ks, p11_err
     )
+    # carry COIN-M (poprawka 12): osobna noga, tylko zapis; błąd nie zatrzymuje dziennika, a pole
+    # w logu dochodzi tylko przy kłopocie (bez kłopotu linia jak przed poprawką 12)
+    ca_err: list[str] = []
+    ca_txt, ca_flag, ch_ca, rows_ca = run_carry(live_dir, journal_dir, cfg["costs"], as_of, ca_err)
     dd = float(res["drawdown"].iloc[-1]) if len(res) else 0.0
     eq = float(res["equity"].iloc[-1]) if len(res) else 1.0
     status = stop_status(dd)
-    changed = ch_sig + ch_res + ch_x1 + ch_st + ch_fg + ch_tr + ch_rb + ch_fz + ch_ks
+    changed = ch_sig + ch_res + ch_x1 + ch_st + ch_fg + ch_tr + ch_rb + ch_fz + ch_ks + ch_ca
     late = (started.normalize() - as_of).days > 1
     summary = (
         summarize(pos, k, as_of, eq, dd, status, late, changed, last)
@@ -1204,7 +1274,10 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         + text_str
         + "\n"
         + summarize_p11(rb_txt, fz_txt, ks_txt, p11_err)
+        + "\n"
+        + summarize_carry(rows_ca, ca_txt, ca_flag, ca_err)
     )
+    ca_log = f" | carry {ca_flag}" if ca_flag else ""  # poprawka 12: tylko przy kłopocie
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
         f"premia {last['coinbase_premia'].date()} | sygnały +{n_sig} | wyniki +{n_res} | "
@@ -1212,7 +1285,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         f"X1 sygnały +{n_sig_x1} wyniki +{n_res_x1} kapitał {eq_x1:.4f} "
         f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | stan rynku {st_txt} | F&G {fg_txt} | "
         f"transakcje {tr_txt} | opisy strategii {str_txt} | rozbicie {rb_txt} | fazy {fz_txt} | "
-        f"koszyk {ks_txt} | historia zmieniona: {len(changed)}\n"
+        f"koszyk {ks_txt}{ca_log} | historia zmieniona: {len(changed)}\n"
     )
     journal_dir.mkdir(parents=True, exist_ok=True)
     with open(journal_dir / "przebiegi.log", "a", encoding="utf-8") as f:

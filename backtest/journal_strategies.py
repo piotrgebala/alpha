@@ -2,8 +2,8 @@
 journal_strategies.py — poprawka 10 dziennika (decyzja użytkownika 2026-09-26): JEDNO źródło opisu
 i dokładnych założeń każdej aktywnej strategii dziennika papierowego. Liczby w opisach biorą się ze
 stałych silników (czytanych w chwili budowy opisu: `ts_momentum`, `xs_momentum`, `run_coinbase_cp1`,
-`rebalance_premium`, domyślne parametry `sizing.apply_rules`, koszty z `config/settings.yaml`) i z
-parametrów dziennika przekazanych przez `live_journal` — opis nie może rozjechać się z kodem.
+`rebalance_premium`, `journal_carry`, domyślne parametry `sizing.apply_rules`, koszty z `config/settings.yaml`)
+i z parametrów dziennika przekazanych przez `live_journal` — opis nie może rozjechać się z kodem.
 
 Z tego źródła powstają: blok „STRATEGIE AKTYWNE” w każdym raporcie dziennika, plik
 `dziennik/strategie.csv` (nadpisywany w każdym przebiegu) i `dziennik/STRATEGIE.md`:
@@ -24,6 +24,7 @@ import backtest.run_coinbase_cp1 as cp
 import backtest.ts_momentum as tsm
 import backtest.xs_momentum as xsm
 from backtest.checkpoint_lib import load_config
+from backtest.journal_carry import CARRY_SYMBOL, carry_costs
 from backtest.sizing import apply_rules
 from data.fetch_universe import STABLE_BASES
 
@@ -46,14 +47,16 @@ def _n(x: float) -> str:
 
 def build(j: dict) -> list[dict]:
     """
-    Opisy aktywnych strategii. `j` — parametry dziennika: JOURNAL_START, X1_START, LEV_TREND, LEV_CB,
-    MMR, WARN_DD, STOP_DD, X1_WARN_DD, X1_STOP_DD (z `live_journal`).
+    Opisy aktywnych strategii. `j` — parametry dziennika: JOURNAL_START, X1_START, CARRY_START, LEV_TREND,
+    LEV_CB, MMR, WARN_DD, STOP_DD, X1_WARN_DD, X1_STOP_DD (z `live_journal`).
     """
     costs = load_config()["costs"]
     fee = costs["taker_fee_rate"] + costs["slippage_bps"] / 10_000.0
+    carry_entry = carry_costs(costs).switch_cost
     r1 = {k: v.default for k, v in signature(apply_rules).parameters.items() if k != "returns"}
     start = j["JOURNAL_START"].date().isoformat()
     x1_start = j["X1_START"].date().isoformat()
+    carry_start = j["CARRY_START"].date().isoformat()
     basket = (
         f"Koszyk: {rp.TOP_N} kontraktów wieczystych USDT-M Binance o największym średnim obrocie z "
         f"{rp.VOLUME_LOOKBACK_DAYS} dni przed początkiem miesiąca (min. {rp.MIN_HISTORY_DAYS} dni notowań), "
@@ -179,6 +182,37 @@ def build(j: dict) -> list[dict]:
             "wynik_od": x1_start,
             "wynik_w": "x1_wyniki.csv",
         },
+        {
+            "id": "carry",
+            "skrot": "D1",
+            "nazwa": "Carry COIN-M na BTC (osobno, tylko papier, do weryfikacji)",
+            "opis": (
+                f"Trzymamy 1 BTC i krótki kontrakt {CARRY_SYMBOL} rozliczany w bitcoinie na tę samą kwotę: "
+                "wartość w dolarach stoi w miejscu, a zarabia opłata funding, którą płacą longi."
+            ),
+            "zalozenia": [
+                f"Konstrukcja z rundy D1: 1 BTC zabezpieczenia kupione na spot przy starcie + short {CARRY_SYMBOL} "
+                "(COIN-M, kontrakt odwrotny) o nominale równym wartości zabezpieczenia; dźwignia 1×; zawsze w pozycji — "
+                "bez przełączania po znaku fundingu (C1b, wniosek 55) i bez parametrów do strojenia.",
+                "Wartość USD pozycji stała (tożsamość P + N·(1/P − 1/P₀)·P = P₀): brak likwidacji i dopłat depozytu "
+                "z konstrukcji; kapitał = wartość zabezpieczenia (1×).",
+                "Dochód: funding COIN-M rozliczany co 8 h (00:00, 08:00, 16:00 UTC); dzień UTC = te trzy rozliczenia; "
+                "stawka dodatnia — short dostaje, ujemna — płaci. Wynik = suma stawek w ułamku nominału, bez procentu "
+                "składanego (jak w D1).",
+                f"Koszt wejścia raz, pierwszego dnia: {_p(carry_entry, 2)} nominału (spot {_p(costs['spot_fee_rate'], 2)} "
+                f"+ kontrakt taker {_p(costs['taker_fee_rate'], 2)} + poślizg {_n(costs['slippage_bps'])} pb na każdej "
+                "nodze), jak w D1; koszt wyjścia (drugie tyle) nie jest naliczany, dopóki noga trwa.",
+                "Dane: historia funding COIN-M z Binance (`dapi/v1/fundingRate`), pobierana w każdym przebiegu; dzień "
+                "zapisywany, gdy jest zamknięty w danych; dzień z liczbą rozliczeń ≠ 3 oznaczony `komplet = False`.",
+            ],
+            "status": (
+                "Kontraktowy przepływ, nie przewaga: D1 +9,07 %/rok [5,88; 12,26] za 2021–2026 H1, zawyżone przez "
+                "2021 (+22,2 %); od 2022 rocznie +1,8 / +7,5 / +12,2 / +5,1 / +2,1 % (2026 H1), średnio +5,7 % wobec "
+                "T-bill 3,95 %. Dziennik sprawdza mechanikę (kompletność rozliczeń, zgodność z giełdą), nie wynik."
+            ),
+            "wynik_od": carry_start,
+            "wynik_w": "carry_wyniki.csv",
+        },
     ]
 
 
@@ -187,7 +221,8 @@ COMMON = [
     "ostatnia zamknięta świeca wspólna dla Binance i premii Coinbase; pozycje ogłaszane na następny dzień.",
     "Dziennik papierowy: bez realnych pieniędzy; wynik w `wyniki.csv` / `x1_wyniki.csv`, pozycje w `sygnaly.csv` / "
     "`x1_sygnaly.csv`, lista transakcji w `transakcje.csv` / `transakcje_otwarte.csv` (poprawka 9); etykiety "
-    "`stan_rynku.csv` i `fng.csv` tylko zapisywane (poprawki 7–8), nie wpływają na pozycje.",
+    "`stan_rynku.csv` i `fng.csv` tylko zapisywane (poprawki 7–8), nie wpływają na pozycje; noga carry COIN-M "
+    "(poprawka 12) ma tylko `carry_wyniki.csv` — bez sygnałów i transakcji.",
     "O realnym kapitale decyduje drabina dowodów (ADR-09) i użytkownik; odczyt dziennika ~2026-12-25.",
 ]
 

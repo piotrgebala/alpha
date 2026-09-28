@@ -3,6 +3,8 @@
 > **STATUS: DZIAŁA od 2026-09-24 (poprawka 1: start przesunięty z 25.09 na 24.09).** Reguły poniżej są zamrożone —
 > każda zmiana = nowy dziennik od zera (inaczej wynik przestaje być „na danych, których nie
 > oglądaliśmy”).
+> Osobno, poza portfelem R1: **X1** (poprawka 3, od 2026-09-25, `x1_sygnaly.csv` / `x1_wyniki.csv`) i **carry COIN-M
+> do weryfikacji** (poprawka 12, od 2026-09-29, tylko zapis `carry_wyniki.csv`).
 
 ## Po co — prostym językiem
 
@@ -263,6 +265,124 @@ z przeglądu kodu (izolacja składowych, komunikat błędu w wydruku): te same l
   miesiąca. Monety wycofane widać tylko od dnia startu, nie wstecz. Miejsca 21–50 nie są strategią (cień TR1 — czyli
   ten sam trend liczony na monetach z miejsc 21–50 — odtwarza się z archiwum; `docs/rag/11_przeglad_kandydatow_2026-09-27.md`).
 
+## Poprawka 12 (2026-09-28, decyzja użytkownika — noga carry COIN-M do weryfikacji, tylko zapis)
+
+Decyzja użytkownika 2026-09-28: „dodajemy do dziennika strategię carry do weryfikacji”. **Nowa noga, osobno i tylko do zapisu:**
+jeden nowy plik `carry_wyniki.csv`. Trend, premia Coinbase, portfel R1 i X1 — reguły, pozycje, wynik, progi i dotychczasowe
+pliki — **bez zmian**.
+
+**Co i dlaczego.** Carry to zarabianie na opłacie funding (co 8 godzin płacą ją sobie strony kontraktu wieczystego; zwykle
+longi płacą shortom). Zmierzyliśmy je w rundach C1 i D1 (wnioski 54, 61–63). 2026-09-23 użytkownik je odpuścił („nie o takie
+zwroty mi chodzi”) i kierunek zamknięto bez produktu. Teraz carry wraca, ale **nie jako nowa hipoteza**, tylko do weryfikacji
+na żywo: czy to, co policzyliśmy na historii, zgadza się z tym, co giełda rozlicza dzień po dniu.
+
+**Konstrukcja — wiersz COIN-M z rundy D1, bez zmian i bez nowych parametrów (zasada 9).**
+
+| noga | pozycja | kapitał | start wyniku | progi |
+|---|---|---|---|---|
+| carry COIN-M (D1, wniosek 61) | 1 BTC zabezpieczenia (kupione na spot przy starcie) + short `BTCUSD_PERP` (kontrakt COIN-M rozliczany w bitcoinie, tzw. odwrotny) o nominale równym wartości zabezpieczenia; zawsze w pozycji | 1× (wartość zabezpieczenia), bez dźwigni | **2026-09-29** | brak — noga tylko do zapisu |
+
+- Wartość tej pary w dolarach jest stała, niezależnie od ceny BTC (tożsamość P + N·(1/P − 1/P₀)·P = P₀, sprawdzona w D1 testem
+  `hypothesis`). Nie ma więc czego likwidować ani dopłacać, a jedynym wynikiem jest funding.
+- Zawsze w pozycji — **bez** wychodzenia, gdy funding jest ujemny (przełączanie po znaku przegrywa z kosztami: C1b, wniosek 55).
+- Dzień UTC = rozliczenia o 00:00, 08:00 i 16:00 tego dnia — ta sama konwencja co funding w silniku dziennika (wejście na
+  zamknięciu dnia poprzedniego, czyli o 00:00 UTC). Stawka dodatnia — short dostaje, ujemna — płaci.
+- **Start 2026-09-29:** pierwszy pełny dzień UTC po zapisaniu tej poprawki (ta sama zasada co start X1 w poprawce 3).
+- **Księgowanie dokładnie jak w D1:** te same funkcje z `backtest/carry_product.py` (`floor_to_grid`, `inverse_carry_pnl`) i ten
+  sam koszt `CarryCosts(...).switch_cost` z `config/settings.yaml`: **0,19 % nominału** (spot 0,10 % + kontrakt taker 0,05 % +
+  poślizg 2 pb na każdej nodze), naliczony **raz, pierwszego dnia**. Wynik = suma stawek, bez procentu składanego (jak w D1).
+- **Jedno odstępstwo od D1 (konieczne):** D1 liczył okres zamknięty, więc w ostatnim rozliczeniu doliczał też koszt wyjścia
+  (drugie 0,19 %). Noga dziennika jest otwarta: koszt wyjścia siedziałby w ostatnim wierszu i przesuwał się co dzień, a plik jest
+  append-only. Dlatego go nie ma. **Wynik liczony jak w D1 za okres od startu do dnia d = `netto_skum` z dnia d − 0,19 %.**
+- Kod: `backtest/journal_carry.py` (czyste funkcje), `live_journal.run_carry` (zapis), `data/fetch_live.fetch_coinm_funding_safe`
+  (pobieranie), opis w `backtest/journal_strategies.py` (piąta strategia w `strategie.csv` i `STRATEGIE.md`, skrót D1).
+
+**Dane.** Historia funding COIN-M z Binance (`dapi/v1/fundingRate`, publiczna, bez klucza) — ta sama funkcja co w D1
+(`fetch_external.fetch_coinm_funding`). Pobierana w każdym przebiegu od startu nogi i nadpisywana (jedno zapytanie; plik rośnie
+o 3 rozliczenia dziennie). Dzięki temu późniejsza zmiana stawki po stronie giełdy wyjdzie jako „historia zmieniona”. Plik:
+`data/raw/live/binance_cm_funding_BTCUSD_PERP.parquet` (poza gitem). Błąd pobrania nie zatrzymuje dziennika: stary plik zostaje,
+a pozostałe nogi liczą się normalnie.
+
+**Plik `carry_wyniki.csv`** — append-only jak `wyniki.csv` (istniejących wierszy przebieg nie zmienia; inna wartość przy
+przeliczeniu = „historia zmieniona”, stary zapis zostaje). Jeden wiersz na każdy zamknięty dzień UTC od 2026-09-29. Dzień trafia
+do pliku dopiero wtedy, gdy dane mają rozliczenie z dnia następnego — wtedy brak rozliczenia to prawdziwy brak, a nie „jeszcze
+nie pobrane”. Kolumny:
+- `date` — dzień UTC;
+- `rozliczenia` — ile rozliczeń giełda opublikowała tego dnia (oczekiwane 3);
+- `komplet` — `True`, gdy są 3 i wszystkie trzy weszły do wyniku. **Dzień z brakiem nie jest pomijany**, tylko oznaczony `False`
+  (także dzień bez żadnego rozliczenia: 0 rozliczeń, netto 0). Gdyby giełda zmieniła rytm (np. co 4 h), liczba to pokaże —
+  przygotowanie z D1 łączy wtedy rekordy na siatce 8 h;
+- `suma_stawek` — funding otrzymany przez short tego dnia, ułamek nominału (0,0001 = 0,01 %); ujemna = zapłacony;
+- `koszt` — koszt wejścia, **dodatni** (jak w D1; inaczej niż `koszt` w `rozbicie.csv`), tylko w pierwszym dniu;
+- `netto` = `suma_stawek` − `koszt`; `netto_skum` — suma `netto` od startu.
+
+**Log i wydruk.** Na ścieżce bez błędów linia `przebiegi.log` ma **te same pola** co przed tą poprawką — parser strony dziennika
+jest wklejony w rutynę Cowork, a nowe pola psuły go przy poprawkach 8–10. Jedyna zmiana w treści: „opisy strategii 5” zamiast 4
+(piąty opis, mechanizm poprawki 10). Pole „carry …” dochodzi przed „historia zmieniona” **tylko przy kłopocie**: „carry BŁĄD <typ>”
+(błąd liczenia albo zapisu; pełny komunikat w wydruku), „carry brak pliku” (brak danych COIN-M), „carry spóźnione” (ostatni
+zamknięty dzień w danych jest wcześniejszy niż dzień dziennika — zwykle nieudane pobranie). Różnice w `carry_wyniki.csv` liczą się
+do „historia zmieniona: N”. Wydruk (`ostatni_wydruk.txt`) ma nową linię „Carry COIN-M (poprawka 12 …)”: ostatni dzień, liczba
+rozliczeń, suma stawek, netto i netto skumulowane. Carry **nie** trafia do `wyniki.csv`, `rozbicie.csv`, `fazy.csv`, `koszyk.csv`
+ani `x1_*` — ich kontrole sumują się do wyników innych nóg; rozbicie carry niesie sam `carry_wyniki.csv`.
+
+**Czego się spodziewać — liczby z D1, bez nowych przeliczeń** (`runs/2026-09-23_d1-produkt-carry/README.md`, Q2 i Q4). Średnia D1
+**+9,07 %/rok [5,88; 12,26]** na kapitale 1× (2021 → 2026 H1) jest **zawyżona przez 2021** (+22,2 % w tym jednym roku). Od 2022
+rok po roku, obok stopy bonów skarbowych USA 3M (T-bill — praktycznie bezryzykowna lokata w dolarze):
+
+| rok | carry COIN-M 1× | T-bill 3M | nadwyżka |
+|---|---|---|---|
+| 2022 | +1,8 % | 2,02 % | −0,2 pp |
+| 2023 | +7,5 % | 5,07 % | +2,5 pp |
+| 2024 | +12,2 % | 4,97 % | +7,2 pp |
+| 2025 | +5,1 % | 4,07 % | +1,0 pp |
+| 2026 H1 (annualizowane) | +2,1 % | 3,61 % | −1,5 pp |
+| **średnia 2022 → 2026 H1** | **+5,7 %** | **3,95 %** | **+1,8 pp** |
+
+To pięć obserwacji rocznych — opis, nie prognoza. Dla decyzji: nawet w dobrym roku carry ledwie wyprzedza lokatę w dolarze,
+a w słabym (2022, 2026 H1) jest pod nią; stawka bywa ujemna (w D1 19,6 % rozliczeń).
+
+**Co ta noga weryfikuje — mechanikę, nie przewagę.** Carry to kontraktowy przepływ (longi płacą za dźwignię), nie przewidywanie
+ceny. Przewagi się tu nie sprawdza i nie ma progu obalenia (kryterium 5 tej nogi nie dotyczy).
+1. **Kompletność rozliczeń:** 3 rozliczenia każdego dnia, bez dziur w datach.
+2. **Zgodność zapisu z giełdą:** stawki w pliku = stawki w historii Binance, dzień po dniu.
+3. **Brak likwidacji z konstrukcji:** przy 1× z zabezpieczeniem w BTC wartość w dolarach jest stała — noga nie ma depozytu, progu
+   likwidacji ani dopłat i w zapisie nie ma zdarzenia, które by ich wymagało. Papier nie ma konta, więc to warunek do sprawdzenia
+   na realnym koncie dopiero na szczeblu 4 (tryb izolowany, ziarno kontraktu 100 USD — D1, „Co na minus”).
+
+**Kryterium odczytu po ~3 miesiącach** (razem z odczytem dziennika ok. 2026-12-25; zapisane przed pierwszym wierszem carry):
+- **(a) terminowość:** pole „carry …” (spóźnione, brak pliku, BŁĄD) w ≤ 5 % przebiegów od 2026-09-30 (z `przebiegi.log`);
+- **(b) kompletność:** `komplet = True` w ≥ 95 % dni od 2026-09-29, każdy dzień z `False` wyjaśniony (brak po stronie giełdy
+  czy błąd pobierania). Dla skali: na historii D1 (2 007 dni, 2021-01-01 → 2026-06-30) niepełny był 1 dzień — 30.06.2026,
+  brak rozliczenia 08:00 w historii Binance;
+- **(c) zgodność z giełdą (druga droga):** przy odczycie jedno ponowne pobranie historii od 2026-09-29 i przeliczenie
+  `journal_carry.carry_rows` daje te same wiersze co plik, do 1e-9; każda różnica wyjaśniona (to jednocześnie sprawdzian
+  „historia zmieniona” = 0 dla `carry_wyniki.csv`);
+- **wynik opisowo, bez werdyktu:** `netto_skum` i ta sama suma przeliczona na rok, obok tabeli powyżej.
+Niespełnione (a)–(c) = błąd mechaniki do wyjaśnienia, nie ocena strategii.
+
+**Ścieżka odwrotu.** Revert commita tej poprawki: dziennik wraca do 4 strategii, linia logu do „opisy strategii 4”, pobieranie
+COIN-M znika. `carry_wyniki.csv` zostaje w gicie jako historia (danych nie kasujemy).
+
+**Testy** (`tests/test_journal_carry.py`; zmienione oczekiwania w `tests/test_live_journal.py` i nowy format błędu
+w `tests/test_strona_dziennika.py`): trzy rozliczenia dziennie sumują się do wiersza; koszt wejścia tylko pierwszego dnia;
+dzień zapisany dopiero po rozliczeniu z dnia następnego, a nowy dzień nie zmienia starych wierszy; brakujące rozliczenie i dzień
+bez rozliczeń oznaczone, nie pominięte; znaczniki z opóźnieniem 0–7 ms dają to samo co bez niego; zmiana rytmu na 4 h pokazana
+w `rozliczenia`; rozliczenia przed startem nie liczą się; netto = wynik D1 (`inverse_carry_pnl` + okno z zamrożonego reportera)
+minus koszt wyjścia, co do 1e-15; test właściwości w `hypothesis` (dowolna ścieżka stawek, braków i opóźnień: każdy dzień raz,
+netto = suma stawek − jeden koszt wejścia); przebieg dziennika: append-only, powtórka +0, ręcznie zmieniony wiersz → „historia
+zmieniona: 1”, stary zapis zostaje; **linia logu bez błędów pasuje dokładnie do formatu sprzed poprawki i jest identyczna
+z przebiegiem, w którym carry nie ma nic do zapisania**; błąd carry → „carry BŁĄD RuntimeError” w logu, pozostałe pliki bajt
+w bajt jak bez błędu, parser strony czyta linię; brak pliku i spóźnione dane → pole w logu; pobieranie łapie błąd sieci.
+
+**Próba na kopii dziennika 2026-09-28** (kopia `dziennik/` i `data/raw/live` z klonu dziennika po przebiegu 02:30, `as_of`
+2026-09-27, bez pobierania; wszystko w katalogu tymczasowym). Ten sam przebieg starym kodem (`master` 0bfeef5) i nowym:
+wszystkie dotychczasowe pliki CSV **bajt w bajt** takie same; `strategie.csv` +1 wiersz (carry); linia `przebiegi.log` identyczna
+poza czasem przebiegu i „opisy strategii 4” → „5”. Z prawdziwym startem (29.09) noga nie ma jeszcze zamkniętego dnia („dopisane
++0”, bez pola w logu). Ze startem przesuniętym na próbę na 21.09 i historią pobraną z `dapi` tego dnia: 7 dni (21–27.09), każdy
+3/3, netto skumulowane −0,1073 % nominału (koszt wejścia 0,19 % jeszcze nieodrobiony). **Druga droga na danych D1**
+(cache `binance_cm_funding_BTCUSD_PERP`, 2021-01-01 → 2026-06-30): suma stawek 50,2403 % i netto po koszcie wyjścia 49,8603 %
+= liczby D1 (9,07 %/rok), różnica 6·10⁻¹⁵. Czas przebiegu bez zmian (5,9 s).
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
@@ -344,6 +464,9 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
 - `fazy.csv` (poprawka 11) — dzienne netto każdej z 7 faz każdej składowej; średnia faz = wynik składowej.
 - `koszyk.csv` (poprawka 11) — ranking obrotu 1–50 na początek każdego miesiąca od 2026-09: pozycja, średni obrót
   30 dni, członek top-20 (= skład koszyka silnika), czy jest funding. Wszystkie trzy tylko do zapisu, bez wpływu na pozycje.
+- `carry_wyniki.csv` (poprawka 12) — noga carry COIN-M do weryfikacji, osobno: dzień UTC od 2026-09-29, liczba rozliczeń
+  fundingu (oczekiwane 3) i znacznik `komplet`, suma stawek, koszt wejścia (tylko pierwszy dzień), netto, netto skumulowane.
+  Tylko zapis, bez wpływu na inne nogi.
 
 ## Progi (zapisane z góry)
 
@@ -360,6 +483,8 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
 5. **Wynik (opisowo, bez werdyktu):** zwrot z przedziałem, dopisany do wspólnego rachunku „poza
    próbą” razem z CP1P i TP1. Nie jest testem przewagi. *(Zastąpione 2026-09-27 progiem obalenia —
    patrz „Zmiana kryteriów odczytu” niżej.)*
+6. **Carry COIN-M (poprawka 12, dopisane 2026-09-28 przed pierwszym wierszem carry):** terminowość, kompletność rozliczeń
+   i zgodność z giełdą — kryteria (a)–(c) z sekcji „Poprawka 12”; wynik tylko opisowo, bez progu obalenia.
 
 ### Zmiana kryteriów odczytu (decyzja użytkownika 2026-09-27, przed pierwszym odczytem)
 

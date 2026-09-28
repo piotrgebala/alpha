@@ -7,7 +7,7 @@
 ## Wspólne
 
 - Dane: kontrakty wieczyste Binance USDT-M, świece dzienne UTC, tylko zamknięte; dzień odczytu (`as_of`) = ostatnia zamknięta świeca wspólna dla Binance i premii Coinbase; pozycje ogłaszane na następny dzień.
-- Dziennik papierowy: bez realnych pieniędzy; wynik w `wyniki.csv` / `x1_wyniki.csv`, pozycje w `sygnaly.csv` / `x1_sygnaly.csv`, lista transakcji w `transakcje.csv` / `transakcje_otwarte.csv` (poprawka 9); etykiety `stan_rynku.csv` i `fng.csv` tylko zapisywane (poprawki 7–8), nie wpływają na pozycje.
+- Dziennik papierowy: bez realnych pieniędzy; wynik w `wyniki.csv` / `x1_wyniki.csv`, pozycje w `sygnaly.csv` / `x1_sygnaly.csv`, lista transakcji w `transakcje.csv` / `transakcje_otwarte.csv` (poprawka 9); etykiety `stan_rynku.csv` i `fng.csv` tylko zapisywane (poprawki 7–8), nie wpływają na pozycje; noga carry COIN-M (poprawka 12) ma tylko `carry_wyniki.csv` — bez sygnałów i transakcji.
 - O realnym kapitale decyduje drabina dowodów (ADR-09) i użytkownik; odczyt dziennika ~2026-12-25.
 
 ## TS1 — Trend tygodniowy na koszyku top-20
@@ -78,3 +78,19 @@
 **Stan dowodów:** Ślad słaby: +9,5 %/rok [−21; +40] (t 0,61) jako średnia 7 faz; poza portfelem R1 (decyzja użytkownika), tylko papier.
 
 **Wynik w dzienniku:** od 2026-09-25 — `x1_wyniki.csv`
+
+## D1 — Carry COIN-M na BTC (osobno, tylko papier, do weryfikacji)
+
+**Opis:** Trzymamy 1 BTC i krótki kontrakt BTCUSD_PERP rozliczany w bitcoinie na tę samą kwotę: wartość w dolarach stoi w miejscu, a zarabia opłata funding, którą płacą longi.
+
+**Założenia:**
+
+1. Konstrukcja z rundy D1: 1 BTC zabezpieczenia kupione na spot przy starcie + short BTCUSD_PERP (COIN-M, kontrakt odwrotny) o nominale równym wartości zabezpieczenia; dźwignia 1×; zawsze w pozycji — bez przełączania po znaku fundingu (C1b, wniosek 55) i bez parametrów do strojenia.
+2. Wartość USD pozycji stała (tożsamość P + N·(1/P − 1/P₀)·P = P₀): brak likwidacji i dopłat depozytu z konstrukcji; kapitał = wartość zabezpieczenia (1×).
+3. Dochód: funding COIN-M rozliczany co 8 h (00:00, 08:00, 16:00 UTC); dzień UTC = te trzy rozliczenia; stawka dodatnia — short dostaje, ujemna — płaci. Wynik = suma stawek w ułamku nominału, bez procentu składanego (jak w D1).
+4. Koszt wejścia raz, pierwszego dnia: 0,19 % nominału (spot 0,10 % + kontrakt taker 0,05 % + poślizg 2 pb na każdej nodze), jak w D1; koszt wyjścia (drugie tyle) nie jest naliczany, dopóki noga trwa.
+5. Dane: historia funding COIN-M z Binance (`dapi/v1/fundingRate`), pobierana w każdym przebiegu; dzień zapisywany, gdy jest zamknięty w danych; dzień z liczbą rozliczeń ≠ 3 oznaczony `komplet = False`.
+
+**Stan dowodów:** Kontraktowy przepływ, nie przewaga: D1 +9,07 %/rok [5,88; 12,26] za 2021–2026 H1, zawyżone przez 2021 (+22,2 %); od 2022 rocznie +1,8 / +7,5 / +12,2 / +5,1 / +2,1 % (2026 H1), średnio +5,7 % wobec T-bill 3,95 %. Dziennik sprawdza mechanikę (kompletność rozliczeń, zgodność z giełdą), nie wynik.
+
+**Wynik w dzienniku:** od 2026-09-29 — `carry_wyniki.csv`

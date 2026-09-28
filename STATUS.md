@@ -3038,6 +3038,11 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **Poprawka 11 dziennika** (rozbicie.csv, fazy.csv, koszyk.csv — tylko zapis): [dziennik/README.md](dziennik/README.md).
   Próba na kopii: dotychczasowe CSV bajt w bajt, historia zmieniona 0. Kolumna `funding_pobrany` (przemianowana z
   `ma_funding` przed pierwszym przebiegiem — znaczy „pobraliśmy funding”, nie „moneta ma funding”).
+- **Poprawka 12 dziennika** (2026-09-28, decyzja użytkownika: „dodajemy do dziennika strategię carry do weryfikacji”):
+  noga carry COIN-M z D1 (1 BTC + short `BTCUSD_PERP`, 1×, zawsze w pozycji), osobno i tylko zapis `carry_wyniki.csv`
+  od 2026-09-29; sprawdza mechanikę (kompletność rozliczeń, zgodność z giełdą), nie przewagę — [dziennik/README.md](dziennik/README.md).
+  Linia `przebiegi.log` bez nowych pól na ścieżce bez błędów (tylko „opisy strategii 5”). **Żeby carry było na stronie
+  dziennika, użytkownik musi podmienić wklejony parser rutyny Cowork** (czytanie `carry_wyniki.csv`).
 - **Rejestr odczytów historii:** [`runs/odczyty_historii.csv`](runs/odczyty_historii.csv) + `py -m backtest.dsr --k <warianty>`.
   **Obowiązuje metoda AU4** (N = Σ wariantów = 40; nowa runda → 41 → t 3,84 dla DSR 0,95), zgodna z AU4 i wnioskiem 96;
   wariant ostrożny (każda runda z wynikiem ≥ 1) N = 52 → t 3,94 — tylko do wglądu. Wniosek 107.
