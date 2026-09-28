@@ -383,6 +383,12 @@ poza czasem przebiegu i „opisy strategii 4” → „5”. Z prawdziwym starte
 (cache `binance_cm_funding_BTCUSD_PERP`, 2021-01-01 → 2026-06-30): suma stawek 50,2403 % i netto po koszcie wyjścia 49,8603 %
 = liczby D1 (9,07 %/rok), różnica 6·10⁻¹⁵. Czas przebiegu bez zmian (5,9 s).
 
+**Przegląd bezpieczeństwa** (`security-review`, 2026-09-28 — nowe połączenie sieciowe w ścieżce dziennika): brak podatności
+z realną drogą ataku. Adres (`https://dapi.binance.com`, tylko https) i symbol są stałymi w kodzie, nie pochodzą z odpowiedzi;
+publiczne API bez klucza; odpowiedź czytana tylko jako JSON i zamieniana na liczby (`parse_funding_records` odrzuca rekord bez
+pól); nazwa pliku ze stałej; w `carry_wyniki.csv` same liczby i daty; do `przebiegi.log` trafia najwyżej nazwa typu błędu,
+a komunikat tylko do wydruku (którego automat nie commituje).
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
