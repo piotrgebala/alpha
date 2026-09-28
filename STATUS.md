@@ -3055,6 +3055,10 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   `tools/zuzycie_tokenow.py` (wersja kanoniczna zostaje w repo) + tłumaczenie wyniku i odesłanie do `/usage`, `/context`, `/insights`.
 - **Wdrożone 2026-09-28 (decyzja użytkownika):** agent `lokalizator` na Haiku, `autoCompactWindow` 300 tys. w ustawieniach
   projektu, podział kosztu na modele w monitorze (Opus 80 %, Fable 5.1 20 %, Haiku 0,3 %) — [docs/rag/12](docs/rag/12_zuzycie_tokenow.md).
+- **Strony (2026-09-28):** „Tokeny CLAS-5” — dzienne zużycie według modelu i źródła (https://claude.ai/artifact/NJZddUpkpWYKAyWXZXcpSb, dane z
+  `tools/zuzycie_tokenow.py --stan`); „Mapa CLAS-5” — przepływ od pomysłu do kapitału, automaty, mapa myśli, stan
+  wiedzy (https://claude.ai/artifact/VpBRJm2vtQBxtujJBYgG1h, źródło `docs/mapa_projektu.html`). **Decyzja użytkownika:** sposób codziennego odświeżania strony
+  tokenów — warianty A–D w [docs/rag/12](docs/rag/12_zuzycie_tokenow.md); do tego czasu odświeżenie na prośbę w sesji.
 - **Do decyzji użytkownika:** rejestracja skilla w zasadzie 19 bez ponownego wczytania, gdy treść jest nadal w kontekście;
   odchudzenie `clas5-quant` SKILL.md przy następnej wersji. Praktyka po stronie użytkownika: nowa sesja na zadanie
   i po przerwie > 1 h; tryb ultracode tylko na duże przeglądy.

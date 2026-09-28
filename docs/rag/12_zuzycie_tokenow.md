@@ -61,3 +61,31 @@ w kontekście; po streszczeniu rozmowy harness dokleja treść wszystkich wczyta
   modelu. Wniosek: Fable tylko do wyjątkowych zadań; Opus na poziomie medium do badań; Sonnet/opusplan do rutyny.
 - **Obserwacja:** skill `update-config` (obowiązkowy przy zmianach konfiguracji, zasada 19) niesie cały
   schemat ustawień — jedno wczytanie to kilkadziesiąt tys. tokenów; wczytywać go tylko przy realnej zmianie.
+
+## Strona „Tokeny CLAS-5” (2026-09-28)
+
+Prośba użytkownika: „dashboard z odświeżaniem dziennym i trendami zużycia tokenów i wykorzystywanych modeli”.
+
+- **Adres:** https://claude.ai/artifact/NJZddUpkpWYKAyWXZXcpSb (prywatny). Źródło strony: `tools/strona_tokeny.html`; zmiana = edycja pliku
+  i ponowna publikacja pod ten sam adres.
+- **Dane:** dokument bazy strony `tokeny/stan` = wynik `tools/zuzycie_tokenow.py --stan runs/tokeny/stan.json`
+  (`tools/odswiez_tokeny.sh`): wiersz na dzień z podziałem na modele i źródła, kontekstem i przepisaniami głównej
+  sesji oraz liczbą sesji. Plik jest zarazem historią: Claude Code kasuje zapisy po 30 dniach, więc dni starsze
+  niż 14 zostają w pliku takie, jak policzono je ostatnio. Limit dokumentu (256 KiB) mieści ok. 3 lata; nadmiar =
+  najstarsze dni. Katalog `runs/tokeny/` jest lokalny (poza gitem).
+- **Co pokazuje:** wczoraj wobec średniej 7 wcześniejszych dni, średnią tygodnia wobec poprzedniego, udział Fable,
+  medianę kontekstu głównej sesji; słupki dzienne według modelu i źródła (z średnią 7 dni), kontekst na wywołanie
+  z liniami 90 tys. (świeża sesja) i 300 tys. (próg streszczenia); tabele modeli i dni. Jednostki jak w monitorze,
+  bez ceny modelu.
+- **Codzienne odświeżanie — czeka na decyzję użytkownika.** Bazę strony zapisuje tylko narzędzie ArtifactData sesji
+  Claude połączonej z claude.ai. Sesja `claude -p` go nie ma (próba 2026-09-28: „narzędzie niedostępne”, koszt
+  0,009 USD). Sesji w tle (`claude --bg`) nie uruchomiłem: automat bezpieczeństwa trybu auto odmówił
+  („Create Unsafe Agents”). Warianty: (A) hook `SessionStart` tylko na serwerze (`settings.local.json`) — pierwsza
+  sesja dnia liczy plik i wysyła go jednym wywołaniem; (B) rutyna Cowork, a dane na osobnej gałęzi publicznego
+  repo; (C) zgoda użytkownika na sesję Claude uruchamianą z crona; (D) ręcznie. Do decyzji: `bash
+  tools/odswiez_tokeny.sh`, potem w sesji prośba „odśwież stronę tokenów”.
+- **Paleta:** styl użytkownika (`styl-dashbordow`). Walidator `dataviz` dla trzech serii (granat, czerwień, szarość):
+  rozróżnialność przy zaburzeniach widzenia barw i kontrast PASS; szarość trzeciej serii celowo poniżej progu
+  nasycenia (FAIL „chroma”, w ciemnym motywie także jasność), zgodnie ze stylem. Tożsamość serii niosą też legenda,
+  podpowiedź i tabela.
+

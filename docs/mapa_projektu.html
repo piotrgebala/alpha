@@ -1,0 +1,343 @@
+<title>Mapa CLAS-5</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!-- Źródło strony „Mapa CLAS-5” (artefakt claude.ai, adres w README.md). Mapa jest WIDOKIEM: przy
+     sprzeczności wygrywają runs/INDEX.md, STATUS.md, docs/rag/09 i dziennik/README.md. Aktualizacja =
+     edycja tego pliku + ponowna publikacja pod ten sam adres. Styl: szwajcarska siatka użytkownika. -->
+<style>
+:root{
+  --bg:#FFFFFF; --ink:#141414; --muted:#6A6A66; --hair:#E4E4E0;
+  --accent:#C41E24; --s2:#2E6DA8; --good:#2F7D4F; --bad:#C41E24;
+  --band:rgba(46,109,168,.06);
+  --sans:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17181A; --ink:#ECECE8; --muted:#9A9A96; --hair:#2A2B2E;
+  --accent:#E4574D; --s2:#4E97DB; --good:#5CAF7F; --bad:#E4574D; --band:rgba(78,151,219,.08);
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#17181A; --ink:#ECECE8; --muted:#9A9A96; --hair:#2A2B2E;
+  --accent:#E4574D; --s2:#4E97DB; --good:#5CAF7F; --bad:#E4574D; --band:rgba(78,151,219,.08);
+  color-scheme:dark;}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;padding-inline:20px;padding-block:0 56px;background:var(--bg);color:var(--ink);font:400 14px/1.55 var(--sans)}
+.wrap{max-width:1080px;margin:0 auto}
+header{padding-top:40px}
+h1{margin:0;font-weight:600;font-size:30px;line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+.meta{margin-top:8px;font:400 12px/1.6 var(--mono);color:var(--muted)}
+p{margin:0;max-width:65ch}
+.lede{margin-top:16px}
+nav{margin-top:20px;display:flex;flex-wrap:wrap;gap:6px 20px;font:500 12px/1.4 var(--mono)}
+nav a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--hair);padding-bottom:2px}
+nav a:hover,nav a:focus-visible{border-bottom-color:var(--accent);outline:none}
+h2{margin:56px 0 6px;padding-top:16px;border-top:1px solid var(--hair);font:600 11px/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h3{margin:0 0 14px;font-weight:600;font-size:20px;line-height:1.25;letter-spacing:-.005em;text-wrap:balance}
+figure{margin:0}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dg{display:block;width:100%;height:auto;min-width:900px}
+.dg text{font-family:var(--sans);fill:var(--ink)}
+.dg .t{font-size:13px;font-weight:600}
+.dg .t2{font-size:12.5px;font-weight:600}
+.dg .s{font-size:11px;fill:var(--muted)}
+.dg .e{font-size:10.5px;fill:var(--muted)}
+.dg .lane{font-size:10.5px;font-weight:600;letter-spacing:.08em;fill:var(--muted)}
+.dg .hot-t{fill:var(--accent);font-weight:600}
+.dg .halo{paint-order:stroke;stroke:var(--bg);stroke-width:5px;stroke-linejoin:round}
+.dg .box{fill:var(--bg);stroke:var(--ink);stroke-width:1.25}
+.dg .box.dash{stroke:var(--muted);stroke-dasharray:4 3}
+.dg .box.hot{stroke:var(--accent);stroke-width:2}
+.dg .box.core{stroke-width:1.75}
+.dg .ln{fill:none;stroke:var(--muted);stroke-width:1.25}
+.dg .ln.dash{stroke-dasharray:4 3}
+.dg .ln.hot{stroke:var(--accent)}
+.dg .ah{fill:var(--muted)}
+.dg .ah.hot{fill:var(--accent)}
+.dg .band{fill:var(--band)}
+.dg .rule{stroke:var(--hair);stroke-width:1}
+.dg .br{fill:none;stroke:var(--s2);stroke-width:1.5}
+.dg .br.hot{stroke:var(--accent)}
+.dg .dot{fill:var(--s2)}
+.dg .dot.hot{fill:var(--accent)}
+.dg .bh{font-size:13.5px;font-weight:600}
+.dg .lf{font-size:12px}
+.dg .ct{font-size:17px;font-weight:700;letter-spacing:.01em}
+figcaption{margin-top:12px;font-size:12.5px;color:var(--muted);max-width:75ch}
+.hint{display:none;margin:0 0 8px;font:400 11px var(--mono);color:var(--muted)}
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0 20px;margin-top:8px}
+.col{min-width:0}
+.ch{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--ink)}
+.st{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13px}
+.st i{width:8px;height:8px;display:inline-block;flex:none}
+.st.no i{background:var(--ink)}
+.st.nm i{background:var(--muted)}
+.st.tr i{background:var(--s2)}
+.st.live i{background:var(--accent)}
+.st.ok i{background:var(--good)}
+.cnt{font:500 12px var(--mono);color:var(--muted)}
+.cn{margin:8px 0 4px;font-size:12px;color:var(--muted)}
+.k{padding:10px 0;border-bottom:1px solid var(--hair)}
+.k h4,.tr h4{margin:0 0 4px;font-size:13px;font-weight:600;line-height:1.35}
+.k p,.tr p{font-size:12.5px;line-height:1.5}
+.ids{margin-top:6px;font:400 11px/1.4 var(--mono);color:var(--muted)}
+.trust{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 24px;margin-top:8px}
+.tr{border-top:1px solid var(--hair);padding-top:10px}
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--hair);font:400 11.5px/1.8 var(--mono);color:var(--muted)}
+footer p{max-width:none}
+@media (max-width:980px){.board{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 20px}.trust{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px}}
+@media (max-width:700px){.hint{display:block}}
+@media (max-width:560px){h1{font-size:24px}.board,.trust{grid-template-columns:1fr}}
+</style>
+<div class="wrap">
+<header>
+  <h1>Mapa CLAS-5</h1>
+  <div class="meta">stan na 28.09.2026 · 84 rundy · 107 wniosków · 34 odczyty historii, 40 wariantów · repo alpha</div>
+  <p class="lede">Badania nad strategiami na perpetualach Binance: BTC i koszyk 20 największych monet. Najpierw dowód,
+    potem architektura. Strona pokazuje, jak pomysł staje się (albo nie staje się) decyzją o kapitale, co dzieje się
+    automatycznie każdego dnia, z czego składa się projekt i co już wiemy.</p>
+  <nav aria-label="Części mapy"><a href="#przeplyw">Od pomysłu do kapitału</a><a href="#codziennie">Każdego dnia</a><a href="#mapa">Mapa myśli</a><a href="#wiedza">Stan wiedzy</a></nav>
+</header>
+
+<h2 id="przeplyw">Przepływ pracy</h2>
+<h3>Od pomysłu do kapitału</h3>
+<p class="hint">Rysunek jest szerszy od ekranu: przesuń go w bok.</p>
+<figure>
+  <div class="scroll"><svg class="dg" viewBox="0 0 1040 432" role="img" aria-label="Od pomysłu do kapitału: pomysł przechodzi przez rachunek mierzalności, pre-rejestrację, rundę, bramki i werdykt do księgi wiedzy; ślad trafia na drabinę dowodów, gdzie trend i premia Coinbase są dziś na szczeblu 3, dzienniku papierowym.">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah" d="M0,1 L9,5 L0,9 z"></path></marker><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah hot" d="M0,1 L9,5 L0,9 z"></path></marker></defs>
+<rect class="box " x="0" y="48" width="140" height="74"></rect>
+<text class="t" x="12" y="72">Pomysł</text>
+<text class="s" x="12" y="91">katalog strategii,</text>
+<text class="s" x="12" y="107">przegląd kandydatów</text>
+<rect class="box " x="180" y="48" width="140" height="74"></rect>
+<text class="t" x="192" y="72">Mierzalność</text>
+<text class="s" x="192" y="91">rachunek mocy</text>
+<text class="s" x="192" y="107">przed rundą (z. 18)</text>
+<path class="ln " d="M140,85 H180" marker-end="url(#a)"></path>
+<rect class="box " x="360" y="48" width="140" height="74"></rect>
+<text class="t" x="372" y="72">Pre-rejestracja</text>
+<text class="s" x="372" y="91">warianty i progi</text>
+<text class="s" x="372" y="107">przed wynikiem</text>
+<path class="ln " d="M320,85 H360" marker-end="url(#a)"></path>
+<rect class="box " x="540" y="48" width="140" height="74"></rect>
+<text class="t" x="552" y="72">Runda</text>
+<text class="s" x="552" y="91">dane od 2021,</text>
+<text class="s" x="552" y="107">checkpoint v2</text>
+<path class="ln " d="M500,85 H540" marker-end="url(#a)"></path>
+<rect class="box " x="720" y="48" width="140" height="74"></rect>
+<text class="t" x="732" y="72">Bramki i werdykt</text>
+<text class="s" x="732" y="91">druga droga liczb,</text>
+<text class="s" x="732" y="107">t_neff &gt; 1,96</text>
+<path class="ln " d="M680,85 H720" marker-end="url(#a)"></path>
+<rect class="box " x="900" y="48" width="140" height="74"></rect>
+<text class="t" x="912" y="72">Księga wiedzy</text>
+<text class="s" x="912" y="91">runs/INDEX.md,</text>
+<text class="s" x="912" y="107">107 wniosków</text>
+<path class="ln " d="M860,85 H900" marker-end="url(#a)"></path>
+<path class="ln " d="M970,48 V30 H70 V48" marker-end="url(#a)"></path>
+<text class="e halo" x="520" y="33.5" text-anchor="middle">STOP serii: kolejny odczyt tej samej historii wymaga t ≈ 3,84</text>
+<path class="ln " d="M250,122 V152 H70 V122" marker-end="url(#a)"></path>
+<text class="e halo" x="160" y="155.5" text-anchor="middle">NIEMIERZALNA: nie startuje</text>
+<path class="ln " d="M790,122 V232 H160 V300" marker-end="url(#a)"></path>
+<text class="e halo" x="475" y="235.5" text-anchor="middle">ślad, nie dowód → drabina dowodów</text>
+<line class="rule" x1="0" x2="1040" y1="262" y2="262"></line>
+<text class="lane" x="0" y="255">BADANIA NA HISTORII</text>
+<text class="s" x="1040" y="255" text-anchor="end">prowadzi Claude, w ramach 20 zasad</text>
+<text class="lane" x="0" y="281">DRABINA DOWODÓW</text>
+<text class="s" x="1040" y="281" text-anchor="end">o kapitale decyduje użytkownik (ADR-09)</text>
+<rect class="box " x="0" y="300" width="184" height="78"></rect>
+<text class="t" x="12" y="324">1 · Mechanizm</text>
+<text class="s" x="12" y="343">poza naszymi danymi:</text>
+<text class="s" x="12" y="359">badania i inne rynki</text>
+<rect class="box " x="214" y="300" width="184" height="78"></rect>
+<text class="t" x="226" y="324">2 · Spójność</text>
+<text class="s" x="226" y="343">≥ 80 % lat, faz i pasm</text>
+<text class="s" x="226" y="359">monet na plusie</text>
+<path class="ln " d="M184,339 H214" marker-end="url(#a)"></path>
+<rect class="box hot" x="428" y="300" width="184" height="78"></rect>
+<text class="t" x="440" y="324">3 · Dziennik papierowy</text>
+<text class="s" x="440" y="343">≥ 3 miesiące, próg</text>
+<text class="s" x="440" y="359">obalenia z góry</text>
+<path class="ln " d="M398,339 H428" marker-end="url(#a)"></path>
+<rect class="box " x="642" y="300" width="184" height="78"></rect>
+<text class="t" x="654" y="324">4 · Mała kwota</text>
+<text class="s" x="654" y="343">najwyżej 5 % kapitału,</text>
+<text class="s" x="654" y="359">STOP przy −27,6 %</text>
+<path class="ln " d="M612,339 H642" marker-end="url(#a)"></path>
+<rect class="box " x="856" y="300" width="184" height="78"></rect>
+<text class="t" x="868" y="324">5 · Skalowanie</text>
+<text class="s" x="868" y="343">≥ 12 miesięcy bez</text>
+<text class="s" x="868" y="359">obalenia, ×2 na krok</text>
+<path class="ln " d="M826,339 H856" marker-end="url(#a)"></path>
+<text class="s " x="0" y="400">trend: 1(b) nierozstrzygnięty (TX1)</text>
+<text class="s " x="214" y="400">trend: spełniony post hoc</text>
+<text class="s hot-t" x="428" y="400">tu: trend + Coinbase od 24.09.2026</text>
+<text class="s " x="642" y="400">decyzja użytkownika po odczycie</text>
+<text class="s " x="856" y="400">decyzja użytkownika</text>
+<text class="s hot-t" x="428" y="416">pierwszy odczyt 24.12.2026</text>
+</svg></div>
+  <figcaption>Górny pas to badania na historii. Każdy odczyt trafia do księgi, także negatywny. Pomysł, którego nie da się
+    zmierzyć, nie startuje. Po serii odczytów tej samej historii próg rośnie (dziś t ≈ 3,84 dla DSR 0,95), więc nowa
+    runda wymaga nowego pomysłu, a nie kolejnego wariantu. Dolny pas to drabina dowodów: ślad z historii nie daje
+    pieniędzy, dopiero kolejne szczeble. Trend i premia Coinbase są dziś na szczeblu 3.</figcaption>
+</figure>
+
+<h2 id="codziennie">Automaty</h2>
+<h3>Co dzieje się każdego dnia</h3>
+<p class="hint">Rysunek jest szerszy od ekranu: przesuń go w bok.</p>
+<figure>
+  <div class="scroll"><svg class="dg" viewBox="0 0 1040 344" role="img" aria-label="Codzienne przepływy: dziennik papierowy liczy na serwerze o 02:30 UTC i wysyła wynik do repozytorium, z którego rutyna Cowork odświeża stronę dziennika; kolektory zbierają likwidacje co 5 minut; monitor tokenów zapisuje historię dni, a sposób wysyłki na stronę czeka na decyzję.">
+<defs><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah" d="M0,1 L9,5 L0,9 z"></path></marker><marker id="bh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah hot" d="M0,1 L9,5 L0,9 z"></path></marker></defs>
+<rect class="band" x="276" y="24" width="202" height="310"></rect>
+<text class="lane" x="0" y="16">ŹRÓDŁO</text>
+<text class="lane" x="296" y="16">SERWER LINUX · CAŁĄ DOBĘ</text>
+<text class="lane" x="572" y="16">ZAPIS</text>
+<text class="lane" x="858" y="16">STRONA LUB ODCZYT</text>
+<rect class="box " x="0" y="40" width="182" height="66"></rect>
+<text class="t2" x="12" y="64">API Binance, Coinbase</text>
+<text class="s" x="12" y="83">świece zamknięte, funding</text>
+<rect class="box " x="286" y="40" width="182" height="66"></rect>
+<text class="t2" x="298" y="64">Dziennik papierowy</text>
+<text class="s" x="298" y="83">02:30 UTC · live_journal.py</text>
+<rect class="box " x="572" y="40" width="182" height="66"></rect>
+<text class="t2" x="584" y="64">GitHub: repo alpha</text>
+<text class="s" x="584" y="83">pliki dziennik/*.csv</text>
+<rect class="box " x="858" y="40" width="182" height="66"></rect>
+<text class="t2" x="870" y="64">Dziennik CLAS-5</text>
+<text class="s" x="870" y="83">strona na tablecie</text>
+<rect class="box " x="0" y="146" width="182" height="66"></rect>
+<text class="t2" x="12" y="170">Likwidacje z giełd</text>
+<text class="s" x="12" y="189">Binance i Bybit, na żywo</text>
+<rect class="box " x="286" y="146" width="182" height="66"></rect>
+<text class="t2" x="298" y="170">Kolektory LK0 i LB0</text>
+<text class="s" x="298" y="189">co 5 min · indeks 00:15 UTC</text>
+<rect class="box " x="572" y="146" width="182" height="66"></rect>
+<text class="t2" x="584" y="170">Kopia likwidacji</text>
+<text class="s" x="584" y="189">lokalny git; zdalna czeka</text>
+<rect class="box dash" x="858" y="146" width="182" height="66"></rect>
+<text class="t2" x="870" y="170">Odczyt E1</text>
+<text class="s" x="870" y="189">po ≥ 1 roku danych</text>
+<rect class="box " x="0" y="252" width="182" height="66"></rect>
+<text class="t2" x="12" y="276">Sesje Claude Code</text>
+<text class="s" x="12" y="295">zapisy rozmów (30 dni)</text>
+<rect class="box " x="286" y="252" width="182" height="66"></rect>
+<text class="t2" x="298" y="276">Monitor tokenów</text>
+<text class="s" x="298" y="295">zuzycie_tokenow.py --stan</text>
+<rect class="box " x="572" y="252" width="182" height="66"></rect>
+<text class="t2" x="584" y="276">Historia dni</text>
+<text class="s" x="584" y="295">runs/tokeny/stan.json</text>
+<rect class="box " x="858" y="252" width="182" height="66"></rect>
+<text class="t2" x="870" y="276">Tokeny CLAS-5</text>
+<text class="s" x="870" y="295">strona z bazą danych</text>
+<path class="ln " d="M182,73 H286" marker-end="url(#b)"></path>
+<text class="e " x="234.0" y="66" text-anchor="middle">pobiera świece</text>
+<path class="ln " d="M468,67 H572" marker-end="url(#b)"></path>
+<text class="e " x="520.0" y="60" text-anchor="middle">commit + push</text>
+<path class="ln " d="M572,81 H468" marker-end="url(#b)"></path>
+<text class="e" x="520.0" y="97" text-anchor="middle">pull master</text>
+<text class="e" x="520.0" y="110" text-anchor="middle">przed przebiegiem</text>
+<path class="ln " d="M754,73 H858" marker-end="url(#b)"></path>
+<text class="e " x="806.0" y="66" text-anchor="middle">rutyna Cowork</text>
+<text class="e " x="806.0" y="88" text-anchor="middle">06:30 UTC</text>
+<path class="ln " d="M182,179 H286" marker-end="url(#b)"></path>
+<text class="e " x="234.0" y="172" text-anchor="middle">zapis na bieżąco</text>
+<path class="ln " d="M468,179 H572" marker-end="url(#b)"></path>
+<text class="e " x="520.0" y="172" text-anchor="middle">kopia raz na dobę</text>
+<path class="ln dash" d="M754,179 H858" marker-end="url(#b)"></path>
+<text class="e " x="806.0" y="172" text-anchor="middle">po ≥ 1 roku</text>
+<path class="ln " d="M182,285 H286" marker-end="url(#b)"></path>
+<text class="e " x="234.0" y="278" text-anchor="middle">na razie ręcznie</text>
+<path class="ln " d="M468,285 H572" marker-end="url(#b)"></path>
+<text class="e " x="520.0" y="278" text-anchor="middle">dopisuje dni</text>
+<path class="ln dash hot" d="M754,285 H858" marker-end="url(#bh)"></path>
+<text class="e hot-t" x="806.0" y="278" text-anchor="middle">wysyłka:</text>
+<text class="e hot-t" x="806.0" y="300" text-anchor="middle">do decyzji</text>
+</svg></div>
+  <figcaption>Wszystko liczy serwer Linux (cron). Dziennik pobiera przed przebiegiem gałąź master, dlatego każda zmiana jego
+    kodu wymaga decyzji użytkownika i „Poprawki N”. Komputer z Windows jest zapasem dziennika i sam się wyłącza, gdy liczy
+    serwer. Linie przerywane to kroki, które jeszcze nie działają; czerwona czeka na decyzję użytkownika.</figcaption>
+</figure>
+
+<h2 id="mapa">Mapa myśli</h2>
+<h3>Z czego składa się projekt</h3>
+<p class="hint">Rysunek jest szerszy od ekranu: przesuń go w bok.</p>
+<figure>
+  <div class="scroll"><svg class="dg" viewBox="0 0 1040 519" role="img" aria-label="Mapa myśli projektu CLAS-5: po lewej cel, dane, przyrząd pomiaru i sposób pracy; po prawej stan wiedzy, dziennik papierowy i infrastruktura.">
+<path class="br" d="M462,259.5 C421.0,259.5 421.0,31.0 380,31.0"></path>
+<circle class="dot" cx="380" cy="31.0" r="4"></circle>
+<text class="bh" x="372" y="36.0" text-anchor="end">Cel i kryterium</text>
+<text class="lf" x="372" y="56.0" text-anchor="end">zyski rzędu zakładu o kierunek, nie odsetki (docs/rag/10)</text>
+<text class="lf" x="372" y="73.0" text-anchor="end">o kapitale decyduje drabina dowodów (ADR-09)</text>
+<text class="lf" x="372" y="90.0" text-anchor="end">testy tylko na danych od 2021-01-01 (zasada 20)</text>
+<text class="lf" x="372" y="107.0" text-anchor="end">realne pieniądze i fazy: zawsze decyzja użytkownika</text>
+<path class="br" d="M462,259.5 C421.0,259.5 421.0,143.0 380,143.0"></path>
+<circle class="dot" cx="380" cy="143.0" r="4"></circle>
+<text class="bh" x="372" y="148.0" text-anchor="end">Dane</text>
+<text class="lf" x="372" y="168.0" text-anchor="end">Binance: świece, funding, pozycjonowanie od 2020-09</text>
+<text class="lf" x="372" y="185.0" text-anchor="end">koszyk top-20 i miejsca 21–50 z 685 kontraktów</text>
+<text class="lf" x="372" y="202.0" text-anchor="end">premia Coinbase: BTC-USD wobec spot Binance</text>
+<text class="lf" x="372" y="219.0" text-anchor="end">spoza wykresu: on-chain, opcje, Fear &amp; Greed</text>
+<text class="lf" x="372" y="236.0" text-anchor="end">likwidacje: Binance od 25.09, Bybit od 27.09.2026</text>
+<path class="br" d="M462,259.5 C421.0,259.5 421.0,272.0 380,272.0"></path>
+<circle class="dot" cx="380" cy="272.0" r="4"></circle>
+<text class="bh" x="372" y="277.0" text-anchor="end">Przyrząd pomiaru</text>
+<text class="lf" x="372" y="297.0" text-anchor="end">checkpoint v2: fold-jitter, t i t_neff, N_eff ≤ n</text>
+<text class="lf" x="372" y="314.0" text-anchor="end">rachunek mocy przed rundą: niemierzalna nie startuje</text>
+<text class="lf" x="372" y="331.0" text-anchor="end">werdykt: t_neff &gt; 1,96 i trafność ponad próg</text>
+<text class="lf" x="372" y="348.0" text-anchor="end">kontrola pozytywna K1 i negatywna NC1</text>
+<text class="lf" x="372" y="365.0" text-anchor="end">rejestr odczytów: 40 wariantów, DSR 0,95 → t ≈ 3,84</text>
+<path class="br" d="M462,259.5 C421.0,259.5 421.0,401.0 380,401.0"></path>
+<circle class="dot" cx="380" cy="401.0" r="4"></circle>
+<text class="bh" x="372" y="406.0" text-anchor="end">Sposób pracy</text>
+<text class="lf" x="372" y="426.0" text-anchor="end">20 zasad w CLAUDE.md, pełne brzmienie w docs/rag/08</text>
+<text class="lf" x="372" y="443.0" text-anchor="end">runda = katalog w runs/, wpis w INDEX, wniosek</text>
+<text class="lf" x="372" y="460.0" text-anchor="end">skille w wyznaczonych momentach (zasada 19)</text>
+<text class="lf" x="372" y="477.0" text-anchor="end">zamrożone skrypty, bramki jakości 16a–c</text>
+<text class="lf" x="372" y="494.0" text-anchor="end">LLM nigdy w decyzjach handlowych (zasada 6)</text>
+<path class="br" d="M578,259.5 C619.0,259.5 619.0,70.0 660,70.0"></path>
+<circle class="dot" cx="660" cy="70.0" r="4"></circle>
+<text class="bh" x="668" y="75.0" text-anchor="start">Stan wiedzy</text>
+<text class="lf" x="668" y="95.0" text-anchor="start">84 rundy, 107 wniosków skumulowanych</text>
+<text class="lf" x="668" y="112.0" text-anchor="start">kierunek BTC z wykresu: brak przewagi (≈ 50 %)</text>
+<text class="lf" x="668" y="129.0" text-anchor="start">analiza techniczna: 7 rodzin zamkniętych</text>
+<text class="lf" x="668" y="146.0" text-anchor="start">dane spoza wykresu: tracą po kosztach</text>
+<text class="lf" x="668" y="163.0" text-anchor="start">ślady: premia Coinbase, trend tygodniowy</text>
+<text class="lf" x="668" y="180.0" text-anchor="start">carry z hedgem działa, ale to nie cel</text>
+<path class="br hot" d="M578,259.5 C619.0,259.5 619.0,216.0 660,216.0"></path>
+<circle class="dot hot" cx="660" cy="216.0" r="4"></circle>
+<text class="bh" x="668" y="221.0" text-anchor="start">Dziennik papierowy</text>
+<text class="lf" x="668" y="241.0" text-anchor="start">trend tygodniowy 2× + premia Coinbase 3×</text>
+<text class="lf" x="668" y="258.0" text-anchor="start">wynik liczony od 24.09.2026, kapitał 1</text>
+<text class="lf" x="668" y="275.0" text-anchor="start">ostrzeżenie przy −18,4 %, STOP przy −27,6 %</text>
+<text class="lf" x="668" y="292.0" text-anchor="start">odczyty: 24.12.2026, 24.03.2027, 23.09.2027</text>
+<text class="lf" x="668" y="309.0" text-anchor="start">momentum X1 osobno, tylko zapis</text>
+<path class="br" d="M578,259.5 C619.0,259.5 619.0,345.0 660,345.0"></path>
+<circle class="dot" cx="660" cy="345.0" r="4"></circle>
+<text class="bh" x="668" y="350.0" text-anchor="start">Infrastruktura</text>
+<text class="lf" x="668" y="370.0" text-anchor="start">serwer Linux w Polsce: badania, dziennik, kolektory</text>
+<text class="lf" x="668" y="387.0" text-anchor="start">komputer z Windows: zapas dziennika, sam się wyłącza</text>
+<text class="lf" x="668" y="404.0" text-anchor="start">Cowork: rutyna strony dziennika o 06:30 UTC</text>
+<text class="lf" x="668" y="421.0" text-anchor="start">GitHub: publiczne repo, master zasila dziennik</text>
+<text class="lf" x="668" y="438.0" text-anchor="start">strony: Dziennik CLAS-5, Tokeny CLAS-5, ta mapa</text>
+<text class="lf" x="668" y="455.0" text-anchor="start">monitor tokenów, agent lokalizator (Haiku)</text>
+<rect class="box core" x="462" y="232.5" width="116" height="54"></rect>
+<text class="ct" x="520" y="260.5" text-anchor="middle">CLAS-5</text>
+<text class="s" x="520" y="277.5" text-anchor="middle">perpetuale Binance</text>
+</svg></div>
+  <figcaption>Po lewej to, co projekt przyjmuje z góry: cel, dane, przyrząd i sposób pracy. Po prawej to, co z tego wynika:
+    wiedza, dziennik papierowy i maszyny, które go liczą. Czerwona gałąź to miejsce, w którym projekt jest teraz.</figcaption>
+</figure>
+
+<h2 id="wiedza">Stan wiedzy</h2>
+<h3>Co już wiemy, od dowodu braku do tego, co działa</h3>
+<p>Kolumny idą od najmocniej zamkniętych kierunków do działających. Pod każdą pozycją są nazwy rund i numery wniosków
+  z <span style="font-family:var(--mono)">runs/INDEX.md</span>, gdzie stoją pełne liczby.</p>
+<div class="board"><section class="col" aria-label="Dowód braku"><div class="ch"><span class="st no"><i></i>Dowód braku</span><span class="cnt">6</span></div><p class="cn">zamknięte; nie wracać bez nowej informacji</p><article class="k"><h4>Kierunek BTC z wykresu</h4><p>Świece 5m, 1h i 4h: trafność ≈ 50 % na dużych próbach. Faza 0: 50,27 % przy n = 7 687.</p><div class="ids">Z10, M1, Y1, WF1 · wn. 12, 39, 69, 85</div></article><article class="k"><h4>Analiza techniczna</h4><p>7 rodzin na BTC 4h, formacje świecowe 46,4 %. MACD i EMA na 1h niemierzalne.</p><div class="ids">A1, A2 · wn. 48–53, 103, 104</div></article><article class="k"><h4>Wykonanie i prowadzenie pozycji</h4><p>Zlecenie po cenie, połowa zysku wcześniej, stop na wejście: pieniądze bez zmian.</p><div class="ids">W1, N1 · wn. 42–45</div></article><article class="k"><h4>Dane spoza wykresu na BTC 4h</h4><p>Funding, pozycjonowanie, opcje, on-chain, Fear &amp; Greed. Ślad +0,02…+0,05 % na transakcję przy koszcie 0,08 %.</p><div class="ids">SW, O1, L1, V1, G1 · wn. 90</div></article><article class="k"><h4>Przepływy bez prognozy</h4><p>Przełączanie carry po znaku fundingu, premia rebalansowa (−3,6 %/rok), short nowych listingów.</p><div class="ids">C1, R1, NL1 · wn. 55, 57, 71</div></article><article class="k"><h4>Tłok lewara</h4><p>Short monet, na których lewar goni ruch: −10,5 %/rok. Filtr tłoku nie pomaga trendowi.</p><div class="ids">TL1, TF1</div></article></section><section class="col" aria-label="Niemierzalne"><div class="ch"><span class="st nm"><i></i>Niemierzalne</span><span class="cnt">5</span></div><p class="cn">szum większy niż spodziewany efekt; test nie startuje</p><article class="k"><h4>Carry przekrojowy</h4><p>Short tam, gdzie funding najwyższy, long tam, gdzie najniższy.</p><div class="ids">P2 · wn. 40</div></article><article class="k"><h4>Pozycja według siły sygnału</h4><p>Szum ±13–17 %/rok przy efekcie kilku %/rok.</p><div class="ids">SC1 · wn. 78</div></article><article class="k"><h4>Premia koreańska</h4><p>Efekt z badań ok. SR 0,15 wobec progu 0,86.</p><div class="ids">KP1 · wn. 91</div></article><article class="k"><h4>Stablecoiny, ETF i reszta sondy</h4><p>15 hipotez: na 5 latach szum 2–5× większy niż efekt.</p><div class="ids">SH1 · wn. 81</div></article><article class="k"><h4>ML przekrojowe top-50</h4><p>Przekrój widzi IC ≈ 0,022, ale ML z przeszukiwaniem traci ~2/3 mocy.</p><div class="ids">AU2 · wn. 92, 93</div></article></section><section class="col" aria-label="Ślad, nie dowód"><div class="ch"><span class="st tr"><i></i>Ślad, nie dowód</span><span class="cnt">4</span></div><p class="cn">każdy wybrany spośród ~30 odczytów tej samej historii</p><article class="k"><h4>Premia Coinbase → BTC na tydzień</h4><p>+32 %/rok, t 2,09. Po korekcie na ~28 prób DSR 0,52. Poza próbą (lip–wrz 2026) +0,1 %.</p><div class="ids">CP1, CP1P, AU4 · wn. 72, 96</div></article><article class="k"><h4>Trend tygodniowy top-20</h4><p>Po korekcie danych ~+11 %/rok [−4; +26], nieistotny.</p><div class="ids">TS1, RU1 · wn. 70, 74, 82</div></article><article class="k"><h4>Trend na miejscach 21–50</h4><p>+15,5 %/rok, t 1,99, ale znany z góry. Od 2022 t 1,32.</p><div class="ids">TR1, RU3 · wn. 88</div></article><article class="k"><h4>Momentum przekrojowe top-20</h4><p>Średnia z 7 dni startu tygodnia +9,5 %/rok, t 0,61. Dawne +42 % to najlepszy dzień.</p><div class="ids">X1, X1F · wn. 89</div></article></section><section class="col" aria-label="Mierzone na żywo"><div class="ch"><span class="st live"><i></i>Mierzone na żywo</span><span class="cnt">3</span></div><p class="cn">rozstrzyga czas, nie kolejny odczyt historii</p><article class="k"><h4>Trend 2× + premia Coinbase 3×</h4><p>Dziennik od 24.09.2026. Na historii ~+17 %/rok, największy spadek ~18 %. Pierwszy odczyt 24.12.2026.</p><div class="ids">SZ1, RU1 · wn. 77, 82, 107</div></article><article class="k"><h4>Momentum X1 osobno</h4><p>Tylko zapis w dzienniku, od 25.09.2026.</p><div class="ids">X1F · wn. 89</div></article><article class="k"><h4>Likwidacje</h4><p>Binance od 25.09, pełne z Bybit od 27.09.2026. Odczyt E1 po ≥ 1 roku.</p><div class="ids">LK0, LB0 · wn. 102, 106</div></article></section><section class="col" aria-label="Działa, ale nie cel"><div class="ch"><span class="st ok"><i></i>Działa, ale nie cel</span><span class="cnt">1</span></div><p class="cn">przepływ za dźwignię, nie prognoza</p><article class="k"><h4>Carry z hedgem, wersja COIN-M</h4><p>~+9 %/rok, bez likwidacji z konstrukcji. Cel użytkownika to zwroty rzędu zakładu o kierunek.</p><div class="ids">C1, D1 · wn. 61</div></article></section></div>
+<h2>Przyrząd</h2>
+<h3>Dlaczego ufamy tym liczbom</h3>
+<div class="trust"><div class="tr"><h4>Moc testu</h4><p>Prawdziwe +10 %/rok test wykrywa w ~25 % przypadków, +20 %/rok w ~73 %. „Nierozstrzygnięty” znaczy więc zwykle „za mało lat”.</p><div class="ids">AU1 · wn. 87</div></div><div class="tr"><h4>Kontrole przyrządu</h4><p>K1: przyrząd widzi znany sygnał. NC1: silniki nie wymyślają zysku z szumu o grubych ogonach.</p><div class="ids">K1, NC1 · wn. 79</div></div><div class="tr"><h4>Dwa warunki werdyktu</h4><p>Zwrot netto t_neff &gt; 1,96 i, przy regułach z trafnością, dolny kraniec trafności nad progiem.</p><div class="ids">wn. 43, 50</div></div><div class="tr"><h4>Audyt po naprawie</h4><p>59 przebiegów przeliczonych po naprawie N_eff: żaden werdykt się nie zmienił.</p><div class="ids">AU3 · wn. 94</div></div></div>
+
+<footer>
+  <p>Źródła: runs/INDEX.md (skrót stanu wiedzy, wnioski do 107), README.md (kamienie milowe), STATUS.md (ETAP 5–6),
+    docs/rag/09 (drabina dowodów), dziennik/README.md, crontab serwera.</p>
+  <p>Mapa jest widokiem. Przy sprzeczności wygrywają te pliki. Aktualizacja: docs/mapa_projektu.html i ponowna publikacja.</p>
+</footer>
+</div>

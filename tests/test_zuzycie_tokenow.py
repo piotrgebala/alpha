@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -230,3 +231,89 @@ def test_cost_split_by_model(tmp_path):
     assert by["claude-opus-5-5"]["koszt"] == by["claude-haiku-4-5-20251001"]["koszt"] == 2050
     assert sum(r["koszt"] for r in s["modele"]) == pytest.approx(s["razem_koszt"])
     assert "Modele (jednostki" in zt.report(s)
+
+
+def test_day_rows_models_sources_context_sessions(root):
+    """Wiersze strony: koszt i liczniki per model i źródło, kontekst, przepisania i sesje głównej sesji."""
+    rows = zt.day_rows(zt.scan_project(root))
+    assert sorted(rows) == ["2026-09-27", "2026-09-28"]
+    d1, d2 = rows["2026-09-27"], rows["2026-09-28"]
+    # główna 2 + 2·1000 + 0,1·5000 + 5·100 = 3002; subagent 1,25·400 + 5·10 = 550;
+    # workflow 2·2000 + 0,1·10 000 + 5·20 = 5100; plik z memory/ poza liczeniem
+    assert d1["z"] == {"main": [3002, 1], "sub": [550, 1], "wf": [5100, 1]}
+    assert d1["m"] == {"?": [8652, 3, 2, 3400, 15_000, 130]}
+    assert d1["ctx"] == [6002, 6002] and d1["prz"] == [0, 0] and d1["ses"] == 1
+    assert d2["prz"] == [1, 1_202_751] and d2["ctx"] == [625_001, 625_001]
+
+
+def test_day_rows_skip_synthetic_and_count_sessions(tmp_path):
+    """Wpisy <synthetic> nie są wywołaniami modelu; sesje = osobne pliki głównej sesji danego dnia."""
+    recs = [_asst(i, f"2026-09-28T0{i}:00:00Z", cw1h=10) for i in "123"]
+    for r, model in zip(recs, ("claude-opus-5-5", zt.SYNTHETIC, "claude-opus-5-5"), strict=True):
+        r["message"]["model"] = model
+    _write(tmp_path / "s1.jsonl", recs[:2])
+    _write(tmp_path / "s2.jsonl", recs[2:])
+    r = zt.day_rows(zt.scan_project(tmp_path))["2026-09-28"]
+    assert list(r["m"]) == ["claude-opus-5-5"] and r["m"]["claude-opus-5-5"][1] == 2
+    assert r["ses"] == 2
+
+
+def test_merge_days_freezes_old_days():
+    """Dzień sprzed okna przeliczania zostaje z historii; nowszy i nieznany historii — ze skanu."""
+    old = [{"d": "2026-09-01", "v": "hist"}, {"d": "2026-09-20", "v": "hist"}]
+    new = {d: {"d": d, "v": "skan"} for d in ("2026-08-30", "2026-09-01", "2026-09-20")}
+    got = zt.merge_days(old, new, "2026-09-28")
+    assert [(r["d"], r["v"]) for r in got] == [
+        ("2026-08-30", "skan"),
+        ("2026-09-01", "hist"),
+        ("2026-09-20", "skan"),
+    ]
+
+
+@settings(max_examples=100, deadline=None)
+@given(old_k=st.sets(st.integers(0, 60)), new_k=st.sets(st.integers(0, 60)))
+def test_merge_days_property(old_k, new_k):
+    """Wynik: dni posortowane i unikalne, suma obu zbiorów; skan wygrywa tylko w oknie przeliczania."""
+    today = date(2026, 9, 28)
+
+    def iso(k):
+        return (today - timedelta(days=k)).isoformat()
+
+    old = [{"d": iso(k), "src": "hist"} for k in sorted(old_k, reverse=True)]
+    new = {iso(k): {"d": iso(k), "src": "skan"} for k in new_k}
+    got = zt.merge_days(old, new, today.isoformat())
+    ds = [r["d"] for r in got]
+    assert ds == sorted(set(ds)) and set(ds) == {iso(k) for k in old_k | new_k}
+    for r in got:
+        k = (today - date.fromisoformat(r["d"])).days
+        from_scan = k in new_k and (k <= zt.FREEZE_DAYS or k not in old_k)
+        assert r["src"] == ("skan" if from_scan else "hist")
+
+
+def test_write_state_history_trim_and_errors(root, tmp_path):
+    """Plik stanu = historia: stary dzień przeżywa kolejny zapis, limit ucina najstarsze, zapis atomowy."""
+    path = tmp_path / "t" / "stan.json"
+    now = datetime(2026, 9, 28, 5, 0, tzinfo=timezone.utc)
+    st1 = zt.write_state(path, zt.scan_project(root), now)
+    assert [r["d"] for r in st1["dni"]] == ["2026-09-27", "2026-09-28"]
+    assert st1["wygenerowano"] == "2026-09-28T05:00:00Z" and not list(path.parent.glob("*.tmp"))
+    hist = json.loads(path.read_text(encoding="utf-8"))
+    hist["dni"].insert(0, {"d": "2026-08-01", "m": {}, "z": {}, "ctx": [0, 0], "prz": [0, 0]})
+    path.write_text(json.dumps(hist), encoding="utf-8")
+    st2 = zt.write_state(path, zt.scan_project(root), now)
+    assert [r["d"] for r in st2["dni"]] == ["2026-08-01", "2026-09-27", "2026-09-28"]
+    st3 = zt.write_state(path, zt.scan_project(root), now, limit=1)
+    assert [r["d"] for r in st3["dni"]] == ["2026-09-28"]
+    path.write_text("{uszkodzony", encoding="utf-8")
+    with pytest.raises(ValueError):
+        zt.write_state(path, zt.scan_project(root), now)
+
+
+def test_main_stan(root, tmp_path, capsys):
+    """--stan zapisuje dokument strony; zły plik historii = kod 1 (nie cichy reset historii)."""
+    path = tmp_path / "stan.json"
+    assert zt.main(["--katalog", str(root), "--stan", str(path)]) == 0
+    assert "stan strony: dni 2" in capsys.readouterr().out
+    assert json.loads(path.read_text(encoding="utf-8"))["kolumny_modelu"] == zt.MODEL_COLS
+    path.write_text("[]", encoding="utf-8")
+    assert zt.main(["--katalog", str(root), "--stan", str(path)]) == 1

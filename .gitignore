@@ -29,3 +29,6 @@ dziennik/ostatni_wydruk.txt
 # (GitHub odrzuca pliki > 100 MB; worktree to osobne repo robocze).
 /*.zip
 .claude/worktrees/
+
+# Strona „Tokeny CLAS-5” (docs/rag/12): historia dni, logi odświeżania — dane lokalne tej maszyny.
+runs/tokeny/

@@ -22,6 +22,12 @@ Zasady liczenia:
     PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py                 # cały zapis tego projektu
     PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py --od 2026-09-27 # od dnia (UTC)
     PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py --json          # dane do dalszej obróbki
+    PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py --stan runs/tokeny/stan.json  # dane strony „Tokeny CLAS-5”
+
+Strona „Tokeny CLAS-5” (docs/rag/12) czyta dokument bazy zbudowany przez `--stan`: wiersz na dzień
+z podziałem na modele i źródła, kontekstem i przepisaniami głównej sesji oraz liczbą sesji. Plik stanu
+jest zarazem historią: Claude Code kasuje zapisy rozmów po 30 dniach (`cleanupPeriodDays`), więc dni
+starsze niż FREEZE_DAYS zostają w pliku takie, jak policzono je ostatnio, zamiast znikać z wykresów.
 """
 
 from __future__ import annotations
@@ -29,10 +35,12 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
 import re
 import statistics
 import sys
 from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 WEIGHTS = {"inp": 1.0, "cw5": 1.25, "cw1h": 2.0, "cr": 0.1, "out": 5.0}
@@ -41,6 +49,15 @@ REWRITE_MAX_READ = 50_000
 MAIN = "główna sesja"
 SUB = "subagent"
 SKILL_MARK = "Base directory for this skill"
+SYNTHETIC = "<synthetic>"  # wpisy harnessu bez wywołania modelu (zero tokenów) — poza stroną
+GROUP_KEY = {
+    MAIN: "main",
+    SUB: "sub",
+    "workflow": "wf",
+}  # krótkie klucze źródeł w dokumencie strony
+MODEL_COLS = ["koszt", "wywolan", "wejscie", "zapis_cache", "odczyt_cache", "wyjscie"]
+FREEZE_DAYS = 14  # dni starszych nie przeliczamy — część ich zapisów mogła już zniknąć (30 dni)
+DOC_LIMIT = 240_000  # bajtów; dokument bazy strony ma limit 256 KiB — nadmiar = najstarsze dni
 
 
 def project_dir(cwd: str | Path, home: Path | None = None) -> Path:
@@ -89,6 +106,7 @@ class Call:
     ts: str
     counts: collections.Counter
     model: str = "?"
+    session: str = ""
 
     @property
     def is_rewrite(self) -> bool:
@@ -141,6 +159,7 @@ def scan_file(path: Path, source: str, scan: Scan, since: str = "") -> None:
                             str(o.get("timestamp") or ""),
                             c,
                             str(msg.get("model") or "?"),
+                            path.stem,
                         )
                     else:
                         prev.counts = collections.Counter(
@@ -270,6 +289,79 @@ def summarize(scan: Scan) -> dict:
     }
 
 
+def day_rows(scan: Scan) -> dict[str, dict]:
+    """Wiersz na dzień dla strony: modele [MODEL_COLS], źródła [koszt, wywołań], kontekst głównej
+    sesji [mediana, maks.], przepisania [liczba, koszt] i liczba głównych sesji z wywołaniem tego dnia.
+    """
+    rows: dict[str, dict] = {}
+    ctx: dict[str, list[int]] = collections.defaultdict(list)
+    sessions: dict[str, set[str]] = collections.defaultdict(set)
+    for call in scan.calls:
+        if not call.day or call.model == SYNTHETIC:
+            continue
+        r = rows.setdefault(
+            call.day, {"d": call.day, "m": {}, "z": {}, "ctx": [0, 0], "prz": [0, 0], "ses": 0}
+        )
+        c, k = call.counts, cost(call.counts)
+        m = r["m"].setdefault(call.model, [0.0] + [0] * (len(MODEL_COLS) - 1))
+        for i, v in enumerate((k, 1, c["inp"], c["cw5"] + c["cw1h"], c["cr"], c["out"])):
+            m[i] += v
+        group = "workflow" if call.source.startswith("workflow:") else call.source
+        z = r["z"].setdefault(GROUP_KEY[group], [0.0, 0])
+        z[0] += k
+        z[1] += 1
+        if call.source == MAIN:
+            ctx[call.day].append(context_size(c))
+            sessions[call.day].add(call.session)
+            if call.is_rewrite:
+                r["prz"][0] += 1
+                r["prz"][1] += k
+    for d, r in rows.items():
+        for v in (*r["m"].values(), *r["z"].values(), r["prz"]):
+            v[0] = round(v[0]) if isinstance(v[0], float) else v[0]
+        r["prz"][1] = round(r["prz"][1])
+        if ctx[d]:
+            r["ctx"] = [int(statistics.median(ctx[d])), max(ctx[d])]
+        r["ses"] = len(sessions[d])
+    return rows
+
+
+def merge_days(old: list[dict], new: dict[str, dict], today: str) -> list[dict]:
+    """Historia + świeże przeliczenie: dzień z ostatnich FREEZE_DAYS (albo nieznany historii) bierze
+    wartość świeżą, starszy zostaje z historii — jego zapisy mogły już zostać skasowane."""
+    cutoff = (date.fromisoformat(today) - timedelta(days=FREEZE_DAYS)).isoformat()
+    out = {r["d"]: r for r in old}
+    for d, r in new.items():
+        if d >= cutoff or d not in out:
+            out[d] = r
+    return [out[d] for d in sorted(out)]
+
+
+def write_state(
+    path: Path, scan: Scan, now: datetime | None = None, limit: int = DOC_LIMIT
+) -> dict:
+    """Dokument strony „Tokeny CLAS-5”: scala plik `path` (historia) ze świeżym skanem, przycina
+    najstarsze dni do `limit` bajtów i zapisuje atomowo. Uszkodzony plik historii = błąd, nie reset.
+    """
+    now = now or datetime.now(timezone.utc)
+    old = json.loads(path.read_text(encoding="utf-8"))["dni"] if path.exists() else []
+    state = {
+        "wersja": 1,
+        "wygenerowano": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "zrodlo": "zapisy Claude Code projektu alpha na serwerze Linux (bez Windows i Cowork)",
+        "kolumny_modelu": MODEL_COLS,
+        "kolumny_zrodla": ["koszt", "wywolan"],
+        "dni": merge_days(old, day_rows(scan), now.date().isoformat()),
+    }
+    while len(state["dni"]) > 1 and len(json.dumps(state, ensure_ascii=False).encode()) > limit:
+        state["dni"].pop(0)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(state, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    os.replace(tmp, path)
+    return state
+
+
 def report(s: dict) -> str:
     """Raport tekstowy (koszt w milionach jednostek wejścia, patrz docstring)."""
     tot = s["razem_koszt"] or 1.0
@@ -335,6 +427,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--od", default="", help="od dnia UTC, RRRR-MM-DD")
     ap.add_argument("--json", action="store_true", help="wynik jako JSON")
+    ap.add_argument("--stan", type=Path, help="zapisz dokument strony „Tokeny CLAS-5” (i historię)")
     a = ap.parse_args(sys.argv[1:] if argv is None else argv)
     if a.od and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", a.od):
         print("BŁĄD: --od w formacie RRRR-MM-DD", file=sys.stderr)
@@ -343,6 +436,18 @@ def main(argv: list[str] | None = None) -> int:
     if not root.is_dir():
         print(f"BŁĄD: brak katalogu zapisów {root}", file=sys.stderr)
         return 1
+    if a.stan:
+        try:
+            st = write_state(a.stan, scan_project(root, a.od))
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            print(f"BŁĄD: plik stanu {a.stan}: {e}", file=sys.stderr)
+            return 1
+        dni = st["dni"]
+        print(
+            f"stan strony: dni {len(dni)} ({dni[0]['d'] if dni else '-'} → "
+            f"{dni[-1]['d'] if dni else '-'}), {a.stan.stat().st_size / 1e3:.0f} KB → {a.stan}"
+        )
+        return 0
     s = summarize(scan_project(root, a.od))
     print(json.dumps(s, ensure_ascii=False, indent=1) if a.json else report(s))
     return 0
