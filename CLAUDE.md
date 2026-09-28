@@ -183,3 +183,11 @@ py tools/frozen_guard.py lista                    # lista zamrożonych skryptów
 
 Przeczytaj odpowiedni plik w `docs/rag/` (metodologia pomiaru: `docs/rag/03`) — zmiana jednej
 wartości bez sprawdzenia drugiej strony (np. mnożnika ATR) łamie spójność budowaną celowo.
+
+# Compact instructions
+
+Przy streszczaniu rozmowy (automatycznym i `/compact`) zachowaj dosłownie: bieżącą gałąź i stan gita (co
+niezacommitowane, co niescalone), ID i katalog rundy, licznik wariantów, pre-rejestrację (warianty i reguły zapisane
+przed wynikiem), decyzje użytkownika z datą i jego słowami, kluczowe liczby z jednostką, zmienione pliki (ścieżki),
+wynik ostatnich testów, otwarte zadania i następny krok. Pomiń treść wyników narzędzi, które da się odtworzyć
+z plików (`runs/`, `STATUS.md`, `docs/rag/`, nota przekazania w pamięci).
