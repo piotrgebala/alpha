@@ -118,3 +118,16 @@ def test_every_enabled_plugin_is_documented_in_claude_md():
     for plugin, enabled in SETTINGS.get("enabledPlugins", {}).items():
         if enabled:
             assert f"`{plugin.split('@', 1)[0]}`" in CLAUDE_MD, plugin
+
+
+def test_context_guard_runs_after_every_tool_on_every_prompt_and_in_status_line():
+    """Strażnik kontekstu (docs/rag/12): po KAŻDYM narzędziu (bez matchera), na starcie tury
+    i w linii statusu; przez `py || python3` jak pozostałe hooki (Windows / serwer / Cowork)."""
+    guard = "tools/straznik_kontekstu.py"
+    for event in ("PostToolUse", "UserPromptSubmit"):
+        matchers = [m for m, command in hooks_for(event) if f'{guard}" hook' in command]
+        assert matchers in ([""], ["*"]), event
+    status = SETTINGS.get("statusLine", {})
+    assert status.get("type") == "command"
+    assert f'{guard}" status' in status.get("command", "")
+    assert "python3" in status["command"]

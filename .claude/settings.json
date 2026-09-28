@@ -70,6 +70,16 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py \"${CLAUDE_PROJECT_DIR:-.}/tools/straznik_kontekstu.py\" hook 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/straznik_kontekstu.py\" hook 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "UserPromptExpansion": [
@@ -83,6 +93,22 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py \"${CLAUDE_PROJECT_DIR:-.}/tools/straznik_kontekstu.py\" hook 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/straznik_kontekstu.py\" hook 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "py \"${CLAUDE_PROJECT_DIR:-.}/tools/straznik_kontekstu.py\" status 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/straznik_kontekstu.py\" status 2>/dev/null"
   }
 }
