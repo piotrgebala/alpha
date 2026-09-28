@@ -129,3 +129,32 @@ Kontrola: nagłówek strony pokazuje czas ostatniego odświeżenia i czerwony al
 `tail runs/tokeny/cron.log`; gałąź: `git log -1 --format='%cs %s' origin/tokeny-dane`. Wyłączenie: usunąć wpis
 crona i rutynę w Cowork.
 
+## Zarządzanie kontekstem — lekcja z 28.09 i plan (2026-09-28)
+
+Sesja 28.09 (strony „Tokeny” i „Mapa”) to sytuacja, której zasady miały zapobiegać: 87 wywołań do 07:56,
+mediana kontekstu 262 tys., maksimum 402 tys., 4,2 mln jednostek. Użytkownik: „po to chcę te optymalizacje, żeby
+właśnie takich sytuacji unikać … bez spadku jakości analizy”. Przyczyny:
+1. dwa duże, niezależne zadania w jednej sesji, a potem pytanie spoza nich w tej samej rozmowie;
+2. ok. 8 skilli i instrukcji w głównym kontekście — każde zostaje w nim do końca sesji;
+3. duże pliki (dwie strony HTML po ~30 KB, generator) pisane przez argumenty narzędzi — zostają w historii;
+4. jedna tura z ~80 wywołaniami: próg streszczenia 300 tys. nie zadziałał (kontekst doszedł do 402 tys.);
+   przyczyny nie sprawdzono.
+Zasada „nowa sesja na zadanie” istniała, ale nic jej nie pilnowało w trakcie tury.
+
+Plan do wdrożenia w NOWEJ sesji (konfiguracja Claude Code → skill `update-config`, zasada 19):
+1. **Strażnik kontekstu** — hook `PostToolUse` (`tools/straznik_kontekstu.py`): czyta z zapisu rozmowy rozmiar
+   kontekstu ostatniego wywołania. Przy 150 tys. jednorazowa uwaga dla Claude: domknij etap, następny duży krok
+   w subagencie albo w nowej sesji. Przy 250 tys. polecenie: zapisz notę przekazania i poproś użytkownika
+   o `/clear`, nie zaczynaj nowego etapu. Bez twardej blokady narzędzi — przerwanie w połowie analizy psułoby
+   jakość. Progi w jednym miejscu, test na syntetycznym zapisie rozmowy.
+2. **Uwaga na starcie tury** — hook `UserPromptSubmit`: gdy kontekst > 150 tys., przypomnienie, że pytanie
+   niezwiązane z bieżącym zadaniem idzie do nowej sesji.
+3. **Linia statusu** z rozmiarem kontekstu — użytkownik widzi go na bieżąco.
+4. **Nota przekazania** — ≤ 15 linii w pamięci projektu: co zrobione, pliki, decyzje, następny krok. Nowa sesja
+   zaczyna od niej zamiast od setek tysięcy tokenów historii. Wiedza i tak żyje w plikach (INDEX, STATUS,
+   README rund), więc jakość nie spada.
+5. **Ciężka praca w subagencie** — duże pliki (strony, raporty), przeglądy, długie odczyty: subagent wczytuje
+   potrzebne skille i oddaje ścieżkę plus krótkie podsumowanie, a główna sesja sprawdza wynik wąsko. Koszt
+   subagenta zostaje, ale główny kontekst nie rośnie, więc każde następne wywołanie jest tańsze.
+Szacunek jak wyżej (−25–35 % całości), z tą różnicą, że strażnik pilnuje progu także w długich turach.
+
