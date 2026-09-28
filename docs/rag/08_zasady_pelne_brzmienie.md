@@ -193,6 +193,15 @@ Te pliki zmieniają się często — traktuj jako aktualny stan, nie jako źród
     wyłączona, chmura niezsynchronizowana) → w README „niedostępny w sesji” i procedura z repo:
     bramki z `docs/skills/bramki-jakosci.md`, runda z zasad 11–19 i `runs/INDEX.md` („Jak dodać
     nowy wpis”). Dokument w repo pozostaje źródłem procedury; skill jest drugą parą oczu.
+
+    **Rejestracja bez ponownego wczytania (decyzja użytkownika 2026-09-28).** Skill wczytany już
+    w głównej rozmowie TEJ sesji, bez streszczenia rozmowy po drodze, dostaje wpis na nowej gałęzi
+    poleceniem `py tools/skill_audit.py zarejestruj <skill>` zamiast ponownego wczytania, które
+    dokładało do kontekstu drugą kopię tej samej treści (skille = 23 % treści dodanej do głównej
+    sesji, `docs/rag/12`). Program sprawdza to w zapisie rozmowy (pisze go Claude Code, nie Claude)
+    i odmawia, gdy skill był wczytany tylko w subagencie, w innej sesji albo przed streszczeniem —
+    więc nadal nie da się dopisać skilla niewczytanego. Wpis ma zdarzenie `rejestracja`, a raport
+    gałęzi liczy takie wpisy osobno.
 20. **Testy na realnych danych używają WYŁĄCZNIE danych od 2021-01-01 (decyzja użytkownika
     2026-09-23: „testuj tylko na danych po 2021 roku”, doprecyzowane: rok 2021 włącznie).**
     Dotyczy każdej nowej rundy od W2: trening, walk-forward, kalibracje i rachunek mocy liczą

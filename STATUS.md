@@ -3065,7 +3065,7 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   (150 tys. uwaga, 250 tys. nota przekazania + `/clear`, co 50 tys. ponownie) i `UserPromptSubmit`, linia statusu
   z rozmiarem kontekstu; bez twardej blokady, progi jak w planie (zmiana = stałe w pliku) —
   [docs/rag/12](docs/rag/12_zuzycie_tokenow.md) („Wdrożenie”). Do sprawdzenia na Windows: linia statusu.
-- **Do decyzji użytkownika:** rejestracja skilla w zasadzie 19 bez ponownego wczytania, gdy treść jest nadal w kontekście;
-  odchudzenie `clas5-quant` SKILL.md przy następnej wersji. Praktyka po stronie użytkownika: nowa sesja na zadanie
+- **Wdrożone 2026-09-28 (decyzja użytkownika):** rejestracja skilla bez ponownego wczytania — `py tools/skill_audit.py
+  zarejestruj <skill>` (zasada 19, dowód z zapisu rozmowy). **Do decyzji użytkownika:** odchudzenie `clas5-quant` SKILL.md przy następnej wersji. Praktyka po stronie użytkownika: nowa sesja na zadanie
   i po przerwie > 1 h; tryb ultracode tylko na duże przeglądy.
 

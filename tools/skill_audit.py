@@ -1,7 +1,7 @@
 """
 skill_audit.py — rejestr użycia skilli (CLAUDE.md, zasada 19).
 
-Dwie role w jednym pliku:
+Role w jednym pliku:
 
 1. HOOK Claude Code. Program Claude Code (nie model) uruchamia ten plik po każdym wczytaniu
    skilla i podaje na stdin JSON zdarzenia. Skrypt dopisuje JEDEN wiersz do pliku rejestru
@@ -31,6 +31,13 @@ rzadki przypadek dwóch sesji dopisujących do tej samej gałęzi w dwóch klona
    Podgląd BEZ blokowania: Excel → Dane → Z pliku tekstowego/CSV (Power Query), potem
    „Odśwież wszystko”. Nie zapisuj tego pliku z Excela — zmieniłby separator i kodowanie.
 
+4. REJESTRACJA BEZ PONOWNEGO WCZYTANIA (decyzja użytkownika 2026-09-28).
+   `py tools/skill_audit.py zarejestruj <skill>` — gdy skill był już wczytany w głównej
+   rozmowie TEJ sesji (bez streszczenia rozmowy po drodze), dostaje wpis na bieżącej gałęzi ze
+   zdarzeniem `rejestracja`, bez drugiej kopii treści w kontekście. Dowodem jest zapis rozmowy
+   sesji (`CLAUDE_CODE_SESSION_ID`), który pisze Claude Code, nie Claude — więc nadal nie da się
+   dopisać skilla niewczytanego ani wczytanego tylko w subagencie.
+
 Trzy twarde reguły hooka (każda ma test w `tests/test_skill_audit.py`):
 - NIGDY nie blokuje sesji — każdy błąd jest połykany, kod wyjścia zawsze 0.
 - NIGDY nie pisze na stdout — przy części zdarzeń (np. UserPromptSubmit) stdout trafia do
@@ -55,6 +62,7 @@ from datetime import datetime
 from pathlib import Path
 
 LOG_DIR = Path("runs") / "skille"
+REJESTRACJA = "rejestracja"  # wpis bez ponownego wczytania (zasada 19, decyzja 2026-09-28)
 MAX_ARGS_CHARS = 200
 MAX_NAME_CHARS = 100
 GIT_TIMEOUT_S = 5
@@ -346,6 +354,121 @@ def hook_main(raw: bytes | str) -> int:
 # --------------------------------------------------------------------------- raport
 
 
+# --------------------------------------------------------------------------- rejestracja
+
+
+def _same_skill(a: str, b: str) -> bool:
+    """`clas5-quant` pasuje do `anthropic-skills:clas5-quant`; dwa różne prefiksy — nie."""
+    bare = ":" not in a or ":" not in b
+    return a == b or (bare and a.rsplit(":", 1)[-1] == b.rsplit(":", 1)[-1])
+
+
+def session_transcript(session: str, config_dir: Path | None = None) -> Path | None:
+    """Zapis rozmowy sesji: `<CLAUDE_CONFIG_DIR albo ~/.claude>/projects/*/<sesja>.jsonl`."""
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", session or ""):
+        return None
+    base = config_dir or Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+    hits = sorted((base / "projects").glob(f"*/{session}.jsonl"))
+    return hits[0] if hits else None
+
+
+def _loaded_skill(entry: dict, skill: str) -> str | None:
+    """Pełna nazwa skilla, jeśli wpis zapisu rozmowy go wczytuje (narzędzie Skill albo /komenda)."""
+    message = entry.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    if entry.get("type") == "assistant" and isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict) and block.get("name") == "Skill":
+                name = str((block.get("input") or {}).get("skill") or "")
+                if block.get("type") == "tool_use" and name and _same_skill(name, skill):
+                    return name
+    if entry.get("type") == "user":
+        blocks = content if isinstance(content, list) else [content]
+        for block in blocks:
+            text = block.get("text", "") if isinstance(block, dict) else str(block or "")
+            for name in re.findall(r"<command-name>/?([^<\s]+)</command-name>", text):
+                if _same_skill(name, skill):
+                    return name
+    return None
+
+
+def last_load(transcript: Path, skill: str) -> tuple[str | None, str, bool]:
+    """
+    (pełna nazwa, czas ostatniego wczytania w GŁÓWNEJ rozmowie, czy po nim streszczono rozmowę).
+    Wczytania subagentów (`isSidechain`) nie liczą się — ich treść nie trafia do głównego kontekstu.
+    """
+    found, when, compacted = None, "", False
+    needle = skill.rsplit(":", 1)[-1].encode()
+    with open(transcript, "rb") as fh:
+        for line in fh:
+            if needle not in line and b"compact_boundary" not in line:
+                continue
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(entry, dict) or entry.get("isSidechain"):
+                continue
+            if entry.get("type") == "system" and entry.get("subtype") == "compact_boundary":
+                compacted = found is not None
+                continue
+            name = _loaded_skill(entry, skill)
+            if name:
+                found, when, compacted = name, str(entry.get("timestamp") or ""), False
+    return found, when, compacted
+
+
+def register_without_reload(
+    root: Path, skill: str, session: str, transcript: Path | None, *, now: datetime
+) -> tuple[int, str]:
+    """
+    Zasada 19: skill wczytany wcześniej w głównej rozmowie TEJ sesji, bez streszczenia po drodze,
+    dostaje wpis na bieżącej gałęzi bez ponownego wczytania. Zwraca (kod wyjścia, komunikat).
+    """
+    if not session:
+        return 1, "Brak CLAUDE_CODE_SESSION_ID — polecenie działa tylko z sesji Claude Code."
+    if transcript is None:
+        return 1, (
+            "Nie znalazłem zapisu tej sesji, więc nie da się sprawdzić, że skill jest "
+            "w kontekście — wczytaj go (zasada 19)."
+        )
+    name, when, compacted = last_load(transcript, skill)
+    if name is None:
+        return (
+            1,
+            f"`{skill}` nie był wczytany w głównej rozmowie tej sesji — wczytaj go (zasada 19).",
+        )
+    if compacted:
+        return (
+            1,
+            f"Po wczytaniu `{name}` ({when}) rozmowę streszczono — wczytaj go ponownie (zasada 19).",
+        )
+    branch = current_branch(root)
+    log_path = log_file_for_branch(root, branch)
+    if any(r.get("skill") == name and r.get("sesja") == session for r in load_records(log_path)[0]):
+        return 0, f"`{name}` jest już w rejestrze gałęzi `{branch}` z tej sesji — nic nie dopisuję."
+    use = {
+        "skill": name,
+        "zdarzenie": REJESTRACJA,
+        "kto": "claude",
+        "argumenty": f"bez ponownego wczytania; w kontekście od {when}",
+        "agent": "",
+    }
+    record = build_record(use, now=now, branch=branch, session=session)
+    append_record(log_path, record)
+    try:
+        append_csv(csv_path(root), [csv_row(record)])
+    except Exception:  # noqa: BLE001 — monitor CSV jest drugorzędny (jak w hooku)
+        pass
+    return (
+        0,
+        f"Zapisano `{name}` dla gałęzi `{branch}` bez ponownego wczytania (w kontekście od {when}).",
+    )
+
+
+# --------------------------------------------------------------------------- raport
+
+
 def load_records(path: Path) -> tuple[list[dict], int]:
     """
     (poprawne wpisy, liczba wierszy uszkodzonych) z pliku albo ze wszystkich `*.jsonl`
@@ -409,6 +532,12 @@ def render_report(records: list[dict], bad: int, branch: str | None = None) -> s
                 + ", ".join(f"`{s}`" for s in distinct)
                 + "."
             )
+            reused = sum(r.get("zdarzenie") == REJESTRACJA for r in records)
+            if reused:
+                out.append(
+                    f"W tym {reused} bez ponownego wczytania (skill był już w kontekście sesji; "
+                    "zasada 19)."
+                )
     else:
         out.append("## Rejestr użycia skilli — podsumowanie per gałąź")
         out.append("")
@@ -443,12 +572,29 @@ def main(argv: list[str] | None = None) -> int:
     rep.add_argument(
         "--plik", help="plik albo katalog rejestru (domyślnie runs/skille/ w bieżącym repo)"
     )
+    reg = sub.add_parser(
+        "zarejestruj",
+        help="wpis dla bieżącej gałęzi bez ponownego wczytania skilla, który jest już "
+        "w kontekście TEJ sesji (zasada 19)",
+    )
+    reg.add_argument("skill", help="np. engineering:code-review albo clas5-quant")
     sub.add_parser(
         "csv", help=f"odbuduj monitor {LOG_DIR.as_posix()}/{CSV_NAME} od zera z rejestrów JSONL"
     )
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
+
+    if args.cmd == "zarejestruj":
+        root = repo_root(os.getcwd())
+        if root is None:
+            parser.error("nie jestem w repozytorium git")
+        session = os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+        code, message = register_without_reload(
+            root, args.skill, session, session_transcript(session), now=datetime.now().astimezone()
+        )
+        print(message, file=sys.stderr if code else sys.stdout)
+        return code
 
     if args.cmd == "csv":
         root = repo_root(os.getcwd())

@@ -16,11 +16,15 @@ from __future__ import annotations
 import csv
 import json
 import subprocess
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
+from tools import skill_audit as sa
 from tools.skill_audit import (
     CSV_BUFFER_NAME,
     CSV_COLUMNS,
@@ -537,3 +541,147 @@ def test_cli_csv_on_locked_file_explains_instead_of_crashing(repo_with_master, c
     monkeypatch.chdir(repo)
     assert main(["csv"]) == 1
     assert "Excelu" in capsys.readouterr().err
+
+
+# --------------------------------------------------------------------------- rejestracja bez ponownego wczytania
+# Zasada 19 (decyzja użytkownika 2026-09-28): dowodem jest zapis rozmowy sesji, nie deklaracja Claude'a.
+
+_T0 = "2026-09-28T10:00:00.000Z"
+_KOMPRESJA = {
+    "type": "system",
+    "subtype": "compact_boundary",
+    "timestamp": "2026-09-28T11:00:00.000Z",
+}
+
+
+def _wczytanie(name: str, ts: str = _T0, sidechain: bool = False) -> dict:
+    blok = {"type": "tool_use", "name": "Skill", "input": {"skill": name}}
+    return {
+        "type": "assistant",
+        "isSidechain": sidechain,
+        "timestamp": ts,
+        "message": {"content": [blok]},
+    }
+
+
+def _zapis(katalog: Path, wpisy: list[dict]) -> Path:
+    sciezka = katalog / "sesja.jsonl"
+    sciezka.write_text("\n".join(json.dumps(w) for w in wpisy) + "\n", encoding="utf-8")
+    return sciezka
+
+
+def _rejestruj(repo: Path, skill: str, wpisy: list[dict], sesja: str = "s1") -> tuple[int, str]:
+    teraz = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
+    return sa.register_without_reload(repo, skill, sesja, _zapis(repo, wpisy), now=teraz)
+
+
+def _wpisy_galezi(repo: Path) -> list[dict]:
+    return sa.load_records(sa.log_file_for_branch(repo, "runda-test"))[0]
+
+
+def test_rejestracja_skilla_z_kontekstu_sesji(repo):
+    kod, _ = _rejestruj(repo, "engineering:code-review", [_wczytanie("engineering:code-review")])
+    assert kod == 0
+    (wpis,) = _wpisy_galezi(repo)
+    assert wpis["zdarzenie"] == sa.REJESTRACJA and wpis["skill"] == "engineering:code-review"
+    assert wpis["sesja"] == "s1" and wpis["galaz"] == "runda-test" and wpis["kto"] == "claude"
+    assert "bez ponownego wczytania" in wpis["argumenty"] and _T0 in wpis["argumenty"]
+    assert (
+        _rejestruj(repo, "engineering:code-review", [_wczytanie("engineering:code-review")])[0] == 0
+    )
+    assert len(_wpisy_galezi(repo)) == 1  # drugi raz nic nie dopisuje
+
+
+def test_rejestracja_po_nazwie_bez_prefiksu_i_z_komendy_uzytkownika(repo):
+    tresc = "<command-name>/anthropic-skills:ta-toolkit</command-name>"
+    komenda = {"type": "user", "timestamp": _T0, "message": {"content": tresc}}
+    assert _rejestruj(repo, "clas5-quant", [_wczytanie("anthropic-skills:clas5-quant")])[0] == 0
+    assert _rejestruj(repo, "ta-toolkit", [komenda])[0] == 0
+    nazwy = [w["skill"] for w in _wpisy_galezi(repo)]
+    assert nazwy == ["anthropic-skills:clas5-quant", "anthropic-skills:ta-toolkit"]
+
+
+@pytest.mark.parametrize(
+    "wpisy",
+    [
+        [],
+        [_wczytanie("dataviz")],
+        [_wczytanie("engineering:code-review", sidechain=True)],  # tylko w subagencie
+        [_wczytanie("engineering:code-review"), _KOMPRESJA],  # streszczenie po wczytaniu
+    ],
+)
+def test_odmowa_gdy_skilla_nie_ma_w_kontekscie(repo, wpisy):
+    kod, komunikat = _rejestruj(repo, "engineering:code-review", wpisy)
+    assert kod == 1 and "zasada 19" in komunikat
+    assert _wpisy_galezi(repo) == []
+
+
+def test_wczytanie_po_streszczeniu_znow_wystarcza(repo):
+    ponownie = _wczytanie("engineering:code-review", "2026-09-28T11:30:00.000Z")
+    wpisy = [_wczytanie("engineering:code-review"), _KOMPRESJA, ponownie]
+    assert _rejestruj(repo, "engineering:code-review", wpisy)[0] == 0
+
+
+def test_nazwy_skilli_z_roznych_wtyczek_sie_nie_myla():
+    assert sa._same_skill("anthropic-skills:clas5-quant", "clas5-quant")
+    assert sa._same_skill("clas5-quant", "anthropic-skills:clas5-quant")
+    assert not sa._same_skill("data:analyze", "x:analyze")
+
+
+def test_odmowa_bez_sesji_albo_bez_zapisu(repo):
+    teraz = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
+    assert sa.register_without_reload(repo, "x", "", repo / "brak.jsonl", now=teraz)[0] == 1
+    assert sa.register_without_reload(repo, "x", "s1", None, now=teraz)[0] == 1
+    assert _wpisy_galezi(repo) == []
+
+
+def test_zapis_sesji_szukany_w_katalogu_konfiguracji(tmp_path):
+    (tmp_path / "projects" / "-repo").mkdir(parents=True)
+    zapis = tmp_path / "projects" / "-repo" / "abc-1.jsonl"
+    zapis.write_text("", encoding="utf-8")
+    assert sa.session_transcript("abc-1", tmp_path) == zapis
+    assert sa.session_transcript("../abc-1", tmp_path) is None
+    assert sa.session_transcript("", tmp_path) is None
+
+
+def test_polecenie_zarejestruj_przez_cli(repo, monkeypatch):
+    projekt = repo / "konf" / "projects" / "-repo"
+    projekt.mkdir(parents=True)
+    _zapis(projekt, [_wczytanie("engineering:code-review")]).rename(projekt / "s9.jsonl")
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(repo / "konf"))
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+    assert sa.main(["zarejestruj", "engineering:code-review"]) == 1  # bez sesji: odmowa
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "s9")
+    assert sa.main(["zarejestruj", "engineering:code-review"]) == 0
+    assert [w["sesja"] for w in _wpisy_galezi(repo)] == ["s9"]
+    raport = sa.render_report(_wpisy_galezi(repo), 0, "runda-test")
+    assert "W tym 1 bez ponownego wczytania" in raport
+
+
+_ZDARZENIE = st.sampled_from(["A", "B", "A-sub", "kompresja", "szum"])
+
+
+@settings(max_examples=80, deadline=None)
+@given(zdarzenia=st.lists(_ZDARZENIE, max_size=10))
+def test_last_load_zgodny_z_modelem_odniesienia(zdarzenia):
+    """Właściwość: wynik = ostatnie wczytanie w głównej rozmowie; streszczenie liczy się tylko po nim."""
+    wpisy, znaleziony, streszczony = [], False, False
+    for i, z in enumerate(zdarzenia):
+        ts = f"2026-09-28T10:{i:02d}:00.000Z"
+        if z == "A":
+            wpisy.append(_wczytanie("engineering:code-review", ts))
+            znaleziony, streszczony = True, False
+        elif z == "B":
+            wpisy.append(_wczytanie("dataviz", ts))
+        elif z == "A-sub":
+            wpisy.append(_wczytanie("engineering:code-review", ts, sidechain=True))
+        elif z == "kompresja":
+            wpisy.append({**_KOMPRESJA, "timestamp": ts})
+            streszczony = streszczony or znaleziony
+        else:
+            wpisy.append({"type": "user", "message": {"content": "code-review bez wczytania"}})
+    with tempfile.TemporaryDirectory() as katalog:
+        nazwa, _, po = sa.last_load(_zapis(Path(katalog), wpisy), "engineering:code-review")
+    assert (nazwa is not None) == znaleziony
+    assert po == (znaleziony and streszczony)
