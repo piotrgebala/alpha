@@ -414,6 +414,44 @@ odpowiedzi są w pliku):*
 - **Koszt:** szacunek 5–15 USD według cennika; limity: przebieg 3 USD, seria 30 USD. Wynik wpływa na: wysiłek
   subagentów (pole `effort` w definicji agenta), zalecenie modelu do prac mechanicznych, pkt B1 noty.
 
+*Seria 1 odrzucona (28.09, przed podsumowaniem; przegląd kodu, bramka 16c):* 56 przebiegów, 6,24 USD. Dwa błędy
+przyrządu:
+1. **Klucze odpowiedzi w kopii repo.** Kopia (worktree na 9a42f84) zawierała plik narzędzia z kluczami i tę
+   pre-rejestrację. 11 z 14 odpowiedzi Z1 wymienia plik narzędzia, a jedna pisze wprost, że widzi gotowy klucz. Poprawność
+   Z1 nic więc nie mówi, a koszt Z1 zależy od tego, czy model zajrzał do klucza. W Z3 klucz był w zasięgu; w odpowiedziach
+   nie ma śladu, ale nie da się tego wykluczyć.
+2. **Powtórzenie 2 korzysta z pamięci podręcznej (cache) powtórzenia 1.** Ten sam prompt daje tę samą rozmowę, którą
+   serwer pamięta przez godzinę. Tańsze konfiguracje zwykle idą tą samą drogą i w powtórzeniu 2 płacą dużo mniej (Z1, Opus
+   low: 0,111 → 0,029 USD; zapis cache 11 564 → 1 009 tokenów), a odniesienie prawie nie (Opus max: 0,175 → 0,210 USD).
+   Średnia z dwóch powtórzeń zaniża więc koszt tańszych konfiguracji — dokładnie tę liczbę, na której stoi reguła.
+
+Dane serii 1 zostają do wglądu (`docs/rag/12_t5_seria1_odrzucona.jsonl`), ale nie wchodzą do wyniku.
+
+*Poprawka pre-rejestracji — seria 2 (28.09, przed pierwszym przebiegiem serii 2).* Zadania, prompty, klucze,
+konfiguracje, kolejność (ziarno), limity i reguła — bez zmian. Zmienia się przyrząd:
+- **kopia repo** = osobny klon samej gałęzi `master` na 2ee7f1b (podkomenda `kopia`): narzędzia T5 i tej pre-rejestracji
+  nie ma ani w plikach, ani w historii. Strażnik przed każdym przebiegiem: brak znaczników klucza, czyste drzewo (model może
+  zostawić plik przez `python3`), sygnatura `expected_trades` w linii 648; historię sprawdza raz na starcie. Kontrola
+  negatywna: strażnik odrzuca kopię z serii 1;
+- **znacznik przebiegu:** na końcu promptu każdego przebiegu zadania neutralna linia „(Identyfikator techniczny przebiegu, bez
+  znaczenia dla zadania: …)” z 8 znakami skrótu sha256 z id przebiegu i ziarna.
+  Rozmowa nie jest już współdzielona między przebiegami; cache promptu systemowego z rozgrzewek zostaje. Tak wygląda zwykła
+  praca: prompt systemowy ciepły, rozmowa nowa;
+- **błędy:** przebieg z błędem (limit budżetu, limit tur) albo przerwany limitem czasu = niepoprawny, bez ponawiania.
+  Ponawiane są tylko awarie procesu i przejściowe błędy API, najwyżej 2 razy. Limit czasu dolicza 3 USD do wydatku serii;
+- **skażenie:** odpowiedź, która wspomina plik narzędzia, klucz albo główne repo = przebieg skażony. Konfiguracja ze
+  skażonym przebiegiem nie może dostać zalecenia na tym zadaniu;
+- **ocena Z3** toleruje dopisek po werdykcie i separatory tysięcy (w serii 1 takich przypadków nie było).
+- **doprecyzowania:** za przejściowy błąd API uchodzi też 429 (limit zapytań) i zerwane połączenie bez statusu;
+  kolumna reguły daje „—” także wtedy, gdy skażony jest przebieg odniesienia; seria 2 idzie wyłącznie na kopii
+  `/home/dantey1/t5_kopia` zrobionej przed scaleniem (po scaleniu master ma narzędzie w historii, więc strażnik odrzuci
+  każdą nową kopię — tak ma być). Ryzyko, które zostaje: klucze leżą w głównym repo poza katalogiem przebiegu; model
+  dotarłby do nich tylko przeszukując cały katalog domowy, a flaga skażenia łapie wzmiankę w odpowiedzi.
+
+Ustawienia kopii to `master` sprzed scalenia tej gałęzi, więc bez B2 — prompt systemowy przebiegów jest nieco dłuższy niż
+po scaleniu. Porównania konfiguracji to nie zmienia; koszty bezwzględne jak dotąd są przybliżeniem. Koszt serii 2 jak
+serii 1 (ok. 6–7 USD), T5 łącznie ok. 13 USD — w szacunku 5–15 USD.
+
 **T6 — hook filtrujący wyniki testów.** Reguła zapisana przed pomiarem: jeśli wyniki `pytest` to < 2 % treści
 dopisywanej do kontekstu głównej sesji, hooka nie robimy.
 *Wynik (zapisy 24–28.09):* `pytest` = 5,4 % znaków wyników Bash (188 wywołań), a wyniki Bash = ok. 20 % dopisanej

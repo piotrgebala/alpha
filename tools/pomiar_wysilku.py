@@ -13,21 +13,31 @@ Kolejność: najpierw rozgrzewki bez oceny — każda konfiguracja (model × wys
 bo pierwsze wywołanie płaci zapis prefiksu do cache, a wysiłek zmienia część prefiksu (sonda 28.09:
 ok. 3,7 tys. tokenów). Potem bloki zadanie × powtórzenie; w bloku konfiguracje w losowej kolejności
 (ziarno stałe), żeby przerwa między użyciami tej samej konfiguracji nie przekraczała życia cache (1 h).
-Wyniki dopisywane do pliku JSONL; przerwany pomiar wznawia się od brakujących przebiegów.
+Prompt zadania kończy znacznik przebiegu: wspólny zostaje prompt systemowy z rozgrzewki, a rozmowa
+jest za każdym razem nowa (seria 1: powtórzenie czytało z cache rozmowę poprzedniego).
+Wyniki dopisywane do pliku JSONL; przerwany pomiar wznawia się od brakujących przebiegów. Ponawiana
+jest tylko awaria bez wyniku JSON albo przejściowy błąd API (najwyżej 2 razy); wynik JSON z błędem
+(limit budżetu, limit tur) i limit czasu rozstrzygają przebieg jako niepoprawny.
 
+    .venv/bin/python tools/pomiar_wysilku.py kopia --zrodlo /home/dantey1/alpha --cel KOPIA
+    .venv/bin/python tools/pomiar_wysilku.py sprawdz --repo KOPIA
     .venv/bin/python tools/pomiar_wysilku.py plan
     .venv/bin/python tools/pomiar_wysilku.py uruchom --wyniki W.jsonl --repo KOPIA --piaskownica KATALOG
     .venv/bin/python tools/pomiar_wysilku.py podsumuj --wyniki W.jsonl
 
-`--repo` to KOPIA repo (git worktree na stałym commicie): równoległa praca w repo zmienia stan gita
-w prompcie systemowym i unieważnia cache. Na serwerze brakuje polecenia `py` (CLAUDE.md je zakłada) —
-przebiegi dostają podkładkę `py` → python z venv, żeby brak polecenia nie dokładał prób i błędów.
+`--repo` to KOPIA z podkomendy `kopia`: klon samej gałęzi master bez zdalnego `origin`. Równoległa
+praca w repo zmienia stan gita w prompcie systemowym i unieważnia cache, a klucze odpowiedzi (ten
+plik, pre-rejestracja w docs/rag/12) nie mogą być w zasięgu modelu — seria 1 (git worktree na
+commicie pre-rejestracji) je miała. Strażnik `sprawdz_kopie_repo` pilnuje tego przed każdym
+przebiegiem w kopii. Na serwerze brakuje polecenia `py` (CLAUDE.md je zakłada) — przebiegi dostają
+podkładkę `py` → python z venv, żeby brak polecenia nie dokładał prób i błędów.
 Skrypt jest neutralnym reporterem: zalecenie podpisuje Claude w docs/rag/12.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import random
@@ -38,6 +48,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -59,6 +70,28 @@ LIMIT_PRZEBIEGU_USD = 3.0
 LIMIT_SERII_USD = 30.0
 LIMIT_CZASU_S = 1200
 ROZGRZEWKA = "Odpowiedz jednym słowem: OK"
+PONOWIENIA = 2  # awaria bez wyniku JSON albo przejściowy błąd API — najwyżej tyle ponowień
+BLAD_CZASU = "przekroczony czas"
+BLAD_JSON = "wyjście nie jest JSON"
+# Koniec promptu każdego zadania (nie rozgrzewki): prefiks rozmowy unikalny dla przebiegu
+ZNACZNIK_PRZEBIEGU = "\n\n(Identyfikator techniczny przebiegu, bez znaczenia dla zadania: {nonce})"
+# Strażnik kopii: narzędzie T5 i znaczniki klucza odpowiedzi. Dobór sprawdzony 28.09: każdy jest
+# w drzewie 9a42f84 (worktree serii 1), żadnego nie ma w master 2ee7f1b.
+PLIK_NARZEDZIA = "tools/pomiar_wysilku.py"
+ZNACZNIKI_KLUCZA = (
+    "KLUCZ_Z1",
+    "KLUCZ_Z3",
+    "pomiar_wysilku",
+    "Pre-rejestracja T5",
+    "metrics.py:648",
+)
+# Odpowiedź z takim napisem = model widział narzędzie T5, klucze albo repo spoza kopii (skażony)
+ZNACZNIKI_SKAZENIA = ("pomiar_wysilku", "KLUCZ", "t5_repo", "/home/dantey1/alpha", "12_zuzycie")
+ETYKIETY_BLEDOW = {
+    "error_max_budget_usd": "limit budżetu",
+    "error_max_turns": "limit tur",
+    "error_during_execution": "błąd wykonania",
+}
 
 _ZAWSZE_ZABRONIONE = ["Skill", "Agent", "Task", "NotebookEdit", "WebFetch", "WebSearch"]
 _CZYTANIE = ["Read", "Grep", "Glob"] + [
@@ -308,12 +341,83 @@ def zbuduj_piaskownice(katalog: Path) -> None:
     (katalog / "pyproject.toml").write_text(PYPROJECT, encoding="utf-8")
 
 
-def sprawdz_kopie_repo(katalog: Path) -> None:
-    """Klucz Z1 wskazuje linię 648 — kopia repo musi ją mieć w tym miejscu."""
-    linie = (katalog / KLUCZ_Z1["sciezka"]).read_text(encoding="utf-8").splitlines()
+class KopiaNieczysta(ValueError):
+    """Kopia repo nie nadaje się do przebiegu — seria staje; kopii nikt nie czyści samoczynnie."""
+
+
+def _git(katalog: Path, *args: str) -> subprocess.CompletedProcess:
+    """git w katalogu, bez opcjonalnych blokad (`status` nie zapisuje indeksu — strażnik tylko czyta)."""
+    return subprocess.run(
+        ["git", "--no-optional-locks", "-C", str(katalog), *args],
+        capture_output=True,
+        text=True,
+    )
+
+
+def sprawdz_kopie_repo(katalog: Path, historia: bool = False) -> None:
+    """Strażnik kopii repo — przed każdym przebiegiem w kopii. Wszystkie znalezione problemy naraz
+    w KopiaNieczysta, bez sprzątania (trzeba zobaczyć, co zostało i skąd):
+    (i) klucz Z1 — linia 648 backtest/metrics.py zaczyna się od `def expected_trades(`;
+    (ii) w drzewie roboczym nie ma narzędzia T5 ani znaczników klucza — pliki śledzone, nieśledzone
+    i ignorowane (seria 1: 11 z 14 odpowiedzi Z1 wymienia to narzędzie);
+    (iii) z `historia=True` (raz na starcie serii): historia kopii nigdy nie miała narzędzia T5,
+    więc `git log` / `git show` nie dosięgną klucza;
+    (iv) `git status --porcelain` pusty — model ma `Bash(python3 *)` i może zostawić plik."""
+    problemy = []
+    metryki = katalog / KLUCZ_Z1["sciezka"]
+    linie = metryki.read_text(encoding="utf-8").splitlines() if metryki.is_file() else []
     nr = KLUCZ_Z1["linie"][0]
     if len(linie) < nr or not linie[nr - 1].startswith(f"def {KLUCZ_Z1['funkcja']}("):
-        raise ValueError(f"{katalog}: klucz Z1 nie pasuje do kopii repo (linia 648)")
+        problemy.append(f"klucz Z1 nie pasuje do kopii repo (linia {nr} {KLUCZ_Z1['sciezka']})")
+    if (katalog / PLIK_NARZEDZIA).exists():
+        problemy.append(f"w drzewie jest {PLIK_NARZEDZIA} (klucze odpowiedzi T5)")
+    znaczniki = [a for z in ZNACZNIKI_KLUCZA for a in ("-e", z)]
+    r = _git(katalog, "grep", "--untracked", "--no-exclude-standard", "-I", "-l", "-F", *znaczniki)
+    if r.returncode == 0:
+        problemy.append(f"znaczniki klucza T5 w drzewie: {', '.join(r.stdout.splitlines()[:5])}")
+    elif r.returncode != 1:
+        problemy.append(f"git grep nie działa: {r.stderr.strip()[:200]}")
+    if historia:
+        r = _git(katalog, "log", "--all", "--format=%h", "--", PLIK_NARZEDZIA)
+        if r.returncode != 0:
+            problemy.append(f"git log nie działa: {r.stderr.strip()[:200]}")
+        elif r.stdout.strip():
+            problemy.append(
+                f"historia kopii ma {PLIK_NARZEDZIA} (commity {', '.join(r.stdout.split()[:3])})"
+                " — zrób nową kopię podkomendą `kopia`"
+            )
+    r = _git(katalog, "status", "--porcelain", "--untracked-files=all")
+    if r.returncode != 0:
+        problemy.append(f"git status nie działa: {r.stderr.strip()[:200]}")
+    elif r.stdout.strip():
+        zmiany = "; ".join(r.stdout.splitlines()[:10])
+        problemy.append(f"kopia brudna (git status --porcelain): {zmiany}")
+    if problemy:
+        raise KopiaNieczysta(f"{katalog}: " + " | ".join(problemy))
+
+
+def kopia(zrodlo: Path, cel: Path) -> str:
+    """Czysta kopia repo do Z1/Z3: klon samej gałęzi master (narzędzie T5 i pre-rejestracja żyją
+    na gałęzi roboczej) z `--no-local` — obiekty idą protokołem gita, tylko osiągalne z master
+    (zwykły klon lokalny dowiązuje cały katalog obiektów źródła, z innymi gałęziami); potem bez
+    zdalnego `origin`. Zwraca skrót HEAD kopii. Istniejącego celu nie rusza."""
+    if cel.exists():
+        raise FileExistsError(
+            f"{cel} już istnieje — nie nadpisuję (usuń ręcznie albo podaj inny cel)"
+        )
+    subprocess.run(
+        ["git", "clone", "-q", "--no-local", "--single-branch", "--branch", "master"]
+        + [str(zrodlo), str(cel)],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(cel), "remote", "remove", "origin"], check=True)
+    return _git(cel, "rev-parse", "--short", "HEAD").stdout.strip()
+
+
+def wersja_claude(env: dict) -> str:
+    """`claude --version` — raz na starcie `uruchom`; wersja CLI zmienia prompt systemowy i koszty."""
+    r = subprocess.run(["claude", "--version"], env=env, capture_output=True, text=True, timeout=60)
+    return (r.stdout or r.stderr).strip()
 
 
 def srodowisko(katalog_bin: Path, python: str = sys.executable) -> dict:
@@ -328,7 +432,10 @@ def srodowisko(katalog_bin: Path, python: str = sys.executable) -> dict:
 
 
 def rekord_z_json(o: dict) -> dict:
-    """Koszt i tokeny z wyniku `claude -p --output-format json`."""
+    """Koszt, tokeny i stan błędu z wyniku `claude -p --output-format json`. Claude Code 2.1:
+    `subtype` = success / error_max_budget_usd / error_max_turns / error_during_execution; przy
+    success `is_error` znaczy wiadomość z błędem API (już po ponowieniach samego CLI), a
+    `api_error_status` to jej status HTTP (w serii 1 `blad_api` łączyło te przypadki)."""
     u = o.get("usage") or {}
     cc = u.get("cache_creation") or {}
     modele = o.get("modelUsage") or {}
@@ -343,7 +450,10 @@ def rekord_z_json(o: dict) -> dict:
         "wyjscie_wszystkie_modele": sum(int(m.get("outputTokens") or 0) for m in modele.values()),
         "modele": {k: round(float(m.get("costUSD") or 0.0), 6) for k, m in modele.items()},
         "tury": o.get("num_turns"),
-        "blad_api": bool(o.get("is_error")),
+        "is_error": bool(o.get("is_error")),
+        "podtyp": o.get("subtype"),
+        "status_api": o.get("api_error_status"),
+        "komunikaty": [str(e)[:300] for e in o.get("errors") or []],
         "odpowiedz": str(o.get("result") or ""),
     }
 
@@ -359,18 +469,33 @@ def linia_wyniku(tekst: str) -> str | None:
 
 
 def _liczba(s: str) -> float | None:
-    """Pierwsza liczba w tekście: „0,54”, „1 800”, „1,800”, „56,3 %”, „0.5631 (56,31 %)”."""
-    m = re.search(r"\d[\d\u00a0\u202f ,.]*%?", s)
+    """Pierwsza liczba w tekście, zapis polski albo angielski: „0,54”, „1 800”, „1,800”, „1,800.0”,
+    „1.800,0”, „56,3 %”, „0.5631 (56,31 %)”. Spacje to zawsze separator tysięcy; gdy są oba znaki
+    „,” i „.”, dziesiętny jest ostatni; jeden znak kilka razy = tysiące (grupy po 3 cyfry). None,
+    gdy grupy się nie zgadzają („1.2.3”)."""
+    m = re.search(r"\d[\d   ,.]*%?", s)
     if not m:
         return None
-    t = re.sub(r"[\u00a0\u202f ]", "", m.group(0)).rstrip(".,")
+    t = re.sub(r"[   ]", "", m.group(0)).rstrip(".,")
     procent = t.endswith("%")
     t = t.rstrip("%").rstrip(".,")
-    # 1,800 — separator tysięcy; 0,563 i 56,310 % — przecinek dziesiętny
-    if not procent and re.fullmatch(r"[1-9]\d{0,2}(,\d{3})+", t):
-        t = t.replace(",", "")
+    znaki = [c for c in t if c in ",."]
+    if len(set(znaki)) == 2:  # 1,800.0 albo 1.800,0
+        tysiace = "," if znaki[-1] == "." else "."
+        calkowita, _, ulamek = t.rpartition(znaki[-1])
+        if not re.fullmatch(rf"\d{{1,3}}(?:{re.escape(tysiace)}\d{{3}})+", calkowita):
+            return None
+        t = f"{calkowita.replace(tysiace, '')}.{ulamek}"
+    elif len(znaki) > 1:  # 1,800,000 albo 1.800.000
+        if not re.fullmatch(rf"\d{{1,3}}(?:{re.escape(znaki[0])}\d{{3}})+", t):
+            return None
+        t = t.replace(znaki[0], "")
+    elif znaki == [","]:
+        # 1,800 — separator tysięcy; 0,563 i 56,310 % — przecinek dziesiętny
+        tysiace = not procent and re.fullmatch(r"[1-9]\d{0,2},\d{3}", t)
+        t = t.replace(",", "" if tysiace else ".")
     try:
-        x = float(t.replace(",", "."))
+        x = float(t)
     except ValueError:
         return None
     return x / 100 if procent else x
@@ -415,7 +540,8 @@ def ocen_z3(tekst: str) -> dict:
     for k in ("p", "n", "p_det"):
         x = _liczba(pola.get(k, ""))
         wynik[k] = x is not None and abs(x - KLUCZ_Z3[k]) <= TOLERANCJA_Z3[k]
-    wynik["werdykt"] = pola.get("werdykt", "").strip(" .").upper() == KLUCZ_Z3["werdykt"]
+    m = re.search(r"[^\W\d_]+", pola.get("werdykt", ""))  # pierwsze słowo; dopisek dalej nie psuje
+    wynik["werdykt"] = m is not None and m.group(0).upper() == KLUCZ_Z3["werdykt"]
     return {
         "poprawna": all(wynik.values()),
         "powod": "" if all(wynik.values()) else w[:120],
@@ -464,17 +590,41 @@ def ocen_z2(katalog: Path, python: str = sys.executable) -> dict:
     return {"poprawna": all(wynik.values()), "powod": "", **wynik}
 
 
+def nonce(id_przebiegu: str, ziarno: int = ZIARNO) -> str:
+    """Znacznik przebiegu: 8 znaków hex z sha256(„id|ziarno”) — deterministyczny, inny dla każdego id."""
+    return hashlib.sha256(f"{id_przebiegu}|{ziarno}".encode()).hexdigest()[:8]
+
+
+def prompt_przebiegu(wpis: dict) -> str:
+    """Treść zadania + znacznik przebiegu na końcu. Seria 1: powtórzenie 2 czytało z cache rozmowę
+    powtórzenia 1 (np. Z1 opus low 0,111 → 0,029 USD, zapis cache 11 564 → 1 009 tokenów), a opus
+    max prawie nie — to zaniżało koszt tańszych konfiguracji. Znacznik robi prefiks rozmowy
+    unikalnym; rozgrzewka go nie ma, bo ma właśnie zapisać wspólny prefiks promptu systemowego."""
+    if not wpis["zadanie"]:
+        return ROZGRZEWKA
+    return ZADANIA[wpis["zadanie"]]["prompt"] + ZNACZNIK_PRZEBIEGU.format(nonce=nonce(wpis["id"]))
+
+
+def czy_skazony(odpowiedz: str) -> bool:
+    """Odpowiedź wymienia narzędzie T5, klucze, starą kopię albo repo spoza kopii — model widział
+    to, czego nie powinien (także w Z2: piaskownica nie broni czytania poza nią)."""
+    return any(z in odpowiedz for z in ZNACZNIKI_SKAZENIA)
+
+
 def uruchom_jeden(wpis: dict, repo: Path, piaskownica: Path, env: dict) -> dict:
     zad = wpis["zadanie"]
-    prompt = ZADANIA[zad]["prompt"] if zad else ROZGRZEWKA
     cwd = piaskownica if wpis["narzedzia"] == "zapis" else repo
     if wpis["narzedzia"] == "zapis":
-        zbuduj_piaskownice(piaskownica)
-    rekord = dict(wpis, start=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+        zbuduj_piaskownice(piaskownica)  # od nowa przed KAŻDYM przebiegiem Z2 i rozgrzewką zapisu
+    rekord = dict(
+        wpis,
+        nonce=nonce(wpis["id"]) if zad else None,
+        start=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    )
     t0 = time.monotonic()
     try:
         r = subprocess.run(
-            komenda(prompt, wpis["model"], wpis["wysilek"], wpis["narzedzia"]),
+            komenda(prompt_przebiegu(wpis), wpis["model"], wpis["wysilek"], wpis["narzedzia"]),
             cwd=cwd,
             env=env,
             stdin=subprocess.DEVNULL,
@@ -483,12 +633,16 @@ def uruchom_jeden(wpis: dict, repo: Path, piaskownica: Path, env: dict) -> dict:
             timeout=LIMIT_CZASU_S,
         )
     except subprocess.TimeoutExpired:
-        return dict(rekord, czas_s=LIMIT_CZASU_S, kod_wyjscia=None, blad="przekroczony czas")
+        return dict(rekord, czas_s=LIMIT_CZASU_S, kod_wyjscia=None, blad=BLAD_CZASU)
     rekord.update(czas_s=round(time.monotonic() - t0, 1), kod_wyjscia=r.returncode)
     try:
-        rekord.update(rekord_z_json(json.loads(r.stdout)))
+        o = json.loads(r.stdout)
     except json.JSONDecodeError:
-        return dict(rekord, blad=f"wyjście nie jest JSON: {(r.stdout or r.stderr)[:300]}")
+        o = None
+    if not isinstance(o, dict):
+        return dict(rekord, blad=f"{BLAD_JSON}: {(r.stdout or r.stderr)[:300]}")
+    rekord.update(rekord_z_json(o))
+    rekord["skazony"] = czy_skazony(rekord["odpowiedz"])
     if zad == "Z1":
         rekord["ocena"] = ocen_z1(rekord["odpowiedz"])
     elif zad == "Z3":
@@ -504,82 +658,255 @@ def wczytaj(sciezka: Path) -> list[dict]:
     return [json.loads(x) for x in sciezka.read_text(encoding="utf-8").splitlines() if x.strip()]
 
 
-def _udany(r: dict) -> bool:
-    return r.get("kod_wyjscia") == 0 and not r.get("blad") and not r.get("blad_api")
+def przejsciowy_blad_api(r: dict) -> bool:
+    """Błąd po stronie API, który ponowienie może naprawić: `is_error` przy podtypie success i status
+    429 (limit zapytań), 5xx (529 = przeciążenie) albo brak statusu (zerwane połączenie). Limit
+    budżetu, limit tur i błąd wykonania mają własne podtypy — te rozstrzygają przebieg."""
+    if not r.get("is_error") or r.get("podtyp") != "success":
+        return False
+    s = r.get("status_api")
+    return s is None or (isinstance(s, int) and (s == 429 or s >= 500))
+
+
+def do_ponowienia(r: dict) -> bool:
+    """Próba bez rozstrzygnięcia: awaria bez wyniku JSON albo przejściowy błąd API. Wynik JSON
+    (także z is_error) i limit czasu rozstrzygają przebieg — nie wraca przy wznowieniu."""
+    return str(r.get("blad") or "").startswith(BLAD_JSON) or przejsciowy_blad_api(r)
+
+
+def rozstrzygniecia(rekordy: list[dict]) -> dict[str, dict]:
+    """Próba rozstrzygająca każdy przebieg (id): pierwsza, której się nie ponawia; bez takiej —
+    ostatnia, gdy wyczerpano PONOWIENIA (przebieg niepoprawny). Przebieg w toku nie ma wpisu."""
+    proby: dict[str, list[dict]] = {}
+    for r in rekordy:
+        proby.setdefault(r["id"], []).append(r)
+    wynik = {}
+    for id_, lista in proby.items():
+        koncowe = [r for r in lista if not do_ponowienia(r)]
+        if koncowe:
+            wynik[id_] = koncowe[0]
+        elif len(lista) > PONOWIENIA:
+            wynik[id_] = lista[-1]
+    return wynik
+
+
+def opis_bledu(r: dict) -> str | None:
+    """Etykieta błędu próby; None = bez błędu (o poprawności decyduje wtedy ocena)."""
+    if r.get("blad") == BLAD_CZASU:
+        return "limit czasu"
+    if r.get("blad"):
+        return "brak JSON"
+    if r.get("is_error", r.get("blad_api")):  # `blad_api` — rekordy serii 1
+        if r.get("podtyp") == "success":
+            return f"błąd API {r.get('status_api') or 'bez statusu'}"
+        return ETYKIETY_BLEDOW.get(r.get("podtyp"), r.get("podtyp") or "is_error")
+    if r.get("kod_wyjscia") != 0:
+        return f"kod wyjścia {r.get('kod_wyjscia')}"
+    return None
+
+
+def poprawny(r: dict) -> bool:
+    """Bez błędu i z poprawną oceną; błędy i limity liczą się jako niepoprawne."""
+    return opis_bledu(r) is None and bool((r.get("ocena") or {}).get("poprawna"))
+
+
+def koszt_serii(r: dict) -> float:
+    """Wydatek próby wobec limitu serii: koszt z wyniku JSON; limit czasu — cały limit przebiegu
+    (proces przerwany, koszt nieznany — liczymy ostrożnie)."""
+    if r.get("blad") == BLAD_CZASU:
+        return LIMIT_PRZEBIEGU_USD
+    return float(r.get("koszt_usd") or 0.0)
+
+
+def _srednia(wartosci) -> float | None:
+    w = [x for x in wartosci if x is not None]
+    return statistics.fmean(w) if w else None
+
+
+def _wiersz(zad: str, model: str, wysilek: str, g: list[dict]) -> dict:
+    return {
+        "zadanie": zad,
+        "model": model,
+        "wysilek": wysilek,
+        "odniesienie": (model, wysilek) == ODNIESIENIE,
+        "n": len(g),
+        "poprawne": sum(poprawny(r) for r in g),
+        "bledy": [e for e in map(opis_bledu, g) if e],
+        "koszty": [round(r["koszt_usd"], 4) if "koszt_usd" in r else None for r in g],
+        "koszt_sredni": _srednia(r.get("koszt_usd") for r in g),
+        "zapis_cache_sredni": _srednia(r.get("zapis_cache") for r in g),
+        # rekordy serii 1 nie mają pola `skazony` — wtedy ocena z treści odpowiedzi
+        "skazone": sum(r.get("skazony", czy_skazony(str(r.get("odpowiedz") or ""))) for r in g),
+        "wyjscie_srednie": _srednia(r.get("wyjscie_wszystkie_modele") for r in g),
+        "tury_srednie": _srednia(r.get("tury") for r in g),
+        "czas_sredni_s": _srednia(r.get("czas_s") for r in g),
+    }
 
 
 def podsumuj(rekordy: list[dict]) -> list[dict]:
-    """Wiersz na zadanie × konfigurację: poprawność, koszty przebiegów, średnie, stosunek do odniesienia."""
+    """Wiersz na zadanie × konfigurację z rozstrzygniętych przebiegów; w każdym zadaniu najpierw
+    odniesienie (opus max). Błędy i limity czasu = niepoprawne, wymienione w wierszu. Kolumna
+    „reguła” (reguła T5 z docs/rag/12): TAK, gdy 2/2 poprawne, zero skażonych i średni koszt
+    najwyżej PROG_TANIEJ kosztu odniesienia; „—”, gdy odniesienie nie ma 2/2 poprawnych bez
+    skażonych (nie ma z czym porównać); inaczej „nie”. Zalecenia skrypt nie wydaje."""
     grupy: dict[tuple, list[dict]] = {}
-    for r in rekordy:
-        if r.get("zadanie") and _udany(r):
+    for r in rozstrzygniecia(rekordy).values():
+        if r.get("zadanie"):
             grupy.setdefault((r["zadanie"], r["model"], r["wysilek"]), []).append(r)
     wiersze = []
     for zad in ZADANIA:
-        ref = grupy.get((zad, *ODNIESIENIE), [])
-        ref_koszt = statistics.fmean(r["koszt_usd"] for r in ref) if ref else None
+        if not any(k[0] == zad for k in grupy):
+            continue
+        ref = _wiersz(zad, *ODNIESIENIE, grupy.get((zad, *ODNIESIENIE), []))
+        ref_wazne = ref["n"] == ref["poprawne"] == POWTORZENIA and ref["skazone"] == 0
+        wiersze.append(
+            dict(ref, wobec_odniesienia=1.0 if ref["koszt_sredni"] else None, regula="odniesienie")
+        )
         for m, w in KONFIGURACJE:
-            g = grupy.get((zad, m, w), [])
-            if not g:
+            if (m, w) == ODNIESIENIE or (zad, m, w) not in grupy:
                 continue
-            koszt = statistics.fmean(r["koszt_usd"] for r in g)
-            wiersze.append(
-                {
-                    "zadanie": zad,
-                    "model": m,
-                    "wysilek": w,
-                    "n": len(g),
-                    "poprawne": sum(bool(r.get("ocena", {}).get("poprawna")) for r in g),
-                    "koszty": [round(r["koszt_usd"], 4) for r in g],
-                    "koszt_sredni": koszt,
-                    "wobec_odniesienia": koszt / ref_koszt if ref_koszt else None,
-                    "odniesienie_poprawne": sum(
-                        bool(r.get("ocena", {}).get("poprawna")) for r in ref
-                    ),
-                    "wyjscie_srednie": statistics.fmean(r["wyjscie_wszystkie_modele"] for r in g),
-                    "tury_srednie": statistics.fmean(r.get("tury") or 0 for r in g),
-                    "czas_sredni_s": statistics.fmean(r["czas_s"] for r in g),
-                }
-            )
+            x = _wiersz(zad, m, w, grupy[(zad, m, w)])
+            wob = None
+            if x["koszt_sredni"] is not None and ref["koszt_sredni"]:
+                wob = x["koszt_sredni"] / ref["koszt_sredni"]
+            if not ref_wazne:
+                regula = "—"
+            elif (
+                x["n"] == x["poprawne"] == POWTORZENIA
+                and x["skazone"] == 0
+                and wob is not None
+                and wob <= PROG_TANIEJ + 1e-9
+            ):
+                regula = "TAK"
+            else:
+                regula = "nie"
+            wiersze.append(dict(x, wobec_odniesienia=wob, regula=regula))
     return wiersze
 
 
+def _md(x: float | None, wzor: str) -> str:
+    return "—" if x is None else format(x, wzor).replace(",", " ")
+
+
 def tabela_md(wiersze: list[dict], rekordy: list[dict]) -> str:
+    """Tabela Markdown + stopka: koszt wszystkich prób, przebiegi z błędem, przebiegi w toku."""
     out = [
-        "| zadanie | konfiguracja | poprawne | koszt USD (przebiegi) | średnio | wobec opus max "
+        "| zadanie | konfiguracja | poprawne | błędy | koszt USD (przebiegi) | średnio "
+        f"| wobec {' '.join(ODNIESIENIE)} | zapis cache (średnio, tokeny) | skażone | reguła "
         "| wyjście (tokeny) | tury | czas s |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in wiersze:
-        wob = "—" if r["wobec_odniesienia"] is None else f"{r['wobec_odniesienia']:.2f}"
-        if r["wobec_odniesienia"] is not None and r["wobec_odniesienia"] <= PROG_TANIEJ:
-            wob += " (≤ 0.70)"
-        koszty = " / ".join(f"{k:.3f}" for k in r["koszty"])
-        wyj = f"{r['wyjscie_srednie']:,.0f}".replace(",", " ")
+        konf = f"{r['model']} {r['wysilek']}" + (" (odniesienie)" if r["odniesienie"] else "")
+        koszty = " / ".join("?" if k is None else f"{k:.3f}" for k in r["koszty"]) or "—"
         out.append(
-            f"| {r['zadanie']} | {r['model']} {r['wysilek']} | {r['poprawne']}/{r['n']} | {koszty} "
-            f"| {r['koszt_sredni']:.3f} | {wob} | {wyj} | {r['tury_srednie']:.1f} "
-            f"| {r['czas_sredni_s']:.0f} |"
+            f"| {r['zadanie']} | {konf} | {r['poprawne']}/{r['n']} | {', '.join(r['bledy']) or '—'} "
+            f"| {koszty} | {_md(r['koszt_sredni'], '.3f')} | {_md(r['wobec_odniesienia'], '.2f')} "
+            f"| {_md(r['zapis_cache_sredni'], ',.0f')} | {r['skazone']} | {r['regula']} "
+            f"| {_md(r['wyjscie_srednie'], ',.0f')} | {_md(r['tury_srednie'], '.1f')} "
+            f"| {_md(r['czas_sredni_s'], '.0f')} |"
         )
-    udane = [r for r in rekordy if _udany(r)]
-    razem = sum(r.get("koszt_usd", 0.0) for r in rekordy)  # z nieudanymi — tyle kosztowała seria
-    rozgrz = sum(r.get("koszt_usd", 0.0) for r in rekordy if not r.get("zadanie"))
-    nieudane = [r["id"] for r in rekordy if not _udany(r)]
-    out.append("")
-    out.append(
-        f"Razem {razem:.2f} USD (w tym rozgrzewki {rozgrz:.2f}); przebiegów udanych {len(udane)}, "
-        f"nieudanych {len(nieudane)}{': ' + ', '.join(nieudane) if nieudane else ''}."
-    )
+    rozstrzygniete = rozstrzygniecia(rekordy)
+    proby = Counter(r["id"] for r in rekordy)
+    znany = sum(float(r.get("koszt_usd") or 0.0) for r in rekordy)
+    rozgrz = sum(float(r.get("koszt_usd") or 0.0) for r in rekordy if not r.get("zadanie"))
+    do_limitu = sum(koszt_serii(r) for r in rekordy)
+    z_bledem = [f"{i} ({e})" for i, r in rozstrzygniete.items() if (e := opis_bledu(r))]
+    w_toku = [
+        f"{i} (prób {n} z {1 + PONOWIENIA})" for i, n in proby.items() if i not in rozstrzygniete
+    ]
+    out += [
+        "",
+        f"Razem {znany:.2f} USD z wyników JSON, wszystkie próby (w tym rozgrzewki {rozgrz:.2f}); "
+        f"do limitu serii {do_limitu:.2f} USD (limit czasu liczony jako {LIMIT_PRZEBIEGU_USD:.2f}).",
+        f"Przebiegi z błędem (niepoprawne): {len(z_bledem)}"
+        f"{': ' + ', '.join(z_bledem) if z_bledem else ''}.",
+        f"Do ponowienia przy wznowieniu: {len(w_toku)}{': ' + ', '.join(w_toku) if w_toku else ''}.",
+    ]
     return "\n".join(out)
+
+
+def _sprawdz(repo: Path) -> int:
+    try:
+        sprawdz_kopie_repo(repo, historia=True)
+    except KopiaNieczysta as e:
+        print(f"ODRZUCONA: {e}", file=sys.stderr)
+        return 2
+    print(
+        f"PRZYJĘTA: {repo} — klucz Z1 na miejscu; narzędzia T5 i znaczników klucza brak w drzewie "
+        "i w historii; drzewo czyste"
+    )
+    return 0
+
+
+def _uruchom(a: argparse.Namespace) -> int:
+    try:
+        sprawdz_kopie_repo(a.repo, historia=True)
+    except KopiaNieczysta as e:
+        print(f"STOP przed serią: {e}", file=sys.stderr)
+        return 2
+    env = srodowisko(a.piaskownica.parent / "t5_bin")
+    stale = {
+        "wersja_claude": wersja_claude(env),
+        "commit_kopii": _git(a.repo, "rev-parse", "HEAD").stdout.strip(),
+    }
+    print(f"claude {stale['wersja_claude']}; kopia {a.repo} na {stale['commit_kopii'][:7]}")
+    rekordy = wczytaj(a.wyniki)
+    rozstrzygniete = rozstrzygniecia(rekordy)
+    wydane = sum(koszt_serii(r) for r in rekordy)
+    wykonane, ostatni_w_kopii = 0, None
+    for wpis in plan():
+        if wpis["id"] in rozstrzygniete:
+            continue
+        if wydane >= LIMIT_SERII_USD:
+            print(f"limit serii {LIMIT_SERII_USD:.2f} USD wyczerpany — dalsze przebiegi wstrzymane")
+            break
+        if a.limit and wykonane >= a.limit:
+            break
+        if wpis["narzedzia"] == "odczyt":  # przebieg w kopii repo: Z1, Z3 i rozgrzewki odczytu
+            try:
+                sprawdz_kopie_repo(a.repo)
+            except KopiaNieczysta as e:
+                print(
+                    f"STOP przed {wpis['id']} (ostatni przebieg w kopii: "
+                    f"{ostatni_w_kopii or 'żaden w tym uruchomieniu'}): {e}\n"
+                    "Kopii nie czyszczę: obejrzyj zmiany, rozstrzygnij los przebiegu, który je "
+                    "zostawił, przywróć kopię i dopiero wtedy wznów.",
+                    file=sys.stderr,
+                )
+                return 2
+            ostatni_w_kopii = wpis["id"]
+        r = dict(uruchom_jeden(wpis, a.repo, a.piaskownica, env), **stale)
+        with open(a.wyniki, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+        wydane += koszt_serii(r)
+        wykonane += 1
+        stan = (opis_bledu(r) or "") + (" (do ponowienia)" if do_ponowienia(r) else "")
+        print(
+            f"{r['id']:28} {r.get('koszt_usd', 0):7.4f} USD  wyj {r.get('wyjscie_wszystkie_modele', 0):6} "
+            f"tury {r.get('tury')}  {r.get('czas_s')} s  "
+            f"poprawna={(r.get('ocena') or {}).get('poprawna')}"
+            f"{'  SKAŻONY' if r.get('skazony') else ''}  {stan}",
+            flush=True,
+        )
+    print(
+        f"seria: wydane {wydane:.2f} USD (limit {LIMIT_SERII_USD:.2f}), wykonano teraz {wykonane}"
+    )
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="tryb", required=True)
+    k = sub.add_parser("kopia", help="czysta kopia repo do Z1/Z3 (klon master bez origin)")
+    k.add_argument("--zrodlo", type=Path, required=True, help="repo projektu")
+    k.add_argument("--cel", type=Path, required=True, help="katalog kopii (nie może istnieć)")
+    s = sub.add_parser("sprawdz", help="strażnik kopii repo: drzewo, historia, czystość")
+    s.add_argument("--repo", type=Path, required=True)
     sub.add_parser("plan", help="kolejność przebiegów")
     u = sub.add_parser("uruchom", help="wykonaj brakujące przebiegi")
     u.add_argument("--wyniki", type=Path, required=True)
-    u.add_argument("--repo", type=Path, required=True, help="kopia repo (git worktree)")
+    u.add_argument("--repo", type=Path, required=True, help="kopia repo z podkomendy `kopia`")
     u.add_argument("--piaskownica", type=Path, required=True, help="katalog Z2 (stała ścieżka)")
     u.add_argument("--limit", type=int, default=0, help="najwyżej tyle przebiegów (0 = wszystkie)")
     p = sub.add_parser("podsumuj", help="tabela wyników (Markdown)")
@@ -593,29 +920,17 @@ def main(argv: list[str] | None = None) -> int:
         rek = wczytaj(a.wyniki)
         print(tabela_md(podsumuj(rek), rek))
         return 0
-    sprawdz_kopie_repo(a.repo)
-    env = srodowisko(a.piaskownica.parent / "t5_bin")
-    zrobione = {r["id"] for r in wczytaj(a.wyniki) if _udany(r)}
-    wydane = sum(r.get("koszt_usd", 0.0) for r in wczytaj(a.wyniki))
-    wykonane = 0
-    for wpis in plan():
-        if wpis["id"] in zrobione:
-            continue
-        if wydane >= LIMIT_SERII_USD or (a.limit and wykonane >= a.limit):
-            break
-        r = uruchom_jeden(wpis, a.repo, a.piaskownica, env)
-        with open(a.wyniki, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-        wydane += r.get("koszt_usd", 0.0)
-        wykonane += 1
-        ocena = r.get("ocena", {}).get("poprawna")
-        print(
-            f"{r['id']:28} {r.get('koszt_usd', 0):7.4f} USD  wyj {r.get('wyjscie_wszystkie_modele', 0):6} "
-            f"tury {r.get('tury')}  {r.get('czas_s')} s  poprawna={ocena}  {r.get('blad') or ''}",
-            flush=True,
-        )
-    print(f"seria: wydane {wydane:.2f} USD, wykonano teraz {wykonane}")
-    return 0
+    if a.tryb == "kopia":
+        try:
+            glowa = kopia(a.zrodlo, a.cel)
+        except FileExistsError as e:
+            print(f"ODMOWA: {e}", file=sys.stderr)
+            return 2
+        print(f"kopia {a.cel}: master na {glowa}, bez zdalnego origin")
+        return _sprawdz(a.cel)
+    if a.tryb == "sprawdz":
+        return _sprawdz(a.repo)
+    return _uruchom(a)
 
 
 if __name__ == "__main__":

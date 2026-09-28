@@ -147,3 +147,27 @@ def test_context_guard_runs_after_every_tool_on_every_prompt_and_in_status_line(
     assert status.get("type") == "command"
     assert f'{guard}" status' in status.get("command", "")
     assert "python3" in status["command"]
+
+
+# Wtyczki, z których pochodzą skille obowiązkowe (tabela zasady 19). B2 wyłączał wtyczki konta
+# spoza projektu — te trzy muszą zostać włączone, inaczej skill znika z listy wyboru po cichu.
+MANDATORY_SKILL_PLUGINS = (
+    "engineering@synced",
+    "data@synced",
+    "claude-code-setup@claude-plugins-official",
+)
+# Przedrostek skilli konta z chmury (`anthropic-skills:<nazwa>`) — to nie wtyczka `enabledPlugins`.
+ACCOUNT_SKILLS_PREFIX = "anthropic-skills"
+
+
+def test_plugins_with_rule_19_skills_stay_enabled():
+    """Skille `engineering:…`, `data:…` i `claude-code-setup:…` z tabeli zasady 19 przychodzą
+    z wtyczek: wtyczka wyłączona w ustawieniach projektu = skill obowiązkowy niedostępny w każdej
+    sesji. Lista pokrywa przedrostki z tabeli (nowy przedrostek w tabeli = dopisz tu wtyczkę)."""
+    plugins = SETTINGS.get("enabledPlugins", {})
+    for plugin in MANDATORY_SKILL_PLUGINS:
+        assert plugins.get(plugin) is True, plugin
+    prefixes = {name.split(":", 1)[0] for name in rule_19_skills() if ":" in name}
+    assert prefixes - {ACCOUNT_SKILLS_PREFIX} == {
+        p.split("@", 1)[0] for p in MANDATORY_SKILL_PLUGINS
+    }
