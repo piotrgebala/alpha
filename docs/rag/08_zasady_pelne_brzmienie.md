@@ -269,6 +269,10 @@ Te pliki zmieniają się często — traktuj jako aktualny stan, nie jako źród
   komenda. Gdyby duplikaty (`docx`, `pdf`, `pptx`, `xlsx`, `skill-creator`) kiedyś wróciły
   z wtyczki — pierwszeństwo ma wersja z chmury (`anthropic-skills:`); rejestr zapisuje pełną
   nazwę skilla, więc użycie innej wersji widać w raporcie.
+  Wyłączone są też wtyczki konta `finance`, `langfuse`, `productivity` (`enabledPlugins: false`)
+  i 6 skilli konta spoza projektu (`skillOverrides`, nadal działają jako `/nazwa`) — decyzja
+  użytkownika 2026-09-28 (B2): pomiar T1 (`docs/rag/12`) — 2,4 tys. tokenów startu każdej sesji
+  i subagenta, a projekt ich nie używa.
   **Łączniki (MCP) w tym projekcie:** wtyczki `engineering` i `data` niosą 18 łączników
   z zewnętrznymi usługami (Slack, Jira, BigQuery, Amplitude…), żaden nie jest używany — na
   maszynie użytkownika są wyłączone per projekt (`/mcp disable <serwer>`, zapis w `~/.claude.json`

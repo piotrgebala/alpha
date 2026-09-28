@@ -13,7 +13,11 @@ na zadanie” istniała, ale nic jej nie pilnowało w trakcie tury. Jeden moduł
   przerwanie analizy w połowie psułoby jakość;
 - hook `UserPromptSubmit` — ponad `PROG_UWAGI` przy każdym poleceniu użytkownika przypomnienie,
   że pytanie niezwiązane z bieżącym zadaniem idzie do nowej sesji;
-- linia statusu — model, wysiłek i rozmiar kontekstu, kolor według progu.
+- linia statusu — model, wysiłek i rozmiar kontekstu, kolor według progu; „cache zimny”, gdy cache
+  głównej rozmowy wygasł (pole `prompt_cache` od Claude Code). Claude Code sam uruchamia linię
+  statusu w chwili `expires_at` ciepłego cache, także podczas bezczynności (dokumentacja statusline,
+  kod 2.1.282), więc napis pojawia się, zanim użytkownik wyśle wiadomość — następna przepisałaby
+  cały kontekst do cache po podwójnej cenie (docs/rag/12, T7).
 
 Rozmiar kontekstu = wejście + zapis cache + odczyt cache (jak `context_size` w
 `zuzycie_tokenow.py`). Narzędzia subagentów (pole `agent_id` w danych hooka) są pomijane: ich
@@ -40,6 +44,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 # Progi w JEDNYM miejscu (docs/rag/12); linia statusu i oba hooki czytają je stąd.
@@ -145,7 +150,7 @@ def uwaga_dla_claude(tokeny: int, poz: int) -> str:
         return (
             f"{naglowek} (próg uwagi {tys(PROG_UWAGI)} tys.). Domknij bieżący etap. Następny duży "
             "krok — duże pliki, przegląd, długie odczyty — zleć subagentowi, który odda ścieżkę "
-            "i krótkie podsumowanie, albo zaproponuj użytkownikowi nową sesję. Rozpoczętej "
+            "i krótkie podsumowanie. Nową sesję proponuj tylko przy nowym, niezwiązanym zadaniu (T2). Rozpoczętej "
             "analizy nie przerywaj w połowie."
         )
     return (
@@ -208,8 +213,23 @@ def hook_main(raw: bytes | str, baza_stanu: Path | None = None) -> str:
         return ""
 
 
+def cache_zimny(dane: dict, teraz: float | None = None) -> bool:
+    """True, gdy cache głównej rozmowy wygasł: `prompt_cache.warm` fałszywe albo minął `expires_at`
+    (sekundy epoki). Bez pola (przed pierwszą odpowiedzią modelu, Claude Code < 2.1.251) albo bez
+    obserwacji cache (`caching_observed` fałszywe — dostawca go nie raportuje) → False."""
+    stan = dane.get("prompt_cache")
+    if not isinstance(stan, dict) or stan.get("caching_observed") is False:
+        return False
+    if stan.get("warm") is False:
+        return True
+    wygasa = stan.get("expires_at")
+    if isinstance(wygasa, (int, float)) and not isinstance(wygasa, bool):
+        return (time.time() if teraz is None else teraz) >= wygasa
+    return False
+
+
 def linia_statusu(raw: bytes | str) -> str:
-    """Model (wysiłek) · kontekst N tys. — kolor i podpowiedź według progu."""
+    """Model (wysiłek) · kontekst N tys. — kolor i podpowiedź według progu; · cache zimny."""
     try:
         dane = _dane(raw)
     except ValueError:
@@ -238,6 +258,8 @@ def linia_statusu(raw: bytes | str) -> str:
             f" · ≥ {tys(PROG_PRZEKAZANIA)}: nota przekazania i /clear",
         )[poz]
         opis = f"{KOLORY[poz]}kontekst {tys(tokeny)} tys.{podpowiedz}{RESET}"
+    if cache_zimny(dane):
+        opis += f" · {KOLORY[1]}cache zimny: nowa sesja{RESET}"
     return f"{nazwa} · {opis}" if nazwa else opis
 
 
