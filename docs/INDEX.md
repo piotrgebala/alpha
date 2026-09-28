@@ -14,6 +14,7 @@
 | [`CLAUDE.md`](../CLAUDE.md) | Krótkie, stabilne instrukcje/zasady dla Claude Code, czytane automatycznie na starcie sesji |
 | [`STATUS.md`](../STATUS.md) | Plan, historia rund, ryzyka (§7), zadania z ID i statusem, backlog — żywy dokument (scalone IMPLEMENTATION_PLAN+TASKS, 2026-09-22) |
 | [`runs/INDEX.md`](../runs/INDEX.md) | Księga eksperymentów: wyniki rund, wnioski skumulowane, liczniki budżetu multiple-testing |
+| [`mapa_projektu.html`](mapa_projektu.html) | Źródło strony „Mapa CLAS-5” (https://claude.ai/artifact/VpBRJm2vtQBxtujJBYgG1h): przepływ od pomysłu do kapitału, automaty dnia, mapa myśli i stan wiedzy — widok; przy sprzeczności wygrywają pliki źródłowe |
 
 ## `docs/rag/` — pełne uzasadnienia decyzji
 
@@ -30,7 +31,7 @@
 | [`09_drabina_dowodow.md`](rag/09_drabina_dowodow.md) | **ADR-09 (2026-09-24):** kryterium decyzji o kapitale = drabina dowodów (mechanizm poza naszymi danymi → spójność w wycinkach → dziennik ≥ 3 mies. → ≤ 5 % kapitału → skalowanie), zamiast t > 1,96 na historii 2021–2026, strukturalnie nieosiągalnego dla strategii tygodniowych |
 | [`10_preferencje_uzytkownika.md`](rag/10_preferencje_uzytkownika.md) | Preferencje użytkownika przeniesione z pamięci lokalnej Claude Code (2026-09-24): sposób handlu (3× na części kapitału, depozyt = ekspozycja/3), cel zwrotów (bez carry), rynek przed 2022, skille z chmury konta |
 | [`11_przeglad_kandydatow_2026-09-27.md`](rag/11_przeglad_kandydatow_2026-09-27.md) | Przegląd całego projektu (2026-09-27, 0 odczytów): 35 kandydatów do testów i dziennika — 3 przeszły (kolektor likwidacji Bybit, kopia i indeks LK0, rozbicie zwrotu dziennika), 18 wymaga decyzji użytkownika, 14 odrzuconych z powodem; historia 2021–2026 nie rozstrzygnie nowej hipotezy (41. odczyt, dowód wymaga t ≈ 3,84) |
-| [`12_zuzycie_tokenow.md`](rag/12_zuzycie_tokenow.md) | Pomiar zużycia tokenów (2026-09-28): 57 % główna sesja (kontekst 0,5–0,8 mln na wywołanie, 9 % przepisania po przerwie), 43 % workflow; ocena wytycznych (Headroom: nie; nowa sesja na zadanie: tak) i zasady oszczędzania; monitor `tools/zuzycie_tokenow.py` |
+| [`12_zuzycie_tokenow.md`](rag/12_zuzycie_tokenow.md) | Pomiar zużycia tokenów (2026-09-28): 57 % główna sesja (kontekst 0,5–0,8 mln na wywołanie, 9 % przepisania po przerwie), 43 % workflow; ocena wytycznych (Headroom: nie; nowa sesja na zadanie: tak) i zasady oszczędzania; monitor `tools/zuzycie_tokenow.py`; strona „Tokeny CLAS-5” i warianty jej codziennego odświeżania |
 | [`Repo lessons i sigma — co przydatne dla alpha.md`](<rag/Repo lessons i sigma — co przydatne dla alpha.md>) | Przegląd dwóch innych projektów użytkownika (SIGMA na QuantConnect, lessons/AI_devs) — wytyczne 1–7 wdrożone w `docs/skills/bramki-jakosci.md` (A6, B6a, C1), kontrola negatywna NC1, strażnik `tests/test_runs_index_guard.py`, odchudzony `CLAUDE.md`. Kolejność propozycji w pliku jest już nieaktualna (D1/O1 zamknięte, carry odrzucone jako cel) |
 
 ## `docs/skills/` — procedury pracy (wersjonowane z repo, niezależne od pluginów)
