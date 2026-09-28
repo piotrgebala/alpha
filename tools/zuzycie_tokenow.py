@@ -23,11 +23,18 @@ Zasady liczenia:
     PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py --od 2026-09-27 # od dnia (UTC)
     PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py --json          # dane do dalszej obróbki
     PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py --stan runs/tokeny/stan.json  # dane strony „Tokeny CLAS-5”
+    PYTHONUTF8=1 python3 tools/zuzycie_tokenow.py --progi         # symulacja progów strażnika kontekstu
 
 Strona „Tokeny CLAS-5” (docs/rag/12) czyta dokument bazy zbudowany przez `--stan`: wiersz na dzień
 z podziałem na modele i źródła, kontekstem i przepisaniami głównej sesji oraz liczbą sesji. Plik stanu
 jest zarazem historią: Claude Code kasuje zapisy rozmów po 30 dniach (`cleanupPeriodDays`), więc dni
 starsze niż FREEZE_DAYS zostają w pliku takie, jak policzono je ostatnio, zamiast znikać z wykresów.
+
+Symulacja progów (`--progi`) sprawdza na danych progi strażnika kontekstu (`tools/straznik_kontekstu.py`):
+co by było, gdyby główną sesję czyścić (/clear + nota przekazania) zawsze, gdy jej kontekst przekroczy
+próg X. Nowa sesja zaczyna z kontekstem R i jednorazowym kosztem K — oba zmierzone na początkach
+prawdziwych sesji (mediana). To przybliżenie: zakłada, że po czyszczeniu praca biegnie tak samo, tylko
+na krótszym kontekście.
 """
 
 from __future__ import annotations
@@ -58,6 +65,14 @@ GROUP_KEY = {
 MODEL_COLS = ["koszt", "wywolan", "wejscie", "zapis_cache", "odczyt_cache", "wyjscie"]
 FREEZE_DAYS = 14  # dni starszych nie przeliczamy — część ich zapisów mogła już zniknąć (30 dni)
 DOC_LIMIT = 240_000  # bajtów; dokument bazy strony ma limit 256 KiB — nadmiar = najstarsze dni
+# Symulacja progów (--progi). 150 i 250 tys. to PROG_UWAGI i PROG_PRZEKAZANIA z tools/straznik_kontekstu.py
+# — bez importu, bo ten moduł ma działać sam (zgodność wartości pilnuje test).
+PROGI_SYMULACJI = (150_000, 200_000, 250_000, 300_000, 400_000)
+MNOZNIKI_K = (0.5, 1.0, 2.0)  # koszt startu nowej sesji jest niepewny: połowa, tyle samo, dwa razy
+MIN_WYWOLAN_SESJI = 12  # krótsza sesja nie ma czego czyścić ani początku do zmierzenia
+N_NOWEJ_SESJI = 10  # w tylu wywołaniach nowa sesja wczytuje to, czego potrzebuje do pracy
+SPADEK_STRESZCZENIA = 20_000  # większy spadek kontekstu = streszczenie rozmowy albo nowy początek
+PROG_SZCZEGOLOW = 250_000  # dla tego progu raport podaje liczby per sesja (w --json)
 
 
 def project_dir(cwd: str | Path, home: Path | None = None) -> Path:
@@ -420,6 +435,266 @@ def report(s: dict) -> str:
     return "\n".join(out)
 
 
+def sesje_glowne(scan: Scan, min_wywolan: int = MIN_WYWOLAN_SESJI) -> list[list[Call]]:
+    """Wywołania głównej sesji (bez wpisów <synthetic>) pogrupowane po sesji, każda posortowana po
+    czasie. Zostają sesje z co najmniej `min_wywolan` wywołaniami, od najwcześniej zaczętej."""
+    by_session: dict[str, list[Call]] = collections.defaultdict(list)
+    for call in scan.calls:
+        if call.source == MAIN and call.model != SYNTHETIC:
+            by_session[call.session].append(call)
+    sesje = [sorted(cs, key=lambda c: c.ts) for cs in by_session.values() if len(cs) >= min_wywolan]
+    return sorted(sesje, key=lambda cs: (cs[0].ts, cs[0].session))
+
+
+def parametry_nowej_sesji(sesje: list[list[Call]], n: int = N_NOWEJ_SESJI) -> dict:
+    """Start od nowa zmierzony na początkach prawdziwych sesji (mediana, żeby jedna nietypowa sesja
+    nie przesuwała wyniku; obok zakres):
+    - R = kontekst n-tego wywołania: tyle czyta nowa sesja, gdy już wczytała, czego potrzebuje;
+    - K = koszt ważony n pierwszych wywołań: jednorazowy koszt startu od nowa.
+    Sesje krótsze niż n wywołań są pomijane; gdy nie zostaje żadna — ValueError."""
+    if n < 1:
+        raise ValueError(f"n = {n}: liczba wywołań startu musi być co najmniej 1")
+    ok = [cs for cs in sesje if len(cs) >= n]
+    if not ok:
+        raise ValueError(f"brak głównych sesji z co najmniej {n} wywołaniami")
+    rs = [context_size(cs[n - 1].counts) for cs in ok]
+    ks = [sum(cost(c.counts) for c in cs[:n]) for cs in ok]
+    return {
+        "n": n,
+        "sesji": len(ok),
+        "R": statistics.median(rs),
+        "R_min": min(rs),
+        "R_max": max(rs),
+        "K": statistics.median(ks),
+        "K_min": min(ks),
+        "K_max": max(ks),
+    }
+
+
+def symuluj_prog(calls: list[Call], X: float, R: float, K: float) -> tuple[int, float]:
+    """Jedna sesja „na niby”: gdy kontekst przekracza próg X, czyścimy ją (/clear + nota
+    przekazania) — nowa sesja ma kontekst R i kosztuje jednorazowo K. Wynik: (liczba czyszczeń,
+    oszczędność w jednostkach wejścia; ujemna = czyszczenia się nie zwróciły).
+
+    `shift` = tokeny usunięte z początku kontekstu przez ostatnie czyszczenie; każde następne
+    wywołanie czyta o tyle mniej. Ta część byłaby odczytem cache (waga odczytu), a to, co z niej
+    wykracza poza odczyt — zapisem cache po wadze zapisu tego wywołania (np. po przerwie > 1 h).
+    Spadek prawdziwego kontekstu o więcej niż SPADEK_STRESZCZENIA (streszczenie rozmowy, nowy
+    początek) zeruje `shift`. Koszt K odejmujemy raz na końcu (czyszczenia × K): wynik jest
+    dokładnie liniowy w K, a liczba czyszczeń od K nie zależy. Próg X ≤ R — ValueError (nowa sesja
+    zaczynałaby już nad progiem)."""
+    if X <= R:
+        raise ValueError(
+            f"próg X = {X / 1e3:g} tys. nie jest większy od kontekstu nowej sesji "
+            f"R = {R / 1e3:g} tys."
+        )
+    shift, clears, saved, prev = 0.0, 0, 0.0, None
+    for call in calls:
+        c = call.counts
+        ctx = context_size(c)
+        if prev is not None and ctx < prev - SPADEK_STRESZCZENIA:
+            shift = 0.0  # prawdziwe streszczenie: wcześniejsze czyszczenie przestaje działać
+        prev = ctx
+        if ctx - shift > X:
+            shift = ctx - R
+            clears += 1
+        if shift > 0:
+            cr, cw = c["cr"], c["cw5"] + c["cw1h"]
+            w = WEIGHTS["cw1h"] if c["cw1h"] else WEIGHTS["cw5"]
+            saved += WEIGHTS["cr"] * min(shift, cr) + w * max(0, min(shift - cr, cw))
+    return clears, saved - clears * K
+
+
+def _po_przekroczeniu(calls: list[Call], X: float) -> int | None:
+    """Ile wywołań zostało w sesji PO pierwszym wywołaniu z kontekstem > X; None = nie przekroczyła."""
+    for i, call in enumerate(calls):
+        if context_size(call.counts) > X:
+            return len(calls) - i - 1
+    return None
+
+
+def raport_progow(
+    scan: Scan,
+    progi: tuple[int, ...] = PROGI_SYMULACJI,
+    mnozniki: tuple[float, ...] = MNOZNIKI_K,
+) -> dict:
+    """Symulacja progów strażnika kontekstu na prawdziwych sesjach głównych: parametry nowej sesji
+    (R, K z zakresami), tabela próg × mnożnik K (czyszczenia, oszczędność, % kosztu tych sesji),
+    ta sama tabela bez najdroższej sesji (R i K bez zmian), zwrot z jednego czyszczenia i liczby per
+    sesja dla PROG_SZCZEGOLOW (K×1). Próg nie większy od R jest pomijany i trafia do
+    „progi_pominiete”. Bez sesji do zmierzenia — ValueError."""
+    sesje = sesje_glowne(scan)
+    if not sesje:
+        raise ValueError(f"brak głównych sesji z co najmniej {MIN_WYWOLAN_SESJI} wywołaniami")
+    par = parametry_nowej_sesji(sesje)
+    R, K = par["R"], par["K"]
+    koszty = [sum(cost(c.counts) for c in cs) for cs in sesje]
+    top = max(range(len(sesje)), key=koszty.__getitem__)
+    reszta = [i for i in range(len(sesje)) if i != top]
+    dobre = [X for X in progi if X > R]
+
+    def tabela(idx: list[int]) -> list[dict]:
+        koszt = sum(koszty[i] for i in idx)
+        wiersze = []
+        for X in dobre:
+            for m in mnozniki:
+                wyniki = [symuluj_prog(sesje[i], X, R, K * m) for i in idx]
+                saved = sum(s for _, s in wyniki)
+                wiersze.append(
+                    {
+                        "prog": X,
+                        "mnoznik_K": m,
+                        "czyszczen": sum(c for c, _ in wyniki),
+                        "oszczednosc": saved,
+                        "oszczednosc_pct": 100 * saved / koszt if koszt else 0.0,
+                    }
+                )
+        return wiersze
+
+    zwrot = []
+    for X in dobre:
+        po = [n for n in (_po_przekroczeniu(cs, X) for cs in sesje) if n is not None]
+        zwrot.append(
+            {
+                "prog": X,
+                "n_zwrotu": K / (WEIGHTS["cr"] * (X - R)),
+                "sesji_ponad_progiem": len(po),
+                "mediana_wywolan_po_przekroczeniu": statistics.median(po) if po else None,
+            }
+        )
+    szczegoly = None
+    if PROG_SZCZEGOLOW > R:
+        szczegoly = {"prog": PROG_SZCZEGOLOW, "mnoznik_K": 1.0, "sesje": []}
+        for cs, koszt in zip(sesje, koszty, strict=True):
+            clears, saved = symuluj_prog(cs, PROG_SZCZEGOLOW, R, K)
+            szczegoly["sesje"].append(
+                {
+                    "sesja": cs[0].session,
+                    "start": cs[0].ts,
+                    "wywolan": len(cs),
+                    "koszt": koszt,
+                    "kontekst_max": max(context_size(c.counts) for c in cs),
+                    "czyszczen": clears,
+                    "oszczednosc": saved,
+                    "wywolan_po_przekroczeniu": _po_przekroczeniu(cs, PROG_SZCZEGOLOW),
+                }
+            )
+    naj = sesje[top]
+    return {
+        "sesji": len(sesje),
+        "min_wywolan": MIN_WYWOLAN_SESJI,
+        "koszt_sesji": sum(koszty),
+        "parametry": par,
+        "progi_pominiete": [X for X in progi if X <= R],
+        "tabela": tabela(list(range(len(sesje)))),
+        "najdrozsza_sesja": {
+            "sesja": naj[0].session,
+            "start": naj[0].ts,
+            "wywolan": len(naj),
+            "koszt": koszty[top],
+        },
+        "tabela_bez_najdrozszej": tabela(reszta) if reszta else [],
+        "koszt_bez_najdrozszej": sum(koszty[i] for i in reszta),
+        "zwrot": zwrot,
+        "sesje_przy_progu": szczegoly,
+    }
+
+
+def _pl(x: float) -> str:
+    """Liczba w tekście po polsku: przecinek dziesiętny, bez zbędnych zer (0,1; 2)."""
+    return f"{x:g}".replace(".", ",")
+
+
+def _tabela_progow(wiersze: list[dict]) -> list[str]:
+    """Wiersz na próg: liczba czyszczeń raz (nie zależy od K), potem oszczędność dla każdego K."""
+    if not wiersze:
+        return ["  brak progów do symulacji"]
+    grupy: dict[float, list[dict]] = {}
+    for w in wiersze:
+        grupy.setdefault(w["prog"], []).append(w)
+    etykiety = ["K×" + _pl(w["mnoznik_K"]) for w in next(iter(grupy.values()))]
+    out = [f"  {'próg X':>10}  {'czyszczeń':>10}" + "".join(f"{e:>22}" for e in etykiety)]
+    for prog, ws in grupy.items():
+        cz = "/".join(str(c) for c in sorted({w["czyszczen"] for w in ws}))
+        out.append(
+            f"  {prog / 1e3:5.0f} tys.  {cz:>10}"
+            + "".join(
+                f"{w['oszczednosc'] / 1e6:+10.2f} M ({w['oszczednosc_pct']:+5.1f} %)" for w in ws
+            )
+        )
+    return out
+
+
+def raport_progow_tekst(r: dict) -> str:
+    """Raport tekstowy symulacji progów (koszt w milionach jednostek wejścia, M)."""
+    p, naj = r["parametry"], r["najdrozsza_sesja"]
+    wr = _pl(WEIGHTS["cr"])
+    out = [
+        "SYMULACJA PROGÓW STRAŻNIKA KONTEKSTU",
+        "Co by było, gdyby główną sesję czyścić (/clear + nota przekazania) zawsze, gdy jej kontekst",
+        "(tokeny czytane w jednym wywołaniu) przekroczy próg X. Koszt w milionach jednostek wejścia (M).",
+        "",
+        f"Dane: {r['sesji']} głównych sesji z co najmniej {r['min_wywolan']} wywołaniami, koszt "
+        f"rzeczywisty {r['koszt_sesji'] / 1e6:.2f} M.",
+        "Nowa sesja po czyszczeniu (mediana z początków tych sesji, w nawiasie zakres):",
+        f"  R = {p['R'] / 1e3:.0f} tys. tokenów ({p['R_min'] / 1e3:.0f}–{p['R_max'] / 1e3:.0f} "
+        f"tys.) — kontekst po {p['n']}. wywołaniu: tyle czyta nowa sesja,",
+        "      gdy już wczytała, czego potrzebuje;",
+        f"  K = {p['K'] / 1e6:.2f} M ({p['K_min'] / 1e6:.2f}–{p['K_max'] / 1e6:.2f} M) — koszt "
+        f"{p['n']} pierwszych wywołań: jednorazowy koszt startu od nowa.",
+        "",
+        "Oszczędność = tańsze wywołania po czyszczeniu (krótszy kontekst) minus K za każde czyszczenie.",
+        "Wynik ujemny = czyszczenie się nie opłaca. K×0,5 i K×2 sprawdzają, czy wniosek przetrwa, gdy",
+        "start nowej sesji kosztuje połowę albo dwa razy tyle. Spadek prawdziwego kontekstu o ponad "
+        f"{SPADEK_STRESZCZENIA / 1e3:.0f} tys.",
+        "(streszczenie rozmowy) kończy działanie wcześniejszego czyszczenia.",
+    ]
+    if r["progi_pominiete"]:
+        out.append(
+            "Pominięte progi (nie wyższe od R — nowa sesja zaczynałaby już nad nimi): "
+            + ", ".join(f"{x / 1e3:.0f} tys." for x in r["progi_pominiete"])
+        )
+    out += ["", f"Wszystkie sesje ({r['sesji']}, koszt {r['koszt_sesji'] / 1e6:.2f} M):"]
+    out += _tabela_progow(r["tabela"])
+    udzial = 100 * naj["koszt"] / (r["koszt_sesji"] or 1)
+    out += [
+        "",
+        f"Bez najdroższej sesji {naj['sesja'][:8]} (start {naj['start'][:10]}, {naj['wywolan']} "
+        f"wywołań, {naj['koszt'] / 1e6:.2f} M = {udzial:.1f} % kosztu),",
+        f"żeby jedna olbrzymia sesja nie przesądzała wniosku ({r['sesji'] - 1} sesji, koszt "
+        f"{r['koszt_bez_najdrozszej'] / 1e6:.2f} M; R i K bez zmian):",
+    ]
+    out += (
+        _tabela_progow(r["tabela_bez_najdrozszej"])
+        if r["tabela_bez_najdrozszej"]
+        else ["  tylko jedna sesja — nie ma czego porównać"]
+    )
+    out += [
+        "",
+        "Zwrot z jednego czyszczenia. Po czyszczeniu przy progu X każde następne wywołanie czyta",
+        f"co najmniej X − R tokenów mniej z cache (waga {wr}). Czyszczenie zwraca się więc po około",
+        f"n* = K / ({wr} · (X − R)) wywołaniach. Obok: ile wywołań naprawdę zostało w sesjach po",
+        "pierwszym przekroczeniu progu (mediana). Więcej pozostałych wywołań niż n* = czyszczenie",
+        "zwykle by się zwróciło.",
+        f"  {'próg X':>10}  {'n*':>8}  {'sesji ponad progiem':>20}  "
+        f"{'mediana wywołań po przekroczeniu':>33}",
+    ]
+    for z in r["zwrot"]:
+        med = z["mediana_wywolan_po_przekroczeniu"]
+        ponad = f"{z['sesji_ponad_progiem']} z {r['sesji']}"
+        out.append(
+            f"  {z['prog'] / 1e3:5.0f} tys.  {z['n_zwrotu']:8.1f}  {ponad:>20}  "
+            f"{'—' if med is None else f'{med:g}':>33}"
+        )
+    if r["sesje_przy_progu"]:
+        out += [
+            "",
+            f"Liczby per sesja dla progu {PROG_SZCZEGOLOW / 1e3:.0f} tys. (K×1): --progi --json, "
+            "klucz „sesje_przy_progu”.",
+        ]
+    return "\n".join(out)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
@@ -427,7 +702,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--od", default="", help="od dnia UTC, RRRR-MM-DD")
     ap.add_argument("--json", action="store_true", help="wynik jako JSON")
-    ap.add_argument("--stan", type=Path, help="zapisz dokument strony „Tokeny CLAS-5” (i historię)")
+    tryb = ap.add_mutually_exclusive_group()
+    tryb.add_argument(
+        "--stan", type=Path, help="zapisz dokument strony „Tokeny CLAS-5” (i historię)"
+    )
+    tryb.add_argument(
+        "--progi",
+        action="store_true",
+        help="symulacja progów strażnika kontekstu: co by było, gdyby czyścić sesję po "
+        "przekroczeniu progu",
+    )
     a = ap.parse_args(sys.argv[1:] if argv is None else argv)
     if a.od and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", a.od):
         print("BŁĄD: --od w formacie RRRR-MM-DD", file=sys.stderr)
@@ -447,6 +731,14 @@ def main(argv: list[str] | None = None) -> int:
             f"stan strony: dni {len(dni)} ({dni[0]['d'] if dni else '-'} → "
             f"{dni[-1]['d'] if dni else '-'}), {a.stan.stat().st_size / 1e3:.0f} KB → {a.stan}"
         )
+        return 0
+    if a.progi:
+        try:
+            r = raport_progow(scan_project(root, a.od))
+        except ValueError as e:
+            print(f"BŁĄD: symulacja progów: {e}", file=sys.stderr)
+            return 1
+        print(json.dumps(r, ensure_ascii=False, indent=1) if a.json else raport_progow_tekst(r))
         return 0
     s = summarize(scan_project(root, a.od))
     print(json.dumps(s, ensure_ascii=False, indent=1) if a.json else report(s))
