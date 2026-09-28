@@ -19,6 +19,9 @@ i wybór rund, więc mieszkają w repo. Źródło każdej: decyzja użytkownika 
   zakładu o kierunek (kierunkowe / relatywne).
 - Przy wyborze rundy pomijaj rodziny carry/przepływ (katalog D2) bez pytania; wynik rzędu kilku
   %/rok opisuj wprost jako poniżej celu użytkownika.
+- 2026-09-28: „dodajemy do dziennika strategię carry do weryfikacji” — noga carry COIN-M z D1 w dzienniku
+  papierowym od 2026-09-29 (Poprawka 12), tylko zapis: sprawdza mechanikę rozliczeń na żywo, nie przewagę.
+  Cel zwrotów bez zmian; nowych rund carry nadal nie proponuj bez pytania.
 
 ## Rynek przed 2022 (2026-09-24)
 - Dane sprzed 2022 to „średni temat do analizy” (inny rynek, większe wahania). Nie proponuj okresów
