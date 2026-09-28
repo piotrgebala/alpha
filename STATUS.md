@@ -3028,10 +3028,11 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **LB0 — kolektor pełnych likwidacji Bybit:** [runda](runs/2026-09-27_lb0-kolektor-bybit/README.md), wniosek 106. Nadzór
   w `tools/likwidacje.sh` (ta sama linia crona co LK0 — nowej nie trzeba); wyłącznik `touch ~/likwidacje_bybit/WYLACZONY`.
 - **Kopia + dzienny indeks likwidacji** (`data/liquidation_backup.py`, `data/liquidation_index.py`; wywołuje ją
-  `tools/likwidacje.sh`, praca raz na dobę po 00:15 UTC): lokalne repo git `~/likwidacje_kopia` działa od dziś.
-  **Zdalna kopia czeka na użytkownika:** prywatne repo GitHub `piotrgebala/alpha-likwidacje` (puste) + klucz
-  `~/.ssh/likwidacje_deploy.pub` dodany jako deploy key z prawem zapisu; remote już ustawiony — pierwszy push sam.
-  Do tego czasu `kopia.log` pisze „BRAK ZDALNEJ KOPII” (kod 0, kolektory działają).
+  `tools/likwidacje.sh`, praca raz na dobę po 00:15 UTC): lokalne repo git `~/likwidacje_kopia` działa od 2026-09-27.
+  **Zdalna kopia działa od 2026-09-28** (05:35 UTC „zaległy push: zdalna kopia dogoniona”): prywatne repo GitHub
+  `piotrgebala/alpha-likwidacje`, push kluczem `~/.ssh/likwidacje_deploy` (deploy key z prawem zapisu; zwykły klucz
+  serwera dostaje „Repository not found”). Sprawdzone 28.09: ten sam ostatni commit lokalnie i na GitHubie. Gdy push
+  się nie uda, `kopia.log` pisze „BRAK ZDALNEJ KOPII” (kod 0, kolektory działają).
 - **Odczyt dziennika z progami z góry:** `backtest/odczyt_dziennika.py` + „Zmiana kryteriów odczytu” w
   [dziennik/README.md](dziennik/README.md). Decyzje: kryterium 5 = próg obalenia (zamiast opisu) — decyzja użytkownika;
   **z = 2,31** na 3 odczytach (92/182/365 dni; dokładna całka normalna 2,3113; przegląd podał przybliżone 2,39 =
