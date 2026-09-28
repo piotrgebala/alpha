@@ -1,6 +1,6 @@
 # runs/ — spis treści
 
-## Stan wiedzy — skrót (czytaj najpierw; stan na 2026-09-25)
+## Stan wiedzy — skrót (czytaj najpierw; stan na 2026-09-28)
 
 Krótka mapa dla kogoś, kto wchodzi do projektu. Pełne liczby i uzasadnienia: tabela niżej
 i „Wnioski skumulowane” (numery w nawiasach). Aktualizuj, gdy runda zmienia obraz — nie przy
@@ -9,7 +9,7 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
 **Zamknięte — nie wracać bez NOWEJ informacji:**
 - Przewidywanie kierunku BTC z cech wykresu na świecach 5m / 1h / 4h: trafność ~50 % na dużych
   próbach — dowód braku (Faza 0, M1, Y1, WF1; wnioski 12, 39, 69, 85). 1d (Y2) niezmierzony.
-- Klasyczna analiza techniczna na BTC 4h — 7 rodzin (48–53); MACD + EMA na 1h niemierzalne, także z filtrami (103, 104). Wykonanie i zarządzanie pozycją nie
+- Klasyczna analiza techniczna na BTC 4h — 7 rodzin (48–53); MACD + EMA na 1h niemierzalne, także z filtrami (103, 104); otwarcia sesji Tokio / Londyn / Nowy Jork niemierzalne (108). Wykonanie i zarządzanie pozycją nie
   tworzą przewagi (42–45).
 - Dane spoza wykresu (funding, OI, L/S, przewaga kupujących, VRP, podaż na giełdach, F&G) na BTC 4h — zmierzone
   (SW, 90): jako reguły i jako model 365 dni tracą po kosztach; duża przewaga wykluczona; ślad przed kosztami
@@ -167,6 +167,7 @@ podsumowanie pod tabelą.
 | **TP1** | 2026-09-26 | [tp1-cel-zysku](2026-09-26_tp1-cel-zysku/README.md) | Decyzja użytkownika („sprawdź jednak”): wyjście na celu zysku +1 % / +2 % „większym wolumenem” — trend TS1 i premia CP1 przy równym ryzyku (R1 na jednym szeregu, sufit 2); X1 wyłączony (konstrukcja nóg); tylko mierzalność | **0 — NIEMIERZALNA, nie startuje** | **Szum różnicy przy równym ryzyku ±17,6–20,1 pp/rok wobec efektu 5 pp → potrzeba 67–83 lat danych. Cel uruchamia się w 78–92 % pozycji; dla równego ryzyka trend musiałby w 97 % dni grać na sufitcie dźwigni 2×.** Walidacja: **Ready** — silnik = dziennik co do bitu, druga droga z OHLC 1 665 / 1 659 |
 | **LB0** | 2026-09-27 | [lb0-kolektor-bybit](2026-09-27_lb0-kolektor-bybit/README.md) | Kolektor PEŁNYCH likwidacji Bybit (`allLiquidation.*`, wszystkie zdarzenia, nie próbka) od 2026-09-27 do `$HOME/likwidacje_bybit` (poza repo) — druga brama danych rodziny E1 obok LK0; decyzja użytkownika („wykonaj wszystkie”, docs/rag/11) | **0 — POZA licznikami** (zbieranie danych, 0 odczytów; jeden licznik E1 dla LK0 i LB0) | **Uruchomiony. Kontrola pozytywna 180 s: 777 symboli na 2 połączeniach, subskrypcje 78/78, 58 likwidacji z 16 monet (14 longów, 44 shortów); LK0 w tym samym oknie 62 zdarzenia, te same główne monety i kierunek (ENA: Bybit 25, Binance 13 — próbkowanie Binance).** Nadzór w `tools/likwidacje.sh` (bez nowej linii crona), wyłącznik `WYLACZONY`; kopia + dzienny indeks obu giełd (`data/liquidation_backup.py`). Walidacja 16a: **Caveats** (jedno krótkie okno) |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
+| **OS1** | 2026-09-28 | [os1-otwarcia-sesji](2026-09-28_os1-otwarcia-sesji/README.md) | Pomysł użytkownika: otwarcia sesji Tokio / Londyn / Nowy Jork na BTC perp 30m (czas letni/zimowy ze stref IANA); F1 dryf 60 min (znak z 365 dni), F2 momentum 30 min → 3,5 h; tylko rachunek mierzalności | **0 — oba ramiona łączne (i 6 per sesja) NIEMIERZALNE, nie startuje** | **Wymagana trafność łącznie: F1 65,0 / 60,2 %, F2 59,3 / 56,5 % (taker 0,14 % / limit 0,09 %) wobec prioru z literatury 53,5–53,8 %; konwencja 56 % też nie przechodzi. Nowy Jork: zmienność +26–45 %, kierunku nie mierzono.** Walidacja: **Caveats** — druga droga zgodna co do cyfry; przegląd: Approve z uwagami |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -189,6 +190,7 @@ podsumowanie pod tabelą.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
 - **NOWA SERIA TP — cel zysku na nogach dziennika (TP1, 2026-09-26, decyzja użytkownika): 0/4 — NIEMIERZALNA, warianty niezużyte, SERIA ZAMKNIĘTA.** Zakazane bez nowej decyzji użytkownika: inne cele, cele ruchome, częściowe wyjścia, stopy, ponowne wejście po celu w tygodniu. Jedyna droga: druga wersja papierowa na danych prospektywnych.
 - **NOWA SERIA MX — MACD + EMA 10/30 na 1h (MX1 + MX2, 2026-09-25, decyzje użytkownika): 0/6 — WSZYSTKIE NIEMIERZALNE (MX1 bez filtra, MX2 pięć filtrów), warianty niezużyte, SERIA ZAMKNIĘTA.** Zakazane bez nowej decyzji użytkownika: inne okna MACD/EMA, okno czasu między przecięciami, wersja „stan”, inne interwały, V/bariery, odwrócenie znaku, podzbiory. Jedyna droga do mierzalności: wiele monet naraz (nowa pre-rejestracja).
+- **NOWA SERIA OS — otwarcia sesji na BTC 30m (OS1, 2026-09-28, pomysł użytkownika): 0/2 — OBA RAMIONA ŁĄCZNE NIEMIERZALNE, nie wystartowała, SERIA ZAMKNIĘTA.** Własny licznik (rodzina G1; zbiór informacyjny: zegar + OHLCV własne). Zakazane bez nowej decyzji użytkownika: inne okna i czasy trzymania, inne sesje (Sydney, Hongkong, Frankfurt osobno), odwrócenie znaku (odwrót zamiast momentum), filtry (zmienność, dzień tygodnia), podzbiory sesji, inne monety. Jedyna droga do mierzalności: wiele monet naraz (mały zysk mocy przy korelacji w ciągu dnia, 40) albo dłuższa historia.
 - **NOWA SERIA TL — tłok przekrojowy (od TL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna/nogi, odwrócenie znaku (post hoc).
 - **SERIA TS — uzupełnienie (TR1/TP1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — zamknięta na historii.** Dalej tylko dziennik prospektywny tej samej reguły (0 wariantów).
 - **NOWA SERIA TF — trend z filtrem tłoku (od TF1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne progi/okna fundingu, OI jako filtr trendu bez nowego mechanizmu.
@@ -1005,6 +1007,13 @@ podsumowanie pod tabelą.
     (DSR 0,95), minimalny roczny SR ~1,6 na 5,5 roku; wariant ostrożny N = 52 (każda runda z wynikiem liczona co najmniej raz), z nową rundą 53 → 3,94.
     → Każda pre-rejestracja na historii 2021–2026 drukuje `py -m backtest.dsr --k <warianty>`; wynik poniżej tego progu to
     najwyżej „kandydat do dziennika”. Obowiązuje metoda AU4 (decyzja koordynatora, STATUS ETAP 6).
+108. **OTWARCIA SESJI NA BTC SĄ NIEMIERZALNE — KOSZT TO 16–27 % RUCHU W OKNIE (PER SESJA 12–36 %), PRZYRZĄD DOKŁADA ±1,5 PKT (OS1, 2026-09-28, 0 wariantów).**
+    Tokio 09:00 JST, Londyn 08:00 i Nowy Jork 09:30 czasu lokalnego (czas letni ze stref IANA), natywne 30m od 2021, 1 433 dni robocze
+    na sesję: F1 dryf 60 min (znak z 365 dni) wymaga łącznie **65,0 %** trafności przy taker 0,14 % (**60,2 %** z wejściem limitem 0,09 %),
+    F2 momentum 30 min → 3,5 h **59,3 / 56,5 %**; prior z literatury 53,5–53,8 % (R² 1,44 % w próbie, niezweryfikowane u źródła; Kraken
+    2016–2025 po teście SPA nieistotne; K33 2026: mit „wyprzedaży o 10:00” obalony); konwencja 56 % też nie przechodzi. Nowy Jork
+    wyróżnia zmienność (σ 60 min 0,99 % wobec 0,69–0,73 %; kierunku nie mierzono). → Reguły pory doby na BTC w horyzoncie godzin nie startują bez
+    efektu z badań po publikacji ≥ 0,15–0,20 % brutto na transakcję (moc 80 %, limit / taker); seria OS zamknięta regułą STOP (0/2).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 
