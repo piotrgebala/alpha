@@ -3053,6 +3053,8 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - Headroom: NIE (wyjścia narzędzi ≈ 5 % kosztu; kompresja na drodze liczb łamie drugą drogę bramki 16a).
 - Nowy skill konta `explain-usage` (2026-09-28): paczka przekazana użytkownikowi do wgrania na claude.ai; w środku kopia
   `tools/zuzycie_tokenow.py` (wersja kanoniczna zostaje w repo) + tłumaczenie wyniku i odesłanie do `/usage`, `/context`, `/insights`.
+- **Wdrożone 2026-09-28 (decyzja użytkownika):** agent `lokalizator` na Haiku, `autoCompactWindow` 300 tys. w ustawieniach
+  projektu, podział kosztu na modele w monitorze (Opus 80 %, Fable 5.1 20 %, Haiku 0,3 %) — [docs/rag/12](docs/rag/12_zuzycie_tokenow.md).
 - **Do decyzji użytkownika:** rejestracja skilla w zasadzie 19 bez ponownego wczytania, gdy treść jest nadal w kontekście;
   odchudzenie `clas5-quant` SKILL.md przy następnej wersji. Praktyka po stronie użytkownika: nowa sesja na zadanie
   i po przerwie > 1 h; tryb ultracode tylko na duże przeglądy.

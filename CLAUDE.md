@@ -124,7 +124,7 @@ handlu, cel zwrotów, rynek przed 2022) → `docs/rag/10_preferencje_uzytkownika
   z przeglądu kodu), `claude-code-setup` (jego rada o `.claude/skills/` u nas nie obowiązuje),
   `discernment-nudge` (pytania kontrolne po polsku). Czego świadomie nie włączamy i dlaczego —
   `docs/rag/08`.
-- **Tokeny (docs/rag/12):** nowa sesja na nowe zadanie i po przerwie > 1 h; workflow wieloagentowe tylko na wyraźne życzenie; wąskie wyjścia narzędzi; pomiar `tools/zuzycie_tokenow.py`.
+- **Tokeny (docs/rag/12):** nowa sesja na nowe zadanie i po przerwie > 1 h; workflow wieloagentowe tylko na wyraźne życzenie; „gdzie co jest” → agent `lokalizator` (Haiku), oceny w głównej sesji; wąskie wyjścia narzędzi; pomiar `tools/zuzycie_tokenow.py`.
 - Lint/format: `ruff` + `black` na dotykanych plikach; zamrożonych nie reformatuj. Różnice
   CRLF/LF są normalne.
 - **Środowiska pracujące na repo:** serwer Linux w Polsce (praca badawcza od 2026-09-24;

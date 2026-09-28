@@ -215,3 +215,18 @@ def test_merge_is_max_and_order_independent(tmp_path_factory, parts):
         got = scan.calls[0].counts
         for i, k in enumerate(("inp", "cw1h", "cw5", "cr", "out")):
             assert got[k] == max(p[i] for p in parts)
+
+
+def test_cost_split_by_model(tmp_path):
+    """Podział na modele: ten sam koszt jednostkowy, osobne wiersze; brak pola model → „?”."""
+    rec_opus = _asst("a", "2026-09-28T00:00:00Z", cw1h=1000, out=10)
+    rec_opus["message"]["model"] = "claude-opus-5-5"
+    rec_haiku = _asst("b", "2026-09-28T00:00:01Z", cw1h=1000, out=10)
+    rec_haiku["message"]["model"] = "claude-haiku-4-5-20251001"
+    _write(tmp_path / "s.jsonl", [rec_opus, rec_haiku, _asst("c", "2026-09-28T00:00:02Z", out=1)])
+    s = zt.summarize(zt.scan_project(tmp_path))
+    by = {r["model"]: r for r in s["modele"]}
+    assert set(by) == {"claude-opus-5-5", "claude-haiku-4-5-20251001", "?"}
+    assert by["claude-opus-5-5"]["koszt"] == by["claude-haiku-4-5-20251001"]["koszt"] == 2050
+    assert sum(r["koszt"] for r in s["modele"]) == pytest.approx(s["razem_koszt"])
+    assert "Modele (jednostki" in zt.report(s)

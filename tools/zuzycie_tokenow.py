@@ -88,6 +88,7 @@ class Call:
     source: str
     ts: str
     counts: collections.Counter
+    model: str = "?"
 
     @property
     def is_rewrite(self) -> bool:
@@ -134,7 +135,13 @@ def scan_file(path: Path, source: str, scan: Scan, since: str = "") -> None:
                     c = _usage_counts(u)
                     prev = merged.get(key)
                     if prev is None:
-                        merged[key] = Call(day, source, str(o.get("timestamp") or ""), c)
+                        merged[key] = Call(
+                            day,
+                            source,
+                            str(o.get("timestamp") or ""),
+                            c,
+                            str(msg.get("model") or "?"),
+                        )
                     else:
                         prev.counts = collections.Counter(
                             {k: max(prev.counts[k], c[k]) for k in set(prev.counts) | set(c)}
@@ -198,6 +205,7 @@ def summarize(scan: Scan) -> dict:
         collections.Counter
     )
     by_src: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    by_model: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
     ctx: dict[tuple[str, str], list[int]] = collections.defaultdict(list)
     rewrites = []
     for call in scan.calls:
@@ -207,6 +215,7 @@ def summarize(scan: Scan) -> dict:
         c["koszt"] = cost(call.counts)
         by_day[(call.day, group)] += c
         by_src[call.source] += c
+        by_model[call.model] += c
         ctx[(call.day, group)].append(context_size(call.counts))
         if call.source == MAIN and call.is_rewrite:
             rewrites.append(
@@ -242,6 +251,20 @@ def summarize(scan: Scan) -> dict:
         "przepisania": sorted(rewrites, key=lambda r: r["ts"]),
         "skille": dict(scan.skills.most_common()),
         "tresc_glownej_sesji_znaki": dict(scan.content.most_common()),
+        "modele": sorted(
+            (
+                {
+                    "model": m,
+                    "wywolan": c["calls"],
+                    "zapis_cache": c["cw5"] + c["cw1h"],
+                    "odczyt_cache": c["cr"],
+                    "wyjscie": c["out"],
+                    "koszt": c["koszt"],
+                }
+                for m, c in by_model.items()
+            ),
+            key=lambda r: -r["koszt"],
+        ),
         "zle_linie": scan.bad_lines,
         "pliki": scan.files,
     }
@@ -267,6 +290,16 @@ def report(s: dict) -> str:
     for r in s["zrodla"]:
         out.append(
             f"  {r['zrodlo']:32} {r['koszt'] / 1e6:8.2f} M ({100 * r['koszt'] / tot:4.1f} %), "
+            f"wywołań {r['wywolan']}"
+        )
+    out += [
+        "",
+        "Modele (jednostki liczone tak samo dla każdego modelu — cena za token RÓŻNI się: Haiku "
+        "i Sonnet są wielokrotnie tańsze od Opusa i Fable, więc ich realny udział jest mniejszy):",
+    ]
+    for r in s["modele"]:
+        out.append(
+            f"  {r['model']:32} {r['koszt'] / 1e6:8.2f} M ({100 * r['koszt'] / tot:4.1f} %), "
             f"wywołań {r['wywolan']}"
         )
     rw = s["przepisania"]
