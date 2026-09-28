@@ -80,6 +80,9 @@ body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(
 <script>
 (function () {
   'use strict';
+  // Nonce tego skryptu (CSP platformy). Tylko synchronicznie: currentScript istnieje wyłącznie
+  // w trakcie wykonania skryptu. Właściwość .nonce, bo atrybut przeglądarka ukrywa.
+  var NONCE = (document.currentScript && document.currentScript.nonce) || '';
   var ZAKLADKI = ['dziennik', 'tokeny', 'mapa'];
   var KLUCZ = 'pulpit-clas5-zakladka';
   var root = document.documentElement;
@@ -111,6 +114,16 @@ body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(
     }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   } catch (e) { /* bez obserwatora motyw dziecka ustala preludium przy starcie */ }
 
+  // Dokument srcdoc dziedziczy CSP powłoki: przy CSP z nonce każdy otwierający tag skryptu
+  // dziecka dostaje nonce powłoki (tag, który już ma nonce, zostaje). Bez nonce — bez zmian.
+  function zNonce(html, nonce) {
+    if (!nonce) return html;
+    var n = String(nonce).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    return html.replace(/<script(?=[\s>])[^>]*>/gi, function (tag) {
+      return /\snonce\s*=/i.test(tag) ? tag : tag.slice(0, 7) + ' nonce="' + n + '"' + tag.slice(7);
+    });
+  }
+
   // Ramka zakładki: tworzona przy pierwszym otwarciu, potem tylko ukrywana razem z panelem.
   function ramka(i) {
     var id = ZAKLADKI[i];
@@ -129,7 +142,7 @@ body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(
     var f = document.createElement('iframe');
     f.title = karty[i].textContent + ' CLAS-5';
     f.addEventListener('load', function () { motyw(f); });
-    f.srcdoc = dok;
+    f.srcdoc = zNonce(dok, NONCE);
     panele[i].appendChild(f);
     ramki[id] = f;
   }

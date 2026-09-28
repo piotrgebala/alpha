@@ -235,6 +235,59 @@ def test_main_zapis_i_sprawdz(tmp_path, monkeypatch, capsys):
     assert "razem" in wyjscie.out and "NIEAKTUALNY" in wyjscie.err
 
 
+def _skrypt_powloki() -> str:
+    return re.findall(r"<script>(.*?)</script>", pc.czytaj(ROOT / pc.SZABLON), re.S)[0]
+
+
+def test_powloka_przekazuje_nonce_do_skryptow_dziecka():
+    skrypt = _skrypt_powloki()
+    przechwycenie = "var NONCE = (document.currentScript && document.currentScript.nonce) || '';"
+    assert przechwycenie in skrypt
+    # synchronicznie: przed pierwszą funkcją wewnątrz IIFE, zanim cokolwiek trafi do obsługi zdarzeń
+    poczatek = skrypt.index("'use strict';")
+    assert poczatek < skrypt.index(przechwycenie) < skrypt.index("function ", poczatek)
+    assert "getAttribute('nonce')" not in skrypt  # atrybut przeglądarka ukrywa, liczy się .nonce
+    assert r"/<script(?=[\s>])[^>]*>/gi" in skrypt
+    assert "f.srcdoc = zNonce(dok, NONCE);" in skrypt
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="brak node")
+def test_znonce_z_nonce_i_bez_node(tmp_path, zlozony):
+    funkcja = re.search(
+        r"^  function zNonce\(html, nonce\) \{\n.*?^  \}\n", _skrypt_powloki(), re.S | re.M
+    )
+    dokumenty = [json.loads(tekst) for tekst in bloki(zlozony).values()]
+    reczny = '<script nonce="stary">a</script><SCRIPT type="module">b</SCRIPT><scripts>c'
+    przypadki = [[html, nonce] for html in [*dokumenty, reczny] for nonce in ("", 'ab+/="&')]
+    (tmp_path / "wejscie.json").write_text(json.dumps(przypadki), encoding="utf-8")
+    (tmp_path / "nonce.js").write_text(
+        funkcja.group(0)
+        + "const fs = require('fs');\n"
+        + "const p = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));\n"
+        + "process.stdout.write(JSON.stringify(p.map(([h, n]) => zNonce(h, n))));\n",
+        encoding="utf-8",
+    )
+    wynik = subprocess.run(
+        ["node", str(tmp_path / "nonce.js"), str(tmp_path / "wejscie.json")],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    assert wynik.returncode == 0, wynik.stderr
+    wstawka = ' nonce="ab+/=&quot;&amp;"'
+    wyjscia = json.loads(wynik.stdout)
+    for (html, nonce), wyjscie in zip(przypadki, wyjscia, strict=True):
+        if not nonce:
+            assert wyjscie == html  # bez nonce dokument bez zmian
+            continue
+        tagi = re.findall(r"<script(?=[\s>])[^>]*>", wyjscie, re.I)
+        assert len(tagi) == len(re.findall(r"<script(?=[\s>])[^>]*>", html, re.I))
+        assert all(len(re.findall(r"\snonce\s*=", t, re.I)) == 1 for t in tagi)  # bez podwajania
+        assert wyjscie.replace(wstawka, "") == html  # tylko wstawka, nic więcej
+    assert [wyjscia[2 * k + 1].count(wstawka) for k in range(3)] == [2, 2, 1]  # preludium + strona
+    assert wyjscia[-1].count(wstawka) == 1  # tylko <SCRIPT type="module">
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="brak node")
 def test_skrypty_powloki_i_preludium_poprawne_skladniowo(tmp_path):
     szablon = pc.czytaj(ROOT / pc.SZABLON)
