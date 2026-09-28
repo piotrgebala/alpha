@@ -47,3 +47,17 @@ w kontekście; po streszczeniu rozmowy harness dokleja treść wszystkich wczyta
 5. **Do decyzji użytkownika:** zasada 19 — gdy skill wczytano w tej samej sesji i jego treść jest nadal
    w kontekście (bez streszczenia po drodze), rejestracja na nowej gałęzi bez ponownego wczytania
    (osobne polecenie w `tools/skill_audit.py`). Oszczędność: część z ~23 % treści skilli w głównej sesji.
+
+## Wdrożone 2026-09-28 (decyzja użytkownika „tak”)
+
+- **Agent `lokalizator`** (`.claude/agents/lokalizator.md`, model Haiku, tylko Read/Grep/Glob): zwraca
+  wyłącznie `plik:linia — co tam jest`. Test na pytaniu z znaną odpowiedzią: stała i opis progu trafione,
+  przy wniosku 107 wskazał sąsiednie linie zamiast nagłówka — do wskazywania miejsc wystarcza, oceny
+  zostają w głównej sesji. Dostępny od następnej sesji (definicje agentów wczytują się przy starcie).
+- **Próg automatycznego streszczenia** `autoCompactWindow: 300000` w `.claude/settings.json` (domyślnie
+  ~967 tys. dla modeli z oknem 1M; po streszczeniu kontekst spadał w tej sesji do ~100 tys.).
+- **Monitor: podział na modele.** Pomiar 24–28.09: Opus 5.5 80 %, **Fable 5.1 20 %** (model droższy od
+  Opusa — realny udział w kosztach jeszcze większy), Haiku 0,3 %. Jednostki monitora nie uwzględniają ceny
+  modelu. Wniosek: Fable tylko do wyjątkowych zadań; Opus na poziomie medium do badań; Sonnet/opusplan do rutyny.
+- **Obserwacja:** skill `update-config` (obowiązkowy przy zmianach konfiguracji, zasada 19) niesie cały
+  schemat ustawień — jedno wczytanie to kilkadziesiąt tys. tokenów; wczytywać go tylko przy realnej zmianie.
