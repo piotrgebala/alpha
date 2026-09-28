@@ -137,5 +137,5 @@ Otwarcie w Nowym Jorku wyróżnia się zmiennością (+40 %), nie kierunkiem.
 2. Jedyne drogi do mierzalności to zmiany z decyzją użytkownika i nową pre-rejestracją. Pierwsza to wiele monet
    naraz, ale korelacja w ciągu dnia jest wysoka, więc zysk mocy jest mały (40). Druga to dużo dłuższa historia,
    której nie ma. Rekomendacja Claude: nie. Prior jest niski, a projekt ma ~40 odczytów na tej historii.
-3. Wiedza użyteczna gdzie indziej: zlecenia nóg dziennika warto składać **poza** oknem 13:30–15:30 UTC.
-   Większa zmienność na otwarciu w Nowym Jorku to większy poślizg zleceń rynkowych. To uwaga o wykonaniu, nie strategia.
+3. Zmienność na otwarciu w Nowym Jorku (+40 %) to opis, nie wskazówka wykonania. Wolumen jest wtedy także
+   najwyższy, więc wpływ pory zlecenia na poślizg nóg dziennika pozostaje niezmierzony.
