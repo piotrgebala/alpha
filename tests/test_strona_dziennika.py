@@ -7,16 +7,20 @@ w live_journal bez zmiany LOG_RE daje czerwony test zamiast cichego „nieczytel
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import shutil
 import subprocess
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from backtest import journal_carry as jc
 from tools import strona_dziennika as sd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -447,3 +451,200 @@ def test_main_fails_without_origin_master(tmp_path, capsys):
 
 def test_main_usage_error():
     assert sd.main([]) == 2
+
+
+# ------------------------------------------------------------------ noga carry (poprawka 12)
+
+BASE12 = (
+    HEAD
+    + X1
+    + " | stan rynku +1 | F&G +1 | transakcje +0 | opisy strategii 5 | rozbicie +3 | fazy +21 | koszyk +0"
+)
+
+
+@pytest.mark.parametrize(
+    "fields, trouble, n",
+    [
+        ("", "", 0),
+        (" | carry spóźnione", "spóźnione", 0),
+        (" | carry brak pliku", "brak pliku", 0),
+        (" | carry BŁĄD RuntimeError", "BŁĄD RuntimeError", 0),
+        (" | carry zmiany 1", "", 1),
+        (" | carry spóźnione | carry zmiany 12", "spóźnione", 12),
+    ],
+    ids=["bez-carry", "spoznione", "brak-pliku", "blad", "zmiany", "spoznione-zmiany"],
+)
+def test_parse_log_reads_carry_fields(fields, trouble, n):
+    runs, bad = sd.parse_log(BASE12 + fields + TAIL)
+    assert bad == 0 and len(runs) == 1
+    r = runs[0]
+    assert (r["carry"], r["carry_changed"], r["changed"], r["stan"]) == (trouble, n, 0, "+1")
+
+
+@settings(max_examples=150, deadline=None)
+@given(
+    trouble=st.one_of(st.none(), _FIELD.filter(lambda s: not s.startswith("zmiany"))),
+    n=st.one_of(st.none(), st.integers(1, 10_000)),
+    changed=st.integers(0, 50),
+)
+def test_carry_fields_round_trip(trouble, n, changed):
+    """Pola carry w kolejności z live_journal (kłopot, potem zmiany) czytają się z powrotem,
+    a licznik główny „historia zmieniona” zostaje osobno."""
+    parts = [BASE12]
+    parts += [f"carry {trouble}"] if trouble is not None else []
+    parts += [f"carry zmiany {n}"] if n else []
+    runs, bad = sd.parse_log(" | ".join(parts + [f"historia zmieniona: {changed}"]))
+    assert bad == 0
+    r = runs[0]
+    assert (r["carry"], r["carry_changed"], r["changed"]) == (trouble or "", n or 0, changed)
+
+
+def _run(day: str, carry: str = "", n: int = 0) -> dict:
+    return {"ts": f"{day}T02:30+00:00", "day": day, "carry": carry, "carry_changed": n}
+
+
+def _crow(d: str, komplet="True", rozl="3", koszt="0.0", netto="0.0002", skum="0.0002") -> dict:
+    return {
+        "date": d,
+        "rozliczenia": rozl,
+        "komplet": komplet,
+        "suma_stawek": "0.0002",
+        "koszt": koszt,
+        "netto": netto,
+        "netto_skum": skum,
+    }
+
+
+def test_carry_state_rows_and_criteria():
+    rows = [
+        _crow("2026-10-01", komplet="False", rozl="2"),
+        _crow("2026-09-29", koszt="0.0019", netto="-0.0017", skum="-0.0017"),
+    ]
+    runs = [
+        _run("2026-09-29", "brak pliku"),
+        _run("2026-09-30"),
+        _run("2026-10-01", "spóźnione", 1),
+        _run("2026-10-02", n=1),
+    ]
+    c = sd.carry_state(rows, runs)
+    assert c["dates"] == ["2026-09-29", "2026-10-01"]  # plik czyta się po dacie, nie po kolei
+    assert c["complete"] == [True, False] and c["settlements"] == [3, 2]
+    assert c["cost"] == [0.0019, 0.0] and c["cum"] == [-0.0017, 0.0002]
+    cr = c["criteria"]
+    # (a) liczy od 30.09 — „brak pliku” z 29.09 to wczesne ostrzeżenie, nie kłopot w kryterium
+    assert cr["timeliness"] == {
+        "runs": 3,
+        "trouble": 1,
+        "last_trouble": {"ts": "2026-10-01T02:30+00:00", "what": "spóźnione"},
+    }
+    assert cr["completeness"] == {
+        "days": 2,
+        "complete": 1,
+        "incomplete": ["2026-10-01"],
+        "missing": ["2026-09-30"],
+    }
+    assert cr["consistency"] == {"runs": 2, "max": 1, "last": 1, "prev": 1}
+
+
+def test_carry_state_before_first_row():
+    c = sd.carry_state([], [_run("2026-09-29")])
+    assert c["dates"] == [] and c["start"] == "2026-09-29"
+    assert c["criteria"]["completeness"]["missing"] == []
+    assert c["criteria"]["timeliness"] == {"runs": 0, "trouble": 0, "last_trouble": None}
+    assert c["criteria"]["consistency"] == {"runs": 0, "max": 0, "last": 0, "prev": 0}
+
+
+@pytest.mark.parametrize(
+    "carry, last_run, expected",
+    [
+        (None, None, []),  # stan ze starego generatora
+        ({"criteria": {"consistency": {"last": 0, "prev": 0}}}, {"carry": ""}, []),
+        ({}, {"carry": "spóźnione"}, ["(f) carry: spóźnione"]),
+        (
+            {"error": "KeyError: 'komplet'"},
+            {},
+            ["(f) carry: nie da się odczytać carry_wyniki.csv (KeyError: 'komplet')"],
+        ),
+        (
+            {"criteria": {"consistency": {"last": 1, "prev": 0}}},
+            {},
+            ["(g) carry: przeliczenie różni się od zapisu w 1 dniu (poprzednio 0)"],
+        ),
+        (
+            {"criteria": {"consistency": {"last": 3, "prev": 1}}},
+            {},
+            ["(g) carry: przeliczenie różni się od zapisu w 3 dniach (poprzednio 1)"],
+        ),
+        ({"criteria": {"consistency": {"last": 2, "prev": 2}}}, {}, []),  # trwała różnica
+    ],
+    ids=["stary-stan", "w-porzadku", "klopot", "blad-odczytu", "nowa-1", "nowa-3", "trwala"],
+)
+def test_checks_carry(carry, last_run, expected):
+    assert sd.checks(_state(carry=carry, last_run=last_run)) == expected
+
+
+def test_verdict_line_shows_carry_once_there_is_a_row():
+    s = _state(carry={"cum": [-0.0017, -0.0015]})
+    assert sd.verdict_line(s, []) == (
+        "Dziennik odświeżony: dane za 2026-09-26, kapitał R1 1.0069, carry -0.15 %."
+    )
+
+
+def test_carry_constants_and_file_format_match_journal():
+    """Strona czyta plik w formacie, który zapisuje dziennik (carry_rows → to_csv, bez indeksu)."""
+    assert (sd.CARRY_CSV, sd.CARRY_START) == (jc.CARRY_CSV, jc.CARRY_START.date().isoformat())
+    ts = pd.date_range("2026-09-29", periods=7, freq="8h", tz="UTC")  # 29.09, 30.09 i 01.10 00:00
+    funding = pd.DataFrame({"timestamp": ts, "funding_rate": [1e-4, 2e-4, -5e-5] + [1e-4] * 4})
+    df = jc.carry_rows(funding, jc.CARRY_START, 0.0019)
+    assert list(df.columns) == jc.CARRY_COLS
+    c = sd.carry_state(list(csv.DictReader(io.StringIO(df.to_csv(index=False)))), [])
+    assert c["dates"] == ["2026-09-29", "2026-09-30"] and c["complete"] == [True, True]
+    assert c["net"] == pytest.approx(df["netto"].tolist(), abs=1e-8)
+    assert c["cum"] == pytest.approx(df["netto_skum"].tolist(), abs=1e-8)
+    assert c["cost"] == pytest.approx([0.0019, 0.0], abs=1e-12)
+
+
+CARRY_CSV_TXT = (
+    "date,rozliczenia,komplet,suma_stawek,koszt,netto,netto_skum\n"
+    "2026-09-29,3,True,0.0002,0.0019,-0.0017,-0.0017\n"
+)
+
+
+@needs_git
+def test_build_state_reads_carry_file_and_log_fields(tmp_path):
+    files = dict(FILES)
+    files["carry_wyniki.csv"] = CARRY_CSV_TXT
+    files["przebiegi.log"] = FILES["przebiegi.log"] + (
+        HEAD.replace("2026-09-27T02:30", "2026-09-30T02:30")
+        + " | carry spóźnione | carry zmiany 1"
+        + TAIL
+        + "\n"
+    )
+    state, _ = sd.build_state(str(_repo(tmp_path, files)), NOW)
+    c = state["carry"]
+    assert c["dates"] == ["2026-09-29"] and c["net"] == [-0.0017] and c["complete"] == [True]
+    assert (state["last_run"]["carry"], state["last_run"]["carry_changed"]) == ("spóźnione", 1)
+    assert c["criteria"]["timeliness"]["runs"] == 1
+    assert sd.checks(state) == [
+        "(f) carry: spóźnione",
+        "(g) carry: przeliczenie różni się od zapisu w 1 dniu (poprzednio 0)",
+    ]
+
+
+@needs_git
+@pytest.mark.parametrize(
+    "txt, err",
+    [
+        ("date,netto\n2026-09-29,0.1\n", "KeyError"),
+        (CARRY_CSV_TXT.replace(",3,True,", ",inf,True,"), "OverflowError"),  # int(float("inf"))
+    ],
+    ids=["brak-kolumn", "nieskonczonosc"],
+)
+def test_bad_carry_file_does_not_block_the_page(tmp_path, capsys, txt, err):
+    files = dict(FILES)
+    files["carry_wyniki.csv"] = txt
+    out = tmp_path / "stan.json"
+    assert sd.main([str(_repo(tmp_path, files)), str(out)]) == 0
+    state = json.loads(out.read_text(encoding="utf-8"))
+    assert state["carry"]["error"].startswith(err) and state["r1"]["dates"]
+    assert "(f) carry: nie da się odczytać carry_wyniki.csv" in capsys.readouterr().out
