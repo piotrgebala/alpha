@@ -1,6 +1,28 @@
 # OS1 — otwarcia sesji (Tokio, Londyn, Nowy Jork) na BTC perp: rachunek mierzalności (2026-09-28)
 
-> **STATUS: PRE-REJESTRACJA** (wynik poniżej po przebiegu).
+> **STATUS: ZAMKNIĘTA — NIEMIERZALNA, nie startuje (0 wariantów zużytych).** Wszystkie ramiona (2 łączne + 6 per
+> sesja, oba koszty) wymagają trafności 56,5–70 %, a najlepszy prior z literatury daje 52,8–54,0 %; nawet konwencja
+> projektu 56 % nie przechodzi. Kolejność w gicie: pre-rejestracja + kod `ad1bd0d` → przebieg → wynik.
+
+## W skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+Pytanie: czy da się zarabiać na BTC w chwili otwarcia giełd w Tokio, Londynie albo Nowym Jorku. Zanim cokolwiek
+policzyliśmy na zyskach, sprawdziliśmy, czy nasz „przyrząd” (5,5 roku danych, około 1 430 dni roboczych na sesję)
+w ogóle jest w stanie taki zarobek zobaczyć. Odpowiedź brzmi: **nie**.
+- Jedna transakcja (wejście i wyjście zleceniem rynkowym) kosztuje 0,14 % wartości pozycji. BTC w ciągu godziny
+  po otwarciu rusza się przeciętnie o 0,4–0,7 %, a w ciągu 3,5 godziny o 0,7–1,1 %. Koszt zjada więc dużą część
+  typowego ruchu. Reguła musiałaby trafiać kierunek w 56–64 % przypadków tylko po to, żeby wyjść na zero.
+- Do tego dochodzi niepewność pomiaru: ±1,5 pkt proc. dla trzech sesji razem. Żeby wynik był rozstrzygający, reguła
+  musiałaby trafiać w 59–65 % przypadków, a z wejściem zleceniem z limitem ceny (tańszym, ale nie zawsze się
+  wykonuje) w 56,5–60 %.
+- Badania dają najwyżej około 54 %, i to w wersji najbardziej optymistycznej: liczba z próby, której nie udało się
+  sprawdzić u źródła. Nowsza praca (Kraken 2016–2025) po korekcie na liczbę sprawdzonych reguł nie odróżnia
+  najlepszej reguły od przypadku. Otwarcie w Nowym Jorku wyróżnia się tylko **zmiennością**: ruch jest
+  o ~40 % większy niż na otwarciu w Tokio czy Londynie. To zgadza się z literaturą, ale zmienność nie mówi, w którą
+  stronę pójdzie cena.
+
+**Decyzja:** runda nie startuje, żaden wariant nie został zużyty. Wynik to „nie da się rozstrzygnąć na tych danych”,
+a nie „nie działa”. Dla decyzji oznacza to jedno: otwarcia sesji nie są kandydatem na strategię w tym projekcie.
 
 ## Metadane
 
@@ -63,3 +85,57 @@ startuje; ramię MIERZALNE z tym priorem — jeden przebieg w osobnym commicie.
 
 **Reguła STOP (seria OS):** najwyżej 2 ramiona. Inne okna, czasy trzymania, sesje, odwrócenie znaku albo filtry —
 tylko decyzją użytkownika i nową pre-rejestracją.
+
+## Wynik — rachunek mierzalności (`raw_output.txt`)
+
+Dane: 96 336 świec 30m (2021-01-01 → 2026-06-30), **0 brakujących** w siatce; 1 433 dni robocze na sesję
+(F1: 1 368 po 65 dniach rozbiegu). Czas letni/zimowy zadziałał: Londyn 832 × 07:00 + 601 × 08:00 UTC, Nowy Jork
+932 × 13:30 + 501 × 14:30 UTC, Tokio 1 433 × 00:00 UTC.
+
+**Ramiona łączne (główne; `p*` = próg opłacalności przy wypłacie ±B, „wymagana” = p* + niepewność przyrządu):**
+
+| ramię | n | B = średni ruch bez znaku | p* taker / limit | ± (95 %) | wymagana taker / limit | prior (literatura) | werdykt |
+|---|---|---|---|---|---|---|---|
+| F1 dryf 60 min, 3 sesje | 4 104 | 0,52 % | 63,4 % / 58,6 % | 1,53 pp | **65,0 % / 60,2 %** | 53,6 % | NIEMIERZALNA |
+| F2 momentum 3,5 h, 3 sesje | 4 299 | 0,89 % | 57,9 % / 55,1 % | 1,49 pp | **59,4 % / 56,5 %** | 53,8 % | NIEMIERZALNA |
+
+Per sesja (opisowo, n 1 368 / 1 433, ± 2,6 pp): wymagana trafność F1 — Tokio 67,3 / 62,0 %, Londyn 70,4 / 64,1 %,
+Nowy Jork 62,8 / 59,2 %; F2 — Tokio 60,9 / 57,9 %, Londyn 62,6 / 59,0 %, Nowy Jork 58,8 / 56,6 % (taker / limit).
+Konwencja 56 % nie przechodzi w żadnym z 16 wierszy.
+
+**Rozrzut na otwarciach (opis zmienności, nie kierunku):** okno 60 min — odchylenie Tokio 0,73 %, Londyn 0,69 %,
+**Nowy Jork 0,99 %**; trzymanie 3,5 h — 1,29 / 1,13 / **1,63 %**. Mediana ruchu bez znaku jest o 35–40 % niższa
+od średniej (np. F2 Tokio 0,51 % wobec 0,84 %): grube ogony, czyli kilka dużych ruchów niesie średnią.
+
+**Druga miara (zwrot, przybliżenie gaussowskie):** F2 łącznie z priorem ρ 0,12 daje brutto ~0,131 %/transakcję.
+Do t = 1,96 potrzeba 0,181 % (taker) albo 0,131 % (limit), a do mocy 80 % (filtr G1: 1,4 × niepewność) 0,198 / 0,148 %.
+Z wejściem limitem najbardziej optymistyczny prior daje więc rzut monetą, czy przyrząd efekt zobaczy, a filtr G1
+nie przechodzi. Obie miary różnią się, bo przy grubych ogonach średni ruch bez znaku (0,89 %) jest mniejszy niż
+σ·√(2/π) (~1,09 %). Werdykt opiera się na mierze kanonicznej (trafność, zasada 18); druga go nie zmienia.
+
+## Co na plus (+) / Co na minus (−)
+
+(+) Rachunek przed pomiarem: żaden średni zwrot ani trafność reguły nie zostały policzone, historia 2021–2026 nie
+dostała kolejnego odczytu (DSR, 96). (+) Czas letni/zimowy ze stref IANA, siatka 30m bez dziur, testy dat przejść.
+(+) Prior z literatury, nie z konwencji, a mimo to werdykt odporny: nie przechodzi też konwencja 56 %.
+(−) Prior F2 to jedna liczba z próby (R² 1,44 %), niezweryfikowana w tekście i dla innego okna (pierwsza/ostatnia
+półgodzina doby UTC); prior F1 to najlepsza z 24 godzin, nie otwarcie. Oba są górnymi granicami, więc błąd działa
+na korzyść hipotezy. (−) Bez kalendarza świąt giełdowych (~4 % dni). (−) N_eff = n przyjęte bez pomiaru — górna
+granica; realna próba może być tylko mniejsza. (−) Wejście limitem 0,09 % jest optymistyczne: tuż po impulsie
+otwarcia wypełnienia są niekorzystnie wybrane (W1, KO1).
+
+## Wniosek
+
+Otwarcia sesji na BTC perp są **niemierzalne** na bazie 2021–2026 w obu formułach i we wszystkich sesjach.
+Koszt jednego obrotu (0,14 %) to 16–36 % typowego ruchu w oknie pozycji, więc próg opłacalności leży na 55–68 %
+trafności, a przyrząd dokłada ±1,5–2,6 pkt proc. Literatura po publikacji nie daje efektu bliskiego progowi.
+Otwarcie w Nowym Jorku wyróżnia się zmiennością (+40 %), nie kierunkiem.
+
+## Rekomendacja
+
+1. Nie uruchamiać reguł na otwarciach sesji; seria OS zamknięta regułą STOP (0/2 zużyte).
+2. Jedyne drogi do mierzalności to zmiany z decyzją użytkownika i nową pre-rejestracją. Pierwsza to wiele monet
+   naraz, ale korelacja w ciągu dnia jest wysoka, więc zysk mocy jest mały (40). Druga to dużo dłuższa historia,
+   której nie ma. Rekomendacja Claude: nie. Prior jest niski, a projekt ma ~40 odczytów na tej historii.
+3. Wiedza użyteczna gdzie indziej: zlecenia nóg dziennika warto składać **poza** oknem 13:30–15:30 UTC.
+   Większa zmienność na otwarciu w Nowym Jorku to większy poślizg zleceń rynkowych. To uwaga o wykonaniu, nie strategia.
