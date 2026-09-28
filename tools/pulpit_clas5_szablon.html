@@ -1,0 +1,195 @@
+<title>Pulpit CLAS-5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#ffffff; --ink:#141414; --muted:#6a6a66; --hair:#e4e4e0;
+  --accent:#c41e24; --s2:#2e6da8; --good:#2f7d4f;
+  --sans:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17181a; --ink:#ecece8; --muted:#9a9a96; --hair:#2a2b2e;
+  --accent:#e4574d; --s2:#4e97db; --good:#5caf7f;
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#17181a; --ink:#ecece8; --muted:#9a9a96; --hair:#2a2b2e;
+  --accent:#e4574d; --s2:#4e97db; --good:#5caf7f;
+  color-scheme:dark;}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:400 14px/1.55 var(--sans)}
+[hidden]{display:none!important}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:1;flex:none;background:var(--bg);border-bottom:1px solid var(--hair)}
+.bar-in{display:flex;flex-wrap:wrap;align-items:center;column-gap:24px;padding:0 20px}
+.brand{flex:none;font:600 16px/48px var(--sans);letter-spacing:-.01em}
+/* Pasek zakładek przewija się w bok we własnym kontenerze, strona nigdy. */
+.tabs-scroll{flex:0 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+.tabs{display:flex;width:max-content}
+.tabs [role="tab"]{flex:none;height:48px;margin:0;padding:2px 8px 0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--muted);font:500 12px/1 var(--mono);cursor:pointer;white-space:nowrap}
+.tabs [role="tab"]+[role="tab"]{margin-left:8px}
+.tabs [role="tab"]:hover{color:var(--ink)}
+.tabs [role="tab"][aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+/* Obwódka fokusu do środka: kontener z przewijaniem przyciąłby obwódkę odsuniętą na zewnątrz. */
+.tabs [role="tab"]:focus-visible{outline:2px solid var(--s2);outline-offset:-4px}
+.ext{flex:0 1 auto;min-width:0;margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 20px;min-height:48px;padding:8px 0}
+.ext a{font:500 12px/1.4 var(--mono);color:var(--ink);text-decoration:none;border-bottom:1px solid var(--hair);padding-bottom:2px;white-space:nowrap}
+.ext a:hover,.ext a:focus-visible{border-bottom-color:var(--accent);outline:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.panels{flex:1 1 0%;min-height:0}
+.panel{height:100%}
+.panel iframe{display:block;width:100%;height:100%;border:0}
+.msg{margin:0;padding:40px 20px 0;max-width:65ch}
+/* Wąski ekran: nazwa i linki w pierwszym wierszu, zakładki w drugim, od krawędzi do krawędzi. */
+@media (max-width:720px){
+  .ext{order:1;flex:1 1 0%}
+  .tabs-scroll{order:2;flex:1 0 calc(100% + 40px);margin:0 -20px;padding:0 12px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+<!-- Powłoka strony „Pulpit CLAS-5” (artefakt claude.ai pod adresem dziennika, adres w README.md).
+     Tego pliku NIE publikuj: python3 tools/pulpit_clas5.py wstawia na dole ładunki zakładek i zapisuje
+     tools/pulpit_clas5.html — publikuje się tamten plik. Zakładka = osobna strona w <iframe srcdoc>,
+     tworzonym przy pierwszym otwarciu i potem tylko ukrywanym (zostaje jej stan i subskrypcja bazy).
+     Styl: system projektowy CLAS-5 (szwajcarska siatka). -->
+<header class="bar">
+  <div class="bar-in">
+    <span class="brand">CLAS-5</span>
+    <div class="tabs-scroll">
+      <div class="tabs" role="tablist" aria-label="Widoki pulpitu">
+        <button type="button" role="tab" id="tab-dziennik" aria-selected="true" aria-controls="panel-dziennik" tabindex="0">Dziennik</button>
+        <button type="button" role="tab" id="tab-tokeny" aria-selected="false" aria-controls="panel-tokeny" tabindex="-1">Tokeny</button>
+        <button type="button" role="tab" id="tab-mapa" aria-selected="false" aria-controls="panel-mapa" tabindex="-1">Mapa</button>
+      </div>
+    </div>
+    <nav class="ext" aria-label="Inne strony projektu">
+      <a href="https://claude.ai/artifact/Y3uD4cuA6kyhs3UW7CXpos" target="_blank" rel="noopener">Kurs Tokenomia <span aria-hidden="true">↗</span><span class="sr"> (otwiera się w nowej karcie)</span></a>
+      <a href="https://claude.ai/artifact/EU79upTq6idwV3yHyC1p1S" target="_blank" rel="noopener">System projektowy <span aria-hidden="true">↗</span><span class="sr"> (otwiera się w nowej karcie)</span></a>
+    </nav>
+  </div>
+</header>
+<main class="panels">
+  <section class="panel" role="tabpanel" id="panel-dziennik" aria-labelledby="tab-dziennik"></section>
+  <section class="panel" role="tabpanel" id="panel-tokeny" aria-labelledby="tab-tokeny" hidden></section>
+  <section class="panel" role="tabpanel" id="panel-mapa" aria-labelledby="tab-mapa" hidden></section>
+</main>
+<script>
+(function () {
+  'use strict';
+  var ZAKLADKI = ['dziennik', 'tokeny', 'mapa'];
+  var KLUCZ = 'pulpit-clas5-zakladka';
+  var root = document.documentElement;
+  var pas = document.querySelector('.tabs-scroll');
+  var karty = ZAKLADKI.map(function (id) { return document.getElementById('tab-' + id); });
+  var panele = ZAKLADKI.map(function (id) { return document.getElementById('panel-' + id); });
+  var ramki = {};
+  var aktywna = null;
+
+  // Ładunki zakładek stoją w pliku po tym skrypcie: ramki powstają dopiero po wczytaniu dokumentu.
+  function poWczytaniu(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  // Motyw: atrybut data-theme z korzenia powłoki na korzeń dziecka (brak w powłoce = brak w dziecku).
+  function motyw(f) {
+    try {
+      var r = f.contentDocument && f.contentDocument.documentElement;
+      if (!r) return;
+      var t = root.getAttribute('data-theme');
+      if (t === null) r.removeAttribute('data-theme');
+      else r.setAttribute('data-theme', t);
+    } catch (e) { /* dziecko niedostępne: zostaje motyw ustawiony przez preludium */ }
+  }
+  try {
+    new MutationObserver(function () {
+      Object.keys(ramki).forEach(function (id) { if (ramki[id]) motyw(ramki[id]); });
+    }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  } catch (e) { /* bez obserwatora motyw dziecka ustala preludium przy starcie */ }
+
+  // Ramka zakładki: tworzona przy pierwszym otwarciu, potem tylko ukrywana razem z panelem.
+  function ramka(i) {
+    var id = ZAKLADKI[i];
+    if (id in ramki) return;
+    var dok = null;
+    try { dok = JSON.parse(document.getElementById('strona-' + id).textContent); } catch (e) { dok = null; }
+    if (typeof dok !== 'string') {
+      ramki[id] = null;
+      var m = document.createElement('p');
+      m.className = 'msg';
+      m.textContent = 'Nie udało się wczytać zakładki „' + karty[i].textContent + '”. Odśwież stronę. ' +
+        'Jeśli to nie pomoże, złóż pulpit od nowa (python3 tools/pulpit_clas5.py) i opublikuj go ponownie.';
+      panele[i].appendChild(m);
+      return;
+    }
+    var f = document.createElement('iframe');
+    f.title = karty[i].textContent + ' CLAS-5';
+    f.addEventListener('load', function () { motyw(f); });
+    f.srcdoc = dok;
+    panele[i].appendChild(f);
+    ramki[id] = f;
+  }
+
+  // Wybrana zakładka widoczna w wąskim pasku: przewija się tylko pasek, bez animacji.
+  function odslon(k) {
+    try {
+      var a = k.getBoundingClientRect(), b = pas.getBoundingClientRect();
+      if (a.left < b.left) pas.scrollLeft -= b.left - a.left;
+      else if (a.right > b.right) pas.scrollLeft += a.right - b.right;
+    } catch (e) { /* pasek bez przewijania */ }
+  }
+
+  function wybierz(i, opcje) {
+    var id = ZAKLADKI[i];
+    aktywna = id;
+    karty.forEach(function (k, j) {
+      k.setAttribute('aria-selected', j === i ? 'true' : 'false');
+      k.tabIndex = j === i ? 0 : -1;
+      panele[j].hidden = j !== i;
+    });
+    if (opcje.fokus) karty[i].focus();
+    odslon(karty[i]);
+    poWczytaniu(function () { ramka(i); });
+    if (!opcje.zapisz) return;
+    try { if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id); } catch (e) { /* adres bez zmian */ }
+    try { localStorage.setItem(KLUCZ, id); } catch (e) { /* brak pamięci przeglądarki */ }
+  }
+
+  karty.forEach(function (k, i) {
+    k.addEventListener('click', function () {
+      if (ZAKLADKI[i] !== aktywna) wybierz(i, { zapisz: true });
+    });
+    k.addEventListener('keydown', function (e) {
+      var n = karty.length, j = -1;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === 'ArrowRight') j = (i + 1) % n;
+      else if (e.key === 'ArrowLeft') j = (i + n - 1) % n;
+      else if (e.key === 'Home') j = 0;
+      else if (e.key === 'End') j = n - 1;
+      if (j < 0) return;
+      e.preventDefault();
+      wybierz(j, { fokus: true, zapisz: true });
+    });
+  });
+
+  function zAdresu() {
+    return ZAKLADKI.indexOf((location.hash || '').slice(1).toLowerCase());
+  }
+  window.addEventListener('hashchange', function () {
+    var i = zAdresu();
+    if (i >= 0 && ZAKLADKI[i] !== aktywna) wybierz(i, { zapisz: true });
+  });
+
+  // Start: #dziennik / #tokeny / #mapa w adresie > ostatnio wybrana zakładka > Dziennik.
+  var start = zAdresu();
+  if (start < 0) {
+    try { start = ZAKLADKI.indexOf(localStorage.getItem(KLUCZ)); } catch (e) { start = -1; }
+  }
+  wybierz(start < 0 ? 0 : start, {});
+})();
+</script>
+<!--@LADUNKI@-->

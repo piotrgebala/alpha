@@ -1,0 +1,399 @@
+<title>Dziennik CLAS-5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<!-- Źródło strony „Dziennik CLAS-5” — zakładka „Dziennik” strony „Pulpit CLAS-5” (adres w README.md).
+     Dane: dokument bazy dziennik/stan, zapisywany codziennie o 06:30 UTC przez rutynę Cowork (logika:
+     tools/strona_dziennika.py). Zmiana strony = edycja tego pliku, python3 tools/pulpit_clas5.py i publikacja
+     tools/pulpit_clas5.html pod adres pulpitu. Odtworzone 2026-09-28 z opublikowanej wersji (bez opakowania
+     platformy; poza tym komentarzem bajt w bajt). -->
+<style>
+:root {
+  --bg: #f4f6f9; --card: #ffffff; --soft: #eef1f6; --line: #e3e7ee;
+  --ink: #111827; --ink-2: #4b5563; --ink-3: #7b8494;
+  --accent: #1d6fe0; --main: #1d6fe0; --aux: #d97706;
+  --good: #15803d; --good-bg: #e3f6e9;
+  --warn: #a15c00; --warn-bg: #fdf1d8;
+  --bad: #c62828; --bad-bg: #fde6e6;
+  --v1: #cfe3fb; --v2: #7fb0ef; --v3: #1d5fbf;
+  --shadow: 0 1px 2px rgba(17, 24, 39, .05), 0 4px 16px rgba(17, 24, 39, .05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d1117; --card: #161b22; --soft: #1d242e; --line: #29313c;
+    --ink: #e8edf3; --ink-2: #aab4c2; --ink-3: #7f8a99;
+    --accent: #5aa2ff; --main: #5aa2ff; --aux: #f5a524;
+    --good: #5bd68a; --good-bg: #12301f;
+    --warn: #f4c15d; --warn-bg: #33270d;
+    --bad: #ff8a80; --bad-bg: #3a1716;
+    --v1: #213652; --v2: #3b6db2; --v3: #8cbcff;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1117; --card: #161b22; --soft: #1d242e; --line: #29313c;
+  --ink: #e8edf3; --ink-2: #aab4c2; --ink-3: #7f8a99;
+  --accent: #5aa2ff; --main: #5aa2ff; --aux: #f5a524;
+  --good: #5bd68a; --good-bg: #12301f;
+  --warn: #f4c15d; --warn-bg: #33270d;
+  --bad: #ff8a80; --bad-bg: #3a1716;
+  --v1: #213652; --v2: #3b6db2; --v3: #8cbcff;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 "Geist", system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 56px; display: grid; gap: 28px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -.015em; }
+h2 { font-size: 21px; font-weight: 700; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; max-width: 66ch; }
+.num { font-family: "Geist Mono", ui-monospace, "SFMono-Regular", monospace; font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-2); }
+.hint { color: var(--ink-3); font-size: 14px; }
+section { display: grid; gap: 14px; }
+.sec-head { display: grid; gap: 4px; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
+.brand i { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; }
+.brand i svg { width: 16px; height: 16px; }
+.fresh { font-size: 13px; color: var(--ink-2); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); display: grid; gap: 12px; align-content: start; }
+
+.hero { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; padding: 22px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
+.hero .ico { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; }
+.hero .ico svg { width: 26px; height: 26px; }
+.hero h1 { font-size: clamp(22px, 4.6vw, 32px); font-weight: 700; line-height: 1.15; }
+.hero .todo { margin-top: 10px; display: inline-flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 15px; }
+.hero .todo b { font-weight: 600; }
+.t-ok .ico { background: var(--good-bg); color: var(--good); }
+.t-warn .ico { background: var(--warn-bg); color: var(--warn); }
+.t-bad .ico { background: var(--bad-bg); color: var(--bad); }
+.t-bad { border-color: var(--bad); }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 820px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); display: grid; gap: 4px; align-content: start; }
+.kpi .l { font-size: 13px; color: var(--ink-2); }
+.kpi .v { font: 600 26px/1.15 "Geist Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.kpi .s { font-size: 13px; color: var(--ink-3); }
+.pos-v { color: var(--good); } .neg-v { color: var(--bad); }
+
+.checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 700px) { .checks { grid-template-columns: 1fr; } }
+.check { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+.dot { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; }
+.dot svg { width: 18px; height: 18px; }
+.dot.ok { background: var(--good-bg); color: var(--good); }
+.dot.warn { background: var(--warn-bg); color: var(--warn); }
+.dot.bad { background: var(--bad-bg); color: var(--bad); }
+.check b { display: block; font-weight: 600; }
+.check span.d { font-size: 14px; color: var(--ink-2); }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.tag.ok { background: var(--good-bg); color: var(--good); }
+.tag.warn { background: var(--warn-bg); color: var(--warn); }
+.tag.bad { background: var(--bad-bg); color: var(--bad); }
+.tag.info { background: var(--soft); color: var(--ink-2); }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
+.money { font: 600 30px/1.1 "Geist Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.money small { font-size: 15px; font-weight: 500; color: var(--ink-2); letter-spacing: 0; }
+
+.spark { width: 100%; height: 110px; display: block; }
+.axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); }
+.empty { font-size: 14px; color: var(--ink-3); padding: 12px; background: var(--soft); border-radius: 10px; }
+
+.meter { display: grid; gap: 6px; }
+.meter .track { position: relative; height: 10px; border-radius: 999px; background: var(--soft); }
+.meter .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; min-width: 4px; }
+.meter .tick { position: absolute; top: -4px; bottom: -4px; width: 2px; border-radius: 2px; }
+.meter .lab { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--ink-3); flex-wrap: wrap; }
+
+.progress .bar { height: 8px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+.progress .bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+.list { display: grid; gap: 0; }
+.list .it { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: center; }
+.list .it:last-child { border-bottom: 0; }
+.list .it b { font-weight: 600; display: block; }
+.list .it span.d { font-size: 14px; color: var(--ink-2); }
+
+.bet { display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--soft); }
+.bet b { font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips span { font: 500 13px/1 "Geist Mono", ui-monospace, monospace; padding: 7px 9px; border-radius: 8px; background: var(--soft); white-space: nowrap; }
+.chips span.l { color: var(--good); } .chips span.s { color: var(--bad); }
+.chips span.l::before { content: "▲ "; } .chips span.s::before { content: "▼ "; }
+.lbl { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+
+.strip { display: flex; flex-wrap: wrap; gap: 4px; }
+.strip span { width: 26px; height: 32px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; color: var(--ink); }
+.strip .v1 { background: var(--v1); } .strip .v2 { background: var(--v2); } .strip .v3 { background: var(--v3); color: var(--card); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; }
+td.nw { white-space: nowrap; }
+
+details { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; }
+details summary { cursor: pointer; font-weight: 600; font-size: 15px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: "+"; color: var(--ink-3); font-weight: 500; }
+details[open] summary::after { content: "−"; }
+details[open] summary { margin-bottom: 12px; }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+dl { margin: 0; display: grid; gap: 12px; }
+dt { font-weight: 600; }
+dd { margin: 2px 0 0; color: var(--ink-2); font-size: 15px; }
+footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
+.state { padding: 40px 0; color: var(--ink-2); }
+</style>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><i aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l4-4 3 3 5-6"/></svg></i>Dziennik CLAS-5</div>
+    <span class="fresh" id="fresh">wczytuję…</span>
+  </div>
+  <div id="app"><p class="state">Wczytuję stan dziennika…</p></div>
+</div>
+
+<script>
+const HOSTS = { dantey1: "serwer", pitgeb: "Twój komputer" };
+const hostName = h => h ? (HOSTS[h] || h) : "nieznana maszyna";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nf = (x, d = 1) => x == null || Number.isNaN(x) ? "—" : x.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (x, d = 1, sign = false) => x == null ? "—" : (sign && x > 0 ? "+" : "") + nf(x * 100, d) + " %";
+const MONTHS = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
+const longDate = iso => { if (!iso) return "—"; const [y, m, d] = iso.slice(0, 10).split("-").map(Number); return `${d} ${MONTHS[m - 1]}`; };
+const short = iso => { if (!iso) return "—"; const [, m, d] = iso.slice(0, 10).split("-"); return `${d}.${m}`; };
+const warsawDay = t => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Warsaw" }).format(t);
+const hm = iso => new Intl.DateTimeFormat("pl-PL", { timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+function when(iso) {
+  if (!iso) return "—";
+  const d = warsawDay(new Date(iso)), today = warsawDay(new Date()), yest = warsawDay(new Date(Date.now() - 86400000));
+  const day = d === today ? "dziś" : d === yest ? "wczoraj" : longDate(d);
+  return `${day}, ${hm(iso)}`;
+}
+const dayDiff = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+const sym = s => esc(String(s).replace(/USDT$/, ""));
+const ICON = {
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 7v6"/><circle cx="12" cy="17" r=".6" fill="currentColor"/><path d="M10.3 3.9L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>',
+  bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+};
+const ddLevel = (dd, th) => dd == null ? "info" : dd >= th.stop ? "bad" : dd >= th.warn ? "warn" : "ok";
+
+function status(D) {
+  const ageH = (Date.now() - Date.parse(D.generated_at)) / 3600000;
+  const H = D.health, C = D.criteria;
+  const r1 = ddLevel(D.r1.drawdown.at(-1), D.thresholds.r1), x1 = D.x1 ? ddLevel(D.x1.drawdown.at(-1), D.thresholds.x1) : "ok";
+  if (ageH > 30) return ["bad", `Strona nie odświeżyła się od ${Math.round(ageH)} godzin`, "Liczby poniżej mogą być nieaktualne.", "sprawdź zadanie odświeżania strony w zaplanowanych zadaniach."];
+  if (H.latest_as_of !== D.expected_as_of) return ["bad", `Dziennik nie policzył się za ${longDate(D.expected_as_of)}`, "Ostatnie obliczenie jest starsze, niż powinno.", "sprawdź, czy serwer działa i czy zapisuje dziennik do repo."];
+  if (r1 === "bad" || x1 === "bad") return ["bad", "Spadek przekroczył próg STOP", "Tak duży spadek zapisano z góry jako moment decyzji.", "zdecyduj, czy przerwać test. Dziennik sam się nie wyłączy."];
+  if (C.consistency.after_first_result > 0) return ["bad", "Dziennik zmienił wcześniej zapisane liczby", "Raz zapisane pozycje i wyniki nie powinny się zmieniać.", "trzeba znaleźć przyczynę przed odczytem 25 grudnia."];
+  if (r1 === "warn" || x1 === "warn") return ["warn", "Spadek przekroczył próg ostrzeżenia", "Portfel stracił więcej niż w najgorszym okresie w historii testów.", "nic pilnego. Obserwuj; decyzja zapada dopiero przy progu STOP."];
+  if (H.hosts_last_day.length > 1) return ["warn", "Wszystko działa, ale dziennik policzyły dwie maszyny", `${longDate(H.last_journal_date)} obliczenie zrobił i serwer, i Twój komputer. Wyniki wyszły takie same.`, "nic, jeśli od następnej nocy liczy już tylko serwer."];
+  return ["ok", "Wszystko działa", "Dziennik liczy się sam każdej nocy i nic nie wymaga Twojej uwagi.", "nic."];
+}
+
+function spark(dates, eq, color) {
+  const vals = (eq || []).map(v => v ?? NaN);
+  if (vals.filter(Number.isFinite).length < 2) return `<p class="empty">Wykres pojawi się od drugiego dnia z wynikiem.</p>`;
+  const W = 300, H = 100, P = 6;
+  const fin = vals.filter(Number.isFinite), lo = Math.min(1, ...fin), hi = Math.max(1, ...fin);
+  const pad = (hi - lo) * .15 || .002, y0 = lo - pad, y1 = hi + pad;
+  const X = i => P + i * (W - 2 * P) / (vals.length - 1), Y = v => H - P - (v - y0) * (H - 2 * P) / (y1 - y0);
+  const pts = vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`), n = vals.length - 1;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Wartość 100 zł w czasie">
+    <line x1="0" x2="${W}" y1="${Y(1)}" y2="${Y(1)}" stroke="var(--ink-3)" stroke-dasharray="3 4" stroke-width="1" vector-effect="non-scaling-stroke"/>
+    <path d="M${X(0)},${Y(1)} L${pts.join(" L")} L${X(n)},${Y(1)} Z" fill="${color}" fill-opacity=".12"/>
+    <polyline points="${pts.join(" ")}" fill="none" stroke="${color}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${X(n)}" cy="${Y(vals[n])}" r="4" fill="${color}" stroke="var(--card)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  </svg><div class="axis"><span>${short(dates[0])}</span><span>przerywana linia = 100 zł na starcie</span><span>${short(dates[n])}</span></div>`;
+}
+
+function meter(dd, th) {
+  const lvl = ddLevel(dd, th), col = { ok: "var(--good)", warn: "var(--warn)", bad: "var(--bad)", info: "var(--ink-3)" }[lvl];
+  const w = Math.min(100, Math.max(0, (dd || 0) / th.stop * 100));
+  return `<div class="meter"><div class="row"><span class="muted">Spadek od najwyższego stanu</span><span class="num"><b>${pct(dd || 0)}</b></span></div>
+    <div class="track"><div class="fill" style="width:${w}%;background:${col}"></div><div class="tick" style="left:${th.warn / th.stop * 100}%;background:var(--warn)"></div><div class="tick" style="right:0;background:var(--bad)"></div></div>
+    <div class="lab"><span>0 %</span><span>ostrzeżenie przy ${pct(th.warn)}</span><span>STOP przy ${pct(th.stop)}</span></div></div>`;
+}
+
+function portfolioCard({ name, about, color, s, th, start }) {
+  const has = s && s.equity && s.equity.length;
+  const eq = has ? s.equity.at(-1) : null, dd = has ? s.drawdown.at(-1) : null;
+  const lvl = has ? ddLevel(dd, th) : "info";
+  const tag = { ok: "w normie", warn: "ostrzeżenie", bad: "STOP", info: "czeka na pierwszy wynik" }[lvl];
+  return `<div class="card">
+    <div class="row"><h3><span class="swatch" style="background:${color}"></span>${name}</h3><span class="tag ${lvl}">${tag}</span></div>
+    <p class="hint">${about}</p>
+    ${has ? `<div class="money">${nf(eq * 100, 2)} zł <small>z każdych 100 zł · ${pct(eq - 1, 2, true)}</small></div>
+      ${meter(dd, th)}${spark(s.dates, s.equity, color)}`
+      : `<p class="empty">Wynik liczy się od ${longDate(start)}. Pierwsza liczba pojawi się po nocnym obliczeniu, które zamknie ten dzień.</p>`}
+  </div>`;
+}
+
+function render(D) {
+  const H = D.health, C = D.criteria, P = D.positions, L = D.last_run, T = D.thresholds;
+  document.getElementById("fresh").textContent = `odświeżono ${when(D.generated_at)}`;
+  const [lvl, title, why, todo] = status(D);
+  const hero = `<div class="hero t-${lvl}"><div class="ico">${ICON[lvl]}</div><div><h1>${esc(title)}</h1><p class="muted" style="margin-top:6px">${esc(why)}</p><div class="todo"><b>Co zrobić:</b><span>${esc(todo)}</span></div></div></div>`;
+
+  // --- liczby na górze
+  const total = dayDiff(D.start.r1, D.start.reading), day = Math.max(0, Math.min(total, dayDiff(D.start.r1, D.expected_as_of) + 1));
+  const r1eq = D.r1.equity.at(-1), x1eq = D.x1?.equity.at(-1);
+  const cls = v => v == null ? "" : v > 1 ? "pos-v" : v < 1 ? "neg-v" : "";
+  const kpis = `<div class="kpis">
+    <div class="kpi"><span class="l">Portfel główny</span><span class="v ${cls(r1eq)}">${r1eq == null ? "—" : pct(r1eq - 1, 2, true)}</span><span class="s">od ${longDate(D.start.r1)}</span></div>
+    <div class="kpi"><span class="l">Portfel pomocniczy</span><span class="v ${cls(x1eq)}">${x1eq == null ? "—" : pct(x1eq - 1, 2, true)}</span><span class="s">${x1eq == null ? "pierwszy wynik wkrótce" : "od " + longDate(D.start.x1)}</span></div>
+    <div class="kpi"><span class="l">Największy spadek (główny)</span><span class="v">${pct(Math.max(0, ...D.r1.drawdown.filter(v => v != null)), 1)}</span><span class="s">ostrzeżenie przy ${pct(T.r1.warn)}</span></div>
+    <div class="kpi"><span class="l">Dzień testu</span><span class="v">${day}<span style="font-size:15px;color:var(--ink-3)"> / ${total}</span></span><span class="s">podsumowanie ${longDate(D.start.reading)}</span></div>
+  </div>`;
+
+  // --- czy wszystko działa
+  const fresh = H.latest_as_of === D.expected_as_of, srcOk = L && L.binance === L.as_of && L.premia === L.as_of;
+  const pre = H.history_events.filter(e => e.before_first_result).length, after = C.consistency.after_first_result;
+  const oneHost = H.hosts_last_day.length <= 1;
+  const checks = [
+    [fresh ? "ok" : "bad", "Dziennik policzył się dziś",
+      fresh ? `Ostatnie obliczenie: ${when(L?.ts)}, na cenach z końca dnia ${longDate(H.latest_as_of)}.`
+            : `Brakuje obliczenia na cenach z ${longDate(D.expected_as_of)}. Ostatnie jest z ${longDate(H.latest_as_of)}.`],
+    [srcOk ? "ok" : "warn", "Ceny z giełd są aktualne",
+      srcOk ? "Binance i Coinbase dostarczyły ceny z właściwego dnia." : `Binance ma ceny do ${longDate(L?.binance)}, Coinbase do ${longDate(L?.premia)}.`],
+    [after ? "bad" : "ok", "Stare zapisy się nie zmieniły",
+      after ? `${after} razy dziennik zmienił coś, co już zapisał. To trzeba wyjaśnić.`
+        : `Raz zapisane pozycje i wyniki zostają bez zmian, tak jak powinny.${pre ? ` (${pre} zmiany z ${longDate(H.history_events[0].ts)} były jeszcze przed pierwszym wynikiem, w czasie przygotowań.)` : ""}`],
+    [oneHost ? "ok" : "warn", "Liczy tylko jedna maszyna",
+      oneHost ? `Ostatnio policzył: ${hostName(H.hosts_last_day[0])}.`
+        : `${longDate(H.last_journal_date)} policzyli: ${H.hosts_last_day.map(hostName).join(" i ")}. Wynik wyszedł ten sam, ale docelowo ma liczyć tylko serwer.`],
+  ];
+  const checksHtml = `<div class="checks">${checks.map(([c, h, d]) => `<div class="check"><span class="dot ${c}">${ICON[c]}</span><span><b>${h}</b><span class="d">${esc(d)}</span></span></div>`).join("")}</div>`;
+
+  // --- portfele
+  const portfolios = `<div class="two">
+    ${portfolioCard({ name: "Portfel główny", color: "var(--main)", s: D.r1, th: T.r1, start: D.start.r1,
+      about: "Dwie strategie razem: podążanie za trendem na 20 największych monetach i zakład na Bitcoina według tego, czy na amerykańskiej giełdzie Coinbase płaci się za niego ostatnio więcej niż zwykle." })}
+    ${portfolioCard({ name: "Portfel pomocniczy", color: "var(--aux)", s: D.x1, th: T.x1, start: D.start.x1,
+      about: "Osobny test: kupuje 5 monet, które ostatnio rosły najmocniej, i gra na spadek 5 najsłabszych. Liczony oddzielnie, bez pożyczonych pieniędzy." })}
+  </div>
+  <p class="hint">Wszystko jest „na papierze”: żadne prawdziwe pieniądze nie biorą udziału. Progi ostrzeżenia i STOP zapisano przed startem. Pierwsze tygodnie to w dużej mierze przypadek — o wyniku nie da się jeszcze nic powiedzieć.</p>`;
+
+  // --- egzamin
+  const comp = C.completeness, tim = C.timeliness, mg = C.margin, km = C.k_max, share = (a, b) => b ? a / b : null;
+  const crit = [
+    ["Liczył się codziennie", comp.days ? `${comp.covered} z ${comp.days} dni` : "—", "co najmniej 95 % dni", share(comp.covered, comp.days) >= .95],
+    ["Ceny były na czas", tim.days ? `${tim.days - tim.late.length} z ${tim.days} dni` : "—", "co najmniej 95 % dni", share(tim.days - tim.late.length, tim.days) >= .95],
+    ["Stare zapisy bez zmian", after ? `${after} zmian` : "bez zmian", "zero niewyjaśnionych zmian", !after],
+    ["Zablokowane środki w normie", mg.median == null ? "—" : `średnio ${pct(mg.median, 0)} kapitału`, "od 15 do 35 %", mg.median != null && mg.median >= .15 && mg.median <= .35],
+    ["Ryzyko w limicie", `maks. ${nf(Math.max(km.trend ?? 0, km.coinbase ?? 0), 2)}`, `nie więcej niż ${nf(km.cap, 0)}`, Math.max(km.trend ?? 0, km.coinbase ?? 0) <= km.cap],
+  ];
+  const exam = `<div class="card">
+    <div class="progress"><div class="row" style="margin-bottom:8px"><b>Dzień ${day} z ${total}</b><span class="hint">podsumowanie ${longDate(D.start.reading)}</span></div><div class="bar"><i style="width:${day / total * 100}%"></i></div></div>
+    <div class="list">${crit.map(([k, v, w, ok]) => `<div class="it"><span><b>${k}</b><span class="d"><span class="num">${esc(v)}</span> · wymóg: ${w}</span></span><span class="tag ${ok ? "ok" : "warn"}">${ok ? "spełnia" : "do sprawdzenia"}</span></div>`).join("")}</div>
+  </div>
+  <p class="hint">„Zablokowane środki” to część kapitału, którą giełda trzyma jako zabezpieczenie otwartych pozycji. „Ryzyko” to mnożnik, którym system dzieli ryzyko między strategie — nie może przekroczyć 2.</p>`;
+
+  // --- pozycje
+  let positions = `<p class="empty">Brak pozycji w danych.</p>`;
+  if (P) {
+    const cb = P.cb, tr = P.trend, dir = cb.exposure > 0 ? "kupuje" : cb.exposure < 0 ? "gra na spadek" : "nie ma pozycji na";
+    const chip = ([s, v], d = 1) => `<span class="${v > 0 ? "l" : "s"}">${sym(s)} ${nf(Math.abs(v) * 100, d)}</span>`;
+    positions = `<div class="two">
+      <div class="card">
+        <div class="row"><h3><span class="swatch" style="background:var(--main)"></span>Portfel główny</h3></div>
+        <div class="bet"><b>Bitcoin: ${dir} za ${pct(Math.abs(cb.exposure), 0)} kapitału</b><span class="hint">Zakład według różnicy cen Coinbase i reszty rynku. Zablokowane środki: ${pct(cb.margin, 0)}.</span></div>
+        <div class="bet"><b>Trend: ${tr.long} monet na wzrost, ${tr.short} na spadek</b><span class="hint">Łącznie przewaga zakładów na wzrost ${pct(tr.net, 0)} kapitału. Zablokowane środki: ${pct(tr.margin_phases, 0)}.</span></div>
+        <span class="lbl">największe pozycje trendu</span>
+        <div class="chips">${tr.top_long.slice(0, 8).map(z => chip(z)).join("")}${tr.top_short.slice(0, 3).map(z => chip(z)).join("")}</div>
+      </div>
+      <div class="card">
+        <div class="row"><h3><span class="swatch" style="background:var(--aux)"></span>Portfel pomocniczy</h3></div>
+        ${P.x1 ? `<span class="lbl">kupuje (najmocniejsze)</span><div class="chips">${P.x1.long.map(z => chip(z)).join("")}</div>
+          <span class="lbl">gra na spadek (najsłabsze)</span><div class="chips">${P.x1.short.map(z => chip(z)).join("")}</div>`
+          : `<p class="empty">Brak pozycji na ten dzień.</p>`}
+      </div>
+    </div>
+    <p class="hint">▲ zakład na wzrost, ▼ zakład na spadek. Liczba to procent kapitału danego portfela. Każdy portfel dzieli się na 7 części i codziennie odnawia jedną z nich, dlatego pozycje zmieniają się stopniowo.</p>
+    <details><summary>Nowe zlecenia na ${longDate(P.for_day)} (${P.orders.length})</summary>
+      <div class="chips">${P.orders.map(o => chip([o.sym, o.exp], 2)).join("")}</div>
+      <p class="hint" style="margin-top:10px">To pozycje części portfela, która odnawia się dziś. Liczba to procent kapitału portfela głównego.</p>
+    </details>`;
+  }
+
+  // --- rynek
+  const M = D.market, mood = { niska: "spokojny", srednia: "normalny", wysoka: "nerwowy" };
+  const market = M && M.dates.length ? `<div class="card">
+    <div class="two" style="gap:10px">
+      <div class="bet"><span class="hint">Rynek jest teraz</span><b style="font-size:20px">${mood[M.stan.at(-1)] || "—"}</b><span class="hint">Bitcoin waha się o ${pct(M.vol30.at(-1), 0)} w skali roku</span></div>
+      <div class="bet"><span class="hint">Bitcoin w ostatnich 3 miesiącach</span><b style="font-size:20px">${M.trend90.at(-1) > 0 ? "w górę" : M.trend90.at(-1) < 0 ? "w dół" : "bez zmian"} ${pct(M.r90.at(-1), 0, true)}</b><span class="hint">stan na ${longDate(M.dates.at(-1))}</span></div>
+    </div>
+    <span class="lbl">dzień po dniu</span>
+    <div class="strip" role="img" aria-label="Nastrój rynku dzień po dniu">${M.dates.map((d, i) => `<span class="${{ niska: "v1", srednia: "v2", wysoka: "v3" }[M.stan[i]] || ""}" title="${short(d)}: ${mood[M.stan[i]] || "—"}">${M.trend90[i] > 0 ? "▲" : M.trend90[i] < 0 ? "▼" : "·"}</span>`).join("")}</div>
+    <div class="legend"><span><i style="background:var(--v1)"></i>spokojny</span><span><i style="background:var(--v2)"></i>normalny</span><span><i style="background:var(--v3)"></i>nerwowy</span><span>▲▼ kierunek Bitcoina z 3 miesięcy</span></div>
+  </div>` : `<p class="empty">Pierwszy wpis pojawi się po najbliższym nocnym obliczeniu.</p>`;
+  const marketNote = `<p class="hint">Tylko notatka, nie wpływa na pozycje. Po kilku miesiącach pokaże, która strategia radzi sobie przy spokojnym, a która przy nerwowym rynku.</p>`;
+
+  // --- historia
+  const runs = [...D.log_tail].reverse();
+  const x1note = s => /BŁĄD/.test(s || "") ? "błąd portfela pomocniczego" : "";
+  const note = r => [r.changed ? `zmieniono ${r.changed} starych zapisów` : "", x1note(r.x1), /BŁĄD/.test(r.stan || "") ? "błąd notatki o rynku" : "", r.status !== "OK" ? r.status : ""].filter(Boolean).join(", ") || "w porządku";
+  const history = `<div class="card" style="padding:6px 6px"><div class="tablewrap"><table><thead><tr><th>Kiedy</th><th>Ceny z dnia</th><th>Portfel główny</th><th>Uwagi</th></tr></thead><tbody>
+    ${runs.map(r => `<tr><td class="nw">${when(r.ts)}</td><td class="nw">${short(r.as_of)}</td><td class="num">${r.eq == null ? "—" : nf(r.eq * 100, 2) + " zł"}</td><td style="${r.changed ? "color:var(--bad)" : ""}">${esc(note(r))}</td></tr>`).join("")}
+  </tbody></table></div></div>
+  <details><summary>Kto zapisał dziennik (${D.commits.length})</summary>
+    <div class="list">${D.commits.map(c => `<div class="it"><span><b>${longDate(c.date)}</b><span class="d">${esc(hostName(c.host))}, zapis ${when(c.ts)}</span></span>${H.double_days.includes(c.date) ? '<span class="tag warn">dwie maszyny</span>' : ""}</div>`).join("")}</div>
+  </details>`;
+
+  const glossary = `<details><summary>Słowniczek</summary><dl>
+    <div><dt>Dziennik papierowy</dt><dd>Codzienny zapis, co zrobiłby system, gdyby grał prawdziwymi pieniędzmi. Pozycje zapisuje się przed poznaniem wyniku, żeby nie dało się niczego poprawić po fakcie.</dd></div>
+    <div><dt>Ceny z końca dnia</dt><dd>Obliczenie w nocy korzysta z cen zamknięcia poprzedniego dnia (według czasu UTC, czyli o 2:00 w nocy w Polsce latem).</dd></div>
+    <div><dt>Spadek od najwyższego stanu</dt><dd>O ile procent portfel jest poniżej swojego najlepszego dotychczasowego wyniku.</dd></div>
+    <div><dt>Ostrzeżenie i STOP</dt><dd>Ostrzeżenie to najgorszy spadek z historycznych testów. STOP to 1,5 raza więcej — wtedy decydujesz, czy przerwać.</dd></div>
+    <div><dt>Premia Coinbase</dt><dd>Różnica między ceną Bitcoina na amerykańskiej giełdzie Coinbase a resztą świata. Gdy w ostatnim tygodniu ta różnica jest wyższa niż średnio z ostatnich 3 miesięcy, system kupuje Bitcoina; gdy niższa, gra na spadek.</dd></div>
+    <div><dt>Trend</dt><dd>Moneta, która rosła przez ostatnie 4 tygodnie, dostaje zakład na wzrost; która spadała — na spadek.</dd></div>
+    <div><dt>7 części portfela</dt><dd>Portfel jest podzielony na 7 kawałków, a codziennie odnawia się tylko jeden. Dzięki temu wynik nie zależy od jednego dnia tygodnia.</dd></div>
+    <div><dt>Podsumowanie 25 grudnia</dt><dd>Po 3 miesiącach sprawdzamy, czy dziennik działał porządnie. Czy strategia zarabia, będzie można ocenić dopiero po dłuższym czasie.</dd></div>
+  </dl></details>`;
+
+  const stale = (Date.now() - Date.parse(D.generated_at)) / 3600000 > 30;
+  document.getElementById("app").innerHTML = `<div style="display:grid;gap:28px">
+    ${hero}${kpis}
+    <section><div class="sec-head"><h2>Czy wszystko działa?</h2><p class="hint">Cztery rzeczy, które muszą grać, żeby dziennikowi można było wierzyć.</p></div>${checksHtml}</section>
+    <section><div class="sec-head"><h2>Ile jest warte 100 zł</h2><p class="hint">Co stałoby się ze 100 zł wpłaconymi na start każdego portfela.</p></div>${portfolios}</section>
+    <section><div class="sec-head"><h2>Podsumowanie 25 grudnia</h2><p class="hint">Po 3 miesiącach sprawdzamy, czy dziennik działał porządnie. Tak wygląda to dziś.</p></div>${exam}</section>
+    <section><div class="sec-head"><h2>Co portfele trzymają ${P ? "na " + longDate(P.for_day) : ""}</h2><p class="hint">Pozycje wyliczone z cen z końca ${P ? longDate(P.as_of) : "dnia"}.</p></div>${positions}</section>
+    <section><div class="sec-head"><h2>Nastrój rynku</h2><p class="hint">Krótka notatka o tym, jaki był rynek każdego dnia.</p></div>${market}${marketNote}</section>
+    <section><div class="sec-head"><h2>Historia obliczeń</h2><p class="hint">Każde nocne obliczenie dziennika, najnowsze na górze.</p></div>${history}</section>
+    ${glossary}
+    <footer><span>Dane z plików dziennika w repozytorium projektu, pobierane raz dziennie około 8:30.${stale ? " Ostatnie odświeżenie się nie udało." : ""}</span><span>Strona tylko pokazuje dziennik — niczego nie liczy od nowa i niczego w nim nie zmienia.</span></footer>
+  </div>`;
+}
+
+function showState(title, text) {
+  document.getElementById("fresh").textContent = "brak danych";
+  document.getElementById("app").innerHTML = `<div class="hero t-warn"><div class="ico">${ICON.warn}</div><div><h1>${esc(title)}</h1><p class="muted" style="margin-top:6px">${esc(text)}</p></div></div>`;
+}
+
+(async () => {
+  const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+  if (!db) return showState("Nie mogę wczytać danych", "Ten widok nie ma dostępu do danych strony. Otwórz ją w Claude jako zalogowany użytkownik.");
+  db.doc("dziennik/stan").onSnapshot(
+    snap => {
+      if (!snap.exists) return showState("Czekam na pierwsze odświeżenie", "Dane dziennika pojawią się po najbliższym odświeżeniu strony.");
+      try { render(snap.data()); } catch (e) { showState("Nie udało się pokazać danych", "Zapisane dane mają nieoczekiwany kształt: " + e.message); }
+    },
+    () => showState("Nie udało się wczytać danych", "Odśwież stronę za chwilę.")
+  );
+})();
+</script>
