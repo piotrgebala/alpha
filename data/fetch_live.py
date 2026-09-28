@@ -157,9 +157,12 @@ def fetch_coinm_funding_safe(out_dir: Path) -> Path | None:
     """
     Funding COIN-M `BTCUSD_PERP` do `out_dir` (poprawka 12, noga carry): historia od startu nogi
     (`journal_carry.CARRY_START`), pobierana od nowa i nadpisywana przy każdym przebiegu — plik rośnie
-    o 3 rozliczenia dziennie (jedno zapytanie na ~330 dni), a późniejsza zmiana stawki po stronie giełdy
-    wychodzi w dzienniku jako „historia zmieniona”. Błąd sieci/schematu → wydruk i `None`; stary plik
-    zostaje, pozostałe nogi liczą się normalnie, a dziennik zgłasza „carry spóźnione”.
+    o 3 rozliczenia dziennie (jedno zapytanie na ~330 dni), a późniejsza zmiana stawki po stronie
+    giełdy wychodzi w dzienniku jako pole „carry zmiany N”. Błąd sieci/schematu (wyjątek) → wydruk
+    i `None`; stary plik zostaje, pozostałe nogi liczą się normalnie, a dziennik zgłasza „carry
+    spóźnione”. Pusta odpowiedź giełdy (HTTP 200 z `[]`) to nie wyjątek: plik zostaje nadpisany
+    pustym. Wtedy `carry_wyniki.csv` zostaje nietknięty, ten jeden przebieg zgłasza „carry
+    spóźnione”, a następny pobiera całą historię od nowa i dopisuje zaległe dni.
     """
     from backtest.journal_carry import CARRY_START, CARRY_SYMBOL
     from data.fetch_external import fetch_coinm_funding

@@ -299,12 +299,14 @@ na żywo: czy to, co policzyliśmy na historii, zgadza się z tym, co giełda ro
 
 **Dane.** Historia funding COIN-M z Binance (`dapi/v1/fundingRate`, publiczna, bez klucza) — ta sama funkcja co w D1
 (`fetch_external.fetch_coinm_funding`). Pobierana w każdym przebiegu od startu nogi i nadpisywana (jedno zapytanie; plik rośnie
-o 3 rozliczenia dziennie). Dzięki temu późniejsza zmiana stawki po stronie giełdy wyjdzie jako „historia zmieniona”. Plik:
-`data/raw/live/binance_cm_funding_BTCUSD_PERP.parquet` (poza gitem). Błąd pobrania nie zatrzymuje dziennika: stary plik zostaje,
-a pozostałe nogi liczą się normalnie.
+o 3 rozliczenia dziennie). Dzięki temu późniejsza zmiana stawki po stronie giełdy wyjdzie jako pole „carry zmiany N” w logu.
+Plik: `data/raw/live/binance_cm_funding_BTCUSD_PERP.parquet` (poza gitem). Błąd pobrania (sieć, zły format) nie zatrzymuje
+dziennika: stary plik zostaje, a pozostałe nogi liczą się normalnie. Inaczej przy pustej odpowiedzi giełdy (poprawna odpowiedź
+bez rekordów): wtedy plik zostaje nadpisany pustym. Skutek jest łagodny: `carry_wyniki.csv` zostaje nietknięty, ten jeden
+przebieg zgłasza „carry spóźnione”, a następny pobiera całą historię od nowa i dopisuje zaległe dni.
 
 **Plik `carry_wyniki.csv`** — append-only jak `wyniki.csv` (istniejących wierszy przebieg nie zmienia; inna wartość przy
-przeliczeniu = „historia zmieniona”, stary zapis zostaje). Jeden wiersz na każdy zamknięty dzień UTC od 2026-09-29. Dzień trafia
+przeliczeniu = pole „carry zmiany N” w logu, stary zapis zostaje). Jeden wiersz na każdy zamknięty dzień UTC od 2026-09-29. Dzień trafia
 do pliku dopiero wtedy, gdy dane mają rozliczenie z dnia następnego — wtedy brak rozliczenia to prawdziwy brak, a nie „jeszcze
 nie pobrane”. Kolumny:
 - `date` — dzień UTC;
@@ -320,9 +322,13 @@ nie pobrane”. Kolumny:
 jest wklejony w rutynę Cowork, a nowe pola psuły go przy poprawkach 8–10. Jedyna zmiana w treści: „opisy strategii 5” zamiast 4
 (piąty opis, mechanizm poprawki 10). Pole „carry …” dochodzi przed „historia zmieniona” **tylko przy kłopocie**: „carry BŁĄD <typ>”
 (błąd liczenia albo zapisu; pełny komunikat w wydruku), „carry brak pliku” (brak danych COIN-M), „carry spóźnione” (ostatni
-zamknięty dzień w danych jest wcześniejszy niż dzień dziennika — zwykle nieudane pobranie). Różnice w `carry_wyniki.csv` liczą się
-do „historia zmieniona: N”. Wydruk (`ostatni_wydruk.txt`) ma nową linię „Carry COIN-M (poprawka 12 …)”: ostatni dzień, liczba
-rozliczeń, suma stawek, netto i netto skumulowane. Carry **nie** trafia do `wyniki.csv`, `rozbicie.csv`, `fazy.csv`, `koszyk.csv`
+zamknięty dzień w danych jest wcześniejszy niż dzień dziennika — zwykle nieudane pobranie). Różnice w `carry_wyniki.csv` mają
+**własne pole „carry zmiany N”** (N = liczba dni, w których przeliczenie różni się od zapisu), tylko gdy są. Stoi po polu
+kłopotu, np. „carry spóźnione | carry zmiany 2”. Wspólny licznik „historia zmieniona: N” i kryterium 2 głównego dziennika
+carry **nie obejmują**: trwała różnica w carry (np. giełda później dopisze rozliczenie zamkniętego dnia) zapalałaby alarm
+codziennie i zasłaniałaby zmiany R1 i X1. Wydruk (`ostatni_wydruk.txt`) ma nową linię „Carry COIN-M (poprawka 12 …)”: ostatni
+dzień, liczba rozliczeń, suma stawek, netto i netto skumulowane. Przy zmianach dochodzi linia z datami i kolumnami zmienionych
+wierszy (pierwsze 5 dni). Carry **nie** trafia do `wyniki.csv`, `rozbicie.csv`, `fazy.csv`, `koszyk.csv`
 ani `x1_*` — ich kontrole sumują się do wyników innych nóg; rozbicie carry niesie sam `carry_wyniki.csv`.
 
 **Czego się spodziewać — liczby z D1, bez nowych przeliczeń** (`runs/2026-09-23_d1-produkt-carry/README.md`, Q2 i Q4). Średnia D1
@@ -350,29 +356,33 @@ ceny. Przewagi się tu nie sprawdza i nie ma progu obalenia (kryterium 5 tej nog
    na realnym koncie dopiero na szczeblu 4 (tryb izolowany, ziarno kontraktu 100 USD — D1, „Co na minus”).
 
 **Kryterium odczytu po ~3 miesiącach** (razem z odczytem dziennika ok. 2026-12-25; zapisane przed pierwszym wierszem carry):
-- **(a) terminowość:** pole „carry …” (spóźnione, brak pliku, BŁĄD) w ≤ 5 % przebiegów od 2026-09-30 (z `przebiegi.log`);
+- **(a) terminowość:** pole „carry …” z kłopotem (spóźnione, brak pliku, BŁĄD — nie „carry zmiany”) w ≤ 5 % przebiegów
+  od 2026-09-30 (z `przebiegi.log`);
 - **(b) kompletność:** `komplet = True` w ≥ 95 % dni od 2026-09-29, każdy dzień z `False` wyjaśniony (brak po stronie giełdy
   czy błąd pobierania). Dla skali: na historii D1 (2 007 dni, 2021-01-01 → 2026-06-30) niepełny był 1 dzień — 30.06.2026,
   brak rozliczenia 08:00 w historii Binance;
 - **(c) zgodność z giełdą (druga droga):** przy odczycie jedno ponowne pobranie historii od 2026-09-29 i przeliczenie
-  `journal_carry.carry_rows` daje te same wiersze co plik, do 1e-9; każda różnica wyjaśniona (to jednocześnie sprawdzian
-  „historia zmieniona” = 0 dla `carry_wyniki.csv`);
+  `journal_carry.carry_rows` daje te same wiersze co plik, do 1e-9, a pole „carry zmiany” nie pojawiło się w `przebiegi.log`
+  ani razu; każda różnica wyjaśniona;
 - **wynik opisowo, bez werdyktu:** `netto_skum` i ta sama suma przeliczona na rok, obok tabeli powyżej.
 Niespełnione (a)–(c) = błąd mechaniki do wyjaśnienia, nie ocena strategii.
 
 **Ścieżka odwrotu.** Revert commita tej poprawki: dziennik wraca do 4 strategii, linia logu do „opisy strategii 4”, pobieranie
 COIN-M znika. `carry_wyniki.csv` zostaje w gicie jako historia (danych nie kasujemy).
 
-**Testy** (`tests/test_journal_carry.py`; zmienione oczekiwania w `tests/test_live_journal.py` i nowy format błędu
-w `tests/test_strona_dziennika.py`): trzy rozliczenia dziennie sumują się do wiersza; koszt wejścia tylko pierwszego dnia;
-dzień zapisany dopiero po rozliczeniu z dnia następnego, a nowy dzień nie zmienia starych wierszy; brakujące rozliczenie i dzień
-bez rozliczeń oznaczone, nie pominięte; znaczniki z opóźnieniem 0–7 ms dają to samo co bez niego; zmiana rytmu na 4 h pokazana
-w `rozliczenia`; rozliczenia przed startem nie liczą się; netto = wynik D1 (`inverse_carry_pnl` + okno z zamrożonego reportera)
-minus koszt wyjścia, co do 1e-15; test właściwości w `hypothesis` (dowolna ścieżka stawek, braków i opóźnień: każdy dzień raz,
-netto = suma stawek − jeden koszt wejścia); przebieg dziennika: append-only, powtórka +0, ręcznie zmieniony wiersz → „historia
-zmieniona: 1”, stary zapis zostaje; **linia logu bez błędów pasuje dokładnie do formatu sprzed poprawki i jest identyczna
-z przebiegiem, w którym carry nie ma nic do zapisania**; błąd carry → „carry BŁĄD RuntimeError” w logu, pozostałe pliki bajt
-w bajt jak bez błędu, parser strony czyta linię; brak pliku i spóźnione dane → pole w logu; pobieranie łapie błąd sieci.
+**Testy** (`tests/test_journal_carry.py`; zmienione oczekiwania w `tests/test_live_journal.py` i nowe formaty linii — błąd i
+zmiany carry — w `tests/test_strona_dziennika.py`): trzy rozliczenia dziennie sumują się do wiersza; koszt wejścia tylko
+pierwszego dnia; dzień zapisany dopiero po rozliczeniu z dnia następnego, a nowy dzień nie zmienia starych wierszy; brakujące
+rozliczenie i dzień bez rozliczeń oznaczone, nie pominięte; znaczniki z opóźnieniem 0–999 ms (w danych D1 do 94 ms) dają to
+samo co bez niego; zmiana rytmu na 4 h pokazana w `rozliczenia`; rozliczenia przed startem nie liczą się; netto = wynik D1
+(`inverse_carry_pnl` + okno z zamrożonego reportera) minus koszt wyjścia, co do 1e-15; test właściwości w `hypothesis` (dowolna
+ścieżka stawek, braków i opóźnień: każdy dzień raz, ostatni zapisany dzień = dzień przed najpóźniejszym rozliczeniem, netto =
+suma stawek − jeden koszt wejścia); przebieg dziennika: append-only, powtórka +0, ręcznie zmieniony wiersz → „carry zmiany 1” w
+logu i data w wydruku, a wspólny licznik zostaje „historia zmieniona: 0” (parser strony czyta licznik główny), stary zapis
+zostaje; pole „carry zmiany” stoi po polu kłopotu; **linia logu bez błędów pasuje dokładnie do formatu sprzed poprawki i jest
+identyczna z przebiegiem, w którym carry nie ma nic do zapisania**; błąd carry → „carry BŁĄD RuntimeError” w logu, pozostałe
+pliki bajt w bajt jak bez błędu, parser strony czyta linię; brak pliku i spóźnione dane → pole w logu; pobieranie łapie błąd
+sieci.
 
 **Próba na kopii dziennika 2026-09-28** (kopia `dziennik/` i `data/raw/live` z klonu dziennika po przebiegu 02:30, `as_of`
 2026-09-27, bez pobierania; wszystko w katalogu tymczasowym). Ten sam przebieg starym kodem (`master` 0bfeef5) i nowym:
@@ -388,6 +398,14 @@ z realną drogą ataku. Adres (`https://dapi.binance.com`, tylko https) i symbol
 publiczne API bez klucza; odpowiedź czytana tylko jako JSON i zamieniana na liczby (`parse_funding_records` odrzuca rekord bez
 pól); nazwa pliku ze stałej; w `carry_wyniki.csv` same liczby i daty; do `przebiegi.log` trafia najwyżej nazwa typu błędu,
 a komunikat tylko do wydruku (którego automat nie commituje).
+
+**Przegląd kodu** (`engineering:code-review`, 2026-09-28, bramka 16c): **Approve z uwagami** — księgowanie zgodne z D1
+(druga droga na danych D1: różnica 1e-16), izolacja nóg i linia logu bez błędów potwierdzone; symulacja pierwszych
+przebiegów: 29.09 „+0” bez pola w logu, 30.09 „+1” (wiersz 29.09, 3 z 3 rozliczeń, koszt 0,0019). Uwagi poprawione przed
+scaleniem: zmiany zapisu carry mają własne pole „carry zmiany N” zamiast wspólnego „historia zmieniona” (W1); opis pustej
+odpowiedzi giełdy (W2); test właściwości pilnuje reguły zamknięcia dnia — mutant „−2 dni” teraz pada (D1); opóźnienia
+znaczników 0–999 ms (D3). Świadomie bez zmiany: „carry brak pliku” zgłaszane już przed startem (D2 — wczesne ostrzeżenie;
+kryterium (a) liczy od 30.09).
 
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 

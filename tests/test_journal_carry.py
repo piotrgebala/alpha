@@ -3,8 +3,9 @@
 Czyste funkcje: agregacja dzienna rozliczeń, koszt wejścia tylko pierwszego dnia, dzień zamknięty
 dopiero po rozliczeniu z dnia następnego, braki oznaczone (nie pominięte), zgodność z D1
 (`inverse_carry_pnl` i okno z zamrożonego reportera), test właściwości w `hypothesis`.
-Przebieg dziennika: append-only z „historia zmieniona”, linia `przebiegi.log` bez nowych pól na
-ścieżce bez błędów, błąd carry nie zatrzymuje dziennika i nie rusza innych plików.
+Przebieg dziennika: append-only; zmiana zapisu carry ma własne pole „carry zmiany N” poza
+wspólnym licznikiem „historia zmieniona”; linia `przebiegi.log` bez nowych pól na ścieżce bez
+błędów i bez zmian; błąd carry nie zatrzymuje dziennika i nie rusza innych plików.
 """
 
 from __future__ import annotations
@@ -105,7 +106,7 @@ def test_missing_settlements_are_flagged_not_skipped():
 
 def test_jitter_is_floored_like_d1_and_rhythm_change_is_flagged():
     base = jc.carry_rows(_funding(first="2026-09-10", days=3), START, SW)
-    jit = np.random.default_rng(0).integers(0, 8, 10)  # ms, jak na giełdzie (0–7 ms)
+    jit = np.random.default_rng(0).integers(0, 1000, 10)  # ms; na giełdzie do 94 ms (dane D1)
     pd.testing.assert_frame_equal(
         jc.carry_rows(_funding(first="2026-09-10", days=3, jitter=jit), START, SW), base
     )
@@ -189,15 +190,21 @@ def test_inverse_carry_pnl_single_settlement_keeps_only_entry_cost():
         st.floats(-0.003, 0.003, allow_nan=False, allow_infinity=False), min_size=4, max_size=90
     ),
     keep=st.lists(st.booleans(), min_size=90, max_size=90),
-    jitter=st.lists(st.integers(0, 7), min_size=90, max_size=90),
+    jitter=st.lists(st.integers(0, 999), min_size=90, max_size=90),
 )
 def test_property_net_is_rates_minus_one_entry_cost(rates, keep, jitter):
     n = len(rates)
     ts = pd.date_range(START, periods=n, freq="8h") + pd.to_timedelta(jitter[:n], unit="ms")
     f = pd.DataFrame({"timestamp": ts, "funding_rate": rates})[np.array(keep[:n])]
     rows = jc.carry_rows(f, START, SW)
+    # reguła zamknięcia dnia: zapisane są dni do dnia PRZED dniem najpóźniejszego rozliczenia,
+    # ani dnia dłużej
+    latest = floor_to_grid(f["timestamp"]).dt.floor("D").max() if len(f) else None
+    assert rows.empty == (latest is None or latest <= START)
     if rows.empty:
         return
+    assert pd.Timestamp(rows["date"].iloc[-1], tz="UTC") == latest - pd.Timedelta(days=1)
+    assert (pd.to_datetime(rows["date"], utc=True) < latest).all()
     days = pd.date_range(START, periods=len(rows), freq="D").strftime("%Y-%m-%d").tolist()
     assert rows["date"].tolist() == days  # każdy dzień od startu dokładnie raz, bez dziur
     used = f[floor_to_grid(f["timestamp"]).dt.floor("D") <= pd.Timestamp(days[-1], tz="UTC")]
@@ -304,6 +311,21 @@ def test_coinm_file_is_neither_usdt_symbol_nor_usdt_funding(live_src):
     )
 
 
+def test_carry_changes_field_comes_after_trouble_and_printout_lists_days():
+    days = lj.changed_days(["2026-09-13:netto", "2026-09-13:netto_skum", "2026-09-14:netto_skum"])
+    assert days == {"2026-09-13": ["netto", "netto_skum"], "2026-09-14": ["netto_skum"]}
+    assert lj.carry_log(None, {}) == ""  # bez kłopotu i bez zmian: linia jak przed poprawką 12
+    assert lj.carry_log("BŁĄD OSError", {}) == " | carry BŁĄD OSError"
+    assert lj.carry_log(None, days) == " | carry zmiany 2"
+    assert lj.carry_log("spóźnione", days) == " | carry spóźnione | carry zmiany 2"
+    assert "historia zmieniona" not in lj.carry_log("spóźnione", days)
+    many = {f"2026-10-{d:02d}": ["netto_skum"] for d in range(1, 8)}
+    text = lj.summarize_carry(None, "+0", None, None, many)
+    assert "UWAGA: carry zmiany 7 — " in text and "2026-10-05 (netto_skum), …" in text
+    assert "2026-10-06" not in text  # w wydruku pierwsze 5 dni, liczba wszystkich w polu
+    assert "carry zmiany" not in lj.summarize_carry(None, "+0", None)
+
+
 def _run(src, jdir, monkeypatch, carry_start="2026-09-10"):
     monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp("2026-08-01", tz="UTC"))
     monkeypatch.setattr(lj, "X1_START", pd.Timestamp("2026-08-01", tz="UTC"))
@@ -336,12 +358,18 @@ def test_run_writes_carry_append_only_and_flags_changed_history(tmp_path, live_s
     text2, log2 = _run(live_src, jdir, monkeypatch)
     assert "dopisane +0" in text2 and "HISTORIA ZMIENIONA" not in text2
     assert log2[1].endswith("historia zmieniona: 0") and len(pd.read_csv(jdir / jc.CARRY_CSV)) == 14
-    # ręcznie zmieniony wiersz → „historia zmieniona”, stary zapis zostaje
+    # ręcznie zmieniony wiersz → własne pole „carry zmiany 1” (daty w wydruku carry); wspólny
+    # licznik „historia zmieniona” zostaje 0 (kryterium 2 głównego dziennika carry nie obejmuje);
+    # stary zapis zostaje
     ca.loc[3, "netto"] += 0.01
     ca.to_csv(jdir / jc.CARRY_CSV, index=False)
     text3, log3 = _run(live_src, jdir, monkeypatch)
-    assert "HISTORIA ZMIENIONA w 1 polach" in text3 and "2026-09-13:netto" in text3
-    assert log3[2].endswith("historia zmieniona: 1")
+    assert "HISTORIA ZMIENIONA" not in text3
+    assert "UWAGA: carry zmiany 1 — " in text3 and "2026-09-13 (netto)" in text3
+    assert re.search(r"\| koszyk \+\d+ \| carry zmiany 1 \| historia zmieniona: 0$", log3[2])
+    # parser strony: „ch” = licznik główny, nie zmiany carry
+    runs, bad = sd.parse_log(log3[2] + "\n")
+    assert bad == 0 and runs[0]["changed"] == 0 and sd.LOG_RE.match(log3[2])["ch"] == "0"
     assert pd.read_csv(jdir / jc.CARRY_CSV)["netto"].iloc[3] == pytest.approx(
         ca["netto"].iloc[3], abs=1e-15
     )

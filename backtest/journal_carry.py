@@ -33,9 +33,8 @@ from backtest.carry_product import PERIODS_PER_DAY, floor_to_grid, inverse_carry
 
 CARRY_SYMBOL = "BTCUSD_PERP"
 CARRY_START = pd.Timestamp("2026-09-29", tz="UTC")  # pierwszy dzień wyniku carry (poprawka 12)
-CARRY_FILE = (
-    f"binance_cm_funding_{CARRY_SYMBOL}.parquet"  # nazwa z `fetch_external.fetch_coinm_funding`
-)
+# nazwa z `fetch_external.fetch_coinm_funding`
+CARRY_FILE = f"binance_cm_funding_{CARRY_SYMBOL}.parquet"
 CARRY_CSV = "carry_wyniki.csv"
 CARRY_KEY = ["date"]
 CARRY_VALUES = ["rozliczenia", "komplet", "suma_stawek", "koszt", "netto", "netto_skum"]
@@ -84,9 +83,8 @@ def settlement_pnl(funding: pd.DataFrame, start: pd.Timestamp, switch_cost: floa
     """
     p = inverse_carry_pnl(settlements(funding, start), switch_cost)
     if len(p):
-        p.loc[
-            len(p) - 1, "cost"
-        ] -= switch_cost  # D1 zamyka pozycję w ostatnim okresie — dziennik nie
+        # D1 zamyka pozycję w ostatnim okresie — dziennik nie
+        p.loc[len(p) - 1, "cost"] -= switch_cost
         p["pnl"] = p["funding_received"] - p["cost"]
     return p
 

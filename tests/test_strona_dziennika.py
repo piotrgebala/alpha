@@ -107,6 +107,24 @@ def test_every_record_of_repo_log_parses():
             "+1",
         ),  # poprawka 12: błąd nogi carry
         (
+            HEAD
+            + X1
+            + " | stan rynku +0 | F&G +0 | transakcje +0 | opisy strategii 5"
+            + " | rozbicie +0 | fazy +0 | koszyk +0 | carry zmiany 1"
+            + TAIL,
+            "sygnały +70 wyniki +1 kapitał 1.0221 obsunięcie 3.7% OK",
+            "+0",
+        ),  # poprawka 12: zmiana zapisu carry — własne pole, „ch” = licznik główny (0)
+        (
+            HEAD
+            + X1
+            + " | stan rynku +0 | F&G +0 | transakcje +0 | opisy strategii 5"
+            + " | rozbicie +0 | fazy +0 | koszyk +0 | carry spóźnione | carry zmiany 2"
+            + TAIL,
+            None,
+            "+0",
+        ),  # poprawka 12: kłopot i zmiany carry naraz (najpierw kłopot)
+        (
             HEAD + X1 + " | stan rynku BŁĄD ValueError | F&G BŁĄD KeyError | nowe pole 7" + TAIL,
             None,
             "BŁĄD ValueError",
@@ -123,6 +141,8 @@ def test_every_record_of_repo_log_parses():
         "rozbicie-blad-x1",
         "carry-spoznione",
         "carry-blad",
+        "carry-zmiany",
+        "carry-spoznione-zmiany",
         "bledy-nowe-pole",
     ],
 )
