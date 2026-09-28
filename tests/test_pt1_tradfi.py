@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import datetime as dt
+import gzip
+import json
 import math
+import zoneinfo
 
 import numpy as np
 import pandas as pd
@@ -24,6 +28,23 @@ def otwarty(kal: pt.Kalendarz, s: str) -> bool:
 
 
 # ------------------------------------------------------------------ czas letni i kalendarze
+_NOWY_JORK = zoneinfo.ZoneInfo("America/New_York")
+
+
+@settings(max_examples=300, deadline=None)
+@given(
+    st.datetimes(
+        min_value=dt.datetime(2024, 11, 3, 6, 0),
+        max_value=dt.datetime(2027, 3, 14, 6, 59, 59),
+        timezones=st.just(dt.UTC),
+    )
+)
+def test_dst_table_matches_tzdata_within_its_range(chwila):
+    """Druga droga: w całym ZAKRES_DST_USA tablica zgadza się z tzdata America/New_York (UTC−4 latem)."""
+    lato = chwila.astimezone(_NOWY_JORK).utcoffset() == dt.timedelta(hours=-4)
+    assert pt.czas_letni_usa(pd.Timestamp(chwila)) is lato
+
+
 @pytest.mark.parametrize(
     ("chwila", "lato"),
     [
@@ -99,6 +120,26 @@ def test_closure_types_night_weekend_holiday():
         for _, _, typ in pt.Kalendarz("surowce", ts("2026-09-01"), ts("2026-09-20")).zamkniecia()
     }
     assert typy == {"przerwa", "weekend"}
+
+
+def test_calendar_tables_out_of_range_raise_instead_of_silent_shift():
+    # czas letni: lato 2024 i lato 2027 nie są w tablicy — błąd, a nie „zima” po cichu (−1 h)
+    for chwila in ("2027-07-01 12:00", "2027-03-14 07:00", "2024-11-03 05:59", "2024-07-01 12:00"):
+        with pytest.raises(ValueError, match="DST_USA"):
+            pt.czas_letni_usa(ts(chwila))
+    assert pt.czas_letni_usa(ts("2024-11-03 06:00")) is False  # granice zakresu — bez błędu
+    assert pt.czas_letni_usa(ts("2027-03-14 06:59")) is False
+    with pytest.raises(ValueError, match="DST_USA"):
+        pt.Kalendarz("waluty", ts("2027-03-01"), ts("2027-06-01"))
+    with pytest.raises(ValueError, match="DST_USA"):
+        pt.indeks_o_godzinie(pd.Series(dtype=float), [ts("2027-06-01")])
+    # święta NYSE: tablica kompletna 2025-11-28 … 2026-11-25 (Thanksgiving 2026-11-26 poza nią)
+    with pytest.raises(ValueError, match="SWIETA_NYSE"):
+        pt.Kalendarz("akcje_usa", ts("2026-09-01"), ts("2026-11-26 14:00"))
+    with pytest.raises(ValueError, match="SWIETA_NYSE"):
+        pt.Kalendarz("akcje_usa", ts("2025-11-27 15:00"), ts("2025-12-10"))
+    pt.Kalendarz("akcje_usa", ts("2025-11-28"), ts("2026-11-25 23:00"))  # granice — bez błędu
+    pt.Kalendarz("waluty", ts("2026-11-27"), ts("2026-12-20"))  # walut święta NYSE nie dotyczą
 
 
 def test_hour_states_and_accrual_share():
@@ -192,6 +233,14 @@ def test_rate_mean_is_as_of_daily_and_fallback_on_stale_series():
     assert pt.wybierz_stope("EUR", fred, ts("2026-09-28"))[0] == "IR3TIB01EZM156N"
     fred["ECBDFR"] = _seria([("2026-09-20", 2.5)])
     assert pt.wybierz_stope("EUR", fred, ts("2026-09-28"))[0] == "ECBDFR"
+
+
+def test_brl_has_no_fallback_series_missing_in_fred():
+    assert pt.STOPY["BRL"] == ("IRSTCI01BRM156N", None)
+    assert "IR3TIB01BRM156N" not in {s for pary in pt.STOPY.values() for s in pary if s}
+    fred = {"IRSTCI01BRM156N": _seria([("2026-01-01", 14.0)])}  # starsza niż 92 dni
+    nazwa, df = pt.wybierz_stope("BRL", fred, ts("2026-09-28"))
+    assert nazwa == "IRSTCI01BRM156N" and df is fred["IRSTCI01BRM156N"]  # bez zamiennika: główna
 
 
 def test_model_b_signs_follow_preregistration():
@@ -385,3 +434,77 @@ def test_costs_use_official_tradfi_taker_and_standard_for_btc():
         (spy["spread_pb_med"] / 2 / 1e4 + pt.TAKER_TRADFI["bybit"]) * 100
     )
     assert spy["koszt_strony_standard_proc"] > spy["koszt_strony_proc"]
+
+
+# ------------------------------------------------------------------ czytnik migawek (odporność)
+def _migawka(czas: str = "2026-09-28T18:19:01+00:00", **zmiany) -> dict:
+    rec = {
+        "czas_utc": czas,
+        "bybit_tickers": {
+            "retCode": 0,
+            "result": {
+                "list": [
+                    {
+                        "symbol": "SPYUSDT",
+                        "bid1Price": "100",
+                        "ask1Price": "100.02",
+                        "turnover24h": "5",
+                    }
+                ]
+            },
+        },
+        "binance_book": [{"symbol": "SPYUSDT", "bidPrice": "100", "askPrice": "100.03"}],
+        "binance_24h": [{"symbol": "SPYUSDT", "quoteVolume": "7"}],
+        "binance_premium": [{"symbol": "SPYUSDT", "interestRate": "0.0001"}],
+    }
+    return rec | zmiany
+
+
+def _gz(rec) -> bytes:
+    return gzip.compress(json.dumps(rec).encode("utf-8"), mtime=0)
+
+
+_SYMBOLE = {"bybit": {"SPYUSDT"}, "binance": {"SPYUSDT"}}
+
+
+def test_snapshot_reader_skips_corrupted_files_and_counts_them(tmp_path, capsys):
+    dobra = _gz(_migawka())
+    (tmp_path / "20260928T181901Z.json.gz").write_bytes(dobra)
+    (tmp_path / "20260928T184904Z.json.gz").write_bytes(dobra[: len(dobra) // 2])  # ucięty gzip
+    # zły JSON; błąd Bybit w odpowiedzi HTTP 200; słownik zamiast listy u Binance
+    (tmp_path / "20260928T191907Z.json.gz").write_bytes(gzip.compress(b'{"czas_utc": "2026'))
+    (tmp_path / "20260928T194910Z.json.gz").write_bytes(
+        _gz(_migawka(bybit_tickers={"retCode": 10006, "retMsg": "Too many visits"}))
+    )
+    (tmp_path / "20260928T201913Z.json.gz").write_bytes(
+        _gz(_migawka(binance_book={"code": -1003, "msg": "Too many requests"}))
+    )
+    mig = pt.wczytaj_migawki(tmp_path, _SYMBOLE)
+    assert len(mig) == 2 and mig["czas"].nunique() == 1  # tylko dobra migawka: Bybit + Binance
+    b = mig.set_index("gielda")
+    assert b.loc["bybit", "ask"] == 100.02 and b.loc["binance", "interestRate"] == 0.0001
+    out = capsys.readouterr().out
+    assert "wczytane 1 z 5, pominięte (uszkodzone): 4" in out
+    for plik in ("184904", "191907", "194910", "201913"):
+        assert f"20260928T{plik}Z.json.gz" in out
+
+
+def test_snapshot_reader_empty_or_all_bad_keeps_columns(tmp_path, capsys):
+    (tmp_path / "20260928T181901Z.json.gz").write_bytes(b"to nie gzip")
+    mig = pt.wczytaj_migawki(tmp_path, _SYMBOLE)
+    assert mig.empty and list(mig.columns) == list(pt.KOLUMNY_MIGAWEK)
+    assert "pominięte (uszkodzone): 1" in capsys.readouterr().out
+
+
+_SUROWA = _gz(_migawka())
+
+
+@settings(max_examples=60, deadline=None)
+@given(st.integers(0, len(_SUROWA) - 1))
+def test_snapshot_reader_skips_file_truncated_anywhere(tmp_path_factory, ciecie):
+    """Plik ucięty w dowolnym miejscu (przerwany zapis) jest pomijany; pozostałe migawki się liczą."""
+    kat = tmp_path_factory.mktemp("migawki")
+    (kat / "20260928T181901Z.json.gz").write_bytes(_SUROWA[:ciecie])
+    (kat / "20260928T184904Z.json.gz").write_bytes(_gz(_migawka("2026-09-28T18:49:04+00:00")))
+    mig = pt.wczytaj_migawki(kat, _SYMBOLE)
+    assert list(mig["czas"].unique()) == [pd.Timestamp("2026-09-28T18:49:04+00:00")]

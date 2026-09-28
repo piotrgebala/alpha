@@ -52,7 +52,8 @@ mediana spreadu / 2 + taker — oficjalna stawka TradFi (``TAKER_TRADFI``; BTCUS
 obok koszt przy stawce standardowej; stosunek do KO1 (0,07 %).
 
 P4 — rdzeń; kalendarze stałe (``przedzialy_otwarcia``), czas letni USA 2025-03-09 07:00 –
-2025-11-02 06:00 UTC i 2026-03-08 07:00 – 2026-11-01 06:00 UTC:
+2025-11-02 06:00 UTC i 2026-03-08 07:00 – 2026-11-01 06:00 UTC (dane poza zakresem tablic —
+``ZAKRES_DST_USA``, ``ZAKRES_SWIAT_NYSE`` — → ``ValueError``, nie ciche przesunięcie o 1 h):
 - ``akcje_usa`` (akcje, ETF, ETF_oblig; BTC_kontrola jako kontrola): pn–pt 13:30–20:00 UTC latem,
   14:30–21:00 zimą; święta NYSE ``SWIETA_NYSE`` zamknięte;
 - ``waluty``: zamknięte pt 21:00 → nd 21:00 UTC latem (zimą 22:00 → 22:00);
@@ -88,6 +89,7 @@ import gzip
 import json
 import math
 import warnings
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -139,6 +141,16 @@ SWIETA_NYSE = frozenset(
         "2026-09-07",
     )
 )
+# Zakresy, w których tablice rozstrzygają POPRAWNIE ([od, do), UTC). Kalendarz poza nimi → ValueError
+# zamiast cichego błędu (godziny sesji przesunięte o 1 h, święto liczone jako dzień sesji); nowy okres
+# = dopisać tablice. DST_USA: między zmianami czasu spoza tablicy — koniec lata 2024 (2024-11-03
+# 06:00) i początek lata 2027 (2027-03-14 07:00; obie granice zgodne z tzdata America/New_York).
+# SWIETA_NYSE: między świętami spoza tablicy — 2025-11-27 i 2026-11-26 (Święto Dziękczynienia).
+ZAKRES_DST_USA = (
+    pd.Timestamp("2024-11-03 06:00", tz="UTC"),
+    pd.Timestamp("2027-03-14 07:00", tz="UTC"),
+)
+ZAKRES_SWIAT_NYSE = (pd.Timestamp("2025-11-28", tz="UTC"), pd.Timestamp("2026-11-26", tz="UTC"))
 KALENDARZ_KLASY = {
     "akcje": "akcje_usa",
     "ETF": "akcje_usa",
@@ -152,7 +164,8 @@ STOPY = {  # waluta → (seria główna FRED, zamiennik)
     "EUR": ("ECBDFR", "IR3TIB01EZM156N"),
     "GBP": ("IUDSOIA", "IR3TIB01GBM156N"),
     "JPY": ("IRSTCI01JPM156N", "IR3TIB01JPM156N"),
-    "BRL": ("IRSTCI01BRM156N", "IR3TIB01BRM156N"),
+    # BRL bez zamiennika: IR3TIB01BRM156N nie istnieje we FRED (HTTP 404 przy pobieraniu 2026-09-28)
+    "BRL": ("IRSTCI01BRM156N", None),
 }
 ZGODNOSC = {  # symbol perpa → (seria FRED, czy porównywać poziom)
     "EURUSDUSDT": ("DEXUSEU", True),
@@ -169,8 +182,19 @@ KOLEJNOSC_KLAS = ("waluty", "surowce", "ETF", "ETF_oblig", "akcje", "przed_IPO",
 
 # ------------------------------------------------------------------ kalendarze (czyste)
 def czas_letni_usa(ts) -> bool:
-    """Czy chwila ``ts`` (UTC) wypada w czasie letnim USA (granice ``DST_USA``, lewostronnie domknięte)."""
+    """
+    Czy chwila ``ts`` (UTC) wypada w czasie letnim USA (granice ``DST_USA``, lewostronnie
+    domknięte). Chwila poza ``ZAKRES_DST_USA`` → ``ValueError`` (tablica nie mówi nic o innych
+    latach).
+    """
     ts = pd.Timestamp(ts)
+    lo, hi = ZAKRES_DST_USA
+    if not lo <= ts < hi:
+        raise ValueError(
+            f"czas letni USA: {ts} poza zakresem tablicy DST_USA [{lo}, {hi}) "
+            "(kalendarze liczone z zapasem 8 dni) — dopisz granice czasu letniego na kolejny rok; "
+            "bez tego godziny sesji przesunęłyby się o 1 h"
+        )
     return any(a <= ts < b for a, b in DST_USA)
 
 
@@ -180,7 +204,19 @@ def _letnia(t: pd.Timestamp) -> pd.Timestamp:
 
 
 def przedzialy_otwarcia(kalendarz: str, od, do) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
-    """Przedziały otwarcia rynku bazowego ``[start, koniec)`` (UTC) pokrywające ``[od, do]`` z zapasem 8 dni."""
+    """
+    Przedziały otwarcia rynku bazowego ``[start, koniec)`` (UTC) pokrywające ``[od, do]`` z zapasem
+    8 dni. ``akcje_usa``: ``[od, do]`` poza ``ZAKRES_SWIAT_NYSE`` → ``ValueError``; czas letni
+    sprawdza ``czas_letni_usa`` (każdy kalendarz, łącznie z zapasem).
+    """
+    if kalendarz == "akcje_usa":
+        lo, hi = ZAKRES_SWIAT_NYSE
+        if pd.Timestamp(od) < lo or pd.Timestamp(do) >= hi:
+            raise ValueError(
+                f"kalendarz akcje_usa: dane {od} … {do} poza zakresem tablicy SWIETA_NYSE "
+                f"[{lo.date()}, {hi.date()}) UTC — dopisz święta NYSE; bez tego święto liczyłoby "
+                "się jako dzień sesji"
+            )
     dni = pd.date_range(
         pd.Timestamp(od).normalize() - pd.Timedelta(days=8),
         pd.Timestamp(do).normalize() + pd.Timedelta(days=8),
@@ -517,44 +553,76 @@ def zgodnosc_z_fred(
 
 
 # ------------------------------------------------------------------ wczytanie danych
-def wczytaj_migawki(katalog: Path, symbole: dict[str, set[str]]) -> pd.DataFrame:
-    """Migawki → wiersze (czas, giełda, symbol, bid, ask, obrót 24 h, interestRate Binance)."""
+KOLUMNY_MIGAWEK = ("czas", "gielda", "symbol", "bid", "ask", "obrot24h", "interestRate")
+# uszkodzony plik migawki: ucięty/zły gzip (OSError, EOFError, zlib.error), zły JSON albo zła treść
+# (ValueError), brak klucza (KeyError), zły typ (TypeError)
+BLEDY_MIGAWKI = (OSError, EOFError, zlib.error, ValueError, KeyError, TypeError)
+
+
+def _wiersze_migawki(p: Path, symbole: dict[str, set[str]]) -> list[dict]:
+    """Jedna migawka → wiersze; plik uszkodzony albo zła treść → wyjątek (cały plik odpada)."""
     num = ft._liczba_lub_nan
+    with gzip.open(p, "rt", encoding="utf-8") as fh:
+        d = json.load(fh)
+    if not isinstance(d, dict):
+        raise ValueError(f"migawka: oczekiwano obiektu JSON, jest {type(d).__name__}")
+    ft.sprawdz_migawke(d)
+    czas = pd.Timestamp(d["czas_utc"])
+    if pd.isna(czas) or czas.tzinfo is None:
+        raise ValueError(f"migawka: zły czas_utc {d['czas_utc']!r}")
     wiersze = []
-    for p in sorted(katalog.glob("*.json.gz")):
-        with gzip.open(p, "rt", encoding="utf-8") as fh:
-            d = json.load(fh)
-        czas = pd.Timestamp(d["czas_utc"])
-        for r in ft._wynik_bybit(d["bybit_tickers"])["list"]:
-            if r.get("symbol") in symbole["bybit"]:
-                wiersze.append(
-                    {
-                        "czas": czas,
-                        "gielda": "bybit",
-                        "symbol": r["symbol"],
-                        "bid": num(r.get("bid1Price")),
-                        "ask": num(r.get("ask1Price")),
-                        "obrot24h": num(r.get("turnover24h")),
-                        "interestRate": float("nan"),
-                    }
-                )
-        book = {r["symbol"]: r for r in d["binance_book"]}
-        h24 = {r["symbol"]: r for r in d["binance_24h"]}
-        prem = {r["symbol"]: r for r in d["binance_premium"]}
-        for s in sorted(symbole["binance"]):
-            b, h, pr = book.get(s, {}), h24.get(s, {}), prem.get(s, {})
+    for r in ft._wynik_bybit(d["bybit_tickers"])["list"]:
+        if r.get("symbol") in symbole["bybit"]:
             wiersze.append(
                 {
                     "czas": czas,
-                    "gielda": "binance",
-                    "symbol": s,
-                    "bid": num(b.get("bidPrice")),
-                    "ask": num(b.get("askPrice")),
-                    "obrot24h": num(h.get("quoteVolume")),
-                    "interestRate": num(pr.get("interestRate")),
+                    "gielda": "bybit",
+                    "symbol": r["symbol"],
+                    "bid": num(r.get("bid1Price")),
+                    "ask": num(r.get("ask1Price")),
+                    "obrot24h": num(r.get("turnover24h")),
+                    "interestRate": float("nan"),
                 }
             )
-    return pd.DataFrame(wiersze)
+    book = {r["symbol"]: r for r in d["binance_book"]}
+    h24 = {r["symbol"]: r for r in d["binance_24h"]}
+    prem = {r["symbol"]: r for r in d["binance_premium"]}
+    for s in sorted(symbole["binance"]):
+        b, h, pr = book.get(s, {}), h24.get(s, {}), prem.get(s, {})
+        wiersze.append(
+            {
+                "czas": czas,
+                "gielda": "binance",
+                "symbol": s,
+                "bid": num(b.get("bidPrice")),
+                "ask": num(b.get("askPrice")),
+                "obrot24h": num(h.get("quoteVolume")),
+                "interestRate": num(pr.get("interestRate")),
+            }
+        )
+    return wiersze
+
+
+def wczytaj_migawki(katalog: Path, symbole: dict[str, set[str]]) -> pd.DataFrame:
+    """
+    Migawki → wiersze (czas, giełda, symbol, bid, ask, obrót 24 h, interestRate Binance). Plik
+    uszkodzony (ucięty gzip, zły JSON) albo ze złą treścią (błąd Bybit w odpowiedzi HTTP 200,
+    słownik zamiast listy u Binance) jest pomijany w całości; nazwy i licznik pominiętych idą
+    na stdout.
+    """
+    pliki = sorted(katalog.glob("*.json.gz"))
+    wiersze, pominiete = [], []
+    for p in pliki:
+        try:
+            wiersze += _wiersze_migawki(p, symbole)
+        except BLEDY_MIGAWKI as exc:
+            pominiete.append(p.name)
+            print(f"[pt1] migawka pominięta (uszkodzona): {p.name}: {exc!r}")
+    print(
+        f"[pt1] migawki: wczytane {len(pliki) - len(pominiete)} z {len(pliki)}, "
+        f"pominięte (uszkodzone): {len(pominiete)}"
+    )
+    return pd.DataFrame(wiersze, columns=list(KOLUMNY_MIGAWEK))
 
 
 def wczytaj_fred(serie, katalog: Path = FRED_DIR) -> dict[str, pd.DataFrame]:

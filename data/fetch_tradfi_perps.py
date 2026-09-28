@@ -5,8 +5,10 @@ Tylko publiczne endpointy REST, bez klucza API; adresy stałe w kodzie, wyłącz
 
 - ``migawka``: surowe odpowiedzi tickerów obu giełd (najlepsza oferta kupna / sprzedaży, obrót 24 h,
   cena indeksu i mark, bieżący funding) zapisane jako ``.json.gz`` — parsowanie osobno, żeby plik był
-  wierną kopią źródła. Tryb pętli (``--co`` sekund, ``--do`` czas UTC) zbiera kilka migawek w różnych
-  godzinach handlu rynku bazowego.
+  wierną kopią źródła. Przed zapisem ``sprawdz_migawke`` (Bybit ``retCode == 0`` i ``result.list``,
+  Binance — listy rekordów); zapis atomowy (plik ``.tmp`` + ``os.replace``), więc przerwany zapis
+  nie zostawia uciętego ``.json.gz``. Tryb pętli (``--co`` sekund, ``--do`` czas UTC) zbiera kilka
+  migawek w różnych godzinach handlu rynku bazowego.
 - ``spis``: instrumenty TradFi obu giełd + BTCUSDT (kontrola). Bybit ``instruments-info`` (kursor
   stron; TradFi = ``symbolType ∈ {stock, ETF, commodity, forex}``), Binance ``exchangeInfo``
   (``contractType == TRADIFI_PERPETUAL``) + ``fundingInfo`` (interwał, cap/floor) →
@@ -30,9 +32,11 @@ także dla SPY czy SOXL) — ETF = baza z listy pre-rejestracji ALBO ten sam sym
 
 Warstwa sieciowa: ``Klient`` — odczekanie między żądaniami (limity: Binance 2400 wag/min, ``fundingRate``
 + ``fundingInfo`` 500 żądań / 5 min / IP; Bybit 600 żądań / 5 s / IP) i ponowienie z wykładniczym
-odczekaniem przy HTTP 429/5xx, błędach sieci i ``retCode 10006`` Bybit; HTTP 418 (blokada IP)
-i pozostałe 4xx → błąd od razu. Stronicowanie (``stronicuj_wstecz`` / ``stronicuj_naprzod``)
-i parsery są czyste — testy bez sieci: ``tests/test_fetch_tradfi_perps.py``.
+odczekaniem przy HTTP 429/5xx, błędach sieci i ``retCode 10006`` Bybit (``Retry-After`` najwyżej
+``RETRY_AFTER_MAX_S`` = 300 s); HTTP 418 (blokada IP Binance) → ``BlokadaIP``, który przerywa CAŁĄ
+komendę (pętle per symbol go nie łapią); pozostałe 4xx → błąd od razu (pętla per symbol zapisuje
+błąd i idzie dalej). Stronicowanie (``stronicuj_wstecz`` / ``stronicuj_naprzod``) i parsery są
+czyste — testy bez sieci: ``tests/test_fetch_tradfi_perps.py``.
 
     PYTHONUTF8=1 py -m data.fetch_tradfi_perps {migawka,spis,funding,swiece,premia}
 
@@ -46,6 +50,7 @@ import datetime as dt
 import gzip
 import json
 import math
+import os
 import time
 import urllib.error
 import urllib.parse
@@ -107,6 +112,8 @@ BINANCE_FUNDING_LIMIT = 1000
 MAX_STRON = 2000
 
 RETRY_HTTP = (429, 500, 502, 503, 504)
+HTTP_BLOKADA_IP = 418  # Binance: IP zablokowane po ignorowaniu 429 — dotyczy wszystkich symboli
+RETRY_AFTER_MAX_S = 300.0  # górny limit odczekania z nagłówka Retry-After
 BYBIT_RETCODE_LIMIT = 10006  # Bybit: „Too many visits” w treści odpowiedzi HTTP 200
 PROBY = 6
 BACKOFF_S = 2.0
@@ -140,11 +147,22 @@ def _otworz(url: str, timeout: float) -> bytes:
 
 
 def _retry_after_s(err: urllib.error.HTTPError) -> float:
-    """Nagłówek ``Retry-After`` w sekundach (0, gdy brak albo nieczytelny)."""
+    """
+    Nagłówek ``Retry-After`` w sekundach, przycięty do ``[0, RETRY_AFTER_MAX_S]`` (0, gdy brak albo
+    nieczytelny) — odpowiedź serwera nie uśpi pobierania na godziny.
+    """
     try:
-        return max(0.0, float((err.headers or {}).get("Retry-After") or 0))
+        v = float((err.headers or {}).get("Retry-After") or 0)
     except (TypeError, ValueError):
         return 0.0
+    return 0.0 if math.isnan(v) else min(max(v, 0.0), RETRY_AFTER_MAX_S)
+
+
+class BlokadaIP(RuntimeError):
+    """
+    HTTP 418 (Binance blokuje IP po ignorowaniu 429). Dotyczy wszystkich symboli, więc przerywa CAŁĄ
+    komendę: pętle per symbol w ``cmd_*`` przepuszczają go dalej zamiast zapisać jako błąd symbolu.
+    """
 
 
 class Klient:
@@ -152,7 +170,8 @@ class Klient:
     GET → JSON z odczekaniem między żądaniami (``pacing``: prefiks adresu → sekundy, najdłuższy
     pasujący wygrywa; zegar per host) i ponowieniem przy HTTP 429/5xx, błędach sieci, ucięciu
     JSON i ``retCode 10006`` Bybit (odczekanie ``backoff_s · 2^próba``, nie krócej niż
-    ``Retry-After``). HTTP 418 (blokada IP Binance) i pozostałe 4xx → wyjątek od razu.
+    ``Retry-After`` przycięty do ``RETRY_AFTER_MAX_S``). HTTP 418 (blokada IP Binance)
+    → ``BlokadaIP`` od razu; pozostałe 4xx → ``HTTPError`` od razu.
     ``otworz``, ``sleep`` i ``zegar`` są podmienialne (testy bez sieci).
     """
 
@@ -194,6 +213,11 @@ class Klient:
             try:
                 payload = json.loads(self._otworz(url, self.timeout))
             except urllib.error.HTTPError as e:
+                if e.code == HTTP_BLOKADA_IP:
+                    raise BlokadaIP(
+                        f"HTTP 418 — blokada IP ({host}; Retry-After: "
+                        f"{(e.headers or {}).get('Retry-After')!r}); komenda przerwana: {url[:120]}"
+                    ) from e
                 if e.code not in RETRY_HTTP:
                     raise
                 ostatni, minimum = e, _retry_after_s(e)
@@ -224,8 +248,10 @@ def _url(base: str, **params) -> str:
 def _nowe_na_stronie(rekordy: list, czas, zebrane: dict, w_oknie) -> list[tuple[int, object]]:
     """
     Rekordy strony w żądanym oknie (``w_oknie(t)``). Rekord spoza okna jest dozwolony tylko jako
-    powtórzenie już zebranego (zakładka stron); nieznany rekord spoza okna = serwer ignoruje
-    kursor → ``ValueError`` (brak postępu).
+    powtórzenie już zebranego (zakładka stron) i tylko obok nowych rekordów. Serwer ignoruje kursor
+    → ``ValueError`` (brak postępu): nieznany rekord spoza okna albo NIEPUSTA strona bez żadnego
+    rekordu w oknie (ta sama strona odesłana ponownie — cichy koniec uciąłby historię). Pusta
+    strona → pusta lista (koniec historii).
     """
     nowe = []
     for r in rekordy:
@@ -234,6 +260,11 @@ def _nowe_na_stronie(rekordy: list, czas, zebrane: dict, w_oknie) -> list[tuple[
             nowe.append((t, r))
         elif t not in zebrane:
             raise ValueError(f"stronicowanie: brak postępu (rekord {t} spoza żądanego okna)")
+    if rekordy and not nowe:
+        raise ValueError(
+            f"stronicowanie: brak postępu (strona {len(rekordy)} rekordów bez nowego w oknie — "
+            "serwer ignoruje kursor)"
+        )
     return nowe
 
 
@@ -247,9 +278,10 @@ def stronicuj_wstecz(
     """
     Stronicowanie WSTECZ (Bybit: lista malejąco, parametr ``end``/``endTime`` włącznie).
     ``strona(end)`` → rekordy z czasem ≤ ``end`` (dowolna kolejność; powtórzenia już zebranych
-    rekordów z czasem > ``end`` są pomijane). Następna strona: ``end = min(czas) − 1``. Koniec: strona
-    bez nowego rekordu albo ``min(czas) ≤ od_ms``. Wynik: bez powtórzeń czasu (pierwsze wystąpienie
-    wygrywa), rosnąco, tylko ``od_ms ≤ czas ≤ koniec_ms``.
+    rekordów z czasem > ``end`` są pomijane). Następna strona: ``end = min(czas) − 1``. Koniec:
+    pusta strona albo ``min(czas) ≤ od_ms``; niepusta strona bez nowego rekordu → ``ValueError``.
+    Wynik: bez powtórzeń czasu (pierwsze wystąpienie wygrywa), rosnąco, tylko
+    ``od_ms ≤ czas ≤ koniec_ms``.
     """
     zebrane: dict[int, object] = {}
     end = koniec_ms
@@ -278,8 +310,9 @@ def stronicuj_naprzod(
     """
     Stronicowanie NAPRZÓD (Binance: lista rosnąco od ``startTime`` włącznie).
     ``strona(start)`` → rekordy z czasem ≥ ``start`` (powtórzenia już zebranych z czasem < ``start``
-    są pomijane). Następna strona: ``start = max(czas) + 1``. Koniec: strona bez nowego rekordu albo
-    ``max(czas) ≥ do_ms``. Wynik: bez powtórzeń czasu, rosnąco, tylko ``od_ms ≤ czas ≤ do_ms``.
+    są pomijane). Następna strona: ``start = max(czas) + 1``. Koniec: pusta strona albo
+    ``max(czas) ≥ do_ms``; niepusta strona bez nowego rekordu → ``ValueError``. Wynik: bez powtórzeń
+    czasu, rosnąco, tylko ``od_ms ≤ czas ≤ do_ms``.
     """
     zebrane: dict[int, object] = {}
     start = od_ms
@@ -535,17 +568,48 @@ def do_ramki(rekordy: list[dict], kolumny: tuple[str, ...]) -> pd.DataFrame:
 
 
 # ------------------------------------------------------------------ pobieranie (get podmienialny)
+def sprawdz_migawke(rec: dict) -> None:
+    """
+    Treść migawki (klucze ``MIGAWKA_URLS``): Bybit — ``retCode == 0`` i lista ``result.list``,
+    Binance — lista; elementy list to rekordy (słowniki). Zła treść (błąd limitu w odpowiedzi
+    HTTP 200, słownik błędu Binance zamiast listy) → ``ValueError``.
+    """
+    for key in MIGAWKA_URLS:
+        payload = rec.get(key)
+        if key.startswith("bybit_"):
+            try:
+                lista = _wynik_bybit(payload)["list"]
+            except ValueError as exc:
+                raise ValueError(f"migawka {key}: {exc}") from exc
+        elif isinstance(payload, list):
+            lista = payload
+        else:
+            raise ValueError(f"migawka {key}: oczekiwano listy: {str(payload)[:200]}")
+        if not all(isinstance(r, dict) for r in lista):
+            raise ValueError(f"migawka {key}: element listy nie jest rekordem: {str(lista)[:200]}")
+
+
 def migawka(out_dir: Path = OUT / "migawki", now: dt.datetime | None = None, get=_get) -> Path:
-    """Jedna migawka: wszystkie odpowiedzi z ``MIGAWKA_URLS`` w jednym pliku ``<czas UTC>.json.gz``."""
+    """
+    Jedna migawka: wszystkie odpowiedzi z ``MIGAWKA_URLS`` w jednym pliku ``<czas UTC>.json.gz``.
+    Zła treść → ``ValueError`` przed zapisem; zapis do ``.tmp`` + ``os.replace`` (błąd w trakcie
+    zapisu nie zostawia pliku docelowego ani ``.tmp``).
+    """
     now = now or dt.datetime.now(dt.UTC)
     stamp = now.strftime("%Y%m%dT%H%M%SZ")
     rec = {"czas_utc": now.isoformat()}
     for key, url in MIGAWKA_URLS.items():
         rec[key] = get(url)
+    sprawdz_migawke(rec)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{stamp}.json.gz"
-    with gzip.open(path, "wt", encoding="utf-8") as fh:
-        json.dump(rec, fh)
+    tmp = path.with_name(f"{path.name}.tmp")  # nie pasuje do wzorca *.json.gz czytników
+    try:
+        with gzip.open(tmp, "wt", encoding="utf-8") as fh:
+            json.dump(rec, fh)
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)  # po udanym os.replace pliku .tmp już nie ma
     return path
 
 
@@ -717,6 +781,8 @@ def cmd_funding(get, out: Path = OUT, od: str = FUNDING_OD, do_ms: int | None = 
         for symbol in _wczytaj_spis(out, gielda)["symbol"]:
             try:
                 rekordy += pobierz(get, symbol, od_ms, do_ms)
+            except BlokadaIP:
+                raise  # blokada IP dotyczy wszystkich symboli — przerwij całą komendę
             except Exception as exc:  # noqa: BLE001 — jeden symbol nie zatrzymuje spisu
                 bledy.append(symbol)
                 print(f"[pt1] BŁĄD funding {gielda} {symbol}: {exc!r}")
@@ -761,6 +827,8 @@ def cmd_swiece(get, out: Path = OUT, do_ms: int | None = None) -> list[Path]:
                         rekordy += pobierz_swiece_binance(
                             get, symbol, str(w["pair"]), rodzaj, od_ms, ostatnia_pelna
                         )
+                except BlokadaIP:
+                    raise  # blokada IP dotyczy wszystkich symboli — przerwij całą komendę
                 except Exception as exc:  # noqa: BLE001
                     bledy.append(symbol)
                     print(f"[pt1] BŁĄD świece {gielda} {rodzaj} {symbol}: {exc!r}")
