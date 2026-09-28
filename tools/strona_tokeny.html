@@ -140,9 +140,9 @@ footer p{max-width:none}
   <footer>
     <p>Źródło: zapisy rozmów Claude Code projektu alpha na serwerze Linux (~/.claude/projects). Komputer
       z Windows i Cowork mają własne zapisy, więc ich tu nie ma.</p>
-    <p>Odświeżanie: codziennie o 04:30 UTC. Cron serwera uruchamia tools/odswiez_tokeny.sh: monitor
-      tools/zuzycie_tokenow.py --stan liczy dni, a krótka sesja Claude Haiku zapisuje wynik do bazy strony.
-      Ręcznie: bash tools/odswiez_tokeny.sh.</p>
+    <p>Odświeżanie: codziennie. O 04:30 UTC cron serwera uruchamia tools/odswiez_tokeny.sh: monitor
+      tools/zuzycie_tokenow.py --stan liczy dni i wypycha plik stan.json (same liczby) na gałąź tokeny-dane
+      publicznego repo. O 05:00 UTC rutyna Cowork przepisuje go do bazy tej strony.</p>
     <p>Wagi jednostek: wejście 1 · zapis cache 5 min 1,25 · zapis cache 1 h 2 · odczyt cache 0,1 · wyjście 5.
       Dni starsze niż 14 są zamrożone w runs/tokeny/stan.json, bo Claude Code kasuje zapisy po 30 dniach.</p>
     <p>Zasady oszczędzania i pierwszy pomiar: docs/rag/12_zuzycie_tokenow.md.</p>
@@ -260,7 +260,7 @@ footer p{max-width:none}
     el.hidden = false;
     el.classList.toggle('stale', ageH > 48);
     el.querySelector('span').textContent = ageH > 48
-      ? 'Dane nieaktualne: ostatnie odświeżenie ' + when + ', ' + F0.format(Math.floor(ageH / 24)) + ' dni temu. Sprawdź runs/tokeny/cron.log na serwerze.'
+      ? 'Dane nieaktualne: ostatnie odświeżenie ' + when + ', ' + F0.format(Math.floor(ageH / 24)) + ' dni temu. Sprawdź runs/tokeny/cron.log na serwerze i rutynę Cowork.'
       : 'Odświeżono ' + when + '. Dzisiejszy dzień jest niepełny.';
   }
 

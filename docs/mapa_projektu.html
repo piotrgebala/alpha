@@ -184,7 +184,7 @@ footer p{max-width:none}
 <h3>Co dzieje się każdego dnia</h3>
 <p class="hint">Rysunek jest szerszy od ekranu: przesuń go w bok.</p>
 <figure>
-  <div class="scroll"><svg class="dg" viewBox="0 0 1040 344" role="img" aria-label="Codzienne przepływy: dziennik papierowy liczy na serwerze o 02:30 UTC i wysyła wynik do repozytorium, z którego rutyna Cowork odświeża stronę dziennika; kolektory zbierają likwidacje co 5 minut; monitor tokenów zapisuje historię dni, a sposób wysyłki na stronę czeka na decyzję.">
+  <div class="scroll"><svg class="dg" viewBox="0 0 1040 344" role="img" aria-label="Codzienne przepływy: dziennik papierowy liczy na serwerze o 02:30 UTC i wysyła wynik do repozytorium, z którego rutyna Cowork odświeża stronę dziennika; kolektory zbierają likwidacje co 5 minut; monitor tokenów wypycha liczby na gałąź tokeny-dane, z której rutyna Cowork odświeża stronę tokenów; tę rutynę zakłada użytkownik.">
 <defs><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah" d="M0,1 L9,5 L0,9 z"></path></marker><marker id="bh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah hot" d="M0,1 L9,5 L0,9 z"></path></marker></defs>
 <rect class="band" x="276" y="24" width="202" height="310"></rect>
 <text class="lane" x="0" y="16">ŹRÓDŁO</text>
@@ -220,10 +220,10 @@ footer p{max-width:none}
 <text class="s" x="12" y="295">zapisy rozmów (30 dni)</text>
 <rect class="box " x="286" y="252" width="182" height="66"></rect>
 <text class="t2" x="298" y="276">Monitor tokenów</text>
-<text class="s" x="298" y="295">zuzycie_tokenow.py --stan</text>
+<text class="s" x="298" y="295">04:30 UTC · historia dni</text>
 <rect class="box " x="572" y="252" width="182" height="66"></rect>
-<text class="t2" x="584" y="276">Historia dni</text>
-<text class="s" x="584" y="295">runs/tokeny/stan.json</text>
+<text class="t2" x="584" y="276">GitHub: tokeny-dane</text>
+<text class="s" x="584" y="295">stan.json, same liczby</text>
 <rect class="box " x="858" y="252" width="182" height="66"></rect>
 <text class="t2" x="870" y="276">Tokeny CLAS-5</text>
 <text class="s" x="870" y="295">strona z bazą danych</text>
@@ -244,16 +244,17 @@ footer p{max-width:none}
 <path class="ln dash" d="M754,179 H858" marker-end="url(#b)"></path>
 <text class="e " x="806.0" y="172" text-anchor="middle">po ≥ 1 roku</text>
 <path class="ln " d="M182,285 H286" marker-end="url(#b)"></path>
-<text class="e " x="234.0" y="278" text-anchor="middle">na razie ręcznie</text>
+<text class="e " x="234.0" y="278" text-anchor="middle">czyta zapisy</text>
 <path class="ln " d="M468,285 H572" marker-end="url(#b)"></path>
-<text class="e " x="520.0" y="278" text-anchor="middle">dopisuje dni</text>
+<text class="e " x="520.0" y="278" text-anchor="middle">commit + push</text>
 <path class="ln dash hot" d="M754,285 H858" marker-end="url(#bh)"></path>
-<text class="e hot-t" x="806.0" y="278" text-anchor="middle">wysyłka:</text>
-<text class="e hot-t" x="806.0" y="300" text-anchor="middle">do decyzji</text>
+<text class="e hot-t" x="806.0" y="278" text-anchor="middle">rutyna Cowork</text>
+<text class="e hot-t" x="806.0" y="300" text-anchor="middle">05:00 UTC</text>
 </svg></div>
   <figcaption>Wszystko liczy serwer Linux (cron). Dziennik pobiera przed przebiegiem gałąź master, dlatego każda zmiana jego
     kodu wymaga decyzji użytkownika i „Poprawki N”. Komputer z Windows jest zapasem dziennika i sam się wyłącza, gdy liczy
-    serwer. Linie przerywane to kroki, które jeszcze nie działają; czerwona czeka na decyzję użytkownika.</figcaption>
+    serwer. Linie przerywane to kroki, które jeszcze nie działają. Czerwona czeka na użytkownika: rutynę tokenów zakłada się
+    w Cowork (instrukcja w docs/rag/12).</figcaption>
 </figure>
 
 <h2 id="mapa">Mapa myśli</h2>
@@ -314,7 +315,7 @@ footer p{max-width:none}
 <text class="bh" x="668" y="350.0" text-anchor="start">Infrastruktura</text>
 <text class="lf" x="668" y="370.0" text-anchor="start">serwer Linux w Polsce: badania, dziennik, kolektory</text>
 <text class="lf" x="668" y="387.0" text-anchor="start">komputer z Windows: zapas dziennika, sam się wyłącza</text>
-<text class="lf" x="668" y="404.0" text-anchor="start">Cowork: rutyna strony dziennika o 06:30 UTC</text>
+<text class="lf" x="668" y="404.0" text-anchor="start">Cowork: rutyny stron dziennika (06:30) i tokenów (05:00)</text>
 <text class="lf" x="668" y="421.0" text-anchor="start">GitHub: publiczne repo, master zasila dziennik</text>
 <text class="lf" x="668" y="438.0" text-anchor="start">strony: Dziennik CLAS-5, Tokeny CLAS-5, ta mapa</text>
 <text class="lf" x="668" y="455.0" text-anchor="start">monitor tokenów, agent lokalizator (Haiku)</text>
