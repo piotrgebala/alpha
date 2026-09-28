@@ -1,8 +1,11 @@
 # PT1 — perpetuale TradFi na Bybit i Binance: spis, funding, koszty, weekend, zgodność z rynkiem bazowym (2026-09-28)
 
-> **STATUS: W TOKU — pre-rejestracja zapisana 2026-09-28 ok. 18:40 UTC, PRZED pobraniem historii fundingu i cen
-> oraz przed obejrzeniem migawek.** 0 wariantów — POZA licznikami: runda opisuje instrument wykonawczy, nie testuje
-> żadnej strategii.
+> **STATUS: ZAMKNIĘTA (opisowo, 0 wariantów — POZA licznikami).** Perpetuale TradFi na obu giełdach mają w fundingu
+> **stopę procentową 0** (Binance publikuje `interestRate` = 0 dla 202 z 206; Bybit — wzór z I = 0 odtwarza 100 % odczytów).
+> Funding jest więc zerem, dopóki premia nie wyjdzie poza ±0,05 %/8 h: **różnica stóp procentowych (carry) nie jest
+> przenoszona** — hipoteza „carry na kilku klasach” jest na tych kontraktach niewykonalna. Za to trzymanie pozycji kosztuje
+> zwykle ~0, koszty wejścia są niższe niż model KO1, a cena w weekend dobrze zapowiada poniedziałkowe otwarcie.
+> Pre-rejestracja: commit `85365a0` (przed danymi).
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
 
@@ -116,6 +119,156 @@ zwrotów); weekendowe spready (migawki tylko pn wieczór); opłaty VIP i rabaty;
 
 ---
 
+## Wynik w skrócie — prostym językiem (CLAUDE.md zasada 17)
+
+- **Carry nie przechodzi przez te kontrakty.** Na krypto długie pozycje płacą stałą stopę 0,01 % co 8 h (~11 % rocznie)
+  plus premię. Na TradFi giełdy ustawiły tę stopę na **zero**. Wzór fundingu ma „martwą strefę” ±0,05 % na 8 h (ok. ±55 %
+  rocznie): dopóki cena kontraktu nie odjedzie od indeksu tak daleko, funding wynosi dokładnie 0. Różnica stóp procentowych
+  dwóch walut to 0–4 % rocznie — **nie ma jak się pojawić w fundingu.** Długi USDJPY na prawdziwym rynku zarabia ~2,8 %
+  rocznie na różnicy stóp; na perpie dostaje 0 (98 % odczytów to równe zero).
+- **Dobra strona tego samego:** trzymanie pozycji kosztuje zwykle ~0 (u każdego z 459 instrumentów TradFi najczęstsza
+  wartość fundingu to 0). Wyjątki są po stronie popytu: popularne akcje i surowce na Binance — długie płacą tam 5–15 %
+  rocznie; te same surowce na Bybit prawie nic. Giełda ma znaczenie.
+- **Koszty są małe w płynnym rdzeniu** (waluty, surowce, główne ETF-y, 5 największych akcji): ok. 0,04 % za stronę, poniżej
+  0,07 % zakładanego w projekcie (KO1). Ale to stawki promocyjne; ogon mniej płynnych akcji ma spread 5–12 pb (punktów
+  bazowych, setnych procenta).
+- **Weekend:** indeksy giełd nie zamierają (giełdy wyceniają je wtedy z własnej księgi zleceń albo z innych źródeł), a ruch
+  perpa w weekend zapowiada poniedziałkową lukę rynku bazowego bez skrzywienia (β ≈ 0,9–1,0), choć z szumem (R² 0,46–0,84).
+- **Historia jest za krótka na test jakiejkolwiek strategii** (najdłużej złoto na Binance: 9,6 miesiąca). Strategię trzeba
+  badać na długich danych rynku bazowego, a perp traktować tylko jako miejsce wykonania.
+
 ## Wynik
 
-_(uzupełniane po przebiegu)_
+Pełny stdout: `raw_output.txt`; tabele: `spis.csv`, `funding.csv`, `funding_wzor.csv`, `koszty.csv`, `zamkniety_rynek.csv`,
+`zgodnosc.csv`. Dane: funding Bybit 60 853 odczytów / 258 symboli, Binance 70 524 / 207 (od startu każdego instrumentu, BTC od
+2025-12-01); świece 1 h (cena, indeks, mark) rdzenia: Bybit 24, Binance 25 instrumentów.
+
+**P1 — spis (2026-09-28).**
+
+| giełda | akcje | ETF (w tym obligacyjne) | surowce | waluty | inne | najdłuższa historia |
+|---|---|---|---|---|---|---|
+| Bybit | 196 (USA 168, HK 19, KR 7, CN 2) | 54 (TLT, TBT, TMF) | 4 (XAU, XAG, WTI, Brent) | 3 (EURUSD, GBPUSD, USDJPY — od 09-08) | — | XAU 204 dni |
+| Binance | 156 | 37 (TBT, TMF; bez TLT) | 8 (+ platyna, pallad, miedź, gaz) | 1 (USDBRL — od 09-21) | 4 „przed IPO” | XAU 291 dni |
+
+Interwał fundingu prawie wszędzie 8 h (4 h: Binance surowce i akcje HK/KR/CN, Bybit XAU/XAG). Dźwignia Bybit: akcje zwykle
+25×, waluty 100× (Binance nie publikuje jej bez klucza).
+
+**P2 — funding: mechanizm (ma pierwszeństwo przed statystyką).**
+- Binance `interestRate` (migawka 18:49 UTC): **0 dla 202 instrumentów TradFi**, 0,00005 dla 4 „przed IPO”, 0,0001 dla BTCUSDT.
+- Bybit (dokumentacja nie podaje I dla TradFi) — odtworzenie ze wzoru F = P̄ + clamp(I − P̄, ±0,05 %), P̄ ważone liniowo jak
+  w dokumentacji, 14 dni: **I = 0 → 100 % odczytów EURUSD, USDJPY i XAU zgodnych w 0,05 pb**; I = 0,01 % → 2–61 % (zwykła
+  średnia). Kontrola: BTCUSDT z I = 0,01 % → 100 % zgodnych. Przyrząd czyta więc znaną stałą krypto i zero TradFi.
+- Wartość modalna = 0 u **każdego** instrumentu TradFi obu giełd (poza „przed IPO”); kontrola BTCUSDT: modalna 0,01 %/8 h.
+
+**P2 — waluty (f̂ = funding roczny płacony przez długą, % rocznie; model A = 10,95, C = 0; B ze stóp FRED).**
+
+| giełda | para | n | N_eff | f̂ [95 % CI] | zero (udział) | B | CI zawiera |
+|---|---|---|---|---|---|---|---|
+| Bybit | EURUSD | 62 | 62 | −2,28 [−7,72; +3,17] | 90,3 % | +1,37 | B, C |
+| Bybit | GBPUSD | 62 | 62 | 0,00 [0,00; 0,00] | 100 % | +0,04 | C |
+| Bybit | USDJPY | 62 | 62 | −0,06 [−0,16; +0,05] | 98,4 % | −2,80 | C |
+| Binance | USDBRL | 31 | 31 | +16,24 [+1,65; +30,82] | 64,5 % | +10,18 | A, B (nie rozróżnia — z góry poza decyzją) |
+
+**P2 — pozostałe klasy: mediana f̂ po instrumentach [kwartyle], % rocznie; w nawiasie liczba instrumentów.**
+
+| klasa | Bybit | Binance |
+|---|---|---|
+| akcje | +2,08 [−0,22; +6,62] (196) | +4,53 [+0,11; +12,02] (156) |
+| ETF | −0,45 [−2,79; +1,91] (51) | +0,50 [−4,27; +4,30] (35) |
+| ETF obligacyjne | +4,61 [−4,07; +15,29] (3) | −20,71 [−34,16; −7,26] (2: TBT, TMF — lewarowane) |
+| surowce | −2,85 [−12,50; +5,07] (4) | +15,25 [+3,14; +20,39] (8) |
+| kontrola BTCUSDT (f̂ [95 % CI]) | +2,50 [+1,16; +3,85] | +3,14 [+1,01; +5,26] |
+
+Punkt odniesienia: finansowanie długiej pozycji kontraktem terminowym ≈ r_USD − dochód aktywa; r_USD (DFF) ≈ 3,6 %.
+
+**P3 — koszty (WSTĘPNIE: 2 migawki 18:19 i 18:49 UTC, obie w sesji USA; ostateczne po 00:10 UTC).** Opłaty oficjalne TradFi
+(promocja „do odwołania”): Bybit taker 0,0275 % / maker 0 (od 2026-06-16), Binance taker 0,04 % / maker 0 (od 2026-03-31);
+standard: 0,055 % / 0,05 %. Rdzeń — mediana spreadu: Bybit 1,55 pb, Binance 1,10 pb; **koszt strony: Bybit 0,036 %
+(0,51× KO1), Binance 0,046 % (0,65×)**; przy stawkach standardowych 0,063 % / 0,056 %. Mediana spreadu po wszystkich
+instrumentach: Bybit akcje 11,8 pb, ETF 11,1, obligacyjne 26,4, waluty 1,2, surowce 1,1; Binance akcje 5,3, ETF 5,4, obligacyjne 13,3.
+
+**P4 — zamknięty rynek bazowy (rdzeń, per klasa).**
+
+| giełda | klasa | (a) indeks bez zmiany: otw. / zamk. | (b) p95 bazisu zamk./otw. | (c) weekend β (R²; zamknięć) | noce β (R²) |
+|---|---|---|---|---|---|
+| Bybit | akcje (5) | 0 / 0,0 % | 1,58 | 0,98 (0,57; 22) | 0,95 (0,55) |
+| Bybit | ETF (8) | 0 / 0,9 % | 1,20 | 0,98 (0,84; 21) | 0,97 (0,81) |
+| Bybit | ETF oblig. (3) | 0 / 2,6 % | 1,16 | 1,04 (0,77; 9) | 1,02 (0,70) |
+| Bybit | surowce (4) | 0 / 0,3 % | 1,32 | 0,90 (0,79; 29) | — |
+| Bybit | waluty (3) | 0 / 0 % | 0,90 | 0,04 (0,02; **3**) | — |
+| Binance | akcje (5) | 0 / 7,8 % | 1,43 | 0,94 (0,46; 33) | 0,94 (0,54) |
+| Binance | ETF (8) | 0 / 6,1 % | 1,80 | 0,95 (0,83; 28) | 0,94 (0,81) |
+| Binance | ETF oblig. (2) | 0 / 0 % | 1,30 | 1,06 (0,78; 9) | 1,04 (0,68) |
+| Binance | surowce (8) | 0,8 / 35,0 % | 1,43 | 0,88 (0,67; 42) | — |
+| obie | kontrola BTC | 0 / 0 % | 0,93–0,98 | 1,03 (0,92; 45) | 1,06 (0,85) |
+
+(c): G = luka indeksu od zamknięcia do pierwszej godziny po otwarciu, R = ruch perpa w czasie zamknięcia; β z MNK. Najwyższy
+stosunek (b) per instrument: 2,90 (Binance XAG). (d) Funding rozliczany przy zamkniętym vs otwartym rynku (mediany rdzenia): bez
+stałego wzorca (np. Bybit surowce −8,6 → +5,3 %/rok, Binance akcje +13,1 → +9,7) — `zamkniety_rynek.csv`.
+
+**P5 — zgodność z niezależnym źródłem (FRED; korelacja dziennych zwrotów).**
+
+| instrument | pora z pre-rejestracji (16:00 UTC) | zamknięcie NYSE (dodatkowo) | n zwrotów | mediana różnicy poziomu |
+|---|---|---|---|---|
+| EURUSD / GBPUSD / USDJPY (Bybit) | 0,997 / 0,997 / 0,998 | — | 8 | 0,005–0,009 % |
+| SPY (Bybit / Binance) ↔ S&P 500 | 0,69 / 0,73 | **0,997 / 0,997** | 89 / 117 | — |
+| QQQ ↔ Nasdaq-100 | 0,80 / 0,81 | **0,9996 / 0,9994** | 97 / 120 | — |
+| WTI ↔ DCOILWTICO | 0,90 / 0,91 | — | 125 / 119 | 3,1 / 3,0 % |
+| Brent ↔ DCOILBRENTEU | 0,82 / 0,83 | — | 92 / 119 | 4,3 / 5,1 % |
+| USDBRL (Binance) | brak: FRED kończy się 09-18, kontrakt od 09-21 | | 0 | |
+
+## Decyzje z pre-rejestracji
+
+- **D1 carry walutowe — carry NIE jest przenoszone.** Uczciwie: dosłownie reguła daje „pozostały układ” (C, C oraz „B albo C”),
+  bo z góry nazwałem tylko A jako „nieprzenoszone”, a model C (f = 0) to z definicji także brak carry — luka w regule, moja.
+  Rozstrzyga dowód mechanizmu, któremu pre-rejestracja dała pierwszeństwo: I = 0 na obu giełdach i martwa strefa ±0,05 %/8 h
+  sprawiają, że różnica stóp 0–4 %/rok z konstrukcji wzoru nie może trafić do fundingu. EURUSD („B albo C”) ma 90 % zer; jego
+  średnia −2,28 % pochodzi z kilku odczytów spoza strefy, nie z różnicy stóp (B = +1,37 ma przeciwny znak).
+- **D2 koszt — model KO1 obowiązuje (zachowawczo):** 0,036–0,046 % za stronę w rdzeniu (≤ 0,07 %), także przy stawkach
+  standardowych (0,056–0,063 %). Wstępnie — do potwierdzenia na komplecie migawek.
+- **D3 zamknięty rynek — bez twardego wymogu:** p95 bazisu przy zamkniętym rynku ≤ 1,8× otwartego w każdej klasie (próg 3×),
+  β weekendu 0,88–1,06 (próg 0,5). Wyjątek: waluty — 3 weekendy, β 0,04 — nierozstrzygnięte; do czasu pomiaru waluty tylko
+  w godzinach otwarcia. R² 0,46–0,84 znaczy, że weekendowa cena perpa to przybliżenie poniedziałku, nie jego kopia.
+- **D4 historia — strategii nie da się zmierzyć na samych perpach** (maks. 9,6 miesiąca). Zgodność: waluty i ETF-y ≥ 0,997
+  (ETF-y przy porze zamknięcia NYSE — pora 16:00 z pre-rejestracji była dla nich błędem projektu: FRED podaje zamknięcia, więc
+  16:00 porównywało cenę ze środka sesji z ceną zamknięcia). **Ropa 0,82–0,91 < 0,95 → flaga, ale nie indeksu:** FRED ma ceny
+  spot (Brent Europe, WTI Cushing), a perpy śledzą najbliższy kontrakt terminowy — różnica 3–5 % poziomu to bazis spot–futures
+  i inna godzina wyceny; zgodności z rynkiem futures ta runda nie sprawdziła.
+
+## Co na plus (+) / Co na minus (−)
+
+**(+)** Dowód mechanizmu z dwóch niezależnych stron (parametr publikowany przez Binance; odtworzenie wzoru Bybit co do 0,05 pb)
+i kontrola pozytywna na BTC (ta sama metoda czyta znaną stałą 0,01 %). Druga droga (bramka 16a): udziały zer i średnie roczne
+walut, XAU i BTC przeliczone osobnym kodem wprost z surowych plików — zgodne z reporterem (EURUSD −2,28 %, GBPUSD 0,00, USDJPY
+−0,05 vs −0,06 — zaokrąglenie interwału, BTC 2,50 %); `interestRate` policzony wprost z migawki: 202 × 0. Wynik NIE potwierdza
+idealnie założenia z rozmowy: przewidywałem „kopię krypto” (długie płacą ~11 %/rok), a jest zero — wniosek dla carry ten sam,
+ale koszt trzymania odwrotny. Dane bez duplikatów i dziur godzinowych; 70 testów nowego kodu, w tym właściwości stronicowania.
+**(−)** Walut jest mało: 3 pary Bybit po 20 dniach i 3 weekendach, USDBRL tydzień. Stopa 0 to stan dzisiejszy — giełda może ją
+zmienić (Binance zmienia `interestRate` per symbol). Opłaty są promocyjne. Migawki tylko z poniedziałkowego wieczoru (bez
+weekendu), tylko najlepsza oferta (bez głębokości). P5 dla ropy porównuje futures ze spotem. Rdzeń P4 to 5 najpłynniejszych akcji,
+nie cała klasa. **Kogo nie ma:** kontrakty już zdjęte; dywidendy (czy giełda koryguje za nie cenę perpa — nie sprawdzone); VIP
+i rabaty; dźwignia Binance; okres przed startem kontraktów (to nie wpływa na opis, ale żadna liczba nie mówi nic o stresie
+rynkowym na tych kontraktach).
+
+## Wniosek
+
+**Prostym językiem:** perpetuale TradFi to tanie i dobrze wyceniane miejsce, żeby zająć pozycję w kierunku ruchu akcji, ETF-ów
+(także obligacyjnych) i surowców — ale nie źródło carry. Funding ma tam stopę zero i szeroką martwą strefę, więc różnica stóp
+procentowych nie trafia do posiadacza kontraktu. Pomysł „carry na kilku klasach” (krok 2 z rozmowy) odpada w tej infrastrukturze.
+Zostaje pytanie, jaki mechanizm kierunkowy na rynkach tradycyjnych przetrwał publikację — to trzeba badać na długich danych rynku
+bazowego (TX1: sam trend po 2013 nie wystarcza), a perp traktować jako wykonanie.
+
+## Rekomendacja
+
+1. **Krok 2 w wersji „carry: waluty + obligacje na perpach” nie startuje** (mechanizm, D1). Carry wymagałoby innego instrumentu
+   (broker z punktami swapowymi albo kontrakty terminowe) — poza infrastrukturą projektu; decyzja użytkownika, moja rekomendacja: nie.
+2. **Jeśli kierunek TradFi zostaje:** osobna sesja wybiera z `quant-strategy-catalog` JEDEN mechanizm kierunkowy z priorytetem po
+   publikacji na tyle dużym, żeby przyrząd go widział (Sharpe ≥ ~0,5 na ~13 latach), i liczy moc na danych rynku bazowego. Wykonanie
+   na perpach z kosztem ≤ 0,07 %/stronę (D2) i z ryzykiem fundingu po stronie popytu: na Binance długie w popularnych instrumentach
+   płacą 5–15 %/rok — wykonanie raczej na Bybit albo z limitem fundingu w regule.
+3. **Obserwacja do kartoteki, NIE rekomendacja:** ten sam surowiec ma inny funding na dwóch giełdach (mediana surowców: Binance
+   +15 %/rok, Bybit −3 %/rok). To możliwe „carry z hedgem” między giełdami — odczytane z tej rundy, więc tylko jako hipoteza do
+   pre-rejestracji na PRZYSZŁYCH danych; ten sam typ produktu co carry COIN-M (niski zwrot z hedgem), czyli nie cel użytkownika.
+4. **Przed realnymi pieniędzmi na TradFi:** dywidendy (czy giełda koryguje cenę perpa), stawki po promocji, depozyt i dźwignia na
+   Binance, spready w weekend (migawka w sobotę), a dla walut — więcej weekendów niż 3.
+
