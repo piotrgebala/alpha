@@ -26,7 +26,10 @@ potwierdzono symbol i status:
 `--wykonaj` zmienia WYŁĄCZNIE nazwy pozycji DO_ZMIANY, na zasadzie „wszystko albo nic”: przy
 jakiejkolwiek pozycji blokującej niczego nie rusza. Treści nie zmienia, niczego nie usuwa ani nie
 nadpisuje: nowa nazwa powstaje jako dowiązanie twarde (`os.link` odmawia, gdy cel istnieje), a stara
-znika dopiero potem. Po każdej zmianie liczy sha256 pod nową nazwą i porównuje z planem.
+znika dopiero potem. Po każdej zmianie liczy sha256 pod nową nazwą i porównuje z planem. Błąd
+w trakcie (np. cel pojawił się po planie) zatrzymuje przebieg; wypisane linie ZMIENIONO mówią, co
+zrobiono, a ponowne `--sprawdz` pokazuje resztę. Przerwanie między dowiązaniem a usunięciem starej
+nazwy zostawia dwie nazwy tej samej treści (CEL_ISTNIEJE, „ta sama treść”) — do ręcznego przeglądu.
 
 Kody wyjścia: 0 — plan wykonalny albo zmiany wykonane; 3 — w planie są pozycje blokujące (nic nie
 zmieniono); 1 — błąd (brak katalogu, zły plik referencyjny, przerwana zmiana nazwy); 2 — złe
@@ -98,7 +101,7 @@ def wczytaj_symbole(pliki: list[str]) -> dict[str, list[str]]:
         if plik.lower().endswith(".parquet"):
             df = pd.read_parquet(plik)
         elif plik.lower().endswith(".csv"):
-            df = pd.read_csv(plik, dtype=str, encoding="utf-8")
+            df = pd.read_csv(plik, dtype=str, encoding="utf-8-sig")  # -sig: CSV z BOM (Excel)
         else:
             raise ValueError(f"{plik}: obsługiwane tylko .csv i .parquet")
         if KOLUMNA_SYMBOLU not in df.columns:

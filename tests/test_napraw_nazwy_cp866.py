@@ -211,6 +211,31 @@ def test_zmiana_nazwy_nigdy_nie_nadpisuje(tmp_path):
     assert open(zrodlo, "rb").read() == b"stara" and open(cel, "rb").read() == b"cel"
 
 
+def test_cel_pojawia_sie_po_planie_przerywa_bez_nadpisania(katalog, ref_csv, capsys):
+    """Wyścig: plan bez blokad, ale plik o nowej nazwie powstaje przed zmianą → przerwanie, bez nadpisania."""
+    plan = nn.zaplanuj([katalog], nn.wczytaj_symbole([ref_csv]))
+    do_zmiany = [p for p in plan if p.status == nn.DO_ZMIANY]
+    assert len(do_zmiany) == 2
+    pierwsza, ostatnia = do_zmiany
+    _plik(katalog, ostatnia.nowa, b"obcy-plik")  # pojawia się po planie
+    assert nn.wykonaj(plan) == nn.KOD_BLAD
+    out = capsys.readouterr().out
+    assert "PRZERWANO" in out and "wykonano 1 zmian" in out
+    assert open(ostatnia.cel, "rb").read() == b"obcy-plik"  # nie nadpisany
+    assert open(ostatnia.sciezka, "rb").read() == b"funding-binance-zycie"  # źródło zostaje
+    assert not os.path.lexists(pierwsza.sciezka) and os.path.exists(pierwsza.cel)
+    # ponowny plan pokazuje resztę jako blokadę do przeglądu
+    assert nn.main(["--sprawdz", katalog, "--symbole", ref_csv]) == nn.KOD_BLOKADA
+    assert "[CEL_ISTNIEJE]" in capsys.readouterr().out
+
+
+def test_referencje_csv_z_bom(katalog, tmp_path, capsys):
+    ref = tmp_path / "bom.csv"
+    ref.write_bytes("symbol\n币安人生USDT\n".encode("utf-8-sig"))
+    assert nn.main(["--sprawdz", katalog, "--symbole", str(ref)]) == nn.KOD_OK
+    assert capsys.readouterr().out.count("[DO_ZMIANY]") == 2
+
+
 def test_bledy_wejscia(tmp_path, ref_csv, capsys):
     assert nn.main(["--sprawdz", str(tmp_path / "brak"), "--symbole", ref_csv]) == nn.KOD_BLAD
     zly = tmp_path / "zly.csv"
