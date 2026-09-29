@@ -5,7 +5,7 @@ ZASADY: zadanie wyłącznie odczytuje repo. Nie commituj, nie pushuj, nie zmieni
 KROKI
 1. Zapisz skrypt z sekcji SKRYPT poniżej DOKŁADNIE (znak w znak, bez znaczników początku i końca) do pliku gen_dziennik.py w katalogu roboczym. Sprawdź sumę:
 python3 -c "import hashlib;print(hashlib.sha256(open('gen_dziennik.py','rb').read().rstrip().replace(b'\r\n',b'\n')).hexdigest())"
-Musi wyjść: 9af7447bed4c5bb14e37d92d7ae31c4dbb0b281f4370c3686625d2ce72362297
+Musi wyjść: 6039a4470ea8cdb2f3285fba83aba64e49729514238d22f8b913c8a81773fc15
 Przy niezgodności zapisz plik jeszcze raz. Jeśli nadal się nie zgadza — przerwij, NIE aktualizuj strony i zakończ komunikatem „UWAGA: skrypt odświeżania nie przeszedł kontroli sumy”.
 2. rm -rf alpha_dz && git clone -q --filter=blob:none --no-checkout --shallow-since=2026-09-20 https://github.com/piotrgebala/alpha.git alpha_dz
 3. python3 gen_dziennik.py alpha_dz stan.json
@@ -25,8 +25,9 @@ tools/pulpit_clas5.py); repo rutyna klonuje tylko jako dane, a wynik zapisuje w 
 w Cowork. Tylko biblioteka standardowa — rutyna nie instaluje zależności.
 Czyta wyłącznie origin/master:dziennik/* i commity „Dziennik: przebieg …”; niczego nie zapisuje
 w repo. Ostatnia linia wydruku to gotowe zdanie do powiadomienia: „Dziennik odświeżony: …” albo
-„UWAGA: …” (kontrole a–g; f–g = noga carry z poprawki 12). Pusty stan albo błąd gita = kod wyjścia 1 i brak pliku wyjściowego,
-żeby strona nie dostała pustych danych.
+„UWAGA: …” (kontrole a–h; f–g = noga carry z poprawki 12; h = „BŁĄD” w polu ostatniego przebiegu).
+Pusty stan albo błąd gita = kod wyjścia 1 i brak pliku wyjściowego, żeby strona nie dostała pustych
+danych.
 
     python3 tools/strona_dziennika.py <klon repo alpha> <plik wyjściowy .json>
 
@@ -67,6 +68,23 @@ LOG_RE = re.compile(
 # „carry zmiany N” (dni, w których przeliczenie różni się od zapisu) — oba tylko wtedy, gdy są.
 CARRY_TROUBLE_RE = re.compile(r" \| carry (?!zmiany \d)([^|]+?)(?= \|)")
 CARRY_CHANGED_RE = re.compile(r" \| carry zmiany (\d+)(?= \|)")
+# Kontrola (h): pole linii z „BŁĄD” = źródło poboczne padło, a przebieg poszedł dalej
+# (live_journal.run pisze wtedy „<pole> BŁĄD <typ>”, X1 z komunikatem, rozbicie/fazy
+# „+N (x1 BŁĄD <typ>)”). Nazwy pól pobocznych w kolejności linii; pole spoza listy (nowa poprawka)
+# nazywają słowa przed „BŁĄD”, liczbą, „+” albo „(”. Pola „carry …” (h) pomija — kłopot ma (f),
+# zmiany (g).
+ERROR_MARK = "BŁĄD"
+SIDE_FIELDS = (
+    "X1",
+    "stan rynku",
+    "F&G",
+    "transakcje",
+    "opisy strategii",
+    "rozbicie",
+    "fazy",
+    "koszyk",
+)
+FIELD_NAME_RE = re.compile(rf"(.+?) (?={ERROR_MARK}|[+(\d])")
 
 
 def git(repo: str, *args: str, check: bool = False) -> str:
@@ -162,6 +180,32 @@ def parse_log(text: str) -> tuple[list[dict], int]:
         )
     runs.sort(key=lambda r: r["ts"])
     return runs, bad
+
+
+def last_record(text: str) -> str:
+    """Rekord ostatniego przebiegu z `przebiegi.log` — ten sam, który stan ma jako `last_run`:
+    najpóźniejszy CZYTELNY rekord w kolejności `parse_log` (sortowanie stabilne po czasie, więc
+    przy tej samej minucie wygrywa późniejszy w pliku). Brak przebiegów = pusty tekst.
+    """
+    pairs = [(run["ts"], rec) for rec in log_records(text) for run in parse_log(rec)[0]]
+    pairs.sort(key=lambda p: p[0])
+    return pairs[-1][1] if pairs else ""
+
+
+def error_fields(record: str) -> list[tuple[str, str]]:
+    """Pola rekordu logu z „BŁĄD” → [(nazwa pola, treść)] dla kontroli (h), w kolejności linii.
+    Pola „carry …” pomija (kłopot ma (f), zmiany (g)); pole bez nazwy → („pole”, całe pole).
+    """
+    out = []
+    for field in (f.strip() for f in record.split(" | ")):
+        if ERROR_MARK not in field or field.startswith("carry "):
+            continue
+        name = next((n for n in SIDE_FIELDS if field.startswith(n + " ")), None)
+        if name is None:
+            m = FIELD_NAME_RE.match(field)
+            name = m[1] if m else ""
+        out.append((name or "pole", field[len(name) :].strip()))
+    return out
 
 
 def _net(rs: list[dict]) -> dict[str, float]:
@@ -456,8 +500,13 @@ def require_nonempty(state: dict) -> None:
         raise ValueError(f"pusty stan dziennika ({', '.join(empty)}) — strona zostaje bez zmian")
 
 
-def checks(state: dict) -> list[str]:
-    """Kontrole a–g (a–e dawniej w treści rutyny); pusta lista = wszystko w porządku."""
+def checks(state: dict, record: str = "") -> list[str]:
+    """Kontrole a–h (a–e dawniej w treści rutyny); pusta lista = wszystko w porządku.
+
+    `record` = rekord ostatniego przebiegu z `przebiegi.log` (`last_record`) dla (h): błąd źródła
+    pobocznego (X1, stan rynku, F&G, transakcje, opisy, rozbicie, fazy, koszyk) jest tylko w polu
+    linii logu, a stan.json zostaje w dotychczasowym formacie. Bez rekordu (h) nic nie zgłasza.
+    """
     probs = []
     latest, exp = state["health"]["latest_as_of"], state["expected_as_of"]
     if latest != exp:
@@ -495,6 +544,7 @@ def checks(state: dict) -> list[str]:
             f"(g) carry: przeliczenie różni się od zapisu w {cons['last']} {dni} "
             f"(poprzednio {cons['prev']})"
         )
+    probs += [f"(h) {name}: {body}" for name, body in error_fields(record)]
     return probs
 
 
@@ -530,7 +580,8 @@ def main(argv: list[str] | None = None) -> int:
         f"wyniki {len(state['r1']['dates'])}, przebiegi {n_runs} "
         f"(nieprzeczytane {state['log_unparsed']}), head {state['repo']['head']}"
     )
-    print(verdict_line(state, checks(state)))
+    record = last_record(git(repo, "show", f"{REF}:dziennik/przebiegi.log"))
+    print(verdict_line(state, checks(state, record)))
     return 0
 
 
