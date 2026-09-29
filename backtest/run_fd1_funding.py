@@ -238,9 +238,10 @@ def analyse(
     P = len(leg.phases)
     fc = leg.fc
     keys = ["a", "ctrl", "q1", "b1", "b2", "new_edge", "old_edge"] + [f"b0_{m}" for m in ratios]
-    keys += [f"b1_{m}" for m in ratios]
+    keys += [f"b1_{m}" for m in ratios] + ["b1_eng", "b0_eng", "d2_diff", "ruin"]
     daily = {k: np.zeros(n_days) for k in keys}
-    sym = {k: np.zeros(n_sym) for k in ("a", "b1", "pos_days", "abs_a")}
+    sym = {k: np.zeros(n_sym) for k in ("a", "b1", "b1_eng", "pos_days", "abs_a")}
+    capstat = {"min": np.inf, "ruin_holdings": 0}
     btc = leg.columns.index(BTC) if BTC in leg.columns else -1
     btc_drift = {m: 0.0 for m in ratios}
     mid_cnt = np.zeros((n_days, n_sym))
@@ -251,8 +252,10 @@ def analyse(
     cls[cnt == 3] = "8h"
     cls[cnt == 6] = "4h"
     cls[cnt == 24] = "1h"
-    risk2 = {c: np.zeros(4) for c in ("8h", "4h", "1h", "inne", "brak")}  # dni, |a|, b1−a, dryf
-    risk1 = {c: np.zeros(3) for c in ("obie", "tylko_nowa", "tylko_stara")}  # n, silnik, (b)
+    # dni, |a|, b1−a, dryf, (D1) b1_eng−a
+    risk2 = {c: np.zeros(5) for c in ("8h", "4h", "1h", "inne", "brak")}
+    # n, silnik (nowa), (b) stara, (D1) stara na wagach silnika
+    risk1 = {c: np.zeros(4) for c in ("obie", "tylko_nowa", "tylko_stara")}
     risk3 = {"dni_poz": 0.0, "bez_rozl": 0.0, "bez_pliku": 0.0, "bez_ceny": 0.0, "dziura": 0.0}
     risk3.update({"niepelne": 0.0, "nan_stawki": 0.0, "granica_abs": 0.0})
     checks = {"funding": 0.0, "gross": 0.0}
@@ -291,6 +294,17 @@ def analyse(
         daily["old_edge"] += head["old_edge"].sum(1)
         diff = head["b1"] - a
         per_phase_diff.append(float(diff[win].sum(1).mean() * YEAR))
+        # diagnostyka po wyniku: (D1) wagi silnika, (D2) bez okresów ruiny stałej ilości
+        beng = fs.settlement_funding(pos.W_eng, pos.R, pos.alive_end, pos.first, st, ratios["1h"])
+        daily["b1_eng"] += beng["b1"].sum(1)
+        daily["b0_eng"] += beng["b0"].sum(1)
+        sym["b1_eng"] += beng["b1"][win].sum(0)
+        diff_eng = beng["b1"] - a
+        rd = fs.ruin_days(pos)
+        daily["d2_diff"] += diff.sum(1) * ~rd
+        daily["ruin"] += rd.astype(float)
+        capstat["min"] = min(capstat["min"], float(np.nanmin(pos.cap_end[win & pos.in_phase])))
+        capstat["ruin_holdings"] += int((rd & pos.first & win).sum())
         sym["a"] += a[win].sum(0)
         sym["b1"] += head["b1"][win].sum(0)
         held = (pos.W != 0) & win[:, None]
@@ -299,7 +313,13 @@ def analyse(
         drift = head["b0"] - q1
         for c in risk2:
             m_ = held & (cls == c)
-            risk2[c] += [m_.sum(), np.abs(a[m_]).sum(), diff[m_].sum(), drift[m_].sum()]
+            risk2[c] += [
+                m_.sum(),
+                np.abs(a[m_]).sum(),
+                diff[m_].sum(),
+                drift[m_].sum(),
+                diff_eng[m_].sum(),
+            ]
         # miejsce ryzyka nr 1: rozliczenia o północy w pierwszym dniu okresu (granica formowania)
         d0 = np.where(pos.first & (np.arange(n_days) >= fc + 1))[0]
         for d in d0:
@@ -315,6 +335,7 @@ def analyse(
                     m_.sum(),
                     head["new_edge"][d, m_].sum(),
                     head["old_edge"][d - 1, m_].sum(),
+                    beng["old_edge"][d - 1, m_].sum(),
                 ]
         # miejsce ryzyka nr 3: brakujące stawki
         fnan = ~np.isfinite(leg.fday)
@@ -329,12 +350,13 @@ def analyse(
         risk3["niepelne"] += (held & (cls == "inne")).sum()
     for k in daily:
         daily[k] = daily[k][fc:] / P
-    for k in ("a", "b1", "pos_days", "abs_a"):
+    for k in ("a", "b1", "b1_eng", "pos_days", "abs_a"):
         sym[k] = sym[k] / P
     risk3["nan_stawki"] = int(np.isnan(st.rate[(st.day >= fc)]).sum())
     return {
         "daily": daily,
         "sym": sym,
+        "capstat": capstat,
         "risk1": risk1,
         "risk2": risk2,
         "risk3": risk3,
@@ -344,6 +366,38 @@ def analyse(
         "n_days": n_days - fc,
         "med_abs_rate": med_abs_rate,
     }
+
+
+def pandas_b1(
+    W: np.ndarray, R: np.ndarray, alive_end: np.ndarray, st: fs.Settlements, ratio: np.ndarray
+) -> np.ndarray:
+    """
+    Druga droga (D1): konwencja (wejście, wyjście] przez złączenia pandas zamiast rozrzutu `np.add.at`.
+    Poza północą: waga dnia × cena(s)/cena(00:00) × stawka; północ: waga końca poprzedniego dnia × stawka.
+    """
+    n_days = W.shape[0]
+    d_i, s_i = np.nonzero(W)
+    start = pd.DataFrame({"day": d_i, "sym": s_i, "w": W[d_i, s_i]})
+    start["w_end"] = start["w"] * (1.0 + R[d_i, s_i]) * alive_end[d_i, s_i]
+    sets = pd.DataFrame(
+        {
+            "day": st.day,
+            "sym": st.sym,
+            "mid": st.midnight,
+            "f": np.nan_to_num(st.rate, nan=0.0),
+            "ratio": ratio,
+        }
+    )
+    sets = sets[sets["day"] >= 0]
+    off = sets[~sets["mid"]].merge(start[["day", "sym", "w"]], on=["day", "sym"])
+    off_c = (-off["w"] * off["ratio"] * off["f"]).groupby(off["day"]).sum()
+    mid = sets[sets["mid"]].assign(day=lambda x: x["day"] - 1)
+    mid = mid.merge(start[["day", "sym", "w_end"]], on=["day", "sym"])
+    mid_c = (-mid["w_end"] * mid["f"]).groupby(mid["day"]).sum()
+    out = np.zeros(n_days)
+    tot = off_c.add(mid_c, fill_value=0.0)
+    out[tot.index.to_numpy(dtype=int)] = tot.to_numpy()
+    return out
 
 
 def second_way(leg: Leg, settle: dict, ratio_fn) -> np.ndarray:  # pragma: no cover - dane
@@ -488,6 +542,67 @@ def report(leg: Leg, res: dict) -> dict:  # pragma: no cover - wydruk
     return {"m": m, "lo": lo, "hi": hi, "yearly": yearly, "coins": c}
 
 
+def report_posthoc(leg: Leg, res: dict) -> dict:  # pragma: no cover - wydruk
+    """Diagnostyka dopisana PO obejrzeniu pierwszego przebiegu (X1: ruina kapitału stałej ilości, MYX 2025-09)."""
+    d = res["daily"]
+    idx = leg.index[leg.fc :]
+    n = res["n_days"]
+    P = len(leg.phases)
+    cs = res["capstat"]
+    print(
+        f"P. {leg.name} — DIAGNOSTYKA PO WYNIKU (nie była w pre-rejestracji; nie zastępuje liczby głównej)"
+    )
+    print(
+        f"  kapitał fazy przy stałej ilości (koniec dnia, względem formowania): minimum {cs['min']:+.3f}; "
+        f"okresów trzymania z ruiną (kapitał ≤ 0): {cs['ruin_holdings']}; dni faz w tych okresach: "
+        f"{d['ruin'].sum() * P:.0f} z {n * P}"
+    )
+    print(
+        "  (D1) każde rozliczenie osobno na WAGACH SILNIKA (model pozycji silnika bez zmian; BTC 1h):"
+    )
+    d1 = d["b1_eng"] - d["a"]
+    m1, lo1, hi1 = boot_line("  (b′) − (a)", d1)
+    boot_line("    dryf ceny w ciągu dnia", d["b0_eng"] - d["ctrl"])
+    boot_line("    przypisanie 00:00: stara zamiast nowej pozycji", d["b1_eng"] - d["b0_eng"])
+    ser = pd.Series(d1, index=idx)
+    yearly = ser.groupby(ser.index.year).mean() * YEAR
+    print("    per rok (%/rok): " + ", ".join(f"{y}: {pct(v)}" for y, v in yearly.items()))
+    print(
+        f"    per rok: mediana {pct(yearly.median())}, zakres [{pct(yearly.min())}; {pct(yearly.max())}]; "
+        f"mediana dzienna × 365 {pct(np.median(d1) * YEAR)}"
+    )
+    s = res["sym"]
+    held = s["pos_days"] > 0
+    c = pd.Series(((s["b1_eng"] - s["a"]) / n * YEAR)[held], index=np.array(leg.columns)[held])
+    top = c.reindex(c.abs().sort_values(ascending=False).index[:5])
+    print(
+        f"    per moneta ({len(c)}): mediana {pct(c.median())}, zakres [{pct(c.min())}; {pct(c.max())}]; "
+        "największe |wkłady|: " + "; ".join(f"{k} {pct(v)}" for k, v in top.items())
+    )
+    r2 = res["risk2"]
+    print(
+        "    per klasa interwału (%/rok): "
+        + ", ".join(f"{k}: {pct(v[4] / P / n * YEAR)}" for k, v in r2.items())
+    )
+    r1 = res["risk1"]
+    print(
+        "    granica 00:00, stara pozycja na wagach silnika (%/rok): "
+        + ", ".join(f"{k}: {pct(v[3] / P / n * YEAR)}" for k, v in r1.items())
+    )
+    print(
+        "  (D2) liczba główna (stała ilość) BEZ okresów ruiny — dni faz w ruinie wyzerowane w obu drogach:"
+    )
+    m2, lo2, hi2 = boot_line("  (b) − (a) bez ruiny", d["d2_diff"])
+    ser2 = pd.Series(d["d2_diff"], index=idx)
+    y2 = ser2.groupby(ser2.index.year).mean() * YEAR
+    print(
+        "    per rok (%/rok): "
+        + ", ".join(f"{y}: {pct(v)}" for y, v in y2.items())
+        + f"; mediana {pct(y2.median())}, zakres [{pct(y2.min())}; {pct(y2.max())}]"
+    )
+    return {"d1": (m1, lo1, hi1), "d2": (m2, lo2, hi2)}
+
+
 def main() -> None:  # pragma: no cover - przebieg na danych
     warnings.filterwarnings("ignore", category=FutureWarning)  # pct_change() w silniku X1
     t0 = time.time()
@@ -601,6 +716,17 @@ def main() -> None:  # pragma: no cover - przebieg na danych
             f"max |różnica dzienna| {np.max(np.abs(dw - (res['daily']['b1'] - res['daily']['a']))):.2e} "
             f"({time.time() - t1:.0f} s)"
         )
+        summary[leg.name].update(report_posthoc(leg, res))
+        tot = np.zeros(len(leg.index))
+        for pos, eng, _ in leg.phases:
+            b = pandas_b1(pos.W_eng, pos.R, pos.alive_end, st, r1h)
+            tot += b - eng["funding"].reindex(leg.index).fillna(0.0).to_numpy()
+        pw = tot[leg.fc :] / len(leg.phases)
+        d1 = res["daily"]["b1_eng"] - res["daily"]["a"]
+        print(
+            f"  druga droga (D1): numpy {100 * d1.mean() * YEAR:+.6f} %/rok; złączenia pandas, (a) z kolumny "
+            f"silnika {100 * pw.mean() * YEAR:+.6f} %/rok; max |różnica dzienna| {np.max(np.abs(pw - d1)):.2e}"
+        )
     print(SEP)
     print(
         "9. Skala KO1 (koszt wykonania taker, wniosek 99) i próg porównywalności z pre-rejestracji (25 %)"
@@ -613,6 +739,13 @@ def main() -> None:  # pragma: no cover - przebieg na danych
             f"przedział w ±progu: {'tak' if (s['lo'] > -thr and s['hi'] < thr) else 'nie'} | "
             f"przedział obejmuje 0: {'tak' if s['lo'] <= 0 <= s['hi'] else 'nie'}"
         )
+        for key, lab in (("d1", "(D1) wagi silnika"), ("d2", "(D2) bez okresów ruiny")):
+            m_, lo_, hi_ = s[key]
+            print(
+                f"     po wyniku {lab}: {pct(m_)} [{pct(lo_)}; {pct(hi_)}] | |średnia| / KO1 = "
+                f"{abs(m_) / KO1[name]:.3f} | przedział w ±progu: "
+                f"{'tak' if (lo_ > -thr and hi_ < thr) else 'nie'}"
+            )
     print(f"czas: {time.time() - t0:.0f} s")
     print(SEP)
 

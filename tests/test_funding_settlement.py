@@ -330,3 +330,22 @@ def test_ruin_days_marks_whole_holding_when_short_squeeze_wipes_capital():
     assert ruin[32:39].all()  # cały okres 32–38 (formowanie 31 → 38)
     assert not ruin[39:].any() and not ruin[:32].any()
     assert np.nanmin(pos.cap_end[32:39]) <= 0
+
+
+def test_runner_pandas_b1_matches_numpy_b1():
+    """Druga droga D1 z przebiegu (złączenia pandas) = `settlement_funding` b1 na tych samych wagach."""
+    from backtest.run_fd1_funding import pandas_b1
+
+    close, _ = _panel(11, n_days=90)
+    rets = close.pct_change(fill_method=None).to_numpy()
+    rng = np.random.default_rng(12)
+    forms = [(t, rng.normal(0, 0.5, close.shape[1])) for t in range(30, 90, 7)]
+    prev = close.shift(1)
+    lo, hi = (close * 0.75 / prev).to_numpy(), (close * 1.35 / prev).to_numpy()
+    pos = fs.ts_liq_positions(rets, forms, lo, hi, 2.0, 0.01)
+    st_ = _synthetic_settlements(close, 13)
+    ratio = fs.interp_ratio(st_, pos.R)
+    b = fs.settlement_funding(pos.W_eng, pos.R, pos.alive_end, pos.first, st_, ratio)["b1"]
+    got = pandas_b1(pos.W_eng, pos.R, pos.alive_end, st_, ratio)
+    assert np.allclose(got, b.sum(axis=1), atol=1e-15)
+    assert abs(got.sum()) > 1e-4
