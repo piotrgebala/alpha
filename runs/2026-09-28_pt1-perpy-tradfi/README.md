@@ -8,7 +8,7 @@
 > jest wypłacana — carry walutowe na tych parach dziś niewykonalne.** Surowce i obligacje — nierozstrzygnięte (funding złota
 > ≈ r_USD, ropy ujemny — opis po przeglądzie, nie test). D1 dosłownie: „pozostały układ” → dalsze zbieranie fundingu. Najczęstszy
 > odczyt fundingu to 0, ale długie w akcjach płacą w medianie 2,1–4,5 %/rok (popularne 10–16 %); mediana kosztu wejścia
-> w rdzeniu ≤ 0,07 % (KO1), typowa akcja 0,067–0,087 %. Pre-rejestracja: commit `85365a0` (przed danymi).
+> w rdzeniu ≤ 0,07 % (KO1), typowa akcja 0,065–0,094 % (12 migawek). Pre-rejestracja: commit `85365a0` (przed danymi).
 
 ## W skrócie — prostym językiem (CLAUDE.md zasada 17)
 
@@ -35,8 +35,10 @@ kontraktach wykonać (krok 2 planu z rozmowy 2026-09-28).
 - **Kod:** `data/fetch_tradfi_perps.py` (pobieranie: spis, funding, świece 1h ceny / indeksu / mark, migawki tickerów),
   `backtest/run_pt1_tradfi.py` (neutralny reporter). Testy: `tests/test_fetch_tradfi_perps.py`, `tests/test_pt1_tradfi.py`.
 - **Komenda:** `PYTHONUTF8=1 py -m data.fetch_tradfi_perps spis|funding|swiece|premia` (migawki: `migawka --co 1800 --do
-  2026-09-29T00:10` w tle od 18:19 UTC), potem `PYTHONUTF8=1 py -m backtest.run_pt1_tradfi > raw_output.txt`; druga droga:
-  `py runs/2026-09-28_pt1-perpy-tradfi/druga_droga.py > druga_droga.txt`.
+  2026-09-29T00:10` w tle od 18:19 UTC), potem (z katalogu repo)
+  `PYTHONUTF8=1 py -m backtest.run_pt1_tradfi > runs/2026-09-28_pt1-perpy-tradfi/raw_output.txt`;
+  druga droga: `PYTHONUTF8=1 py runs/2026-09-28_pt1-perpy-tradfi/druga_droga.py > runs/2026-09-28_pt1-perpy-tradfi/druga_droga.txt`;
+  druga droga P3 na komplecie migawek (29.09): `PYTHONUTF8=1 py runs/2026-09-28_pt1-perpy-tradfi/druga_droga_p3.py > runs/2026-09-28_pt1-perpy-tradfi/druga_droga_p3.txt`.
 - **Źródła:** publiczne REST bez klucza — Bybit `https://api.bybit.com/v5/market/*` (category=linear,
   `symbolType ∈ {stock, ETF, commodity, forex}`), Binance `https://fapi.binance.com/fapi/v1/*`
   (`contractType = TRADIFI_PERPETUAL`); FRED (`data.fetch_external.fetch_fred`, bez klucza) do drugiej drogi i stóp.
@@ -146,10 +148,11 @@ zwrotów); weekendowe spready (migawki tylko pn wieczór); opłaty VIP i rabaty;
   giełdach prawie ten sam funding (np. złoto 4,0 i 3,6 %, MU 16,4 i 15,1 %). Różnice median całych klas między giełdami
   wynikają z innego składu klas i innego okresu (paradoks Simpsona), nie z giełdy. Wyraźny wyjątek: ropa WTI (funding −12 i −28 %
   rocznie — długie dostają).
-- **Koszty wejścia (wstępnie, 2 migawki):** mediana rdzenia (waluty, surowce, główne ETF-y, 5 największych akcji) to ok.
-  0,04 % za stronę, poniżej 0,07 % zakładanego w projekcie (KO1). Ale rdzeń wybrano regułą, nie płynnością: 7 z 23
-  instrumentów rdzenia Bybit i 4 z 24 Binance kosztuje więcej niż 0,07 %. Typowa akcja: 0,087 % (Bybit) i 0,067 % (Binance);
-  mediana spreadu klasy akcji to 5–12 pb (punktów bazowych, setnych procenta). Opłaty są promocyjne.
+- **Koszty wejścia (12 migawek z poniedziałkowego wieczoru, w sesji USA i po niej):** mediana rdzenia (waluty, surowce,
+  główne ETF-y, 5 największych akcji) to 0,03–0,05 % za stronę, poniżej 0,07 % zakładanego w projekcie (KO1) — w każdej
+  migawce. Ale rdzeń wybrano regułą, nie płynnością: 6 z 23 instrumentów rdzenia Bybit i 5 z 24 Binance kosztuje więcej niż
+  0,07 %. Typowa akcja: 0,094 % (Bybit; tego wieczoru po zamknięciu sesji USA drożej niż w jej ostatnich godzinach) i 0,065 % (Binance); mediana spreadu
+  klasy akcji to 5–13 pb (punktów bazowych, setnych procenta). Opłaty są promocyjne.
 - **Weekend:** indeksy giełd przy zamkniętym rynku bazowym zwykle się ruszają (bez zmiany: Bybit 0–2,6 % godzin; Binance
   surowce 35 %, akcje 7,8 %, ETF-y 6,1 % — giełdy wyceniają je wtedy z własnej księgi zleceń albo z innych źródeł), a ruch
   perpa w weekend zapowiada poniedziałkową lukę rynku bazowego bez skrzywienia (β ≈ 0,9–1,0 w każdej klasie, dolna granica
@@ -160,7 +163,7 @@ zwrotów); weekendowe spready (migawki tylko pn wieczór); opłaty VIP i rabaty;
 
 ## Wynik
 
-Pełny stdout: `raw_output.txt`; tabele: `spis.csv`, `funding.csv`, `funding_wzor.csv`, `koszty.csv`, `zamkniety_rynek.csv`,
+Pełny stdout: `raw_output.txt` (komplet 12 migawek; uruchomienie 29.09 ok. 00:20 UTC); tabele: `spis.csv`, `funding.csv`, `funding_wzor.csv`, `koszty.csv`, `zamkniety_rynek.csv`,
 `zgodnosc.csv`. Dane: funding Bybit 60 853 odczytów / 258 symboli, Binance 70 524 / 207 (od startu każdego instrumentu, BTC od
 2025-12-01); świece 1 h (cena, indeks, mark) rdzenia: Bybit 24, Binance 25 instrumentów.
 
@@ -175,7 +178,7 @@ Interwał fundingu prawie wszędzie 8 h (4 h: Binance surowce i akcje HK/KR/CN, 
 25×, waluty 100× (Binance nie publikuje jej bez klucza).
 
 **P2 — funding: mechanizm (ma pierwszeństwo przed statystyką).**
-- Binance `interestRate` (migawka 18:49 UTC): **0 dla 202 instrumentów TradFi**, 0,00005 dla 4 „przed IPO”, 0,0001 dla BTCUSDT.
+- Binance `interestRate` (każda z 12 migawek, 18:19–23:49 UTC): **0 dla 202 instrumentów TradFi**, 0,00005 dla 4 „przed IPO”, 0,0001 dla BTCUSDT.
 - Bybit (dokumentacja nie podaje I dla TradFi) — odtworzenie ze wzoru F = P̄ + clamp(I − P̄, ±0,05 %), P̄ ważone liniowo jak
   w dokumentacji, 14 dni; ten sam wariant ważenia i ta sama tolerancja 0,05 pb dla obu wartości I: **I = 0 → 100 % odczytów
   EURUSD, USDJPY i XAU zgodnych; I = 0,01 % → 2–53 %** (USDJPY 2 %, EURUSD 15 %, XAU 53 %). Kontrola: BTCUSDT z I = 0,01 %
@@ -235,16 +238,26 @@ Niżej tylko opis.
 - **Gdzie działa arbitraż, funding wygląda na koszt carry:** złoto na wspólnym oknie 3,6–4,0 %/rok ≈ r_USD 3,6 %; ropa — długie
   DOSTAJĄ 12–28 %/rok (CL i BZ na wspólnym oknie); USDBRL +16 %/rok, w tę samą stronę co B (+10,2). To obserwacje, nie test.
 
-**P3 — koszty (WSTĘPNIE: 2 migawki 18:19 i 18:49 UTC, obie w sesji USA; ostateczne po 00:10 UTC).** Opłaty oficjalne TradFi
-(promocja „do odwołania”): Bybit taker 0,0275 % / maker 0 (od 2026-06-16), Binance taker 0,04 % / maker 0 (od 2026-03-31);
-standard: 0,055 % / 0,05 %. Rdzeń — mediana spreadu: Bybit 1,55 pb, Binance 1,10 pb; **koszt strony: Bybit 0,036 %
-(0,51× KO1), Binance 0,046 % (0,65×)**; przy stawkach standardowych 0,063 % / 0,056 %. Mediana spreadu po wszystkich
-instrumentach: Bybit akcje 11,8 pb, ETF 11,1, obligacyjne 26,4, waluty 1,2, surowce 1,1; Binance akcje 5,3, ETF 5,4, obligacyjne 13,3.
+**P3 — koszty (komplet: 12 migawek co 30 min, pn 2026-09-28 18:19–23:49 UTC — 4 w sesji USA, 8 po jej zamknięciu; wersja
+wstępna z 2 migawek zastąpiona 29.09).** Opłaty oficjalne TradFi (promocja „do odwołania”): Bybit taker 0,0275 % / maker 0
+(od 2026-06-16), Binance taker 0,04 % / maker 0 (od 2026-03-31); standard: 0,055 % / 0,05 %. Rdzeń — mediana spreadu: Bybit
+1,05 pb, Binance 1,15 pb; **koszt strony: Bybit 0,034 % (0,49× KO1), Binance 0,046 % (0,65×)** — tyle samo w sesji USA i po
+niej (Bybit 0,035 / 0,034 %, Binance 0,046 / 0,046 %); przy stawkach standardowych 0,060 % / 0,056 %. Zakres po pojedynczych
+migawkach (mediana rdzenia policzona osobno w każdej z 12): Bybit 0,033–0,036 %, Binance 0,045–0,046 %. Mediana spreadu po
+wszystkich instrumentach: Bybit akcje 13,3 pb, ETF 12,4, obligacyjne 22,8, waluty 0,5, surowce 1,0; Binance akcje 5,0, ETF 5,9,
+obligacyjne 9,3, surowce 1,2. Względem wersji wstępnej mediany rdzenia i klasy akcji zmieniły się najwyżej o 0,008 pkt proc. za stronę (rdzeń Bybit
+0,036 → 0,034 %, akcje Bybit 0,087 → 0,094 %), małe klasy (ETF-y obligacyjne) o ok. 0,02, a pojedyncze instrumenty rdzenia do
+0,06 (TLT na Bybit 0,205 → 0,142 %) — koszt per instrument z jednego wieczoru jest przybliżony; werdykt D2 bez zmian.
 
-Zakres D2 (dopisek 16b; wstępnie, te same 2 migawki): rdzeń to reguła, nie płynność. Koszt strony powyżej 0,07 % ma 7 z 23
-instrumentów rdzenia Bybit (EWJ, EWZ, GDX, XLE, TBT, TLT, TMF) i 4 z 24 Binance (GDX, XLE, TBT, TMF). Bybit EURUSD: obrót
-~28 tys. USDT/dobę, spread ~4,5 pb. Mediana klasy akcji: 0,087 % za stronę na Bybit (60 % akcji powyżej KO1) i 0,067 % na
-Binance (48 %); p90 spreadu akcji 13 pb (Binance) i 43 pb (Bybit). Werdykt „KO1 obowiązuje” dotyczy więc tylko MEDIANY rdzenia.
+Zakres D2 (dopisek 16b, przeliczony na komplecie): rdzeń to reguła, nie płynność. Koszt strony powyżej 0,07 % ma 6 z 23
+instrumentów rdzenia Bybit (EWJ, EWZ, GDX, TBT, TLT, TMF; wstępnie 7 — także XLE) i 5 z 24 Binance (EWZ, GDX, TBT, TMF, XLE;
+wstępnie 4 — bez EWZ). Bybit EURUSD: obrót ~28 tys. USDT/dobę, spread skacze między 1 a 8 pb (mediana 12 migawek 3,3 pb). Mediana klasy akcji:
+0,094 % za stronę na Bybit (65 % akcji powyżej KO1) i 0,065 % na Binance (44 %); p90 spreadu akcji 14 pb (Binance) i 43 pb
+(Bybit). Tego wieczoru akcje na Bybit po zamknięciu sesji USA drożały (0,083 → 0,095 %; mediana klasy w każdej z 8 migawek
+po sesji wyższa niż w każdej z 4 z ostatnich ~100 min sesji), na Binance nie (0,067 → 0,063 %). Klasa akcji
+łączy USA z Azją: akcje z Hongkongu, Korei i Chin (Bybit 28, Binance 22) mierzono tylko przy zamkniętej giełdzie macierzystej —
+na Bybit kosztowały wtedy 0,18 % za stronę; same akcje USA: 0,090 % (Bybit) i 0,066 % (Binance). Werdykt „KO1 obowiązuje”
+dotyczy więc tylko MEDIANY rdzenia.
 
 **P4 — zamknięty rynek bazowy (rdzeń, per klasa).**
 
@@ -303,10 +316,11 @@ Flaga dla Brent zostaje; przyczyna (np. FRED = cena spot, perp = kontrakt termin
   parach dziś niewykonalne.** Tam, gdzie arbitraż jest (złoto, ropa, USDBRL — opis post hoc), funding wygląda na koszt carry;
   surowce i obligacje — nierozstrzygnięte. Dalsze zbieranie fundingu jest tanie i w 1–4 miesiące może rozstrzygnąć B/C dla
   EURUSD i USDBRL (GBPUSD: B = +0,04 ≈ C — nie do rozróżnienia i bez znaczenia ekonomicznego).
-- **D2 koszt — model KO1 obowiązuje dla MEDIANY rdzenia (wstępnie):** 0,036–0,046 % za stronę (≤ 0,07 %), także przy stawkach
-  standardowych (0,056–0,063 %). Rdzeń to reguła, nie płynność: powyżej 0,07 % jest 7 z 23 instrumentów rdzenia Bybit i 4 z 24
-  Binance, a typowa akcja kosztuje 0,087 % (Bybit) / 0,067 % (Binance). Strategia liczy więc koszt per instrument, nie
-  z mediany. Do potwierdzenia na komplecie migawek.
+- **D2 koszt — model KO1 obowiązuje dla MEDIANY rdzenia (komplet 12 migawek):** 0,034–0,046 % za stronę (≤ 0,07 %), w sesji
+  USA i po niej, w każdej pojedynczej migawce (0,033–0,046 %) i przy stawkach standardowych (0,056–0,060 %). Rdzeń to reguła,
+  nie płynność: powyżej 0,07 % jest 6 z 23 instrumentów rdzenia Bybit i 5 z 24 Binance, a typowa akcja kosztuje 0,094 % (Bybit;
+  same akcje USA 0,090 %) / 0,065 % (Binance). Strategia liczy więc koszt per instrument, nie z mediany. Komplet migawek
+  potwierdził wersję wstępną (2 migawki).
 - **D3 zamknięty rynek — bez twardego wymogu dla klas; wymóg dla walut oraz miedzi i palladu na Binance.** Decyzja opiera się
   tylko na (c). Miara (b) nie wykryje złej wyceny, gdy indeks w czasie zamknięcia pochodzi z księgi samego kontraktu — wtedy
   bazis jest mały z konstrukcji. β weekendu per klasa 0,88–1,06; 95 % CI przy n = liczbie zamknięć (9–42) ma dolne granice
@@ -326,7 +340,8 @@ Flaga dla Brent zostaje; przyczyna (np. FRED = cena spot, perp = kontrakt termin
 i kontrola pozytywna na BTC (ta sama metoda czyta znaną stałą 0,01 % — przez wartość modalną i wzór; masa punktowa BTC to tylko
 6–7 % odczytów, w F1 35,85 %). Druga droga (bramka 16a): udziały zer i średnie roczne walut, XAU i BTC przeliczone osobnym kodem
 wprost z surowych plików — zgodne z reporterem (EURUSD −2,28 %, GBPUSD 0,00, USDJPY −0,055 — „−0,05” i „−0,06” to zaokrąglenia
-tej samej liczby, XAU 4,04 %, BTC 2,50 %); `interestRate` policzony wprost z migawki: 202 × 0. Liczby dopisane po przeglądzie
+tej samej liczby, XAU 4,04 %, BTC 2,50 %); `interestRate` policzony wprost z migawki: 202 × 0 (na komplecie: 0 w każdej z 12 migawek, 2424 odczyty). Koszty P3 na
+komplecie migawek przeliczone osobnym kodem (`druga_droga_p3.py`) — zgodne z reporterem co do 4. miejsca po przecinku. Liczby dopisane po przeglądzie
 (N_eff walut, wspólne okna, koszty, przedziały β, ropa o innych godzinach) przeliczone jeszcze raz osobnym kodem — zgodne
 z recenzją (drobne różnice w „Bramki jakości”). Wynik NIE potwierdza idealnie założenia z rozmowy: przewidywałem „kopię krypto”
 (długie płacą ~11 %/rok), a jest zero — brak automatycznego carry, a koszt trzymania zależy od popytu na długie pozycje. Dane bez
@@ -338,7 +353,8 @@ wynik walutowy opisuje dzisiejszy stan młodego rynku, nie trwałą cechę kontr
 walut (wartość awaryjna estymatora), „ropa: FRED to spot” (niesprawdzone). Sprawdzenia dopisane po przeglądzie (wspólne okna,
 złoto / ropa / USDBRL wobec carry, ropa o innych godzinach, przedziały β) są post hoc — opis, nie test. Stopa 0 to stan
 dzisiejszy — giełda może ją zmienić (Binance zmienia `interestRate` per symbol). Opłaty są promocyjne. Migawki tylko
-z poniedziałkowego wieczoru (bez weekendu), tylko najlepsza oferta (bez głębokości). Rdzeń P4 to 5 najpłynniejszych akcji, nie
+z poniedziałkowego wieczoru (bez weekendu i bez godzin azjatyckich — akcje z Hongkongu, Korei i Chin mierzone tylko przy
+zamkniętej giełdzie macierzystej), tylko najlepsza oferta (bez głębokości). Rdzeń P4 to 5 najpłynniejszych akcji, nie
 cała klasa. **Kogo nie ma:** kontrakty już zdjęte; dywidendy (czy giełda koryguje za nie cenę perpa — nie sprawdzone); dochód
 aktywa potrzebny do porównania z carry (dlatego porównania per instrument nie wykonano); płynność poza najlepszą ofertą — rdzeń
 wybrano regułą, więc są w nim instrumenty z obrotem kilkudziesięciu tys. USDT na dobę (Bybit: EWJ ~23 tys., EURUSD ~28 tys.,
@@ -358,13 +374,23 @@ mówi nic o stresie rynkowym na tych kontraktach).
   (recenzja 3,5); NVDA / MU Binance 10,40 / 15,07 (recenzja 10,5 / 15,2 — to samo z odczytem na granicy okna: 10,49 / 15,21);
   miedź [0,22; 0,86] z rozkładem t (recenzja [0,23; 0,85]); USDBRL w bootstrapie blokowym [+3,6; +32,6] — bez C. Ponad
   recenzję: różnicę > 10 pkt/rok między giełdami ma 19 ze 166 wspólnych instrumentów (nie tylko ropa), a przedział β obejmuje
-  0,5 także u 11 instrumentów z β 0,74–1,09. Zostające zastrzeżenia: waluty to 20 dni (USDBRL 7); P3 z 2 migawek
-  poniedziałkowego wieczoru (domknięcie po 00:10 UTC); sprawdzenia po przeglądzie oznaczone jako post hoc. Czerwona flaga
+  0,5 także u 11 instrumentów z β 0,74–1,09. Zostające zastrzeżenia: waluty to 20 dni (USDBRL 7); P3 z 12 migawek
+  jednego wieczoru (bez weekendu i godzin azjatyckich); sprawdzenia po przeglądzie oznaczone jako post hoc. Czerwona flaga
   „wynik idealnie potwierdza hipotezę” nie zachodzi: prognoza z rozmowy to A (kopia krypto), wynik dla walut to C (zero). Druga
   droga (`druga_droga.py` → `druga_droga.txt`) zgodna z reporterem.
+- **Domknięcie P3 (29.09): 16a (`data:validate-data`) i 16b według `docs/skills/bramki-jakosci.md` na komplecie migawek —
+  Caveats.** Reporter na 12 migawkach i osobny
+  kod wprost z surowych plików (`druga_droga_p3.py` → `druga_droga_p3.txt`): rdzeń, klasy, sesja USA / po sesji — zgodne co do
+  4. miejsca po przecinku. Obecny kod na 2 pierwszych migawkach odtwarza wstępny `koszty.csv` 1:1, a pozostałe tabele (P1, P2,
+  P4, P5) są identyczne jak w wersji wstępnej — zmienia się tylko P3. Dopisane: zakres po pojedynczych migawkach (rdzeń Bybit
+  0,033–0,036 %, Binance 0,045–0,046 %), podział akcji USA / Azja i `interestRate` we wszystkich migawkach. Zastrzeżenia: jeden
+  wieczór, bez weekendu i godzin azjatyckich, tylko najlepsza oferta, stawki promocyjne.
 - **16c przegląd diffu (`engineering:code-review`): Approve z uwagami.** Poprawki odporności kodu (stronicowanie, migawki,
   Retry-After / 418, zakres kalendarza) — commit `2522227` (91 testów nowego kodu, zielone). Kalendarz surowców nie zna świąt
-  CME — przypis pod P4 (wpływ na D3 żaden).
+  CME — przypis pod P4 (wpływ na D3 żaden). Diff domknięcia (od `13722df`: `druga_droga_p3.py`, wyniki P3, dokumentacja,
+  lista zamrożonych) — przegląd 29.09 (`engineering:code-review`): **Approve z uwagami**; poprawione: zdanie o zmianie względem
+  wersji wstępnej zawężone do median rdzenia i akcji, „na Bybit” przy akcjach azjatyckich (INDEX), „tego wieczoru”, EURUSD
+  1–8 pb, 0,067 zamiast 0,068, pełne ścieżki i `PYTHONUTF8=1` w komendach; `druga_droga_p3.py` zamrożony.
 - **Bezpieczeństwo (`security-review`, nowe połączenia sieciowe): Approve** — tylko https, stałe hosty, parametry przez
   urlencode, brak kluczy i sekretów. Opcjonalne utwardzenie: odrzucać przekierowania na adresy nie-https.
 
@@ -389,16 +415,16 @@ po stronie popytu jako kosztem.
    kontrakty terminowe) — poza infrastrukturą projektu; decyzja użytkownika.
 2. **Jeśli kierunek TradFi zostaje:** osobna sesja wybiera z `quant-strategy-catalog` JEDEN mechanizm kierunkowy z priorytetem po
    publikacji na tyle dużym, żeby przyrząd go widział (Sharpe ≥ ~0,5 na ~13 latach), i liczy moc na danych rynku bazowego.
-   Wykonanie na perpach z kosztem liczonym per instrument (mediana rdzenia ≤ 0,07 %/stronę, typowa akcja 0,067–0,087 %; D2)
+   Wykonanie na perpach z kosztem liczonym per instrument (mediana rdzenia ≤ 0,07 %/stronę, typowa akcja 0,065–0,094 %; D2)
    i z fundingiem po stronie popytu jako kosztem w regule (popularne akcje 10–16 %/rok na obu giełdach na wspólnym oknie).
    Wyboru giełdy te dane nie uzasadniają: ten sam instrument ma prawie ten sam funding, a Bybit ma szersze spready akcji
-   (mediana 11,8 vs 5,3 pb).
+   (mediana 13,3 vs 5,0 pb; tego wieczoru po zamknięciu sesji USA różnica rosła).
 3. **Obserwacja do kartoteki, NIE rekomendacja:** ropa WTI ma na wspólnym oknie inny funding na dwóch giełdach
    (CL −12 vs −28 %/rok; Brent −21 vs −26). Podobnej wielkości różnice ma 19 ze 166 wspólnych instrumentów, bez stałego
    kierunku — to może być szum okna. Tylko jako hipoteza do pre-rejestracji na PRZYSZŁYCH danych; to ten sam typ produktu co
    carry COIN-M (niski zwrot z hedgem), czyli nie cel użytkownika.
 4. **Przed realnymi pieniędzmi na TradFi:** dywidendy (czy giełda koryguje cenę perpa), stawki po promocji, depozyt i dźwignia na
-   Binance, spready w weekend (migawka w sobotę), dla walut — więcej weekendów niż 3; waluty oraz miedź i pallad (Binance) — tylko
+   Binance, spready w weekend (migawka w sobotę) i w godzinach azjatyckich, dla walut — więcej weekendów niż 3; waluty oraz miedź i pallad (Binance) — tylko
    przy otwartym rynku bazowym (D3).
 
 ## Użyte skille (CLAUDE.md zasada 19)
@@ -417,8 +443,11 @@ Wynik `PYTHONUTF8=1 py tools/skill_audit.py raport --galaz pt1-perpy-tradfi`:
 | 2026-09-28T19:03:37+00:00 | claude (agent: general-purpose) | `data:validate-data` |  |
 | 2026-09-28T19:03:40+00:00 | claude (agent: general-purpose) | `data:statistical-analysis` |  |
 | 2026-09-28T19:03:40+00:00 | claude (agent: general-purpose) | `security-review` |  |
+| 2026-09-28T19:39:36+00:00 | claude | `discernment-nudge:discernment-nudge` |  |
+| 2026-09-29T00:20:42+00:00 | claude | `data:validate-data` | PT1 P3 — ostateczne koszty z kompletu 12 migawek (18:19–23:49 UTC 28.09) zastępują wstępne z 2 migawek; sprawdzenie przed aktualizacją README rundy, wniosku 109 i STATUS |
+| 2026-09-29T00:24:59+00:00 | claude (agent: general-purpose) | `engineering:code-review` |  |
 
-Razem: 8 wczytań, 8 różnych skilli: `anthropic-skills:clas5-quant`, `anthropic-skills:clas5-runda`, `data:explore-data`, `data:statistical-analysis`, `data:validate-data`, `engineering:code-review`, `engineering:testing-strategy`, `security-review`.
+Razem: 11 wczytań, 9 różnych skilli: `anthropic-skills:clas5-quant`, `anthropic-skills:clas5-runda`, `data:explore-data`, `data:statistical-analysis`, `data:validate-data`, `discernment-nudge:discernment-nudge`, `engineering:code-review`, `engineering:testing-strategy`, `security-review`.
 
 Co wniósł każdy: `clas5-runda` — pre-rejestracja przed danymi (commit `85365a0`), wiersz w rejestrze odczytów
 (`runs/odczyty_historii.csv`) i wpis w INDEX; `clas5-quant` — masa punktowa fundingu z F1 → wartość modalna jako główna miara
@@ -427,4 +456,9 @@ SPCX; `engineering:testing-strategy` — testy bez sieci (fałszywe odpowiedzi R
 `data:validate-data` i `data:statistical-analysis` — bramki 16a/16b: paradoks Simpsona, zakres wniosku o carry, N_eff walut;
 `engineering:code-review` i `security-review` — bramka 16c i nowe połączenia sieciowe. Momenty tabeli bez wpisu:
 `quant-strategy-catalog` — runda nie tworzy hipotezy (potrzebny w kroku 2); `dataviz` — runda bez wykresu; `ta-toolkit`,
-`lean-research` — nie dotyczy.
+`lean-research` — nie dotyczy. Domknięcie 28/29.09: `discernment-nudge` — pytania kontrolne w raporcie dla
+użytkownika (28.09); `data:validate-data` — bramka 16a na komplecie migawek: druga droga P3 (`druga_droga_p3.py`), zakres po
+migawkach, podział akcji USA / Azja, `interestRate` we wszystkich migawkach; `engineering:code-review` — przegląd diffu
+domknięcia (zawężenie zdania o wersji wstępnej, „na Bybit”, „tego wieczoru”). `data:statistical-analysis` przy domknięciu NIE
+wczytany ponownie (wczytany na tej gałęzi 28.09 przy wersji wstępnej); 16b na komplecie wykonano według
+`docs/skills/bramki-jakosci.md` — liczby P3 to pre-rejestrowane mediany opisowe bez przedziałów, dopisano zakresy po migawkach.

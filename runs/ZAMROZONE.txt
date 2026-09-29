@@ -82,3 +82,12 @@ runs/2026-09-27_lb0-kolektor-bybit/porownanie_lk0.py       # LB0
 runs/2026-09-27_lb0-kolektor-bybit/kontrola_subskrypcji.py # LB0
 backtest/run_os1_otwarcia.py                 # OS1
 runs/2026-09-28_os1-otwarcia-sesji/druga_droga.py  # OS1
+backtest/run_pt1_tradfi.py                   # PT1
+runs/2026-09-28_pt1-perpy-tradfi/druga_droga.py   # PT1
+runs/2026-09-28_pt1-perpy-tradfi/przeglad_16ab/p1_waluty.py   # PT1
+runs/2026-09-28_pt1-perpy-tradfi/przeglad_16ab/p2_wspolne_okno.py   # PT1
+runs/2026-09-28_pt1-perpy-tradfi/przeglad_16ab/p2b_warianty.py   # PT1
+runs/2026-09-28_pt1-perpy-tradfi/przeglad_16ab/p3_koszty.py   # PT1
+runs/2026-09-28_pt1-perpy-tradfi/przeglad_16ab/p4_beta.py   # PT1
+runs/2026-09-28_pt1-perpy-tradfi/przeglad_16ab/p5_ropa.py   # PT1
+runs/2026-09-28_pt1-perpy-tradfi/druga_droga_p3.py   # PT1

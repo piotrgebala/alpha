@@ -207,7 +207,7 @@
 > trafności łącznie, literatura daje ≤ 54 %; Nowy Jork: zmienność +26–45 %, kierunku nie mierzono); runda nie wystartowała, seria OS 0/2 (wniosek 108).
 > PT1 (2026-09-28): perpetuale TradFi (Bybit 257, Binance 206) mają w fundingu stopę 0 — brak automatycznego carry; na 3 parach
 > walutowych Bybit (20 dni) różnica stóp dziś nie jest wypłacana (carry walutowe na nich dziś niewykonalne), surowce i obligacje
-> nierozstrzygnięte → zbieranie fundingu trwa; mediana kosztu rdzenia ≤ 0,07 %/stronę (typowa akcja 0,067–0,087 %), historia
+> nierozstrzygnięte → zbieranie fundingu trwa; mediana kosztu rdzenia ≤ 0,07 %/stronę na komplecie 12 migawek (typowa akcja 0,065–0,094 %), historia
 > ≤ 9,6 mies. → perp tylko jako wykonanie (wniosek 109, [runda](runs/2026-09-28_pt1-perpy-tradfi/README.md)); bramki 16a/16b: Caveats po „Revision”.
 
 ---

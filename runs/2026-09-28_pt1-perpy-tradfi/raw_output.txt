@@ -1,10 +1,10 @@
-[pt1] FRED IR3TIB01BRM156N: błąd pobierania <HTTPError 404: 'Not Found'>
+[pt1] migawki: wczytane 12 z 12, pominięte (uszkodzone): 0
 PT1 — perpetuale TradFi (Bybit, Binance): neutralny raport liczb P1–P5
-teraz (najpóźniejszy odczyt fundingu) = 2026-09-28 16:00:00.002000+00:00; migawki: 2 (2026-09-28 18:19:01.656261+00:00 … 2026-09-28 18:49:04.440434+00:00); rdzeń z migawki 20260928T181901Z.json.gz
+teraz (najpóźniejszy odczyt fundingu) = 2026-09-28 16:00:00.002000+00:00; migawki: 12 (2026-09-28 18:19:01.656261+00:00 … 2026-09-28 23:49:25.231130+00:00); rdzeń z migawki 20260928T181901Z.json.gz
 rdzeń Bybit: BTCUSDT, BZUSDT, CLUSDT, EURUSDUSDT, EWJUSDT, EWYUSDT, EWZUSDT, GBPUSDUSDT, GDXUSDT, IWMUSDT, MSTRUSDT, MUUSDT, NVDAUSDT, QQQUSDT, SNDKUSDT, SPCXUSDT, SPYUSDT, TBTUSDT, TLTUSDT, TMFUSDT, USDJPYUSDT, XAGUSDT, XAUUSDT, XLEUSDT
 rdzeń Binance: BTCUSDT, BZUSDT, CLUSDT, COPPERUSDT, CRCLUSDT, EWJUSDT, EWYUSDT, EWZUSDT, GDXUSDT, IWMUSDT, MUUSDT, NATGASUSDT, QQQUSDT, SKHYUSDT, SNDKUSDT, SPCXUSDT, SPYUSDT, TBTUSDT, TMFUSDT, USDBRLUSDT, XAGUSDT, XAUUSDT, XLEUSDT, XPDUSDT, XPTUSDT
 obrót 24 h akcji w pierwszej migawce (mln USDT): bybit: MSTRUSDT 23.0, MUUSDT 22.4, NVDAUSDT 31.8, SNDKUSDT 63.8, SPCXUSDT 54.0; binance: CRCLUSDT 312.3, MUUSDT 489.1, SKHYUSDT 286.7, SNDKUSDT 1447.7, SPCXUSDT 2062.3
-FRED (ostatnia obserwacja): DCOILBRENTEU 2026-09-22, DCOILWTICO 2026-09-22, DEXBZUS 2026-09-18, DEXJPUS 2026-09-18, DEXUSEU 2026-09-18, DEXUSUK 2026-09-18, DFF 2026-09-24, ECBDFR 2026-09-28, IR3TIB01EZM156N 2026-01-01, IR3TIB01GBM156N 2026-01-01, IR3TIB01JPM156N 2026-07-01, IRSTCI01BRM156N 2026-08-01, IRSTCI01JPM156N 2026-08-01, IUDSOIA 2026-09-24, NASDAQ100 2026-09-25, SP500 2026-09-22; brak: IR3TIB01BRM156N
+FRED (ostatnia obserwacja): DCOILBRENTEU 2026-09-22, DCOILWTICO 2026-09-22, DEXBZUS 2026-09-18, DEXJPUS 2026-09-18, DEXUSEU 2026-09-18, DEXUSUK 2026-09-18, DFF 2026-09-24, ECBDFR 2026-09-28, IR3TIB01EZM156N 2026-01-01, IR3TIB01GBM156N 2026-01-01, IR3TIB01JPM156N 2026-07-01, IRSTCI01BRM156N 2026-08-01, IRSTCI01JPM156N 2026-08-01, IUDSOIA 2026-09-24, NASDAQ100 2026-09-25, SP500 2026-09-22
 
 === P1 — spis per klasa i giełda ===
  gielda        klasa   n                   regiony  start_min  start_max  dni_med  dni_max najdluzszy  interwal_spis_h interwal_dane_h                                         cap                          max_dzwignia
@@ -154,76 +154,76 @@ USDJPYUSDT        42        0.6542      -0.0085    0.0000 2026-09-15 00:00:00+00
 
 === P3 — per klasa: mediana po instrumentach (spread pełny w pb; koszt strony = spread/2 + taker TradFi: Bybit 0,0275 %, Binance 0,04 %; BTCUSDT i koszt_standard: 0,055 % / 0,05 %; % nominału; KO1 = 0,07 %) ===
  gielda        klasa  n_instr  spread_pb_med  spread_pb_sesja  spread_pb_poza  koszt_strony_proc  koszt_sesja  koszt_poza  koszt_do_KO1  koszt_standard  standard_do_KO1  obrot24h_med_mln  anomalie
-binance       waluty        1         0.8626           0.8626             NaN             0.0443       0.0443         NaN        0.6330          0.0543           0.7759            1.1968         0
-binance      surowce        8         1.1130           1.1130             NaN             0.0456       0.0456         NaN        0.6509          0.0556           0.7938          350.0166         0
-binance          ETF       35         5.3996           5.3996             NaN             0.0670       0.0670         NaN        0.9571          0.0770           1.1000            2.2997         0
-binance    ETF_oblig        2        13.3243          13.3243             NaN             0.1066       0.1066         NaN        1.5232          0.1166           1.6660            1.1697         0
-binance        akcje      156         5.3042           5.3042             NaN             0.0665       0.0665         NaN        0.9503          0.0765           1.0932            1.9436         0
-binance    przed_IPO        4         1.9941           1.9941             NaN             0.0500       0.0500         NaN        0.7139          0.0600           0.8567            3.6197         0
-binance BTC_kontrola        1         0.0119           0.0119             NaN             0.0501       0.0501         NaN        0.7151          0.0501           0.7151        13140.0510         0
-  bybit       waluty        3         1.2089           1.2089             NaN             0.0335       0.0335         NaN        0.4792          0.0610           0.8721            0.0627         0
-  bybit      surowce        4         1.0542           1.0542             NaN             0.0328       0.0328         NaN        0.4682          0.0603           0.8610          117.4327         0
-  bybit          ETF       51        11.0654          11.0654             NaN             0.0828       0.0828         NaN        1.1832          0.1103           1.5761            0.1263         0
-  bybit    ETF_oblig        3        26.4123          26.4123             NaN             0.1596       0.1596         NaN        2.2794          0.1871           2.6723            0.1544         0
-  bybit        akcje      196        11.8005          11.8005             NaN             0.0865       0.0865         NaN        1.2358          0.1140           1.6286            0.1755         0
-  bybit BTC_kontrola        1         0.0119           0.0119             NaN             0.0551       0.0551         NaN        0.7866          0.0551           0.7866         5205.3566         0
+binance       waluty        1         0.1914           0.1916          0.1913             0.0410       0.0410      0.0410        0.5851          0.0510           0.7280            1.2295         0
+binance      surowce        8         1.1655           1.1130          1.1987             0.0458       0.0456      0.0460        0.6547          0.0558           0.7975          374.0538         0
+binance          ETF       35         5.9058           5.5081          5.5375             0.0695       0.0675      0.0677        0.9933          0.0795           1.1361            2.3817         0
+binance    ETF_oblig        2         9.2713          12.1195          9.2685             0.0864       0.1006      0.0863        1.2337          0.0964           1.3765            1.1739         0
+binance        akcje      156         4.9906           5.4961          4.6683             0.0650       0.0675      0.0633        0.9279          0.0750           1.0708            1.9926         0
+binance    przed_IPO        4         2.6135           1.8059          1.8608             0.0531       0.0490      0.0493        0.7581          0.0631           0.9010            3.7904         0
+binance BTC_kontrola        1         0.0120           0.0119          0.0120             0.0501       0.0501      0.0501        0.7151          0.0501           0.7151        13335.1268         0
+  bybit       waluty        3         0.5277           1.2089          0.6783             0.0301       0.0335      0.0309        0.4306          0.0576           0.8234            0.0628         0
+  bybit      surowce        4         1.0451           1.0512          1.0438             0.0327       0.0328      0.0327        0.4675          0.0602           0.8604          125.7022         0
+  bybit          ETF       51        12.3708          11.3474         13.7817             0.0894       0.0842      0.0964        1.2765          0.1169           1.6693            0.1271         0
+  bybit    ETF_oblig        3        22.8020          26.4678         21.5122             0.1415       0.1598      0.1351        2.0216          0.1690           2.4144            0.1273         0
+  bybit        akcje      196        13.2949          11.0265         13.5392             0.0940       0.0826      0.0952        1.3425          0.1215           1.7354            0.1711         0
+  bybit BTC_kontrola        1         0.0120           0.0119          0.0120             0.0551       0.0551      0.0551        0.7866          0.0551           0.7866         5325.1286         0
 
 === P3 — rdzeń: mediana po instrumentach rdzenia ===
  gielda  n_instr  spread_pb_med  spread_pb_sesja  spread_pb_poza  koszt_strony_proc  koszt_sesja  koszt_poza  koszt_do_KO1  koszt_standard  standard_do_KO1  obrot24h_med_mln  anomalie
-binance       25         1.1015           1.1015             NaN             0.0456       0.0456         NaN        0.6518          0.0555           0.7930           77.1041         0
-  bybit       24         1.5507           1.5507             NaN             0.0358       0.0358         NaN        0.5116          0.0628           0.8965            3.0964         0
+binance       25         1.1459           1.0804          1.1501             0.0458       0.0455      0.0458        0.6547          0.0557           0.7961           80.5683         0
+  bybit       24         1.0451           1.3147          1.0438             0.0343       0.0351      0.0343        0.4899          0.0602           0.8604            3.2635         0
 
 === P3 — instrumenty rdzenia (obrót 24 h w mln USDT) ===
  gielda     symbol        klasa  n_migawek  n_sesja  spread_pb_med  spread_pb_sesja  spread_pb_poza  koszt_strony_proc  koszt_do_KO1  obrot24h_mln
-binance    BTCUSDT BTC_kontrola          2        2         0.0119           0.0119             NaN             0.0501        0.7151    13140.0510
-binance     BZUSDT      surowce          2        2         1.0243           1.0243             NaN             0.0451        0.6446      662.5588
-binance     CLUSDT      surowce          2        2         1.0831           1.0831             NaN             0.0454        0.6488     1494.1887
-binance COPPERUSDT      surowce          2        2         1.5049           1.5049             NaN             0.0475        0.6789       11.0929
-binance   CRCLUSDT        akcje          2        2         1.1445           1.1445             NaN             0.0457        0.6532      313.6290
-binance    EWJUSDT          ETF          2        2         3.0929           3.0929             NaN             0.0555        0.7923        0.9726
-binance    EWYUSDT          ETF          2        2         0.5436           0.5436             NaN             0.0427        0.6103      111.9091
-binance    EWZUSDT          ETF          2        2         5.4953           5.4953             NaN             0.0675        0.9639        0.2024
-binance    GDXUSDT          ETF          2        2        11.8522          11.8522             NaN             0.0993        1.4180        0.6879
-binance    IWMUSDT          ETF          2        2         2.6704           2.6704             NaN             0.0534        0.7622        0.6684
-binance     MUUSDT        akcje          2        2         0.0948           0.0948             NaN             0.0405        0.5782      491.2767
-binance NATGASUSDT      surowce          2        2         3.2144           3.2144             NaN             0.0561        0.8010       37.4745
-binance    QQQUSDT          ETF          2        2         0.1354           0.1354             NaN             0.0407        0.5811      178.4513
-binance   SKHYUSDT        akcje          2        2         0.5481           0.5481             NaN             0.0427        0.6106      287.9262
-binance   SNDKUSDT        akcje          2        2         0.0584           0.0584             NaN             0.0403        0.5756     1452.8367
-binance   SPCXUSDT        akcje          2        2         0.6764           0.6764             NaN             0.0434        0.6197     2069.3949
-binance    SPYUSDT          ETF          2        2         0.1302           0.1302             NaN             0.0407        0.5807       77.1041
-binance    TBTUSDT    ETF_oblig          2        2         9.6229           9.6229             NaN             0.0881        1.2588        0.3009
-binance    TMFUSDT    ETF_oblig          2        2        17.0258          17.0258             NaN             0.1251        1.7876        2.0386
-binance USDBRLUSDT       waluty          2        2         0.8626           0.8626             NaN             0.0443        0.6330        1.1968
-binance    XAGUSDT      surowce          2        2         1.6321           1.6321             NaN             0.0482        0.6880     1050.6297
-binance    XAUUSDT      surowce          2        2         0.0241           0.0241             NaN             0.0401        0.5732     3226.3885
-binance    XLEUSDT          ETF          2        2         7.2330           7.2330             NaN             0.0762        1.0881        0.2268
-binance    XPDUSDT      surowce          2        2         1.1015           1.1015             NaN             0.0455        0.6501        6.9335
-binance    XPTUSDT      surowce          2        2         1.1245           1.1245             NaN             0.0456        0.6518       17.3979
-  bybit    BTCUSDT BTC_kontrola          2        2         0.0119           0.0119             NaN             0.0551        0.7866     5205.3566
-  bybit     BZUSDT      surowce          2        2         1.0245           1.0245             NaN             0.0326        0.4660       19.6931
-  bybit     CLUSDT      surowce          2        2         1.0838           1.0838             NaN             0.0329        0.4703      182.4214
-  bybit EURUSDUSDT       waluty          2        2         4.4809           4.4809             NaN             0.0499        0.7129        0.0280
-  bybit    EWJUSDT          ETF          2        2         9.7955           9.7955             NaN             0.0765        1.0925        0.0228
-  bybit    EWYUSDT          ETF          2        2         0.8155           0.8155             NaN             0.0316        0.4511        4.5740
-  bybit    EWZUSDT          ETF          2        2        10.9819          10.9819             NaN             0.0824        1.1773        0.0583
-  bybit GBPUSDUSDT       waluty          2        2         0.8289           0.8289             NaN             0.0316        0.4521        0.0627
-  bybit    GDXUSDT          ETF          2        2         9.0271           9.0271             NaN             0.0726        1.0376        0.2563
-  bybit    IWMUSDT          ETF          2        2         7.4834           7.4834             NaN             0.0649        0.9274        0.1188
-  bybit   MSTRUSDT        akcje          2        2         2.5032           2.5032             NaN             0.0400        0.5717       23.0125
-  bybit     MUUSDT        akcje          2        2         1.4695           1.4695             NaN             0.0348        0.4978       22.4854
-  bybit   NVDAUSDT        akcje          2        2         0.8689           0.8689             NaN             0.0318        0.4549       31.8811
-  bybit    QQQUSDT          ETF          2        2         0.2708           0.2708             NaN             0.0289        0.4122        8.9428
-  bybit   SNDKUSDT        akcje          2        2         1.2557           1.2557             NaN             0.0338        0.4826       64.0315
-  bybit   SPCXUSDT        akcje          2        2         1.6914           1.6914             NaN             0.0360        0.5137       54.0717
-  bybit    SPYUSDT          ETF          2        2         1.1070           1.1070             NaN             0.0330        0.4719        1.6189
-  bybit    TBTUSDT    ETF_oblig          2        2        22.8824          22.8824             NaN             0.1419        2.0273        0.0406
-  bybit    TLTUSDT    ETF_oblig          2        2        35.4925          35.4925             NaN             0.2050        2.9280        0.1544
-  bybit    TMFUSDT    ETF_oblig          2        2        26.4123          26.4123             NaN             0.1596        2.2794        0.2558
-  bybit USDJPYUSDT       waluty          2        2         1.2089           1.2089             NaN             0.0335        0.4792        0.6679
-  bybit    XAGUSDT      surowce          2        2         1.6320           1.6320             NaN             0.0357        0.5094       52.4440
-  bybit    XAUUSDT      surowce          2        2         0.0241           0.0241             NaN             0.0276        0.3946      208.7075
-  bybit    XLEUSDT          ETF          2        2         8.8443           8.8443             NaN             0.0717        1.0246        0.0406
+binance    BTCUSDT BTC_kontrola         12        4         0.0120           0.0119          0.0120             0.0501        0.7151    13335.1268
+binance     BZUSDT      surowce         12        4         1.0155           1.0214          1.0144             0.0451        0.6440      709.5279
+binance     CLUSDT      surowce         12        4         1.0740           1.0804          1.0730             0.0454        0.6481     1592.1564
+binance COPPERUSDT      surowce         12        4         1.5091           1.5061          1.5097             0.0475        0.6792       11.5386
+binance   CRCLUSDT        akcje         12        4         1.1662           1.1525          1.1673             0.0458        0.6547      325.5390
+binance    EWJUSDT          ETF         12        4         2.5806           3.6094          2.0656             0.0529        0.7558        0.9757
+binance    EWYUSDT          ETF         12        4         0.5431           0.5437          0.5427             0.0427        0.6102      116.1160
+binance    EWZUSDT          ETF         12        4         6.8797           5.5081          8.2702             0.0744        1.0628        0.2100
+binance    GDXUSDT          ETF         12        4        11.8887           9.0365         13.5660             0.0994        1.4206        0.7116
+binance    IWMUSDT          ETF         12        4         1.4277           1.0694          1.6060             0.0471        0.6734        0.6647
+binance     MUUSDT        akcje         12        4         0.0948           0.0948          0.0947             0.0405        0.5782      510.7738
+binance NATGASUSDT      surowce         12        4         3.1822           3.1970          3.1807             0.0559        0.7987       38.5796
+binance    QQQUSDT          ETF         12        4         0.1356           0.1355          0.1356             0.0407        0.5811      183.0924
+binance   SKHYUSDT        akcje         12        4         0.5485           0.5487          0.5482             0.0427        0.6106      295.5905
+binance   SNDKUSDT        akcje         12        4         0.0584           0.0584          0.0583             0.0403        0.5756     1510.7446
+binance   SPCXUSDT        akcje         12        4         0.6835           0.6799          0.6847             0.0434        0.6203     2127.2388
+binance    SPYUSDT          ETF         12        4         0.1305           0.1303          0.1305             0.0407        0.5807       80.5683
+binance    TBTUSDT    ETF_oblig         12        4         7.2133           7.2133          7.2312             0.0761        1.0867        0.3007
+binance    TMFUSDT    ETF_oblig         12        4        11.3293          17.0258         11.3058             0.0966        1.3807        2.0471
+binance USDBRLUSDT       waluty         12        4         0.1914           0.1916          0.1913             0.0410        0.5851        1.2295
+binance    XAGUSDT      surowce         12        4         1.6430           1.6341          1.6434             0.0482        0.6888     1069.9303
+binance    XAUUSDT      surowce         12        4         0.0242           0.0242          0.0242             0.0401        0.5732     3315.8363
+binance    XLEUSDT          ETF         12        4         7.2345           7.2345          6.4329             0.0762        1.0882        0.2254
+binance    XPDUSDT      surowce         12        4         1.1459           1.1015          1.1501             0.0457        0.6533        7.1670
+binance    XPTUSDT      surowce         12        4         1.1851           1.1245          1.2472             0.0459        0.6561       17.4260
+  bybit    BTCUSDT BTC_kontrola         12        4         0.0120           0.0119          0.0120             0.0551        0.7866     5325.1286
+  bybit     BZUSDT      surowce         12        4         1.0160           1.0218          1.0148             0.0326        0.4654       21.5257
+  bybit     CLUSDT      surowce         12        4         1.0742           1.0807          1.0729             0.0329        0.4696      198.9192
+  bybit EURUSDUSDT       waluty         12        4         3.3396           4.4809          3.3396             0.0442        0.6314        0.0280
+  bybit    EWJUSDT          ETF         12        4        10.3423          11.3474         10.3423             0.0792        1.1316        0.0233
+  bybit    EWYUSDT          ETF         12        4         0.5436           0.5439          0.5432             0.0302        0.4317        4.9275
+  bybit    EWZUSDT          ETF         12        4        12.3708           9.6318         13.7817             0.0894        1.2765        0.0620
+  bybit GBPUSDUSDT       waluty         12        4         0.5277           0.4523          0.6783             0.0301        0.4306        0.0628
+  bybit    GDXUSDT          ETF         12        4        13.6220           9.5991         20.3683             0.0956        1.3659        0.2519
+  bybit    IWMUSDT          ETF         12        4         8.3980           7.4913         10.0008             0.0695        0.9927        0.1171
+  bybit   MSTRUSDT        akcje         12        4         1.8964           1.8818          1.9055             0.0370        0.5283       23.8239
+  bybit     MUUSDT        akcje         12        4         0.7108           1.4206          0.2368             0.0311        0.4436       23.2013
+  bybit   NVDAUSDT        akcje         12        4         0.8685           0.8695          0.4365             0.0318        0.4549       33.5433
+  bybit    QQQUSDT          ETF         12        4         0.1356           0.1356          0.1356             0.0282        0.4025        9.3431
+  bybit   SNDKUSDT        akcje         12        4         0.0585           0.6138          0.0584             0.0278        0.3970       65.7443
+  bybit   SPCXUSDT        akcje         12        4         0.6848           1.0168          0.6848             0.0309        0.4418       55.9628
+  bybit    SPYUSDT          ETF         12        4         0.7826           0.7817          0.7826             0.0314        0.4488        1.5995
+  bybit    TBTUSDT    ETF_oblig         12        4        28.8600          26.4678         28.8809             0.1718        2.4543        0.0383
+  bybit    TLTUSDT    ETF_oblig         12        4        22.8020          32.9611         21.5122             0.1415        2.0216        0.1273
+  bybit    TMFUSDT    ETF_oblig         12        4        22.6458          24.5794         20.6934             0.1407        2.0104        0.2572
+  bybit USDJPYUSDT       waluty         12        4         0.0637           1.2089          0.0637             0.0278        0.3974        0.6685
+  bybit    XAGUSDT      surowce         12        4         1.6426           1.6340          1.6428             0.0357        0.5102       52.4852
+  bybit    XAUUSDT      surowce         12        4         0.0242           0.0242          0.0242             0.0276        0.3946      213.9887
+  bybit    XLEUSDT          ETF         12        4         8.0444           8.8459          8.0444             0.0677        0.9675        0.0408
 
 === P4 (a) — udział godzin z niezmienionym indeksem (high == low): otwarty vs zamknięty ===
  gielda     symbol        klasa  n_godz_otw  n_godz_zam  niezm_otw  niezm_zam
