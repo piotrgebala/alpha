@@ -369,7 +369,7 @@ Wynik `py tools/skill_audit.py raport --galaz zadanie-016-funding-druga-droga`:
 Razem: 6 wczytań, 6 różnych skilli: `anthropic-skills:clas5-quant`, `anthropic-skills:clas5-runda`, `data:statistical-analysis`, `data:validate-data`, `engineering:code-review`, `engineering:testing-strategy`.
 
 Co wniósł każdy: `clas5-runda` — pre-rejestracja przed liczbą (`ab6ab0e`), wiersz w rejestrze odczytów, wpis w INDEX
-i wniosek 111; `clas5-quant` — dyscyplina „nie zmieniać silników, odtworzyć je i porównać”, próg kosztów z KO1, kontrola
+i wniosek 112; `clas5-quant` — dyscyplina „nie zmieniać silników, odtworzyć je i porównać”, próg kosztów z KO1, kontrola
 zerowa (A6); `data:statistical-analysis` — bootstrap blokowy po tygodniach, mediana obok średniej, zakresy per rok, faza
 i moneta (skośność X1); `data:validate-data` — czerwona flaga X1 potraktowana jako błąd do zbadania przed interpretacją,
 ręczne sprawdzenie rekordu MYX, pytanie „kogo nie ma w zbiorze”, werdykt Caveats; `engineering:testing-strategy`
