@@ -1,0 +1,92 @@
+# Zadanie 024 — skrypty czytające pliki o nazwach w cp866 i czy zmiana nazw może zmienić ich wynik na serwerze
+# (2026-09-29, gałąź zadanie-024-nazwy-cp866-universe; tylko odczyt, żadna runda nie była uruchamiana ponownie)
+
+## Dotknięte pliki (sprawdz_serwer.txt): 20 plików, 5 symboli, 3 katalogi
+- data/raw/universe_full (6): 币安人生USDT_1d/_funding, 我踏马来了USDT_1d/_funding, 牛来USDT_1d (0 wierszy), 龙虾USDT_1d
+- data/raw/universe_2026q3 (8): te same 4 symbole, każdy _1d i _funding
+- data/raw/live (6): 币安人生USDT_1d/_funding, 我踏马来了USDT_1d, 牛来USDT_1d, 龙虾USDT_1d, 哈基米USDT_1d
+- Pozostałe katalogi data/raw: 0 nazw spoza ASCII. Plików o poprawnej nazwie (duplikatów) nie ma nigdzie.
+
+## Skąd na serwerze, a nie na Windows (dowody)
+- Wszystkie pliki trzech katalogów mają czas modyfikacji w parzystej sekundzie i z ułamkiem .000000000
+  (universe_full 1198/1198, universe_2026q3 1370/1370, live 633/634 — wyjątek alternative_fng_1d.parquet
+  zapisany na serwerze 2026-09-25): to czasy DOS z archiwum zip odtworzone przy rozpakowaniu.
+  `python -m zipfile -e` (tools/setup_serwer.sh) czasów nie odtwarza, więc paczkę rozpakował najpewniej inny
+  program (np. `unzip`), który odczytał nazwy UTF-8 jako cp866. Tego nie da się już rozstrzygnąć z danych.
+- Rundy z Windows (commit +0200) mają w wydrukach POPRAWNE nazwy: RU1 raw_output_sklad.txt l. 67, X1F walidacja.txt
+  l. 27, AU1, SH1 (grep 币安人生 w runs/). Zniekształconą nazwę ma tylko LP1 (serwer, 2026-09-29).
+
+## Kod: statyczne domknięcie importów (zadania/024-dowody/importy.py; Z = runs/ZAMROZONE.txt)
+komenda: PYTHONUTF8=1 py zadania/024-dowody/importy.py <katalog repo>
+- backtest.live_journal                         katalogi=['live'] laczy_z=[]
+- backtest.odczyt_dziennika_stale               katalogi=['universe_full'] laczy_z=['universe_ohlc_full']
+Z backtest.run_au2_ml                           katalogi=['universe_full'] laczy_z=['oi_panel']
+Z backtest.run_au2_szerokosc                    katalogi=['universe_full'] laczy_z=[]
+Z backtest.run_coinbase_cp1_oos                 katalogi=['universe_2026q3'] laczy_z=[]
+Z backtest.run_ko1_koszty                       katalogi=['universe_full'] laczy_z=[]
+Z backtest.run_kr1_korelacje                    katalogi=['universe_full'] laczy_z=[]
+Z backtest.run_kr2_tradfi                       katalogi=['universe_full'] laczy_z=[]
+Z backtest.run_lp1_likwidacja_progi             katalogi=['universe_full'] laczy_z=['mark_1d', 'universe_ohlc_full']
+Z backtest.run_p4_pokrycie_onchain              katalogi=['universe_full'] laczy_z=[]
+Z backtest.run_pr1_portfel                      katalogi=['przez:universe_full'] laczy_z=[]
+Z backtest.run_start_fix_ru3                    katalogi=['universe_full', 'przez:universe_2026q3'] laczy_z=[]
+Z backtest.run_tl1_full_ru4                     katalogi=['universe_full'] laczy_z=['oi_panel']
+Z backtest.run_tp1_cel_zysku                    katalogi=['universe_full'] laczy_z=['universe_ohlc_full']
+Z backtest.run_ts_momentum_oos                  katalogi=['universe_2026q3'] laczy_z=[]
+Z backtest.run_universe_fix_ru1                 katalogi=['universe_full'] laczy_z=['universe_ohlc_full']
+Z backtest.run_universe_fix_ru2                 katalogi=['universe_full', 'przez:universe_2026q3'] laczy_z=['universe_ohlc_full']
+Z backtest.run_x1_phases_x1f                    katalogi=['universe_full'] laczy_z=[]
+- data.complete_universe                        katalogi=['universe_full'] laczy_z=[]
+- data.fetch_live                               katalogi=['live'] laczy_z=[]
+- data.fetch_mark_1d                            katalogi=['universe_full'] laczy_z=['mark_1d', 'universe_ohlc_full']
+- data.fetch_universe_ohlc                      katalogi=['universe_full'] laczy_z=[]
+(„przez:” = katalog wymieniony w module importowanym; analiza statyczna, może zawyżać. Poza listą: test
+tests/test_rebalance_premium.py::test_ranking_top20_equals_members_on_real_panel czyta universe_full i live.)
+
+## Mechanizm
+Symbol = nazwa pliku (rebalance_premium.load_universe, xs_momentum.daily_funding_panel,
+fetch_live.symbol_files). W obrębie jednego katalogu zniekształcony symbol jest spójny (ceny, obrót, funding pod
+tą samą nazwą), więc skład koszyka się nie zmienia. Różnica powstaje tylko przy łączeniu z danymi o poprawnej
+nazwie (universe_ohlc_full, mark_1d, listings) i przy filtrze nazw dziennika (SYMBOL_RE odrzuca znaki ramek
+„╕║╛▒│”: 4 z 5 zniekształconych nazw; чЙЫцЭеUSDT przechodzi jako zniekształcony symbol).
+Dowód (druga_droga.txt, sekcja E, prawdziwe loadery na kopii po --wykonaj):
+- universe_full: skład top-20 taki sam w 65/65 miesiącach (币安人生 w koszyku tylko 2026-05);
+- universe_2026q3: taki sam w 14/14;
+- live z filtrem dziennika: 522 → 526 symboli; 2026-05: RIVERUSDT wypada, wchodzi 币安人生USDT
+  (dokładnie różnica opisana w runs/2026-09-24_x1f-siedem-faz/walidacja.txt l. 27, naprawiona na Windows poprawką 4);
+- łączenie z universe_ohlc_full (high.reindex(columns=close.columns)): dni 2026-05 z high dla 币安人生:
+  0/31 pod zniekształconą nazwą → 31/31 po naprawie.
+
+## Wynik per skrypt (środowisko przebiegu zapisanego w runs/: strefa czasowa commitu raw_output)
+A. Tylko etykieta — liczby NIE mogą się zmienić (tylko katalog własny; OI bez tych monet pod obiema nazwami):
+   AU2 krok 0 run_au2_szerokosc (serwer 09-25), AU2 kroki 1-2 i AU3 run_au2_ml (serwer 09-25), KR1
+   run_kr1_korelacje (serwer), PR1 run_pr1_portfel (serwer), RU4 run_tl1_full_ru4 (serwer), P4
+   run_p4_pokrycie_onchain (serwer), KO1 run_ko1_koszty (serwer), KR2 run_kr2_tradfi (serwer), RU3
+   run_start_fix_ru3 (Windows 09-24), X1F run_x1_phases_x1f (Windows), TR1/TP1 run_ts_momentum_oos
+   (Windows), CP1P run_coinbase_cp1_oos (Windows). Potwierdzenie niezależne: AU3 uruchomił je ponownie na
+   serwerze (zniekształcone nazwy) — diff raw_output rundy z Windows vs runs/2026-09-25_au3-audyt-neff/logi/*_old.log
+   bez linii z czasem: X1F 0, RU3 0, CP1P 0, TR1 (raw_output_tr1.txt) 0 różnych linii. (Tryb TP1 skryptu
+   run_ts_momentum_oos AU3 nie uruchamiał — raw_output_tp1.txt nieporównany.)
+B. Łączenie z universe_ohlc_full przez likwidację — mechanizm jest, ale wynik NIE może się zmienić:
+   RU1 run_universe_fix_ru1 (sz1; Windows), RU2 run_universe_fix_ru2 (LQ1; Windows),
+   backtest/odczyt_dziennika_stale.py (μ, σ odczytu dziennika; serwer 2026-09-27; niezamrożony).
+   Dowód (ruch_maj.py): 币安人生 w 2026-05 — long: największy spadek w 7 dniach 19,7 %; short (znak trendu
+   −1 tylko 16–19.05): największy wzrost 21,0 / 15,6 / 3,7 / 11,9 %; progi 2× 49,0 %, 3× 32,3 % → likwidacji
+   nie ma pod żadną nazwą. Zgodne z tym: wydruk odczyt_dziennika_stale z serwera = RU1 z Windows do 0,1 %
+   (dziennik/README.md, tabela „Zmiana kryteriów odczytu”).
+C. Wynik MOŻE się zmienić po naprawie (przebiegi zapisane na serwerze ze zniekształconą nazwą):
+   - TP1 run_tp1_cel_zysku (serwer 2026-09-26): cel zysku +1 % / +2 % dla 币安人生 w 2026-05 nigdy nie był
+     trafiany (NaN high → 1,0); z high/low trafiany w 30/30 wejść long. Skala: 1 moneta z 20, 1 miesiąc z ~65.
+   - LP1 run_lp1_likwidacja_progi (serwer 2026-09-29): 1 moneta × 1 miesiąc wypadła z kroku 2 (README LP1);
+     po naprawie łączy się z ceną ostatnią, ale mark_1d dalej jej nie ma (kolektor pytał o zniekształcony symbol, 404).
+   Nie uruchamiałem ich ponownie (zadanie tego zabrania); zmiana wyniku = decyzja orkiestratora/użytkownika.
+D. Kolektory (data/): fetch_mark_1d i fetch_oi_panel pytały giełdę o zniekształcony symbol → mark_1d.parquet
+   i oi_daily_full.parquet nie mają 币安人生 (czy giełda by je zwróciła — nie sprawdzano, bez sieci).
+   complete_universe / fetch_universe szukają pliku po POPRAWNEJ nazwie: uruchomione na serwerze przed naprawą
+   pobrałyby 币安人生 itd. drugi raz obok pliku zniekształconego → ta sama moneta dwa razy w panelu koszyka
+   (ten sam obrót). Naprawa usuwa to ryzyko.
+E. Dziennik: automat działa w ~/alpha-dziennik (własne data/raw/live) — zmiana nazw w katalogu głównym repo go
+   nie dotyka; klonu dziennika nie sprawdzałem (zakaz zadania). data/raw/live w katalogu głównym to kopia
+   z paczki 2026-09-24: czytają ją test_rebalance_premium (real_panel[live]) i ewentualne ręczne przebiegi
+   live_journal/fetch_live z katalogu głównego; po naprawie skład 2026-05 wraca do tego, co liczył dziennik na
+   Windows (X1F walidacja.txt l. 27).
