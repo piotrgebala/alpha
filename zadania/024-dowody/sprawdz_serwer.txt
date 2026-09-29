@@ -1,0 +1,141 @@
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_full
+  stara (bajty):   b'\xd1\x85\xe2\x95\x95\xd0\x91\xd1\x85\xd0\xbe\xd0\x99\xd1\x84\xe2\x95\x91\xe2\x95\x91\xd1\x87\xd0\xa4\xd0\xafUSDT_1d.parquet'
+  stara (tekst):   х╕БхоЙф║║чФЯUSDT_1d.parquet
+  nowa:            币安人生USDT_1d.parquet
+  sha256 treści:   ba067145077a5dcec8defb634555c1473f43b4952a64be57dd7ef4dbf2f5f081
+  cel istnieje:    nie
+  symbol:          币安人生USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet, /home/dantey1/alpha/data/raw/universe_ohlc_full/ohlc_1d.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_full
+  stara (bajty):   b'\xd1\x85\xe2\x95\x95\xd0\x91\xd1\x85\xd0\xbe\xd0\x99\xd1\x84\xe2\x95\x91\xe2\x95\x91\xd1\x87\xd0\xa4\xd0\xafUSDT_funding.parquet'
+  stara (tekst):   х╕БхоЙф║║чФЯUSDT_funding.parquet
+  nowa:            币安人生USDT_funding.parquet
+  sha256 treści:   7de2c3b97ff031229a9ffdba36946f569bfae4cf8880a07c66dd481383ea6bbc
+  cel istnieje:    nie
+  symbol:          币安人生USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet, /home/dantey1/alpha/data/raw/universe_ohlc_full/ohlc_1d.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_full
+  stara (bajty):   b'\xd1\x86\xd0\x98\xd0\xa1\xd1\x88\xe2\x95\x95\xd0\x9f\xd1\x89\xd0\xb9\xd0\xbc\xd1\x86\xd0\xad\xd0\xb5\xd1\x84\xe2\x95\x91\xd0\x96USDT_1d.parquet'
+  stara (tekst):   цИСш╕ПщймцЭеф║ЖUSDT_1d.parquet
+  nowa:            我踏马来了USDT_1d.parquet
+  sha256 treści:   be520f156606c2c026c2ee5111910fee32943764ef277b4e271545f174dae485
+  cel istnieje:    nie
+  symbol:          我踏马来了USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_full
+  stara (bajty):   b'\xd1\x86\xd0\x98\xd0\xa1\xd1\x88\xe2\x95\x95\xd0\x9f\xd1\x89\xd0\xb9\xd0\xbc\xd1\x86\xd0\xad\xd0\xb5\xd1\x84\xe2\x95\x91\xd0\x96USDT_funding.parquet'
+  stara (tekst):   цИСш╕ПщймцЭеф║ЖUSDT_funding.parquet
+  nowa:            我踏马来了USDT_funding.parquet
+  sha256 treści:   331918f3acd22bfa2ef1ff6ac393e2ef7e48aa28fc17722977cf77119dd6a516
+  cel istnieje:    nie
+  symbol:          我踏马来了USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_full
+  stara (bajty):   b'\xd1\x87\xd0\x99\xd0\xab\xd1\x86\xd0\xad\xd0\xb5USDT_1d.parquet'
+  stara (tekst):   чЙЫцЭеUSDT_1d.parquet
+  nowa:            牛来USDT_1d.parquet
+  sha256 treści:   df714d505db81e08b16d97bc6cb03c5a2f5e3a1f27c50d24e5dc0c50ecb17341
+  cel istnieje:    nie
+  symbol:          牛来USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_full
+  stara (bajty):   b'\xd1\x89\xe2\x95\x9b\xd0\xa9\xd1\x88\xd0\xa9\xe2\x95\x9bUSDT_1d.parquet'
+  stara (tekst):   щ╛ЩшЩ╛USDT_1d.parquet
+  nowa:            龙虾USDT_1d.parquet
+  sha256 treści:   e0eeae64a74553469b9759644f3b00e66accbebdbbc309120500356145c4e417
+  cel istnieje:    nie
+  symbol:          龙虾USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_2026q3
+  stara (bajty):   b'\xd1\x85\xe2\x95\x95\xd0\x91\xd1\x85\xd0\xbe\xd0\x99\xd1\x84\xe2\x95\x91\xe2\x95\x91\xd1\x87\xd0\xa4\xd0\xafUSDT_1d.parquet'
+  stara (tekst):   х╕БхоЙф║║чФЯUSDT_1d.parquet
+  nowa:            币安人生USDT_1d.parquet
+  sha256 treści:   f324a4c1242b3fa7c5c9ce8cbb92bb08a86debdd1f174dbaf30918dbb498418d
+  cel istnieje:    nie
+  symbol:          币安人生USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet, /home/dantey1/alpha/data/raw/universe_ohlc_full/ohlc_1d.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_2026q3
+  stara (bajty):   b'\xd1\x85\xe2\x95\x95\xd0\x91\xd1\x85\xd0\xbe\xd0\x99\xd1\x84\xe2\x95\x91\xe2\x95\x91\xd1\x87\xd0\xa4\xd0\xafUSDT_funding.parquet'
+  stara (tekst):   х╕БхоЙф║║чФЯUSDT_funding.parquet
+  nowa:            币安人生USDT_funding.parquet
+  sha256 treści:   5aefcbc3ca27d63b594338a0d44404788e21b59cb7564abe2ca6c3ffee2f70dc
+  cel istnieje:    nie
+  symbol:          币安人生USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet, /home/dantey1/alpha/data/raw/universe_ohlc_full/ohlc_1d.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_2026q3
+  stara (bajty):   b'\xd1\x86\xd0\x98\xd0\xa1\xd1\x88\xe2\x95\x95\xd0\x9f\xd1\x89\xd0\xb9\xd0\xbc\xd1\x86\xd0\xad\xd0\xb5\xd1\x84\xe2\x95\x91\xd0\x96USDT_1d.parquet'
+  stara (tekst):   цИСш╕ПщймцЭеф║ЖUSDT_1d.parquet
+  nowa:            我踏马来了USDT_1d.parquet
+  sha256 treści:   a4f8addc219bc9a9faba1ced924e97801f016708dee7ee292740c87e73844a4d
+  cel istnieje:    nie
+  symbol:          我踏马来了USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_2026q3
+  stara (bajty):   b'\xd1\x86\xd0\x98\xd0\xa1\xd1\x88\xe2\x95\x95\xd0\x9f\xd1\x89\xd0\xb9\xd0\xbc\xd1\x86\xd0\xad\xd0\xb5\xd1\x84\xe2\x95\x91\xd0\x96USDT_funding.parquet'
+  stara (tekst):   цИСш╕ПщймцЭеф║ЖUSDT_funding.parquet
+  nowa:            我踏马来了USDT_funding.parquet
+  sha256 treści:   5bdbf81c4cde1df64ec91a1abf56fcfecf53f23c17e9042c3c987231a4b8b077
+  cel istnieje:    nie
+  symbol:          我踏马来了USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_2026q3
+  stara (bajty):   b'\xd1\x87\xd0\x99\xd0\xab\xd1\x86\xd0\xad\xd0\xb5USDT_1d.parquet'
+  stara (tekst):   чЙЫцЭеUSDT_1d.parquet
+  nowa:            牛来USDT_1d.parquet
+  sha256 treści:   79b20d20e59c8e3e6b1c679b9ed9652719e1af19e3ae68aa41be0256456ea12a
+  cel istnieje:    nie
+  symbol:          牛来USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_2026q3
+  stara (bajty):   b'\xd1\x87\xd0\x99\xd0\xab\xd1\x86\xd0\xad\xd0\xb5USDT_funding.parquet'
+  stara (tekst):   чЙЫцЭеUSDT_funding.parquet
+  nowa:            牛来USDT_funding.parquet
+  sha256 treści:   bf310f06fe949ea96127341c07025779d455ebbbc9abd49c1c7311c6a091801a
+  cel istnieje:    nie
+  symbol:          牛来USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_2026q3
+  stara (bajty):   b'\xd1\x89\xe2\x95\x9b\xd0\xa9\xd1\x88\xd0\xa9\xe2\x95\x9bUSDT_1d.parquet'
+  stara (tekst):   щ╛ЩшЩ╛USDT_1d.parquet
+  nowa:            龙虾USDT_1d.parquet
+  sha256 treści:   70effbba67e5da9c6a7a14f6a4cfdcf17df11c654df0ec870383e4ec5b746ed5
+  cel istnieje:    nie
+  symbol:          龙虾USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/universe_2026q3
+  stara (bajty):   b'\xd1\x89\xe2\x95\x9b\xd0\xa9\xd1\x88\xd0\xa9\xe2\x95\x9bUSDT_funding.parquet'
+  stara (tekst):   щ╛ЩшЩ╛USDT_funding.parquet
+  nowa:            龙虾USDT_funding.parquet
+  sha256 treści:   3104883f2e396010d9a6902044252b22ea3e7fe60245f723b4cec71896174220
+  cel istnieje:    nie
+  symbol:          龙虾USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/live
+  stara (bajty):   b'\xd1\x85\xd0\xa3\xd0\x98\xd1\x85\xd0\xaf\xe2\x95\x91\xd1\x87\xe2\x96\x92\xe2\x94\x82USDT_1d.parquet'
+  stara (tekst):   хУИхЯ║ч▒│USDT_1d.parquet
+  nowa:            哈基米USDT_1d.parquet
+  sha256 treści:   41cdbdb98e402e9167282435a59653dc34719f8e8a5ae875131f0fffcccf7289
+  cel istnieje:    nie
+  symbol:          哈基米USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/live
+  stara (bajty):   b'\xd1\x85\xe2\x95\x95\xd0\x91\xd1\x85\xd0\xbe\xd0\x99\xd1\x84\xe2\x95\x91\xe2\x95\x91\xd1\x87\xd0\xa4\xd0\xafUSDT_1d.parquet'
+  stara (tekst):   х╕БхоЙф║║чФЯUSDT_1d.parquet
+  nowa:            币安人生USDT_1d.parquet
+  sha256 treści:   e0cdc2421007a26e618d08c863a7420c5360a2ba88efb569d4e161db0b794cb5
+  cel istnieje:    nie
+  symbol:          币安人生USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet, /home/dantey1/alpha/data/raw/universe_ohlc_full/ohlc_1d.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/live
+  stara (bajty):   b'\xd1\x85\xe2\x95\x95\xd0\x91\xd1\x85\xd0\xbe\xd0\x99\xd1\x84\xe2\x95\x91\xe2\x95\x91\xd1\x87\xd0\xa4\xd0\xafUSDT_funding.parquet'
+  stara (tekst):   х╕БхоЙф║║чФЯUSDT_funding.parquet
+  nowa:            币安人生USDT_funding.parquet
+  sha256 treści:   b5cbde45509e0df69c3e3629156083e1739783a15b7a3171439b0f561af37eef
+  cel istnieje:    nie
+  symbol:          币安人生USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet, /home/dantey1/alpha/data/raw/universe_ohlc_full/ohlc_1d.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/live
+  stara (bajty):   b'\xd1\x86\xd0\x98\xd0\xa1\xd1\x88\xe2\x95\x95\xd0\x9f\xd1\x89\xd0\xb9\xd0\xbc\xd1\x86\xd0\xad\xd0\xb5\xd1\x84\xe2\x95\x91\xd0\x96USDT_1d.parquet'
+  stara (tekst):   цИСш╕ПщймцЭеф║ЖUSDT_1d.parquet
+  nowa:            我踏马来了USDT_1d.parquet
+  sha256 treści:   66e290c65625bdb844fad1b631aef6848d8a7c5b85d9a46c86ace99fe684b1e7
+  cel istnieje:    nie
+  symbol:          我踏马来了USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/live
+  stara (bajty):   b'\xd1\x87\xd0\x99\xd0\xab\xd1\x86\xd0\xad\xd0\xb5USDT_1d.parquet'
+  stara (tekst):   чЙЫцЭеUSDT_1d.parquet
+  nowa:            牛来USDT_1d.parquet
+  sha256 treści:   cb04b5fc05180c5c89ce856ce3609a9cc60be485c463c2e9f43da7879114636f
+  cel istnieje:    nie
+  symbol:          牛来USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv)
+[DO_ZMIANY] /home/dantey1/alpha/data/raw/live
+  stara (bajty):   b'\xd1\x89\xe2\x95\x9b\xd0\xa9\xd1\x88\xd0\xa9\xe2\x95\x9bUSDT_1d.parquet'
+  stara (tekst):   щ╛ЩшЩ╛USDT_1d.parquet
+  nowa:            龙虾USDT_1d.parquet
+  sha256 treści:   35790edeaf61e17e8d3b9987af987fd5f537b20afa92559dd030316c33535c67
+  cel istnieje:    nie
+  symbol:          龙虾USDT (w danych referencyjnych: /home/dantey1/alpha/data/raw/listings/events.csv, /home/dantey1/alpha/data/raw/listings/klines.parquet)
+PODSUMOWANIE: nazw spoza ASCII 20; DO_ZMIANY 20; POPRAWNA 0; CEL_ISTNIEJE 0; NIEPOTWIERDZONA 0; NIE_UTF8 0; NIE_PLIK 0
