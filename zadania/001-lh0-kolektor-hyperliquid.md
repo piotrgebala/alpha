@@ -2,7 +2,7 @@
 id: 001
 tytul: LH0 — brama danych Hyperliquid (likwidacje), tylko zbieranie
 typ: zbieranie_danych
-status: czeka_na_decyzje
+status: zrobione
 zlecil: cowork
 decyzja_uzytkownika: "2026-09-28: trzeci kolektor likwidacji obok LK0 i LB0, tylko zbieranie, bez odczytu"
 utworzono: 2026-09-29
@@ -155,4 +155,6 @@ Raport ma powiedzieć:
   3. tanie od razu: krok 2 — stan rynku co 60 s (funding, otwarte pozycje), ~19 MB/dobę;
   4. stan pozycji przed kaskadą (0b), ~700 adresów co 1–3 min;
   5. zamknięcie LH0.
+- **Decyzja użytkownika 2026-09-29:** „Tryb ograniczony, bez kosztów: kolektor tylko na kilka głównych monet. Najpierw
+  trzeba zmierzyć na dłuższym oknie, czy zmieści się w limicie.” → kontynuacja w zadaniu 004. Opcje 2–5 niewybrane.
 

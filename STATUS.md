@@ -3155,4 +3155,7 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   = 2,6–8,6× limitu IP); kolektora nie zbudowano. **Do decyzji użytkownika:** tryb ograniczony / węzeł lub płatne S3 /
   sam stan rynku co 60 s / stan pozycji przed kaskadą / zamknięcie — wniosek 110,
   [runda](runs/2026-09-29_lh0-kolektor-hyperliquid/README.md), [zadanie](zadania/001-lh0-kolektor-hyperliquid.md).
+- **Decyzje użytkownika 2026-09-29 (tablica):** LH0 — tryb ograniczony bez kosztów, najpierw pomiar wag na dłuższym oknie
+  (zadanie 004); przegląd tygodnia hooka audytowego od 2026-10-06 (005); kroki z `sudo` izolacji — użytkownik, sprawdzenie
+  orkiestrator (006).
 
