@@ -1,5 +1,7 @@
 """Testy kolektora likwidacji (`data/collect_liquidations.py`) — bez sieci: parser, pliki dzienne,
-odczekanie, pętla z podmienionym połączeniem (zapis, pomijanie złych wiadomości, ponowne łączenie).
+odczekanie, pętla z podmienionym połączeniem (zapis, pomijanie złych wiadomości, ponowne łączenie),
+czas transakcji `T` sprawdzany przy zapisie regułą indeksu (zadanie 021): rekord poprawny, `T`
+z przyszłości, `T` z poprzedniego dnia przy `E` po północy, brak `T`.
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ import json
 import pytest
 
 from data import collect_liquidations as cl
+from data import liquidation_index as li
 
 DAY_MS = 86_400_000
 E0 = 1_790_294_400_000  # 2026-09-25 00:00:00 UTC
@@ -172,3 +175,129 @@ def test_connect_rejects_non_wss():
 
     with pytest.raises(ValueError, match="tylko wss"):
         asyncio.run(go())
+
+
+# ------------------------------------------------------------------ zakres T przy zapisie (zadanie 021)
+def _run_one(tmp_path, msgs: list) -> tuple[dict, list[str]]:
+    """Jedno połączenie z podanymi wiadomościami, koniec strumienia, koniec pętli → (stan, log)."""
+    logs: list[str] = []
+
+    async def no_sleep(_s):
+        return None
+
+    state = asyncio.run(
+        cl.run(
+            tmp_path,
+            connect=_fake_connect([msgs]),
+            sleep=no_sleep,
+            max_reconnects=1,
+            log=logs.append,
+            clock=lambda: 1e9,
+        )
+    )
+    return state, logs
+
+
+def _lines(path) -> list[str]:
+    return path.read_text(encoding="utf-8").splitlines()
+
+
+def _with_t(msg: dict, t) -> dict:
+    msg["o"]["T"] = t
+    return msg
+
+
+def test_t_problem_ta_sama_regula_co_indeks_bez_nowego_progu():
+    rec = cl.parse_event(_msg(E0 + 5))
+    assert cl.t_problem(rec) is None
+    assert "poza zakresem 2019-01-01…2100-01-01 UTC" in cl.t_problem({**rec, "T": 10**20})
+    assert "nie jest liczbą ms" in cl.t_problem({**rec, "T": "abc"})
+    assert "nie jest liczbą ms" in cl.t_problem({**rec, "T": None})
+    assert cl.t_problem({k: v for k, v in rec.items() if k != "T"}).endswith(": brak T")
+    # reguła nie porównuje T z E: doba wcześniej i doba później (w 2019…2100) są poprawne
+    assert cl.t_problem({**rec, "T": E0 - DAY_MS}) is None
+    assert cl.t_problem({**rec, "T": E0 + DAY_MS}) is None
+
+
+def test_run_rekord_poprawny_licznik_T_zero(tmp_path):
+    state, logs = _run_one(tmp_path, [_msg(E0 + 5)])
+    assert state["events"] == 1 and state["skipped"] == 0
+    assert state["t_out_of_range"] == 0 and state["t_out_of_range_examples"] == []
+    st_ = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert st_["t_out_of_range"] == 0 and st_["t_out_of_range_examples"] == []
+    assert not [x for x in logs if x.startswith("T poza zakresem")]
+    txt = cl.status_text(tmp_path)
+    assert "(pominiętych 0; T poza zakresem 0 (zapisane bez zmian))" in txt
+    assert "przykłady T" not in txt
+    assert json.loads(_lines(tmp_path / "2026-09-25.jsonl")[0]) == cl.parse_event(_msg(E0 + 5))
+
+
+def test_run_T_z_przyszlosci_zapisany_bez_zmian_policzony_w_statusie_i_logu(tmp_path):
+    far = _with_t(_msg(E0 + 7), 10**20)  # po 2100 roku → łamie regułę indeksu
+    tomorrow = _with_t(_msg(E0 + 8, "ETHUSDT"), E0 + DAY_MS + 8)  # jutro, ale w 2019…2100
+    state, logs = _run_one(tmp_path, [_msg(E0 + 5), far, tomorrow])
+    assert state["events"] == 3 and state["skipped"] == 0 and state["t_out_of_range"] == 1
+    lines = _lines(tmp_path / "2026-09-25.jsonl")  # plik dnia wg E, nie wg T
+    assert lines[1] == json.dumps(cl.parse_event(far), separators=(",", ":"))  # bajt w bajt
+    assert json.loads(lines[1])["T"] == 10**20 and json.loads(lines[2])["T"] == E0 + DAY_MS + 8
+    (example,) = state["t_out_of_range_examples"]
+    assert example.startswith(f"'BTCUSDT' E={E0 + 7}: T ") and "poza zakresem" in example
+    t_logs = [x for x in logs if x.startswith("T poza zakresem")]
+    assert t_logs == [f"T poza zakresem (1), zapisano bez zmian: {example}"]
+    st_ = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert st_["t_out_of_range"] == 1 and st_["t_out_of_range_examples"] == [example]
+    txt = cl.status_text(tmp_path)
+    assert "T poza zakresem 1 (zapisane bez zmian)" in txt
+    assert txt.endswith(f"; przykłady T poza zakresem: {example}")
+    # indeks (a przez niego kopia) liczy TEN SAM rekord jako złą linię — teraz widać to przy zapisie
+    idx = li.aggregate("binance", "2026-09-25", lines)
+    assert idx.lines == 3 and idx.bad_lines == state["t_out_of_range"] == 1
+
+
+def test_run_T_z_poprzedniego_dnia_przy_E_po_polnocy_poprawny(tmp_path):
+    msg = _with_t(
+        _msg(E0 + DAY_MS + 40), E0 + DAY_MS - 20
+    )  # E 26.09 00:00:00,040; T 25.09 23:59:59,980
+    state, logs = _run_one(tmp_path, [msg])
+    assert state["events"] == 1 and state["skipped"] == 0 and state["t_out_of_range"] == 0
+    assert not (tmp_path / "2026-09-25.jsonl").exists()  # plik wg E — układ plików bez zmian
+    lines = _lines(tmp_path / "2026-09-26.jsonl")
+    assert lines == [json.dumps(cl.parse_event(msg), separators=(",", ":"))]
+    idx = li.aggregate("binance", "2026-09-26", lines)  # indeks też przyjmuje
+    assert idx.bad_lines == 0 and idx.rows[0]["pierwsze_utc"] == "2026-09-25T23:59:59.980Z"
+    assert not [x for x in logs if x.startswith("T poza zakresem")]
+
+
+def test_run_brak_T_to_nieznany_schemat_pominiety_i_policzony(tmp_path):
+    no_t = _msg(E0 + 9)
+    del no_t["o"]["T"]
+    state, logs = _run_one(tmp_path, [no_t, _msg(E0 + 10)])
+    assert state["events"] == 1 and state["skipped"] == 1 and state["t_out_of_range"] == 0
+    assert [json.loads(x)["E"] for x in _lines(tmp_path / "2026-09-25.jsonl")] == [E0 + 10]
+    (skip_log,) = [x for x in logs if x.startswith("pominięto")]
+    assert skip_log.startswith("pominięto (1): likwidacje: brak pól ['T']")
+
+
+def test_run_zle_E_i_zle_T_tylko_pominiety_bez_licznika_T(tmp_path):
+    """Bez dnia pliku (E poza zakresem) rekordu nie da się zapisać — liczy się jak dotąd w `skipped`,
+    a licznik `T` obejmuje wyłącznie rekordy ZAPISANE."""
+    state, _ = _run_one(tmp_path, [_msg(10**20)])  # E i T poza zakresem
+    assert state["events"] == 0 and state["skipped"] == 1 and state["t_out_of_range"] == 0
+    assert not list(tmp_path.glob("*.jsonl"))
+
+
+def test_run_licznik_T_przyklady_i_log_ograniczone(tmp_path):
+    msgs = [_with_t(_msg(E0 + i), -i) for i in range(1001)]  # wszystkie T przed 2019
+    state, logs = _run_one(tmp_path, msgs)
+    assert state["events"] == 1001 and state["t_out_of_range"] == 1001
+    assert len(_lines(tmp_path / "2026-09-25.jsonl")) == 1001  # żaden rekord nie zginął
+    assert len(state["t_out_of_range_examples"]) == cl.T_EXAMPLES
+    numbers = [x.split(")")[0] for x in logs if x.startswith("T poza zakresem")]
+    assert numbers == [f"T poza zakresem ({n}" for n in (1, 2, 3, 4, 5, 1000)]
+
+
+def test_status_text_procesu_sprzed_zmiany_bez_licznika_T(tmp_path):
+    """Stary proces (bez pola `t_out_of_range`) → tekst jak dotąd; po restarcie pole się pojawia."""
+    cl.write_status(tmp_path, pid=7, events=3, skipped=0, reconnects=0, last_event_ms=E0)
+    txt = cl.status_text(tmp_path)
+    assert "kolektor pid 7" in txt and "(pominiętych 0)" in txt and "T poza zakresem" not in txt

@@ -39,8 +39,9 @@ Zasady:
 - tylko dni ZAMKNIĘTE: dzień z nazwy pliku < dziś UTC (plik bieżącego dnia jest w trakcie zapisu);
 - plik źródłowy otwierany wyłącznie do odczytu; linia, której nie da się odczytać, jest
   pomijana i liczona (`zle_linie`), nie przerywa indeksu. „Nie da się odczytać” obejmuje też pola
-  z sieci poza zakresem: `T` spoza `[MIN_EVENT_MS, MAX_EVENT_MS]` (2019-01-01 … 2100-01-01 UTC,
-  te same granice co `collect_liquidations.day_path`) i symbol, który zepsułby CSV (przecinek,
+  z sieci poza zakresem: `T` łamiące wspólną regułę czasu `data/liquidation_time.event_time_ms`
+  (bool, nie liczba, poza 2019-01-01 … 2100-01-01 UTC; tę samą funkcję stosuje kolektor LK0 przy
+  zapisie — zadanie 021) i symbol, który zepsułby CSV (przecinek,
   cudzysłów, biały znak, znak sterujący, początek `=`/`+`/`-`/`@` = formuła w arkuszu). Symbole
   spoza ASCII są DOZWOLONE — Binance ma prawdziwe kontrakty `龙虾USDT`, `币安人生USDT` (5 symboli,
   762 zdarzenia LK0 w dniach 2026-09-25…27, zmierzone przy przeglądzie);
@@ -60,6 +61,8 @@ from dataclasses import dataclass, field
 from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from pathlib import Path
 
+from data import liquidation_time as lt
+
 GIELDY = ("binance", "bybit")
 # podbić przy każdej zmianie kolumn lub definicji → kopia (manifest) przelicza wszystkie indeksy
 INDEX_VERSION = 1
@@ -72,9 +75,9 @@ CM_CONTRACT_USD = {"BTCUSD": Decimal(100)}
 CM_CONTRACT_USD_DEFAULT = Decimal(10)
 _BINANCE_CM = re.compile(r"USD_(PERP|\d{6})$")
 _BYBIT_INVERSE = re.compile(r"[A-Z0-9]+USD([FGHJKMNQUVXZ]\d{2})?")  # BTCUSD, BTCUSDZ25
-# granice czasu zdarzenia jak w `data/collect_liquidations.py` (bez importu — tamten moduł ciągnie
-# zależności sieciowe); poza nimi `_iso_ms` rzucałoby ValueError/OverflowError z platformy
-MIN_EVENT_MS, MAX_EVENT_MS = 1_546_300_800_000, 4_102_444_800_000  # 2019-01-01 … 2100-01-01 UTC
+# granice czasu zdarzenia: jedno źródło w `data/liquidation_time.py` (wspólne z kolektorami, bez
+# importu kolektora z jego kodem sieciowym); poza nimi `_iso_ms` rzucałoby błąd z platformy
+MIN_EVENT_MS, MAX_EVENT_MS = lt.MIN_EVENT_MS, lt.MAX_EVENT_MS  # 2019-01-01 … 2100-01-01 UTC
 # symbol bezpieczny dla CSV bez cytowania: bez przecinka, cudzysłowów, białych i sterujących znaków,
 # bez początku formuły arkusza (=, +, -, @); litery spoza ASCII dozwolone (docstring modułu)
 _SYMBOL = re.compile(r"[^\s,\"'=+\-@\x00-\x1f\x7f][^\s,\"'\x00-\x1f\x7f]{0,39}")
@@ -190,14 +193,10 @@ def parse_line(gielda: str, line: str) -> Event:
         raise ValueError(f"indeks likwidacji: brak pola {exc}") from None
     if not isinstance(symbol, str) or not _SYMBOL.fullmatch(symbol):
         raise ValueError(f"indeks likwidacji: zły symbol {str(symbol)[:60]!r}")
-    if isinstance(t_raw, bool):
-        raise ValueError(f"indeks likwidacji: zły czas T={t_raw!r}")
-    try:
-        t_ms = int(t_raw)
-    except (TypeError, ValueError, OverflowError):  # OverflowError: T = 1e400 → float('inf')
-        raise ValueError(f"indeks likwidacji: zły czas T={str(t_raw)[:40]!r}") from None
-    if not MIN_EVENT_MS <= t_ms <= MAX_EVENT_MS:
-        raise ValueError(f"indeks likwidacji: czas T={t_ms} poza zakresem 2019…2100")
+    try:  # wspólna reguła czasu (bool, nie liczba, 1e400 → inf, poza 2019…2100 = zła linia)
+        t_ms = lt.event_time_ms(t_raw)
+    except ValueError as exc:
+        raise ValueError(f"indeks likwidacji: zły czas T: {exc}") from None
     try:
         nom = notional(gielda, rec)
     except KeyError as exc:

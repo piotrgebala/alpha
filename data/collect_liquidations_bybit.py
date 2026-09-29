@@ -24,7 +24,8 @@ Fakty z dokumentacji Bybit v5 (sprawdzone 2026-09-27, potwierdzone kontrolą poz
 Zasady:
 - czyste funkcje `parse_message`, `classify`, `subscribe_batches`, `parse_instruments` — testy bez
   sieci (`tests/test_collect_liquidations_bybit.py`); `DayWriter`, `day_path`, `backoff_s`,
-  `write_status` z `data.collect_liquidations` (ten sam format plików i statusu co LK0);
+  `write_status` z `data.collect_liquidations` (ten sam format plików i statusu co LK0, bez
+  licznika `t_out_of_range` — patrz niżej);
 - pętla `run` z podmienialnym połączeniem, pobieraniem listy symboli, zegarem i uśpieniem;
 - cienka warstwa sieciowa (`_connect`, `_get_json`; aiohttp; adresy STAŁE w kodzie, tylko
   `wss://` i `https://`); żadnych kluczy — dane publiczne;
@@ -38,7 +39,10 @@ Zasady:
   transportu = ponowne połączenie po odczekaniu 1 s → 60 s (odczekanie zeruje się dopiero po
   cyklu dłuższym niż 60 s — chroni limit 500 połączeń / 5 min);
 - wiadomość o nieznanym schemacie albo zła likwidacja (symbol, liczba, czas) jest POMIJANA i liczona
-  (nie zrywa połączenia);
+  (nie zrywa połączenia); czas sprawdza ta sama funkcja co LK0, indeks i kopia
+  (`data/liquidation_time.event_time_ms`, zadanie 021). Inaczej niż w LK0 likwidacja z `T` spoza
+  reguły NIE jest zapisywana: tu `T` wyznacza plik dnia, więc bez zmiany formatu nie ma dla niej
+  miejsca — zostaje pominięta i policzona w `skipped` (wpis w logu z treścią wiadomości);
 - nieudana subskrypcja (Bybit odrzuca CAŁE żądanie, gdy jeden temat jest zły, i podaje tylko
   pierwszy zły temat — sprawdzone na żywo 2026-09-27) jest liczona, logowana i NAPRAWIANA od razu:
   zły temat (`handler not found`) wypada z planu do najbliższego udanego odświeżenia listy,
@@ -65,6 +69,7 @@ from collections import Counter
 from pathlib import Path
 
 from data import collect_liquidations as cl
+from data import liquidation_time as lt
 
 STREAM_URL = "wss://stream.bybit.com/v5/public/linear"
 INSTRUMENTS_URL = "https://api.bybit.com/v5/market/instruments-info"
@@ -91,9 +96,15 @@ RECORD_FIELDS = ("T", "s", "S", "v", "p", "pos", "ts", "rcv")
 
 # ------------------------------------------------------------------ czyste funkcje
 def _is_ms(x) -> bool:
-    return (
-        isinstance(x, int) and not isinstance(x, bool) and cl.MIN_EVENT_MS <= x <= cl.MAX_EVENT_MS
-    )
+    """Czas w ms jako liczba całkowita JSON (nie bool, nie tekst, nie ułamek — `T` jest tu kluczem
+    pliku dnia) w zakresie wspólnej reguły `liquidation_time.event_time_ms` (LK0, indeks, kopia)."""
+    if not isinstance(x, int) or isinstance(x, bool):
+        return False
+    try:
+        lt.event_time_ms(x)
+    except ValueError:
+        return False
+    return True
 
 
 def _is_positive_number_text(x) -> bool:
