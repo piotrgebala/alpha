@@ -266,3 +266,72 @@ Razem: 2 wczytania, 2 różne skille: `anthropic-skills:clas5-quant`, `anthropic
   środowiskowych, zapisują tylko do ścieżek z argumentów (katalog tymczasowy); zamrożone w `runs/ZAMROZONE.txt`. Liczby
   kontroli pozytywnej sprawdzone w `raw_output.txt` (BTC 109 wypełnień = 78 zleceń, ETH 17 = 13, razem 91).
 
+
+---
+
+# Krok 1 — tryb ograniczony (zadanie 004)
+
+> **STATUS: KROK A (pomiar wag) — pre-rejestracja zapisana, pomiar w toku.** Kroki B–D (kolektor, nadzór, dokumentacja)
+> zależą od wyniku A i NIE są robione w tej sesji. **0 wariantów — POZA licznikami**, bez odczytu E1 (nie zestawiamy
+> likwidacji z cenami; licznik E1 wspólny z LK0/LB0, stan: 0 odczytów).
+
+## Metadane (krok 1)
+
+- Zadanie `zadania/004-lh0-tryb-ograniczony.md`; decyzja użytkownika 2026-09-29: „Tryb ograniczony, bez kosztów:
+  kolektor tylko na kilka głównych monet. Najpierw trzeba zmierzyć na dłuższym oknie, czy zmieści się w limicie.”
+- Gałąź `zadanie-004-lh0-tryb-ograniczony` od `master` `283749c`.
+- Sieć: wyłącznie `https://api.hyperliquid.xyz/info` i `wss://api.hyperliquid.xyz/ws`. Bez kluczy, portfeli, zleceń, MCP.
+
+## Poprzedzające wyniki (krok 1)
+
+Krok 0 tej rundy (wniosek 110): trójka BTC/ETH/SOL odpytywana w całości kosztowała 1 243 wagi/min przy limicie
+1 200 na IP; średnio 21,8 wagi na zapytanie `userFillsByTime`; 91 likwidacji w 44 min (78 BTC, 13 ETH, 0 SOL), każda
+z metodą `market`, zlikwidowany zawsze stroną aktywną. Wnioski 102 i 106 (LK0, LB0): źródło przyjmujemy po kontroli
+pozytywnej na żywo. **Co z tego wynika dla projektu kroku 1 (jedno zdanie):** skoro pełne odpytanie trójki już
+przekracza limit, koszt sposobów liczymy z darmowych zliczeń strumienia `trades` (bez wag), a prawdziwe zapytania
+robimy tylko na losowej próbce pod twardym sufitem wag, i na tej samej próbce sprawdzamy, czy filtr gubi likwidacje.
+
+## Pre-rejestracja kroku A (zapisana PRZED pomiarem; 0 wariantów, pomiar kosztu, nie strategii)
+
+- **[pre] Zestawy monet:** S1 = {BTC}, S2 = {BTC, ETH}, S3 = {BTC, ETH, SOL}. Tylko perpetuale głównej giełdy.
+- **[pre] Strona aktywna** (taker) = `users[0]` przy `side: "B"`, `users[1]` przy `"A"` (potwierdzone w kroku 0:
+  10 680 / 10 680). **Zlecenie aktywne** = grupa transakcji o tym samym (moneta, strona aktywna, `hash`).
+- **[pre] Sposoby odpytywania** (zapytanie = `userFillsByTime` dla adresu i okna; waga wg dokumentacji
+  „Rate limits”: 20 + 1 za każde rozpoczęte 20 zwróconych wypełnień, każda strona wyników osobno):
+  - **M1 — pełny, co minutę:** każdy unikalny adres strony aktywnej w zestawie w danej minucie → 1 zapytanie za tę minutę.
+  - **M2 — tylko strony aktywne z ruchem ceny**, co minutę. Dwie definicje ruchu ceny (obie liczone, obie raportowane):
+    **F1** = zlecenie aktywne zmiotło ≥ 2 poziomy ceny (≥ 2 różne `px` w zleceniu);
+    **F2** = pierwsza cena zlecenia jest „dalej” w kierunku agresora niż cena poprzedniej transakcji w tej monecie
+    (kupno powyżej, sprzedaż poniżej) albo F1. Adres wchodzi do M2, jeśli w oknie ma ≥ 1 zlecenie spełniające filtr.
+  - **M3 — obiegi co N min z `startTime`:** jedno zapytanie na unikalny adres strony aktywnej na okno N minut,
+    N ∈ {5, 15, 60}; zapytania rozłożone równomiernie w następnym oknie (koszt/min = koszt okna / N).
+  - **M4 — pomijanie adresów bez pozycji:** zapytanie jest zbędne, jeśli adres na początku okna nie miał pozycji
+    w żadnej monecie zestawu, w której handlował, i w oknie ma w tych monetach tylko jedno zlecenie (`oid`) — wtedy
+    likwidacja jest niemożliwa (likwidacja zamyka istniejącą pozycję i jest osobnym zleceniem). Mierzone jako
+    **górna granica oszczędności** (zakłada pełną wiedzę o pozycji na starcie okna, ustaloną tu z samych wypełnień);
+    realne źródło tej wiedzy nie jest dziś wskazane, więc M4 raportujemy jako oszczędność potencjalną i **nie
+    przyznajemy mu samodzielnie „mieści się”**.
+- **[pre] Jak liczony koszt:** darmowe zliczenia z WebSocket `trades` (unikalne adresy na minutę / na okno N, dla
+  każdego zestawu i filtra) × średnia zmierzona waga zapytania `w̄` z próbki (osobno dla każdej długości okna 1/5/15/60
+  min, z adresów, które handlowały w danym zestawie). Obok: dolna granica 20 wagi/zapytanie (bez `w̄`).
+  Statystyki na szeregu minut (M1, M2) i okien (M3, podzielone przez N): **średnia, mediana, p95, maks.**
+- **[pre] Próg (z zadania, bez zmian):** sposób × zestaw „mieści się”, jeśli **średnie zużycie ≤ 600 wagi/min**
+  (50 % limitu 1 200; reszta to zapas i ewentualne 0b) **ORAZ p95 ≤ 1 200 wagi/min** (drugi warunek: w godzinach
+  ruchu kolektor nie może stale zderzać się z limitem; dopisany teraz, przed wynikiem). Dla M2 dodatkowo filtr musi
+  nie gubić likwidacji (niżej). Jeśli żaden sposób × zestaw nie mieści się — **STOP, raport do użytkownika**.
+- **[pre] Czy filtr gubi likwidacje (M2):** prawda = losowa próbka stron aktywnych każdego okna, odpytana w całości;
+  likwidacja = wypełnienie z polem `liquidation`, w którym zlikwidowanym jest ten adres (jednostka: zlecenie
+  (adres, `oid`)), tylko w monetach zestawu. Likwidacja jest „zgubiona” przez filtr, jeśli jej adres w tym oknie nie
+  przeszedł filtra. Filtr **nie gubi**, jeśli górna granica 95 % (dokładna, Cloppera–Pearsona) udziału zgubionych
+  ≤ 5 % (np. 0 zgubionych przy ≥ 59 likwidacjach). W przeciwnym razie raportujemy udział z przedziałem, a filtr daje
+  tylko **próbkę** (decyzja użytkownika). Dodatkowo co 60 min jedno okno 1-min zestawu S3 odpytane w całości
+  (porównanie z pełnym odpytaniem na krótkim oknie).
+- **[pre] M3 a gubienie:** M3 czyta te same dane później, więc gubi tylko przez obcięcie wyników (2 000 wypełnień na
+  stronę) — liczymy adresy, które wymagały stronicowania albo zostały ucięte (limit 5 stron).
+- **[pre] Opóźnienie wykrycia:** czas odebrania odpowiedzi − czas `T` wypełnienia likwidacyjnego, per N (mediana, p95).
+- **[pre] Okno:** ≥ 24 h ciągłego pomiaru (plan 26 h), obejmuje porę azjatycką, europejską i amerykańską. Okresu
+  kaskady nie da się zaplanować — jeśli wystąpi, opiszemy; jeśli nie, zapiszemy jako ograniczenie.
+- **[pre] Budżet samego pomiaru:** próbkowanie celuje w ≤ 700 wagi/min (okno przesuwne 60 s), **twardy sufit 900**;
+  przy 429 rosnące odczekanie (10 s → 300 s), nigdy obchodzenie (bez dodatkowych IP/proxy). Liczba 429 w wyniku.
+- **[pre] Czego NIE robimy:** żadnych cen po likwidacjach, żadnego odczytu E1, żadnego stanu pozycji (0b),
+  żadnego `metaAndAssetCtxs`.
