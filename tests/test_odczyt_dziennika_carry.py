@@ -533,6 +533,13 @@ def test_main_flag_keeps_json_stdout_clean(tmp_path, capsys, monkeypatch):
     out = capsys.readouterr()
     rep = json.loads(out.out)  # wydruk pobierania nie trafił do stdout
     assert rep["carry"]["exchange"]["status"] == MET and rep["carry"]["exchange_requested"]
+    assert rep["carry"]["thresholds"] == {
+        "trouble_max": 0.05,
+        "check_from": "2026-09-30",
+        "complete_min": 0.95,
+        "start": "2026-09-29",
+        "tol": 1e-9,
+    }
     assert "coinm funding BTCUSD_PERP" in out.err
 
 

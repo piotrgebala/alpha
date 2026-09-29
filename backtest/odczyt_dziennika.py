@@ -677,8 +677,9 @@ def reading(
 ) -> dict:
     """Pełny odczyt: kryteria 1–4 (build_state), 4b, 5 per noga i 6 (carry, Poprawka 12).
 
-    Niczego nie zapisuje. `carry_exchange` = krok (c) z siecią (`exchange_check`, flaga
-    `--carry-sprawdz-gielde`); `fetch` — atrapa pobrania w testach.
+    Niczego nie zapisuje w repo. `carry_exchange` = krok (c) z siecią (`exchange_check`, flaga
+    `--carry-sprawdz-gielde`; plik pobrania tylko w katalogu tymczasowym, usuwanym); `fetch` —
+    atrapa pobrania w testach.
     """
     ref = sd.REF if as_of is None else snapshot_ref(repo, as_of)
     if now is None:
@@ -754,6 +755,13 @@ def reading(
         "legs": legs,
         "carry": {
             **carry_criteria(carry, last_run_day, last, exchange),
+            "thresholds": {
+                "trouble_max": CARRY_TROUBLE_MAX,
+                "check_from": sd.CARRY_CHECK_FROM,
+                "complete_min": CARRY_COMPLETE_MIN,
+                "start": sd.CARRY_START,
+                "tol": CARRY_TOL,
+            },
             "exchange_requested": carry_exchange,
             "exchange": exchange,
         },
