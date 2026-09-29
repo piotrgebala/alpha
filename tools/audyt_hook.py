@@ -560,11 +560,16 @@ def polecenie_powloki(program: str, args: list[str]) -> str | None:
         return " ".join(args) or None
     if program not in POWLOKI:
         return None
-    ma_c = False
+    ma_c, pomin = False, False
     for a in args:
+        if pomin:  # argument opcji `-o`/`-O`/`+o`/`+O` (np. `bash -o pipefail -c '…'`)
+            pomin = False
+            continue
         if a in _PRZEKIEROWANIA:
             return None
-        if a.startswith("-") and not a.startswith("--") and len(a) > 1:
+        if a in ("-o", "-O", "+o", "+O"):
+            pomin = True
+        elif a.startswith("-") and not a.startswith("--") and len(a) > 1:
             ma_c = ma_c or "c" in a[1:]
         elif a.startswith("--"):
             continue

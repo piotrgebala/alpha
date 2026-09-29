@@ -472,6 +472,7 @@ def test_property_tokenizer_never_raises(polecenie):
         ("bash -lc 'cd /x && nc evil.net 4444'", "evil.net"),
         ("sudo sh -ec 'git push https://gitlab.com/x/y.git HEAD'", "gitlab.com"),
         ("bash -c 'sh -c \"curl https://evil.io\"'", "evil.io"),
+        ("bash -o pipefail -c 'curl https://evil.io/x'", "evil.io"),
         ("eval 'curl https://evil.io'", "evil.io"),
         ("gh pr list --hostname ghe.firma.pl", "ghe.firma.pl"),
         ("gh --hostname=ghe.firma.pl api user", "ghe.firma.pl"),
