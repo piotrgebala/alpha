@@ -335,3 +335,27 @@ robimy tylko na losowej próbce pod twardym sufitem wag, i na tej samej próbce 
   przy 429 rosnące odczekanie (10 s → 300 s), nigdy obchodzenie (bez dodatkowych IP/proxy). Liczba 429 w wyniku.
 - **[pre] Czego NIE robimy:** żadnych cen po likwidacjach, żadnego odczytu E1, żadnego stanu pozycji (0b),
   żadnego `metaAndAssetCtxs`.
+- **Hash pre-rejestracji:** `6f7e10c` (commit samej pre-rejestracji, przed napisaniem skryptu i przed pomiarem).
+- **[implementacja] Skrypt:** `data/measure_hl_weights.py` (commit `c9cd2bd`), testy bez sieci
+  `tests/test_measure_hl_weights.py` (w tym `hypothesis`: ogranicznik nigdy nie przekracza sufitu 900 w żadnym oknie
+  60 s; F1 ⇔ ≥ 2 różne ceny; reguła M4 nie pomija adresu z likwidacją; przedział CP). Kwoty próbki na okno:
+  N=1: 10, N=5: 30, N=15: 45, N=60: 90 adresów; zapytania okien N > 1 rozłożone na 0,9·N min; minuta liczy się tylko,
+  gdy połączenie WebSocket trwało przez całą minutę; zadanie próbki starsze niż 2N + 5 min od planowanego startu jest
+  porzucane i liczone. Stronicowanie `startTime = max(time) + 1` (wyniki rosnąco — sprawdzone na żywo), najwyżej
+  5 stron.
+- **[implementacja] Próba dymna (nie jest dowodem, nie w `raw_output.txt`):** 6 min 08:27–08:33 UTC do katalogu
+  tymczasowego sesji — 86 zapytań, 0 × 429, waga samego pomiaru ≤ 700/min, 4 pełne minuty; mechanika działa.
+- **[implementacja] Uruchomienie:** kopia skryptu poza repo, żeby przeżyła usunięcie worktree:
+  `$HOME/likwidacje_hl/pomiar_krok1/measure_hl_weights.py` (sha256 `3bf50945f0c2…84bbe1`, identyczna z `c9cd2bd`),
+  start `bash $HOME/likwidacje_hl/pomiar_krok1/start.sh` (`setsid nohup`, 26 h, interpreter `~/alpha/.venv`).
+  Wyniki w tym samym katalogu: `minuty.jsonl`, `zapytania.jsonl`, `status.json`, `pomiar.log`, `stdout.txt`.
+  Postęp: `~/alpha/.venv/bin/python ~/likwidacje_hl/pomiar_krok1/measure_hl_weights.py --status`.
+  Po końcu: `… --podsumuj` dopisane do `raw_output.txt` pod nagłówkiem „KROK 1A — pomiar wag” (krok 0 zostaje
+  nad nim bez zmian).
+- **[implementacja] Stan uruchomienia:** PID `1387584`, start 2026-09-29 08:33:37 UTC, koniec planowany
+  2026-09-30 10:33 UTC (proces kończy się sam). Pierwsze odczyty z `pomiar.log`: waga samego pomiaru w ostatnich
+  60 s = 211 / 357 / 353 (08:38 / 08:43 / 08:48 UTC), 0 × 429, 188 zapytań do 08:48. Pełny `pytest`: 1 935 passed,
+  3 skipped, kod 0.
+- **Co zostaje po końcu pomiaru (następna sesja):** dopisać `--podsumuj` do `raw_output.txt`; wynik A z werdyktem
+  per zestaw i sposób (próg wyżej), druga droga kluczowej liczby, bramka 16a; potem — tylko jeśli coś się mieści —
+  kroki B–D. Jeśli nic się nie mieści: STOP i raport do użytkownika.
