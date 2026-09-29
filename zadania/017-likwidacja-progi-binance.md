@@ -2,7 +2,7 @@
 id: 017
 tytul: Cena likwidacji — płaski próg 1/dźwignia − 1 % wobec progów depozytu Binance i ceny mark, 0 wariantów
 typ: przeglad
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „tak wrzuć na tablicę z zadaniami” (po przeglądzie bibliotek)"
 utworzono: 2026-09-29

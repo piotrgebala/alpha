@@ -2,7 +2,7 @@
 id: 016
 tytul: Funding drugą drogą — dzienna suma × waga (nasze silniki) wobec rozliczenia po rozliczeniu (wzór freqtrade), 0 wariantów
 typ: przeglad
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „tak wrzuć na tablicę z zadaniami” (po przeglądzie bibliotek)"
 utworzono: 2026-09-29
