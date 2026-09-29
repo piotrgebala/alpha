@@ -86,6 +86,45 @@ def test_interp_ratio():
     assert fs.interp_ratio(st_, R).tolist() == pytest.approx([1.1, 1.0])
 
 
+def test_bootstrap_rejects_too_few_blocks():
+    with pytest.raises(ValueError):
+        fs.weekly_block_bootstrap(np.zeros(10), n_boot=10)
+
+
+def test_liquidated_position_pays_intraday_but_not_next_midnight():
+    """Long 1× przy 2×: minimum dnia 1 = 45 (−55 % ≥ próg 49 %) → likwidacja; 08:00 płaci, północ dnia 2 nie."""
+    returns = np.array([[np.nan], [-0.5], [0.0]])
+    low_rel = np.array([[np.nan], [0.45], [np.nan]])
+    high_rel = np.full((3, 1), np.nan)
+    pos = fs.ts_liq_positions(returns, [(0, np.array([1.0]))], low_rel, high_rel, 2.0, 0.01)
+    assert pos.alive_end[1, 0] == 0.0 and pos.W[1, 0] == 1.0
+    st_ = _st([(0, 1, 1 / 3, 0.002), (0, 2, 0.0, 0.004)])
+    b = fs.settlement_funding(pos.W, pos.R, pos.alive_end, pos.first, st_, np.array([0.9, 1.0]))
+    assert b["b1"].sum() == pytest.approx(-0.0018)  # tylko 08:00: −1 × 0,9 × 0,002
+    assert b["b0"][2, 0] == 0.0  # po likwidacji brak wagi w dniu 2
+
+
+def test_settlement_outside_index_is_ignored():
+    idx = pd.date_range("2024-01-01", periods=2, freq="D", tz="UTC")
+    raw = {
+        "AAA": pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2024-01-02 08:00", "2024-01-03 00:00"], utc=True),
+                "funding_rate": [0.001, 0.002],
+            }
+        )
+    }
+    st_ = fs.build_settlements(raw, ["AAA"], idx)
+    assert list(st_.day) == [1, -1]
+    returns = np.array([[np.nan], [0.1]])
+    nan = np.full((2, 1), np.nan)
+    pos = fs.ts_liq_positions(returns, [(0, np.array([1.0]))], nan, nan, 2.0, 0.01)
+    b = fs.settlement_funding(pos.W, pos.R, pos.alive_end, pos.first, st_, np.ones(2))
+    for k in ("b0", "b1", "b2"):
+        assert b[k].sum() == pytest.approx(-0.001)  # północ poza danymi nie wchodzi nigdzie
+    assert np.isnan(fs.daily_sum(st_, 2, 1)[0, 0])
+
+
 def test_bootstrap_constant_series():
     m, lo, hi = fs.weekly_block_bootstrap(np.full(70, 0.001), n_boot=200)
     assert m == pytest.approx(0.365) and lo == pytest.approx(0.365) and hi == pytest.approx(0.365)
