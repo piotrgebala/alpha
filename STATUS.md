@@ -197,7 +197,7 @@
 > ZBIERANE-dane, rodziny C2 premie giełdowe / G3 halving / J sentyment, ranking po PR1/LK0, siedem błędów, karta z DSR i fazami);
 > paczka `quant-strategy-catalog.skill` przekazana użytkownikowi do wgrania na claude.ai (repo nie trzyma kopii skilli).
 > SERWER: ciężkie przebiegi z `OMP_NUM_THREADS=1` i ≤ 24 procesami (bez tego przeciążenie ~15× i ryzyko dla walidatora).
-> BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
+> BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków ([zadanie 023](zadania/023-black-stare-pliki.md)).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -212,16 +212,16 @@
 
 ---
 
-## Lista wykonania — czeka na użytkownika (stan 2026-09-28)
+## Lista wykonania — czeka na użytkownika (stan 2026-09-29)
 
 Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opisie commita).
 
-1. **Do 30.09, 06:30 UTC — rutyna dziennika w Cowork** (`trig_013XEDboNXSkb6CF17K1eSGf`): wkleić całą treść
-   [`tools/rutyna_dziennika.md`](tools/rutyna_dziennika.md) zamiast starej instrukcji. Bez tego strona nie pokaże
-   carry (pierwszy wiersz 30.09), a stara wersja zapisuje pliki w `/tmp` i zawiesza się na pytaniu o zgodę.
-   Szczegóły: §17, ETAP 6 — wykonanie (Poprawka 12).
-2. **Rutyna tokenów w Cowork (05:00 UTC)** — założyć wg [docs/rag/12](docs/rag/12_zuzycie_tokenow.md). Część na
-   serwerze działa; bez rutyny zakładka Tokeny na pulpicie się nie odświeża.
+1. **Rutyna tokenów w Cowork (05:00 UTC)** — założyć wg [docs/rag/12](docs/rag/12_zuzycie_tokenow.md). Część na
+   serwerze działa; bez rutyny zakładka Tokeny na pulpicie się nie odświeża. 29.09: na koncie nie ma takiej rutyny.
+2. **Radar założony dwa razy** — „Radar makro Puls Finansów” (`trig_01JHDJKyFH6Dp2gEeC7YckEi`, 04:52 UTC, Opus,
+   z łącznikami) i „Radar” (`trig_016Lw2BpotHxkYWnmMDXibXJ`, 04:44 UTC, założony 29.09 przez API, bez łączników —
+   krok zapisu do GitHuba może się w nim nie udać). Ta sama instrukcja, ta sama strona. Wyłączyć „Radar” na
+   https://claude.ai/code/routines/trig_016Lw2BpotHxkYWnmMDXibXJ (agent może zmieniać tylko rutyny założone przez agenta).
 3. **Dwie zawieszone sesje rutyn w Cowork** — zamknąć ręcznie (jedna to ręczny przebieg z 28.09, 05:35 UTC, który
    utknął na pytaniu o `/tmp`).
 4. **Serwer: usunąć `wersje_serwer.txt` i `wersje_windows.txt`** (listy bibliotek z 24.09; oba środowiska są zgodne
@@ -232,8 +232,10 @@ Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opi
    `! crontab -l | grep -v -F '/home/dantey1/ogranicznik.sh' | crontab -`.
    Powrót: `(crontab -l; echo '0 * * * * /home/dantey1/ogranicznik.sh') | crontab -`.
 6. **Do decyzji: `~/nohup.out`** (1 GB, nic do niego nie pisze od 8.10.2025) — zostawić czy usunąć.
-7. **Do wyjaśnienia: „decyzje o pulpicie” i „watch co 4 h”** — wymienione w notach przekazania bez szczegółów.
-   Przy pulpicie zostało ręczne sprawdzenie na tablecie (połączenie strony z Claude, motyw jasny/ciemny).
+7. **Do wyjaśnienia: „decyzje o pulpicie”** — wymienione w notach przekazania bez szczegółów. Zostało ręczne
+   sprawdzenie na tablecie (połączenie strony z Claude, motyw jasny/ciemny). „Watch co 4 h” wyjaśnione 29.09:
+   rutyna `trig_01CKDfXTbkEm4EfTu5teZcds` chodziła co godzinę z opisem z 21.09 — teraz co 4 h, z aktualnym opisem
+   i alarmem przy dzienniku starszym niż 2 dni (model bez zmian: Sonnet; zmiana na Opus tylko na słowo użytkownika).
 8. **Windows: linia statusu strażnika kontekstu** — sprawdzić, czy się pokazuje
    ([docs/rag/12](docs/rag/12_zuzycie_tokenow.md), „Wdrożenie”).
 9. **Do decyzji przy następnej wersji skilla:** odchudzenie SKILL.md skilla `clas5-quant`.
@@ -3092,9 +3094,10 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   Znane ograniczenie (g): `prev` = poprzedni przebieg, więc powtórka tej samej nocy albo przebieg z „brak pliku”/„BŁĄD”
   może ukryć lub powtórzyć ogłoszenie różnicy; karta i kryterium (c) i tak ją pokazują (backlog: `prev` z ostatniego
   przebiegu, który porównał zapis, sprzed poprzedniej rutyny).
-- **Backlog:** kontrola (h) na stronie (litery f–g ma już carry) — alarm przy „BŁĄD” w polach ostatniej linii `przebiegi.log`; nowa wersja skilla
-  katalogu (low-vol/BAB, D1 vs TL1); kolektor Binance nie sprawdza zakresu T przy zapisie (sprawdza go indeks/kopia); kryteria carry (a)–(c)
-  z Poprawki 12 do `backtest/odczyt_dziennika.py` przed odczytem 1 (2026-12-25).
+- **Backlog → tablica (2026-09-29, decyzja użytkownika „wykonaj wszystkie 3 punkty”):** kryteria carry (a)–(c) w odczycie —
+  [019](zadania/019-odczyt-kryteria-carry.md); kontrola (h) na stronie — [020](zadania/020-strona-kontrola-h-blad.md); zakres T
+  w kolektorze Binance — [021](zadania/021-kolektor-binance-zakres-t.md); nowa wersja skilla katalogu —
+  [022](zadania/022-skill-katalog-lowvol-d1-tl1.md); `black --check` na starych plikach — [023](zadania/023-black-stare-pliki.md).
 
 #### Zużycie tokenów (2026-09-28) — [docs/rag/12](docs/rag/12_zuzycie_tokenow.md)
 
