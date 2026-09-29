@@ -1,0 +1,53 @@
+# Zadanie 019 — podgląd odczytu dziennika z sekcją „Carry COIN-M (Poprawka 12)”
+# Komenda (z katalogu repo, gałąź zadanie-019-odczyt-kryteria-carry @ fd9ff72):
+#   git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika
+# Czyta origin/master @ d50aea1 (ostatni przebieg dziennika: 1901a20, „Dziennik: przebieg 2026-09-29”).
+# Uruchomienie: 2026-09-29 ok. 11:32 UTC. Bez flagi --carry-sprawdz-gielde (bez sieci: krok (c)
+# z ponownym pobraniem nie uruchomiony). Status „ZA WCZEŚNIE — tylko podgląd”: to nie jest odczyt wiążący.
+# Poniżej pełny wydruk (stdout i stderr), bez zmian.
+====================================================================================================
+ODCZYT DZIENNIKA (szczebel 3 ADR-09) — wynik R1 2026-09-24 → 2026-09-28, 5 dni kalendarzowych (5 z wynikiem)
+STATUS: ZA WCZEŚNIE — tylko podgląd
+migawka origin/master (commit 2026-09-29T11:28:05+00:00, ostatni przebieg 2026-09-29), przebiegi 16 (nieczytelne 0)
+plan: --as-of 2026-12-24 / 2027-03-24 / 2027-09-23 (92/182/365 dni), z = 2.31
+====================================================================================================
+Kryteria mechaniki (definicje: tools/strona_dziennika.build_state; progi: dziennik/README.md)
+  1. kompletność ≥ 95 % dni: 6/6 (100.0 %) → TAK
+  2. spójność, 0 zmian historii po pierwszym wyniku: 0 (wszystkich zdarzeń 3) → TAK
+  3. terminowość ≥ 95 % dni: spóźnione 0 z 6 (100.0 %) → TAK
+  4. depozyt mediana w [15; 35] %: 23.0 % (min 22.0 %, max 23.4 %); k maks. trend 0.5739, premia 0.3426 (sufit 2.0) → TAK
+  4b. zmienność R1 w [13; 31] %/rok: 8.7 % z 5 dni → poza pasmem [podgląd]
+
+Kryterium 5 — próg obalenia: średnia roczna < μ − z·SE, SE = σ/√(n/365) (μ, σ zakładane, arytmetyczne; źródła: dziennik/README.md)
+  TS1  trend tygodniowy, likwidacja 2×: n 5 dni (braki 0) — ZA WCZEŚNIE — tylko podgląd
+       średnia +58.0 %/rok (przedział 95 % -172.1 % … +288.1 %); Σ za okres +0.8 %; zakładane μ +10.7 %, σ 18.1 %; SE 154.8 %/rok
+       próg obalenia -346.9 %/rok (Σ za okres -4.8 %) → podgląd: średnia nad progiem (nie wiąże)
+       wykrycie zakładanego μ przy 2·SE wymaga ~11.5 lat danych
+  CP1  premia Coinbase na BTC, likwidacja 3×: n 5 dni (braki 0) — ZA WCZEŚNIE — tylko podgląd
+       średnia -74.1 %/rok (przedział 95 % -251.5 % … +103.4 %); Σ za okres -1.0 %; zakładane μ +31.0 %, σ 35.1 %; SE 300.0 %/rok
+       próg obalenia -661.9 %/rok (Σ za okres -9.1 %) → podgląd: średnia nad progiem (nie wiąże)
+       wykrycie zakładanego μ przy 2·SE wymaga ~5.1 lat danych
+  R1   portfel R1 (trend + premia, budżet ryzyka): n 5 dni (braki 0) — ZA WCZEŚNIE — tylko podgląd
+       średnia +9.8 %/rok (przedział 95 % -135.4 % … +155.0 %); Σ za okres +0.1 %; zakładane μ +18.2 %, σ 21.7 %; SE 185.1 %/rok
+       próg obalenia -409.3 %/rok (Σ za okres -5.6 %) → podgląd: średnia nad progiem (nie wiąże)
+       wykrycie zakładanego μ przy 2·SE wymaga ~5.7 lat danych
+  X1   momentum przekrojowe, średnia 7 faz: n 4 dni (braki 0) — ZA WCZEŚNIE — tylko podgląd
+       średnia +426.7 %/rok (przedział 95 % -1035.9 % … +1889.3 %); Σ za okres +4.7 %; zakładane μ +9.5 %, σ 36.3 %; SE 346.4 %/rok
+       próg obalenia -790.6 %/rok (Σ za okres -8.7 %) → podgląd: średnia nad progiem (nie wiąże)
+       wykrycie zakładanego μ przy 2·SE wymaga ~58.4 lat danych
+
+Brak obalenia ≠ potwierdzenie przewagi: próg odrzuca tylko wyniki wyraźnie gorsze od założeń; zakładanego zysku 3–12 miesięcy nie są w stanie potwierdzić.
+
+Carry COIN-M (Poprawka 12) — kryterium 6: mechanika zapisu, nie przewaga; bez werdyktu i bez progu obalenia (brzmienie i progi: dziennik/README.md)
+  (a) terminowość: pole „carry …” z kłopotem (spóźnione, brak pliku, BŁĄD — nie „carry zmiany”) w ≤ 5 % przebiegów od 2026-09-30 (z przebiegi.log)
+      → ZA WCZEŚNIE: żadnego przebiegu od 2026-09-30 (ostatni przebieg 2026-09-29)
+  (b) kompletność: komplet = True w ≥ 95 % dni od 2026-09-29, każdy dzień z False wyjaśniony (brak po stronie giełdy czy błąd pobierania)
+      → ZA WCZEŚNIE: żaden dzień od 2026-09-29 nie jest jeszcze zamknięty (ostatni przebieg 2026-09-29)
+  (c) zgodność z giełdą (druga droga): przy odczycie jedno ponowne pobranie historii od 2026-09-29 i przeliczenie journal_carry.carry_rows daje te same wiersze co plik, do 1e-9, a pole „carry zmiany” nie pojawiło się w przebiegi.log ani razu; każda różnica wyjaśniona
+      → ZA WCZEŚNIE: pole „carry zmiany” w 0 przebiegach; ponowne pobranie nie uruchomione (krok z siecią: --carry-sprawdz-gielde)
+  wynik opisowo, bez werdyktu: netto_skum i ta sama suma przeliczona na rok
+      → brak zamkniętego dnia carry w carry_wyniki.csv
+  Niespełnione (a)–(c) = błąd mechaniki do wyjaśnienia, nie ocena strategii.
+
+Skrypt jest reporterem — werdykt o strategii podpisuje Claude w dokumentacji odczytu.
+UWAGA: ZA WCZEŚNIE — tylko podgląd.
