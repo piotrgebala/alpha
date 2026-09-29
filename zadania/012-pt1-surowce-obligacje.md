@@ -2,9 +2,9 @@
 id: 012
 tytul: PT1 — carry i trend na surowcach i obligacjach na danych bazowych (szczebel 1 drabiny), nierozstrzygnięte
 typ: badawcze
-status: czeka_na_decyzje
+status: nowe
 zlecil: uzytkownik
-decyzja_uzytkownika: "brak"
+decyzja_uzytkownika: "2026-09-29: zgoda na wszystkie 008–014 („Wszystkie 008–014”); odczyty na historii startują tylko, jeśli mapa 007 uzna rodzinę za MIERZALNĄ"
 utworzono: 2026-09-29
 zalezy_od: [007]
 budzet: "Opus"
