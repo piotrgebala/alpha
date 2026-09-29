@@ -66,7 +66,7 @@ SIDE_FIELDS = (
     "fazy",
     "koszyk",
 )
-FIELD_NAME_RE = re.compile(rf"(.+?) (?={ERROR_MARK}|[+(\d])")
+FIELD_NAME_RE = re.compile(rf"(.+?) (?={re.escape(ERROR_MARK)}|[+(\d])")
 
 
 def git(repo: str, *args: str, check: bool = False) -> str:

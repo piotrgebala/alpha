@@ -427,6 +427,8 @@ def test_carry_error_does_not_stop_journal_nor_touch_other_files(tmp_path, live_
     assert "RuntimeError: test" not in log[0]
     runs, bad = sd.parse_log(log[0] + "\n")
     assert bad == 0 and runs[0]["changed"] == 0
+    # strona dziennika: błąd carry zgłasza (f) z pola „carry”, kontrola (h) go pomija
+    assert runs[0]["carry"] == "BŁĄD RuntimeError" and sd.error_fields(log[0]) == []
     assert not (tmp_path / "blad" / jc.CARRY_CSV).exists()
     others = sorted(p.name for p in (tmp_path / "ok").glob("*.csv") if p.name != jc.CARRY_CSV)
     assert len(others) >= 12

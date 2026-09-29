@@ -5,7 +5,7 @@ ZASADY: zadanie wyłącznie odczytuje repo. Nie commituj, nie pushuj, nie zmieni
 KROKI
 1. Zapisz skrypt z sekcji SKRYPT poniżej DOKŁADNIE (znak w znak, bez znaczników początku i końca) do pliku gen_dziennik.py w katalogu roboczym. Sprawdź sumę:
 python3 -c "import hashlib;print(hashlib.sha256(open('gen_dziennik.py','rb').read().rstrip().replace(b'\r\n',b'\n')).hexdigest())"
-Musi wyjść: 6039a4470ea8cdb2f3285fba83aba64e49729514238d22f8b913c8a81773fc15
+Musi wyjść: 1a9934a2c9e0fa063a0f4272a4c8db534539ec21fa8e3dbcf46b636cd34b40f5
 Przy niezgodności zapisz plik jeszcze raz. Jeśli nadal się nie zgadza — przerwij, NIE aktualizuj strony i zakończ komunikatem „UWAGA: skrypt odświeżania nie przeszedł kontroli sumy”.
 2. rm -rf alpha_dz && git clone -q --filter=blob:none --no-checkout --shallow-since=2026-09-20 https://github.com/piotrgebala/alpha.git alpha_dz
 3. python3 gen_dziennik.py alpha_dz stan.json
@@ -84,7 +84,7 @@ SIDE_FIELDS = (
     "fazy",
     "koszyk",
 )
-FIELD_NAME_RE = re.compile(rf"(.+?) (?={ERROR_MARK}|[+(\d])")
+FIELD_NAME_RE = re.compile(rf"(.+?) (?={re.escape(ERROR_MARK)}|[+(\d])")
 
 
 def git(repo: str, *args: str, check: bool = False) -> str:
