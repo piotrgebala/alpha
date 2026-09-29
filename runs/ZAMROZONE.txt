@@ -99,3 +99,4 @@ runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_skala.py   # LH0
 runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_trades.py   # LH0
 runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_weryfikacja.py   # LH0
 backtest/run_lp1_likwidacja_progi.py         # LP1 (zadanie 017)
+backtest/run_fd1_funding.py                  # FD1

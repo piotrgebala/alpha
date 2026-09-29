@@ -58,3 +58,4 @@ nr,data,runda,katalog,baza,rodzaj,odczyt_programu,wariantow,uwagi
 57,2026-09-28,PT1,2026-09-28_pt1-perpy-tradfi,inna,opis-z-wynikiem,nie,0,"Opis instrumentu (funding, koszty, weekend) na perpach TradFi; zwrotu strategii nie odczytano (wn. 109)."
 58,2026-09-29,LH0,2026-09-29_lh0-kolektor-hyperliquid,krypto-na-żywo,bez-wyniku,nie,0,"Sonda wykonalności kolektora likwidacji Hyperliquid (zadanie 001, krok 0), 0 odczytów E1 (wn. 110)."
 59,2026-09-29,LP1,2026-09-29_lp1-likwidacja-progi-binance,krypto-2021-2026,opis-z-wynikiem,nie,0,"Przegląd modelu likwidacji (zadanie 017): progi Binance i cena mark wobec płaskiego progu dziennika; liczy tylko przekroczenia progu na wszystkich dniach i obu stronach, bez pozycji strategii i bez zwrotu (wn. 111)."
+60,2026-09-29,FD1,2026-09-29_fd1-funding-druga-droga,krypto-2021-2026,opis-z-wynikiem,nie,0,"Składowa funding nóg TS1/X1 policzona dwiema drogami; bez zwrotu netto nóg ani związku sygnału ze zwrotem (wn. 112)."

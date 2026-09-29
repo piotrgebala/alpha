@@ -13,6 +13,8 @@ target-version = ["py311"]
 # Skrypty rund są zamrożone (zasada 13) — formater ich nie dotyka. Źródłem prawdy dla ich
 # wyników są katalogi `runs/`, a reformatowanie zmieniałoby plik, którego komenda w sekcji
 # "Metadane" ma odtwarzać zapisany output.
+# Zadanie 023 (2026-09-29): dopisane zamrożone skrypty (runs/ZAMROZONE.txt), na których
+# `black --check .` był czerwony — poprawnie wyłącza się je stąd, nie formatuje.
 extend-exclude = '''
 (
     ^/runs/
@@ -23,6 +25,15 @@ extend-exclude = '''
   | ^/backtest/run_timeout_leg_band\.py
   | ^/backtest/run_abstention_fix_k2\.py
   | ^/backtest/run_measurability_k3\.py
+  | ^/backtest/calibrate_regime_thresholds\.py
+  | ^/backtest/checkpoint_timeframe_robustness\.py
+  | ^/backtest/diagnose_cost_feasibility\.py
+  | ^/backtest/diagnose_range_signal\.py
+  | ^/backtest/evaluate_confidence_threshold\.py
+  | ^/backtest/evaluate_feature_candidate\.py
+  | ^/backtest/run_funding_measured_f1\.py
+  | ^/backtest/run_momentum_m1\.py
+  | ^/backtest/screen_feature_candidates\.py
 )
 '''
 
@@ -41,6 +52,15 @@ extend-exclude = [
     "backtest/run_timeout_leg_band.py",
     "backtest/run_abstention_fix_k2.py",
     "backtest/run_measurability_k3.py",
+    "backtest/calibrate_regime_thresholds.py",
+    "backtest/checkpoint_timeframe_robustness.py",
+    "backtest/diagnose_cost_feasibility.py",
+    "backtest/diagnose_range_signal.py",
+    "backtest/evaluate_confidence_threshold.py",
+    "backtest/evaluate_feature_candidate.py",
+    "backtest/run_funding_measured_f1.py",
+    "backtest/run_momentum_m1.py",
+    "backtest/screen_feature_candidates.py",
 ]
 
 [tool.ruff.lint]
