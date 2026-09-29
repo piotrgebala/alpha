@@ -2,7 +2,7 @@
 id: 001
 tytul: LH0 — brama danych Hyperliquid (likwidacje), tylko zbieranie
 typ: zbieranie_danych
-status: nowe
+status: w_toku
 zlecil: cowork
 decyzja_uzytkownika: "2026-09-28: trzeci kolektor likwidacji obok LK0 i LB0, tylko zbieranie, bez odczytu"
 utworzono: 2026-09-29

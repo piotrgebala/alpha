@@ -2,7 +2,7 @@
 id: 002
 tytul: Hook audytowy wykonawców i plan izolacji na serwerze
 typ: infra
-status: nowe
+status: w_toku
 zlecil: cowork
 decyzja_uzytkownika: "2026-09-29: kolejność tablica → izolacja → ewentualny harmonogram"
 utworzono: 2026-09-29
