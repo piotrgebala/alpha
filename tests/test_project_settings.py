@@ -183,3 +183,25 @@ def test_project_agents_run_on_opus_with_medium_effort():
         assert "\neffort: medium\n" in naglowek, nazwa
     for plik in katalog.glob("*.md"):
         assert "\nmodel: haiku" not in plik.read_text(encoding="utf-8").split("---")[1], plik.name
+
+
+def test_audit_hook_watches_executor_tools_and_never_blocks():
+    """Zadanie 002 (docs/rag/13): hook audytowy `tools/audyt_hook.py` w PreToolUse na każdym
+    narzędziu, które sięga po sieć, pliki lub powłokę; wywołanie `py || python3 || true` jak
+    pozostałe hooki — błąd interpretera nie może zablokować narzędzia (tryb „tylko oznacza”)."""
+    matches = [(m, c) for m, c in hooks_for("PreToolUse") if "tools/audyt_hook.py" in c]
+    assert matches, "brak hooka tools/audyt_hook.py w PreToolUse"
+    for tool in (
+        "Bash",
+        "Read",
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "NotebookEdit",
+        "WebFetch",
+        "Grep",
+        "Glob",
+    ):
+        assert any(re.fullmatch(matcher, tool) for matcher, _ in matches), tool
+    for _, command in matches:
+        assert "python3" in command and command.rstrip().endswith("|| true")

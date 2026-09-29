@@ -1,0 +1,43 @@
+# Lista hostów dozwolonych dla hooka audytowego wykonawców (`tools/audyt_hook.py`, zadanie 002,
+# docs/rag/13). Polecenie sieciowe do hosta SPOZA tej listy dostaje flagę `siec_poza_lista`
+# w dzienniku `~/.clas5_audyt/RRRR-MM-DD.jsonl`. Hook tylko OZNACZA — niczego nie blokuje.
+#
+# Format (celowo najprostszy — hook czyta go bez biblioteki YAML, żeby był szybki):
+#   - jeden host na linię jako element listy `hosty`;
+#   - `*.domena` = każda poddomena (sama `domena` NIE jest wtedy objęta — dopisz ją osobno);
+#   - komentarz po `#`.
+# Zmiana listy = commit z powodem (host z kodu `data/` lub `tools/`, albo adres z treści zadania).
+#
+# Źródło wpisów: grep po `data/` i `tools/` (2026-09-29) + adresy z zadań tablicy.
+hosty:
+  # --- lokalnie ---
+  - localhost
+  - 127.0.0.1
+  - "::1"
+  # --- Binance (data/fetch_*.py, data/fetch_universe.py, kolektory) ---
+  - fapi.binance.com
+  - dapi.binance.com
+  - api.binance.com
+  - fstream.binance.com
+  - data.binance.vision
+  - s3-ap-northeast-1.amazonaws.com  # listing archiwum data.binance.vision
+  # --- Bybit (kolektor likwidacji, dane publiczne) ---
+  - api.bybit.com
+  - stream.bybit.com
+  # --- Hyperliquid (zadanie 001: tylko publiczne API bez klucza) ---
+  - api.hyperliquid.xyz
+  # --- inne źródła danych (data/fetch_external.py, data/fetch_korea.py, data/fetch_live.py) ---
+  - api.exchange.coinbase.com
+  - api.upbit.com
+  - www.deribit.com
+  - community-api.coinmetrics.io
+  - api.alternative.me
+  - fred.stlouisfed.org
+  # --- kod i pakiety (git push/fetch, pip install) ---
+  - github.com
+  - api.github.com
+  - codeload.github.com
+  - raw.githubusercontent.com
+  - objects.githubusercontent.com
+  - pypi.org
+  - files.pythonhosted.org
