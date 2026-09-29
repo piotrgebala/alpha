@@ -261,3 +261,8 @@ Razem: 2 wczytania, 2 różne skille: `anthropic-skills:clas5-quant`, `anthropic
   orkiestrator; `data:validate-data` / `data:statistical-analysis` — nie wczytane (zakres zlecenia; 0 odczytów, jedyny
   przedział to Wilson w 0b), bramkę 16a zrobiono ręcznie według `docs/skills/bramki-jakosci.md`; `data:explore-data` —
   nie dotyczy (zbiór nie powstał).
+- **Bramka 16c (orkiestrator, `engineering:code-review`, przy scaleniu 2026-09-29): Approve** — jednorazowe skrypty sondy
+  łączą się wyłącznie z `https://api.hyperliquid.xyz/info` i `wss://api.hyperliquid.xyz/ws`, bez kluczy i zmiennych
+  środowiskowych, zapisują tylko do ścieżek z argumentów (katalog tymczasowy); zamrożone w `runs/ZAMROZONE.txt`. Liczby
+  kontroli pozytywnej sprawdzone w `raw_output.txt` (BTC 109 wypełnień = 78 zleceń, ETH 17 = 13, razem 91).
+

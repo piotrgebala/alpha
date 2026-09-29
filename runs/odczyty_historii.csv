@@ -56,3 +56,4 @@ nr,data,runda,katalog,baza,rodzaj,odczyt_programu,wariantow,uwagi
 55,2026-09-27,LB0,2026-09-27_lb0-kolektor-bybit,krypto-na-żywo,bez-wyniku,nie,0,"Kolektor likwidacji Bybit, 0 odczytów; wiersz dodany z góry, runda powstaje na gałęzi równoległej (docs/rag/11 §3)."
 56,2026-09-28,OS1,2026-09-28_os1-otwarcia-sesji,krypto-2021-2026,bez-wyniku,nie,0,"NIEMIERZALNA we wszystkich ramionach, nie wystartowała; tylko rozrzut okien i próg (wn. 108)."
 57,2026-09-28,PT1,2026-09-28_pt1-perpy-tradfi,inna,opis-z-wynikiem,nie,0,"Opis instrumentu (funding, koszty, weekend) na perpach TradFi; zwrotu strategii nie odczytano (wn. 109)."
+58,2026-09-29,LH0,2026-09-29_lh0-kolektor-hyperliquid,krypto-na-żywo,bez-wyniku,nie,0,"Sonda wykonalności kolektora likwidacji Hyperliquid (zadanie 001, krok 0), 0 odczytów E1 (wn. 110)."

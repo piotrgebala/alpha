@@ -2,7 +2,7 @@
 id: 001
 tytul: LH0 — brama danych Hyperliquid (likwidacje), tylko zbieranie
 typ: zbieranie_danych
-status: w_toku
+status: czeka_na_decyzje
 zlecil: cowork
 decyzja_uzytkownika: "2026-09-28: trzeci kolektor likwidacji obok LK0 i LB0, tylko zbieranie, bez odczytu"
 utworzono: 2026-09-29
@@ -133,3 +133,26 @@ Raport ma powiedzieć:
 - ile miejsca zajmuje doba danych;
 - czy działa kopia;
 - co wymaga decyzji użytkownika (śledzenie pozycji przed kaskadą, ewentualne źródło płatne).
+
+## Wynik
+
+- **Co zrobiono:** tylko krok 0 (sonda). Werdykt 0a: **TYLKO PRÓBKA** z darmowego API na żywo → zgodnie z zadaniem
+  **STOP przed kolektorem**. Hyperliquid nie ma strumienia likwidacji. Każdą likwidację rynkową da się rozpoznać
+  (zlikwidowany = strona aktywna, pole `liquidation` w `userFillsByTime`), ale dla całej giełdy to 2,6–8,6× limitu
+  zapytań jednego IP. Skarbiec HLP widzi tylko backstop.
+- **Kontrola pozytywna** (2026-09-29 06:14–06:58 UTC): HL 78 BTC / 13 ETH / 0 SOL zleceń likwidacyjnych; LK0 (Binance)
+  29/61/13; LB0 (Bybit) 10/21/4; 100 % shortów we wszystkich. Zgodność co do rzędu wielkości na BTC i ETH.
+- **0b:** ~700 adresów z pozycjami > 100 tys. USD (95 %: 520–960), obieg co 1,2–2,5 min mieści się w limicie, ale
+  zabiera limit drodze (ii). Nie budowano.
+- **0c:** stan rynku co 60 s ≈ 19,4 MB/dobę gzip; likwidacje BTC+ETH < 1 MB/dobę; dysk 1,4 TB wolne.
+- **Commity i gałęzie:** `zadanie-001-lh0-hyperliquid` (05b1426 wykonawca + domknięcie orkiestratora: wiersz LH0
+  i wniosek 110 w `runs/INDEX.md`, skrypty w `runs/ZAMROZONE.txt`, przegląd 16c); scalone do `master`.
+- **Dowody:** `runs/2026-09-29_lh0-kolektor-hyperliquid/README.md` i `raw_output.txt`; liczby BTC/ETH sprawdzone przez
+  orkiestratora w surowym zapisie; pełny `OMP_NUM_THREADS=4 py -m pytest -q`: 1914 passed, 2 skipped, 1 failed (brak wiersza w `runs/odczyty_historii.csv`) → wiersz dopisany, strażniki 145 passed, kod 0.
+- **Do decyzji użytkownika** (żadne nie startuje bez niej):
+  1. tryb ograniczony za darmo: kolektor na kilka głównych monet (najpierw dłuższy pomiar wag) albo obieg „raz na dobę”;
+  2. pełne źródło: własny węzeł Hyperliquid albo płatne S3 `node_fills_by_block`;
+  3. tanie od razu: krok 2 — stan rynku co 60 s (funding, otwarte pozycje), ~19 MB/dobę;
+  4. stan pozycji przed kaskadą (0b), ~700 adresów co 1–3 min;
+  5. zamknięcie LH0.
+
