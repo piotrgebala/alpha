@@ -102,6 +102,12 @@ handlu, cel zwrotów, rynek przed 2022) → `docs/rag/10_preferencje_uzytkownika
     2026-09-23). Filtr mieszka w jednym miejscu: `config/settings.yaml` (`data.min_start`),
     nakładany przez `backtest/checkpoint_lib.py::fetch_window`. Starsze świece zostają tylko dla
     odtwarzalności zamrożonych rund; wyników sprzed W2 nie porównuje się 1:1 z nowymi.
+21. **Tablica zadań = `zadania/`** (zasady: `zadania/README.md`; decyzja użytkownika 2026-09-29). Na polecenie
+    „wykonaj zadania z tablicy” sesja staje się orkiestratorem: bierze zadania `nowe` w kolejności numerów
+    z uwzględnieniem `zalezy_od`, ciężką pracę zleca wykonawcom (subagent, własny worktree, gałąź
+    `zadanie-NNN-<slug>`). Zadania `badawcze`, `dziennik` i `konto` bez zapisanej decyzji użytkownika →
+    `czeka_na_decyzje`. Scala tylko na dowodach (testy, `raw_output.txt`/log, komenda, hash, druga droga liczby).
+    Cowork pisze wyłącznie w `zadania/`. Bez harmonogramu, dopóki użytkownik nie zdecyduje.
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 
@@ -163,6 +169,7 @@ runs/<data>_<id>-<slug>/ + runs/INDEX.md                 — rundy (zasady 11, 1
 docs/rag/ (01–08) + docs/INDEX.md                        — uzasadnienia decyzji; 08 = pełne brzmienie zasad
 docs/skills/bramki-jakosci.md                            — procedura bramek (zasada 16)
 STATUS.md                                                — plan, decyzje, ryzyka, zadania, backlog
+zadania/ (README, SZABLON, NNN-<slug>.md)                — tablica zadań orkiestratora (zasada 21)
 config/settings.yaml, agents/feature_registry.yaml       — źródło prawdy parametrów
 tools/skill_audit.py + runs/skille/<gałąź>.jsonl         — rejestr skilli (zasada 19)
 tools/frozen_guard.py + runs/ZAMROZONE.txt               — zamrożone skrypty (zasada 13)

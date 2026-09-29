@@ -44,6 +44,10 @@ i wybór rund, więc mieszkają w repo. Źródło każdej: decyzja użytkownika 
   install/uninstall` (samomodyfikacja) — wtyczki włączaj w `.claude/settings.json` projektu, resztę
   zostaw użytkownikowi z gotową komendą.
 
+## Tablica zadań (2026-09-29)
+- Zadania dla Claude na serwerze zapisuje się w `zadania/` (Cowork pisze tylko tam); użytkownik uruchamia je
+  poleceniem „wykonaj zadania z tablicy” (na razie ręcznie). Zasady: `zadania/README.md`, CLAUDE.md zasada 21.
+
 ## Inne repo użytkownika
 - `sigma` (osobne repo, QuantConnect): ML ETH 4h, wyniki na ~28 transakcjach; rodzina „ML na OHLCV”
   zamknięta w CLAS-5 (wniosek 11); jedyny nowy element to BTC→ETH lead-lag. Szczegóły:

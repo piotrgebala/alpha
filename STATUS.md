@@ -3142,3 +3142,12 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   **wdrożenie T5 — decyzja użytkownika 28.09:** „Bierz opusta cały czas tylko do prostszych zadań z medium effort” — agenci `lokalizator` (dotąd Haiku)
   i nowy `wykonawca` na Opusie z wysiłkiem medium.
 
+#### Tablica zadań od 2026-09-29
+
+- Decyzja użytkownika 2026-09-29: zadania w `zadania/` ([README](zadania/README.md)), orkiestrator na polecenie
+  „wykonaj zadania z tablicy”, CLAUDE.md zasada 21. Kolejność: tablica (000) → izolacja wykonawców (002) → ewentualny
+  harmonogram (osobna decyzja). Ścieżka odwrotu: usunięcie zasady 21 i katalogu `zadania/`.
+- **Zadanie 002 (2026-09-29):** hook audytowy `tools/audyt_hook.py` (tylko oznacza, dziennik `~/.clas5_audyt/`) i plan
+  izolacji wykonawców [docs/rag/13](docs/rag/13_izolacja_wykonawcow.md). **Do decyzji użytkownika:** po tygodniu
+  obserwacji (od 2026-09-29) — czy blokować; kroki z `sudo` z dokumentu 13. Luki wykrywania → zadanie 003.
+  Ścieżka odwrotu: usunięcie grupy hooka z `.claude/settings.json`.
