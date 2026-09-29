@@ -2,7 +2,7 @@
 id: 004
 tytul: LH0 — tryb ograniczony: pomiar wag na dłuższym oknie, potem kolektor likwidacji Hyperliquid na kilku głównych monetach
 typ: zbieranie_danych
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Tryb ograniczony, bez kosztów: kolektor tylko na kilka głównych monet. Najpierw trzeba zmierzyć na dłuższym oknie, czy zmieści się w limicie.”"
 utworzono: 2026-09-29
