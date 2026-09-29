@@ -2,9 +2,9 @@
 id: 011
 tytul: E1 — karta pre-rejestracji kaskad likwidacji z rachunkiem mocy z realnej częstości zdarzeń (bez cen)
 typ: badawcze
-status: czeka_na_decyzje
+status: nowe
 zlecil: uzytkownik
-decyzja_uzytkownika: "brak"
+decyzja_uzytkownika: "2026-09-29: zgoda na wszystkie 008–014 („Wszystkie 008–014”); odczyty na historii startują tylko, jeśli mapa 007 uzna rodzinę za MIERZALNĄ"
 utworzono: 2026-09-29
 zalezy_od: [004]
 nie_wczesniej_niz: 2026-09-30

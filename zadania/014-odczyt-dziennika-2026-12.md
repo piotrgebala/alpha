@@ -2,9 +2,9 @@
 id: 014
 tytul: Odczyt dziennika papierowego ~2026-12-25 — TS1 + CP1 (+ X1 osobno), szczebel 3 drabiny dowodów
 typ: dziennik
-status: czeka_na_decyzje
+status: nowe
 zlecil: uzytkownik
-decyzja_uzytkownika: "brak"
+decyzja_uzytkownika: "2026-09-29: zgoda na wszystkie 008–014 („Wszystkie 008–014”); odczyty na historii startują tylko, jeśli mapa 007 uzna rodzinę za MIERZALNĄ"
 utworzono: 2026-09-29
 zalezy_od: []
 budzet: "Opus"
