@@ -11,12 +11,21 @@ Co liczy:
 - kryterium 5 — próg obalenia per noga (TS1 = r_trend, CP1 = r_coinbase, R1 = r_port, X1 = r_x1):
   średnia roczna poniżej μ − z·SE, gdzie SE = σ/√(n/365), μ i σ zakładane (stałe niżej, ze źródłami),
   z = Z_READ — jeden próg na każdym z 3 odczytów (≈ 92, 182, 365 dni), dobrany tak, by łączna
-  jednostronna szansa fałszywego obalenia nogi przez 3 odczyty wynosiła 2,5 % (`simulate_z`).
+  jednostronna szansa fałszywego obalenia nogi przez 3 odczyty wynosiła 2,5 % (`simulate_z`);
+- kryterium 6 — noga carry COIN-M, kryteria (a)–(c) z `dziennik/README.md`, Poprawka 12
+  („Kryterium odczytu po ~3 miesiącach”): (a) terminowość i (b) kompletność — TE SAME liczniki
+  co strona (`tools/strona_dziennika.carry_state`), tu tylko progi; (c) zgodność z giełdą — pole
+  „carry zmiany” z tego samego licznika plus (tylko z flagą `--carry-sprawdz-gielde`) jedno
+  ponowne pobranie funding COIN-M i przeliczenie `journal_carry.carry_rows`. Wynik carry wyłącznie
+  opisowo (netto_skum i ta sama suma w skali roku), bez werdyktu i bez progu obalenia.
 
 Zasady: czyta WYŁĄCZNIE `<repo>@origin/master:dziennik/*` (przez `strona_dziennika`) i niczego nie
 zapisuje. Jest reporterem: pisze „próg przekroczony / nieprzekroczony”; werdykt o strategii podpisuje
 Claude w dokumentacji (CLAUDE.md). Brak obalenia NIE jest potwierdzeniem przewagi.
 `--as-of` odtwarza stan dziennika z ostatniego commita „Dziennik: przebieg …” z datą ≤ as_of + 1 dzień.
+Jedyny krok z siecią to (c) z flagą `--carry-sprawdz-gielde`: publiczne `dapi/v1/fundingRate` przez
+funkcję dziennika `data.fetch_live.fetch_coinm_funding_safe`, plik w katalogu tymczasowym (usuwany).
+Bez flagi odczyt jest czystym odczytem plików, a (c) ma status „NIE SPRAWDZONO”, nigdy „spełnione”.
 
 Który wydruk wiąże (status liczony RAZ z kalendarza, wspólny dla wszystkich nóg — braki w nodze
 zmniejszają tylko jej n w SE): WYŁĄCZNIE wydruk z `--as-of` równym dacie planu (PLAN_DATES:
@@ -27,20 +36,25 @@ migawka daje ten sam wydruk: kolejne uruchomienia to kopie, nie nowe odczyty. Ka
 „ZA WCZEŚNIE — tylko podgląd” (przed pierwszą datą planu), „podgląd” albo „NIE WIĄŻE”.
 
     git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika [--repo .] [--as-of RRRR-MM-DD] [--json]
+        [--carry-sprawdz-gielde]
 
-Testy: `tests/test_odczyt_dziennika.py`. Stałe μ, σ: `backtest/odczyt_dziennika_stale.py`.
+Testy: `tests/test_odczyt_dziennika.py`, carry: `tests/test_odczyt_dziennika_carry.py`. Stałe μ, σ:
+`backtest/odczyt_dziennika_stale.py`.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import math
 import statistics
 import sys
-from contextlib import contextmanager
+import tempfile
+from contextlib import contextmanager, redirect_stdout
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, time, timedelta, timezone
+from pathlib import Path
 
 import numpy as np
 
@@ -133,6 +147,54 @@ LEGS = (
         "(X1F raw_output.txt l. 14: +9,5 %/rok)",
     ),
 )
+
+# Kryterium 6 — noga carry COIN-M: kryteria (a)–(c) z dziennik/README.md, Poprawka 12, „Kryterium
+# odczytu po ~3 miesiącach” (zapisane 2026-09-28 przed pierwszym wierszem carry). Liczniki (a),
+# (b) i pola „carry zmiany” (c) liczy `strona_dziennika.carry_state` — tu tylko progi. Okna:
+# (a) przebiegi od sd.CARRY_CHECK_FROM (2026-09-30), (b) i (c) dni od sd.CARRY_START (2026-09-29).
+# Tekst kryteriów niżej = brzmienie README, a progi = progi README (pilnuje obu
+# tests/test_odczyt_dziennika_carry.py).
+CARRY_TROUBLE_MAX = 0.05  # (a) pole „carry …” z kłopotem w ≤ 5 % przebiegów
+CARRY_COMPLETE_MIN = 0.95  # (b) komplet = True w ≥ 95 % dni
+# (c) przeliczenie = plik do 1e-9 — ta sama tolerancja co `live_journal.TOL` (append_rows)
+CARRY_TOL = 1e-9
+CARRY_FLAG = "--carry-sprawdz-gielde"  # (c): jedyny krok odczytu z siecią, tylko na żądanie
+# koszt wejścia carry do przeliczenia (c) — ten sam plik konfiguracji, którego używa dziennik
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "settings.yaml"
+# statusy kryteriów carry; NIESPEŁNIONE = błąd mechaniki do wyjaśnienia, nie ocena strategii
+MET, UNMET, EARLY, NO_DATA, UNCHECKED = (
+    "spełnione",
+    "NIESPEŁNIONE",
+    "ZA WCZEŚNIE",
+    "BRAK DANYCH",
+    "NIE SPRAWDZONO",
+)
+
+
+def _pp(x: float) -> str:
+    """Próg w procentach, zapis z README: 0,05 → „5”."""
+    return f"{100 * x:g}".replace(".", ",")
+
+
+def _tol(x: float) -> str:
+    """Tolerancja, zapis z README: 1e-09 → „1e-9”."""
+    mant, _, exp = f"{x:.0e}".partition("e")
+    return f"{mant}e{int(exp)}"
+
+
+CARRY_CRITERIA = {
+    "a": "terminowość: pole „carry …” z kłopotem (spóźnione, brak pliku, BŁĄD — nie "
+    f"„carry zmiany”) w ≤ {_pp(CARRY_TROUBLE_MAX)} % przebiegów od {sd.CARRY_CHECK_FROM} "
+    "(z przebiegi.log)",
+    "b": f"kompletność: komplet = True w ≥ {_pp(CARRY_COMPLETE_MIN)} % dni od {sd.CARRY_START}, "
+    "każdy dzień z False wyjaśniony (brak po stronie giełdy czy błąd pobierania)",
+    "c": "zgodność z giełdą (druga droga): przy odczycie jedno ponowne pobranie historii od "
+    f"{sd.CARRY_START} i przeliczenie journal_carry.carry_rows daje te same wiersze co plik, "
+    f"do {_tol(CARRY_TOL)}, a pole „carry zmiany” nie pojawiło się w przebiegi.log ani razu; "
+    "każda różnica wyjaśniona",
+}
+CARRY_RESULT = "wynik opisowo, bez werdyktu: netto_skum i ta sama suma przeliczona na rok"
+CARRY_UNMET = "Niespełnione (a)–(c) = błąd mechaniki do wyjaśnienia, nie ocena strategii."
 
 
 # ------------------------------------------------------------------ czyste funkcje
@@ -351,6 +413,212 @@ def mechanics(state: dict) -> dict:
     }
 
 
+def carry_criteria(
+    carry: dict,
+    last_run_day: str | None,
+    ref_day: str | None = None,
+    exchange: dict | None = None,
+) -> dict:
+    """Kryterium 6 (Poprawka 12): (a)–(c) nogi carry z `carry_state` porównane z progami README.
+
+    carry — `state["carry"]` z `build_state` (`{"error": …}`, gdy pliku carry nie da się odczytać);
+    last_run_day — dzień UTC ostatniego przebiegu w logu (None: pusty log): odróżnia „ZA WCZEŚNIE”
+    (okno kryterium jeszcze się nie zaczęło) od „BRAK DANYCH”; ref_day — ostatni dzień wyniku R1
+    migawki (plik carry krótszy → uwaga opisowa, definicja (b) bez zmian); exchange — wynik
+    `exchange_check` (None: krok z siecią nie uruchomiony → (c) co najwyżej „NIE SPRAWDZONO”).
+    (b) liczy dzień bez wiersza (dziura w datach) jako niepełny — tak samo jak strona
+    (`docs/strona_dziennik.html`, `carryCard`: dni = wiersze + brakujące). Wynik wyłącznie opisowo:
+    netto_skum i ta sama suma × 365 / dni kalendarzowe od startu (bez procentu składanego, jak D1).
+    """
+    if carry.get("error"):
+        crit = {k: {"status": NO_DATA} for k in "abc"}
+        return {
+            "error": carry["error"],
+            "last_run_day": last_run_day,
+            "criteria": crit,
+            "result": None,
+            "note": None,
+        }
+    cr = carry["criteria"]
+    tim, comp, cons = cr["timeliness"], cr["completeness"], cr["consistency"]
+
+    a = {**tim, "share": None}
+    if tim["runs"]:
+        a["share"] = tim["trouble"] / tim["runs"]
+        a["status"] = MET if a["share"] <= CARRY_TROUBLE_MAX + EPS else UNMET
+    elif last_run_day is not None and last_run_day < sd.CARRY_CHECK_FROM:
+        a["status"] = EARLY  # żaden przebieg nie jest jeszcze z okna (a)
+    else:
+        a["status"] = NO_DATA
+
+    n_days = comp["days"] + len(comp["missing"])  # dni od startu; brakujący wiersz = dzień niepełny
+    settled = dict(zip(carry["dates"], carry["settlements"], strict=True))
+    b = {
+        **comp,
+        "n_days": n_days,
+        "share": None,
+        "settlements": {d: settled.get(d) for d in comp["incomplete"]},
+        # druga część (b) — „każdy dzień z False wyjaśniony” — to zadanie dokumentacji odczytu
+        "to_explain": sorted(comp["incomplete"] + comp["missing"]),
+    }
+    if n_days:
+        b["share"] = comp["complete"] / n_days
+        b["status"] = MET if b["share"] >= CARRY_COMPLETE_MIN - EPS else UNMET
+    elif last_run_day is not None and last_run_day <= sd.CARRY_START:
+        b["status"] = EARLY  # pierwszy dzień carry zamyka dopiero przebieg dnia następnego
+    else:
+        b["status"] = NO_DATA
+
+    c = {"log_runs": cons["runs"], "log_max": cons["max"], "log_ok": cons["runs"] == 0}
+    if not c["log_ok"]:
+        c["status"] = UNMET  # „carry zmiany” w logu — niezależnie od kroku z siecią
+    elif not n_days:
+        c["status"] = b["status"]  # nie ma czego porównać
+    elif exchange is None:
+        c["status"] = UNCHECKED
+    else:
+        c["status"] = exchange["status"]
+
+    dates, cum = carry["dates"], carry["cum"]
+    result = None
+    if dates and cum and cum[-1] is not None:
+        n_cal = (date.fromisoformat(dates[-1]) - date.fromisoformat(sd.CARRY_START)).days + 1
+        if n_cal > 0:
+            result = {
+                "first": sd.CARRY_START,
+                "last": dates[-1],
+                "days": n_cal,
+                "netto_skum": cum[-1],
+                "annual": cum[-1] * DAYS_PER_YEAR / n_cal,
+            }
+    note = None
+    if dates and ref_day and dates[-1] < ref_day:
+        note = (
+            f"plik carry kończy się na {dates[-1]}, wynik R1 na {ref_day} — dni po {dates[-1]} "
+            "nie wchodzą do (b) (definicja strony), spóźnienie pokazuje (a)"
+        )
+    return {
+        "error": None,
+        "last_run_day": last_run_day,
+        "criteria": {"a": a, "b": b, "c": c},
+        "result": result,
+        "note": note,
+    }
+
+
+def _same(old, new, tol: float = CARRY_TOL) -> bool:
+    """Wartość z pliku (tekst z CSV) = przeliczona: liczby do tol, prawda/fałsz dosłownie."""
+    if isinstance(new, (bool, np.bool_)):
+        return str(old) == str(bool(new))
+    try:
+        x, y = float(old), float(new)
+    except (TypeError, ValueError):
+        return str(old) == str(new)
+    if math.isnan(x) or math.isnan(y):
+        return math.isnan(x) and math.isnan(y)
+    return x == y or abs(x - y) <= tol
+
+
+def compare_carry(file_rows: list[dict], fresh, values: list[str], tol: float = CARRY_TOL) -> dict:
+    """(c): wiersze `carry_wyniki.csv` (tekst z CSV) vs przeliczenie `carry_rows` (DataFrame).
+
+    Porównuje każdy dzień pliku, kolumny `values`: liczby do tol (jak `live_journal.append_rows`:
+    |a − b| ≤ TOL), `komplet` dosłownie. Różnica = inna wartość, dzień pliku bez wiersza
+    w przeliczeniu, duplikat daty w pliku albo dzień przeliczenia nie późniejszy niż ostatni dzień
+    pliku, którego w pliku brak (dziura). Nowsze dni przeliczenia się nie liczą: pobranie jest
+    późniejsze niż migawka dziennika.
+    """
+    fresh_rows = {str(r["date"]): r for r in fresh.to_dict("records")}
+    seen: dict[str, dict] = {}
+    diffs: dict[str, list[str]] = {}
+    for r in file_rows:
+        d = str(r.get("date", ""))
+        if d in seen:
+            diffs.setdefault(d, []).append("duplikat w pliku")
+        else:
+            seen[d] = r
+    for d, r in seen.items():
+        new = fresh_rows.get(d)
+        if new is None:
+            diffs.setdefault(d, []).append("brak w przeliczeniu")
+            continue
+        cols = [c for c in values if not _same(r.get(c), new[c], tol)]
+        if cols:
+            diffs.setdefault(d, []).extend(cols)
+    last = max(seen, default=None)
+    for d in fresh_rows:
+        if last is not None and d <= last and d not in seen:
+            diffs.setdefault(d, []).append("brak w pliku")
+    return {
+        "file_rows": len(file_rows),
+        "fresh_rows": len(fresh_rows),
+        "compared": sum(d in fresh_rows for d in seen),
+        "fresh_last": max(fresh_rows, default=None),
+        "diffs": dict(sorted(diffs.items())),
+    }
+
+
+def exchange_check(file_rows: list[dict], fetch=None, config_path: Path = CONFIG_PATH) -> dict:
+    """(c), druga droga — JEDYNY krok odczytu z siecią (w `main` tylko z `--carry-sprawdz-gielde`).
+
+    Jedno ponowne pobranie historii funding COIN-M od startu nogi istniejącą funkcją dziennika
+    (`data.fetch_live.fetch_coinm_funding_safe`: publiczne `dapi/v1/fundingRate`, bez klucza)
+    do katalogu tymczasowego (usuwany; odczyt nie zapisuje nic w repo ani w `data/raw/live`),
+    przeliczenie `journal_carry.carry_rows` z kosztem wejścia z `config/settings.yaml` (jak
+    `live_journal.run_carry`) i porównanie z plikiem (`compare_carry`). Pusty plik, nieudane
+    pobranie, pusta odpowiedź giełdy albo błąd przeliczenia → „BRAK DANYCH”, nigdy „zgodne”.
+    Wydruk pobierania idzie na stderr (stdout zostaje czysty dla `--json`).
+    `fetch(out_dir) -> Path | None` — atrapa w testach; domyślnie funkcja dziennika.
+    """
+    out = {
+        "status": NO_DATA,
+        "why": "",
+        "switch_cost": None,
+        "file_rows": len(file_rows),
+        "fresh_rows": 0,
+        "compared": 0,
+        "fresh_last": None,
+        "diffs": {},
+    }
+    if not file_rows:
+        out["why"] = f"brak wierszy w {sd.CARRY_CSV} do porównania"
+        return out
+    buf = io.StringIO()
+    try:
+        import pandas as pd
+
+        from backtest.checkpoint_lib import load_config
+        from backtest.journal_carry import CARRY_START, CARRY_VALUES, carry_costs, carry_rows
+
+        if fetch is None:
+            from data.fetch_live import fetch_coinm_funding_safe as fetch
+
+        out["switch_cost"] = carry_costs(load_config(str(config_path))["costs"]).switch_cost
+        with tempfile.TemporaryDirectory(prefix="odczyt_carry_") as tmp:
+            with redirect_stdout(buf):
+                path = fetch(Path(tmp))
+            funding = None if path is None else pd.read_parquet(path)
+        if funding is None:
+            tail = [x for x in buf.getvalue().splitlines() if x.strip()][-1:]
+            out["why"] = "pobranie nieudane" + (f" ({tail[0].strip()[:200]})" if tail else "")
+            return out
+        if funding.empty:
+            out["why"] = f"giełda nie zwróciła żadnego rozliczenia od {sd.CARRY_START}"
+            return out
+        fresh = carry_rows(funding, CARRY_START, out["switch_cost"])
+        if fresh.empty:
+            out["why"] = "w pobranych danych żaden dzień od startu nie jest zamknięty"
+            return out
+        out.update(compare_carry(file_rows, fresh, CARRY_VALUES))
+    except Exception as exc:  # noqa: BLE001 — krok (c) nie przerywa odczytu; błąd = BRAK DANYCH
+        out["why"] = f"błąd {type(exc).__name__}: {str(exc)[:200]}"
+        return out
+    finally:
+        sys.stderr.write(buf.getvalue())
+    out["status"] = UNMET if out["diffs"] else MET
+    return out
+
+
 # ------------------------------------------------------------------ odczyt z repo
 
 
@@ -400,8 +668,18 @@ def _cut(rows: list[dict], as_of: date | None) -> list[dict]:
     return [r for r in rows if r.get("date", "") <= as_of.isoformat()]
 
 
-def reading(repo: str = ".", as_of: date | None = None, now: datetime | None = None) -> dict:
-    """Pełny odczyt: kryteria 1–4 (build_state), 4b i 5 per noga. Niczego nie zapisuje."""
+def reading(
+    repo: str = ".",
+    as_of: date | None = None,
+    now: datetime | None = None,
+    carry_exchange: bool = False,
+    fetch=None,
+) -> dict:
+    """Pełny odczyt: kryteria 1–4 (build_state), 4b, 5 per noga i 6 (carry, Poprawka 12).
+
+    Niczego nie zapisuje. `carry_exchange` = krok (c) z siecią (`exchange_check`, flaga
+    `--carry-sprawdz-gielde`); `fetch` — atrapa pobrania w testach.
+    """
     ref = sd.REF if as_of is None else snapshot_ref(repo, as_of)
     if now is None:
         now = (
@@ -412,6 +690,9 @@ def reading(repo: str = ".", as_of: date | None = None, now: datetime | None = N
     with _ref(ref):
         state, n_runs = sd.build_state(repo, now)
         files = {name: _cut(sd.rows(repo, name), as_of) for name in {g.file for g in LEGS}}
+        # plik carry do (c) — tylko na żądanie i tylko, gdy strona go przeczytała (build_state)
+        want = carry_exchange and not state["carry"].get("error")
+        carry_file = sd.rows(repo, sd.CARRY_CSV) if want else []
     r1 = files["wyniki.csv"]
     first = r1[0]["date"] if r1 else None
     last = r1[-1]["date"] if r1 else None
@@ -445,6 +726,11 @@ def reading(repo: str = ".", as_of: date | None = None, now: datetime | None = N
             )
         if as_of >= R1_START and last != as_of.isoformat():  # przed startem R1 wyników brak
             warnings.append(f"migawka kończy się na dniu {last}, a nie na {as_of}")
+    # kryterium 6 — carry: liczniki strony (state["carry"]); (c) z siecią tylko na żądanie i tylko,
+    # gdy plik carry czyta się i ma wiersze (inaczej nie ma czego porównać — status z (b))
+    carry = state["carry"]
+    exchange = exchange_check(carry_file, fetch) if carry_file else None
+    last_run_day = (state["last_run"] or {}).get("day")
     return {
         "v": 1,
         "generated_at": now.isoformat(timespec="minutes"),
@@ -466,6 +752,11 @@ def reading(repo: str = ".", as_of: date | None = None, now: datetime | None = N
         # pasmo [13; 31] zapisano dla odczytu 1 (~92 dni); odczyty 2 i 3 — tylko opis
         "vol_band": {**band, "binding": status["binding"] and status["reading"] == 1},
         "legs": legs,
+        "carry": {
+            **carry_criteria(carry, last_run_day, last, exchange),
+            "exchange_requested": carry_exchange,
+            "exchange": exchange,
+        },
     }
 
 
@@ -483,6 +774,111 @@ def _short(ref: str) -> str:
 
 def _yn(ok) -> str:
     return "—" if ok is None else ("TAK" if ok else "NIE")
+
+
+def _status(s: str) -> str:
+    return f"{UNMET} (błąd mechaniki do wyjaśnienia)" if s == UNMET else s
+
+
+def _n(n: int, one: str, many: str) -> str:
+    """Liczba z rzeczownikiem: 1 → „1 dzień”, „w 1 dniu”; inaczej → „5 dni”, „w 2 dniach”."""
+    return f"{n} {one if n == 1 else many}"
+
+
+def _render_carry(car: dict) -> list[str]:
+    """Sekcja „Carry COIN-M (Poprawka 12)”: kryteria (a)–(c) w brzmieniu README + wynik opisowo."""
+    lines = [
+        "",
+        "Carry COIN-M (Poprawka 12) — kryterium 6: mechanika zapisu, nie przewaga; bez werdyktu "
+        "i bez progu obalenia (brzmienie i progi: dziennik/README.md)",
+    ]
+    crit, last_run = car["criteria"], car["last_run_day"]
+    if car.get("error"):
+        why = f"nie da się odczytać {sd.CARRY_CSV} ({car['error']})"
+        for k in "abc":
+            lines += [f"  ({k}) {CARRY_CRITERIA[k]}", f"      → {NO_DATA}: {why}"]
+    else:
+        a, b, c = crit["a"], crit["b"], crit["c"]
+        if a["status"] in (MET, UNMET):
+            lt = a["last_trouble"]
+            why_a = (
+                f"{a['trouble']} z {a['runs']} przebiegów od {sd.CARRY_CHECK_FROM} z kłopotem "
+                f"({_pct(a['share'])[1:]})" + (f"; ostatni: {lt['ts']} {lt['what']}" if lt else "")
+            )
+        elif a["status"] == EARLY:
+            why_a = f"żadnego przebiegu od {sd.CARRY_CHECK_FROM} (ostatni przebieg {last_run})"
+        else:
+            why_a = "brak przebiegów w przebiegi.log"
+        if b["status"] in (MET, UNMET):
+            why_b = (
+                f"{b['complete']} z {b['n_days']} dni z kompletem 3 rozliczeń "
+                f"({_pct(b['share'])[1:]})"
+            )
+            if b["incomplete"]:
+                why_b += "; dni z False: " + ", ".join(
+                    f"{d} ({b['settlements'][d]} rozl.)" for d in b["incomplete"]
+                )
+            if b["missing"]:
+                why_b += "; dni bez wiersza: " + ", ".join(b["missing"])
+            if b["incomplete"] or b["missing"]:
+                why_b += " — każdy wyjaśnić w dokumentacji odczytu"
+        elif b["status"] == EARLY:
+            why_b = (
+                f"żaden dzień od {sd.CARRY_START} nie jest jeszcze zamknięty "
+                f"(ostatni przebieg {last_run})"
+            )
+        else:
+            why_b = f"brak wierszy w {sd.CARRY_CSV} mimo przebiegów po {sd.CARRY_START}"
+        why_c = f"pole „carry zmiany” w {_n(c['log_runs'], 'przebiegu', 'przebiegach')}" + (
+            f" (najwięcej {_n(c['log_max'], 'dzień', 'dni')})" if c["log_runs"] else ""
+        )
+        ex = car["exchange"]
+        if ex is None:
+            why_c += (
+                f"; ponowne pobranie nie uruchomione (krok z siecią: {CARRY_FLAG})"
+                if not car["exchange_requested"]
+                else "; ponowne pobranie pominięte (brak wierszy w pliku)"
+            )
+        elif ex["status"] == MET:
+            why_c += (
+                f"; przeliczenie z ponownego pobrania = plik do {_tol(CARRY_TOL)} "
+                f"({_n(ex['compared'], 'dzień', 'dni')}; dane giełdy do {ex['fresh_last']})"
+            )
+        elif ex["status"] == UNMET:
+            shown = "; ".join(
+                f"{d}: {', '.join(cols)}" for d, cols in list(ex["diffs"].items())[:5]
+            )
+            more = ", …" if len(ex["diffs"]) > 5 else ""
+            n_diff = _n(len(ex["diffs"]), "dniu", "dniach")
+            why_c += f"; przeliczenie ≠ plik w {n_diff}: {shown}{more}"
+        else:
+            why_c += f"; ponowne pobranie: {NO_DATA} — {ex['why']}"
+        st_b = _status(b["status"])
+        if b["status"] == MET and b["to_explain"]:
+            st_b = f"{MET} co do progu"  # „każdy dzień z False wyjaśniony” — w dokumentacji
+        lines += [
+            f"  (a) {CARRY_CRITERIA['a']}",
+            f"      → {_status(a['status'])}: {why_a}",
+            f"  (b) {CARRY_CRITERIA['b']}",
+            f"      → {st_b}: {why_b}",
+            *([f"      ({car['note']})"] if car["note"] else []),
+            f"  (c) {CARRY_CRITERIA['c']}",
+            f"      → {_status(c['status'])}: {why_c}",
+        ]
+    res = car["result"]
+    lines.append(f"  {CARRY_RESULT}")
+    if res is None:
+        lines.append(f"      → brak zamkniętego dnia carry w {sd.CARRY_CSV}")
+    else:
+        lines.append(
+            f"      → netto_skum {_pct(res['netto_skum'], 4)} nominału za "
+            f"{_n(res['days'], 'dzień', 'dni')} ({res['first']} → {res['last']}); "
+            f"ta sama suma w skali roku {_pct(res['annual'], 2)}/rok (× 365/{res['days']}); "
+            "z kosztem wejścia, bez kosztu wyjścia — do porównania z tabelą D1 "
+            "w dziennik/README.md (Poprawka 12)"
+        )
+    lines.append(f"  {CARRY_UNMET}")
+    return lines
 
 
 def render(rep: dict) -> str:
@@ -565,6 +961,10 @@ def render(rep: dict) -> str:
         "",
         "Brak obalenia ≠ potwierdzenie przewagi: próg odrzuca tylko wyniki wyraźnie gorsze od "
         "założeń; zakładanego zysku 3–12 miesięcy nie są w stanie potwierdzić.",
+    ]
+    lines += _render_carry(rep["carry"])
+    lines += [
+        "",
         "Skrypt jest reporterem — werdykt o strategii podpisuje Claude w dokumentacji odczytu.",
     ]
     if not st["binding"]:
@@ -577,9 +977,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repo", default=".", help="klon repo alpha (czytany origin/master)")
     ap.add_argument("--as-of", type=date.fromisoformat, default=None, help="obcięcie RRRR-MM-DD")
     ap.add_argument("--json", action="store_true", help="wydruk JSON zamiast tekstu")
+    ap.add_argument(
+        CARRY_FLAG,
+        dest="carry_exchange",
+        action="store_true",
+        help="kryterium carry (c), Poprawka 12: jedno ponowne pobranie funding COIN-M z Binance "
+        "(sieć) i przeliczenie carry_rows; bez flagi odczyt czyta tylko pliki",
+    )
     args = ap.parse_args(argv)
     try:
-        rep = reading(args.repo, args.as_of)
+        rep = reading(args.repo, args.as_of, carry_exchange=args.carry_exchange)
     except (OSError, RuntimeError, ValueError, KeyError) as exc:
         print(f"BŁĄD: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
