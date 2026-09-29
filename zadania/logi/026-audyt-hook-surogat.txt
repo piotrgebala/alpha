@@ -1,0 +1,490 @@
+# Zadanie 026 — hook audytowy: samotny surogat (np. \ud800) w ścieżce wywracał analizę
+# Gałąź: zadanie-026-audyt-hook-surogat (baza: master efa0d48). Poprawka + testy: commit 44d2257.
+# Środowisko: serwer Linux; /home/dantey1/alpha/.venv/bin/python = Python 3.12.3, pytest 9.1.1,
+#   hypothesis 6.163.0, ruff 0.16.8, black 26.5.1; kodowanie systemu plików: utf-8 / surrogateescape.
+# Każdy pytest: OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4, `timeout`, `-p no:cacheprovider`.
+# SCR = katalog tymczasowy sesji (/tmp/claude-1000/-home-dantey1-alpha/65f868ce-…/scratchpad).
+# Data: 2026-09-29 (UTC).
+====================================================================================================
+
+1. PRZYCZYNA (sprawdzone ręcznie w tym interpreterze)
+   os.path.realpath('/x\ud800y')   → UnicodeEncodeError (podklasa ValueError). Linux nie zakoduje
+                                     samotnego surogatu w nazwie pliku (utf-8 + surrogateescape).
+   os.path.expanduser('~\ud800/x') → UnicodeEncodeError z pwd.getpwnam — DRUGIE miejsce, poza
+                                     realpath (opis zadania go nie wymieniał).
+   os.path.realpath('/x\x00y')     → ValueError „embedded null byte” (zachowanie do utrzymania).
+   os.path.realpath('/x\udc80y')   → bez wyjątku (surogat „ucieczkowy” = bajt 0x80).
+   Hook łapał wyjątek szerokim `except` i pisał wiersz z `blad_analizy`: polecenie bez oceny.
+
+2. POPRAWKA (tools/audyt_hook.py, commit 44d2257)
+   Nowa funkcja `_kodowalna(sciezka)`: gdy `os.fsencode` nie umie zakodować ścieżki, znaki
+   niekodowalne zamienia na „?” (`encode(kodowanie systemu plików, "replace")`). Wywołana przed
+   `expanduser`/`realpath` w `rozwin` (ścieżka i cwd) i w `katalogi_dozwolone` (cwd). To jedyne
+   miejsca, w których do tych funkcji trafia tekst z wejścia hooka. Takiej nazwy i tak nie ma na
+   dysku; reszta ścieżki (katalogi, `..`, dowiązania) jest oceniana jak każda inna.
+   Bajt zerowy nie jest „niekodowalny” (fsencode go przepuszcza), więc dalej daje ValueError
+   → `blad_analizy` — bez zmian. Surogaty \udc80–\udcff (same) idą starą drogą, bez zmian.
+   Pozostałe wywołania realpath (gitdir z pliku .git, katalogi_tmp z TMPDIR/TEMP, katalog audytu
+   z CLAS5_AUDYT_DIR/HOME) biorą tekst ze środowiska albo z dysku; na Linuksie jest on zawsze
+   kodowalny (surrogateescape), więc zostały bez zmian.
+   Skutek uboczny (zamierzony): `cd` do ścieżki z surogatem przesuwa teraz bazę jak każdy inny
+   `cd` (wcześniej wyjątek był po cichu połykany i baza zostawała w repo).
+   Testy (tests/test_audyt_hook.py): test_lone_surrogate_path_judged_like_any_other (6 poleceń
+   Bash × zwykła litera / \ud800 / \udd00 — te same flagi), test_lone_surrogate_in_write_path_and_cwd
+   (Write do ~/.ssh z surogatem → poswiadczenia + zapis_poza_repo; cwd z surogatem → repo znalezione
+   wyżej), test właściwości: ta sama strategia losowania + forma `cat /{polecenie} ~{polecenie}`.
+
+3. DOWÓD ODTWORZENIA — PRZED poprawką (w worktree: testy z 44d2257, hook z efa0d48)
+   $ git show efa0d48:tools/audyt_hook.py > tools/audyt_hook.py
+   $ rm -rf .hypothesis
+   $ OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 timeout 600 /home/dantey1/alpha/.venv/bin/python -m pytest -q -p no:cacheprovider \
+       tests/test_audyt_hook.py -k lone_surrogate
+   kod wyjścia: 1
+   ---- pełny wydruk ----
+    FFFFFFF                                                                  [100%]
+    =================================== FAILURES ===================================
+    ______ test_lone_surrogate_path_judged_like_any_other[cat /x{z}y-flagi0] _______
+
+    tmp_path = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge0')
+    repo = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge0/repo')
+    monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x784bddebe1b0>
+    szablon = 'cat /x{z}y', flagi = []
+
+        @pytest.mark.parametrize(
+            ("szablon", "flagi"),
+            [
+                ("cat /x{z}y", []),
+                ("bash -c 'cat /x{z}y'", []),
+                ("cat ~nieistniejacy{z}/plik", []),  # `~nazwa`: `expanduser` pyta `pwd` o użytkownika
+                ("echo x > plik{z}.txt", []),
+                ("cd /x{z} && echo x > plik", [ah.F_ZAPIS]),
+                ("echo x > ~/.ssh/klucz{z}", [ah.F_POSW, ah.F_ZAPIS]),
+            ],
+        )
+        def test_lone_surrogate_path_judged_like_any_other(tmp_path, repo, monkeypatch, szablon, flagi):
+            """Przed zadaniem 026 `realpath` i `expanduser` rzucały tu UnicodeEncodeError (Linux) → wiersz
+            z `blad_analizy`, czyli polecenie bez oceny. Surogat ma dać te same flagi co zwykła litera."""
+            monkeypatch.setenv("HOME", str(tmp_path / "dom"))  # `~/.ssh` fikcyjne, w `tmp_path`
+            for znak in ("a", "\ud800", "\udd00"):
+    >           assert bash(tmp_path, repo, szablon.format(z=znak))["flagi"] == flagi, repr(znak)
+    E           AssertionError: '\ud800'
+    E           assert ['blad_analizy'] == []
+    E             
+    E             Left contains one more item: 'blad_analizy'
+    E             Use -v to get more diff
+
+    tests/test_audyt_hook.py:647: AssertionError
+    _ test_lone_surrogate_path_judged_like_any_other[bash -c 'cat /x{z}y'-flagi1] __
+
+    tmp_path = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge1')
+    repo = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge1/repo')
+    monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x784bddec3f80>
+    szablon = "bash -c 'cat /x{z}y'", flagi = []
+
+        @pytest.mark.parametrize(
+            ("szablon", "flagi"),
+            [
+                ("cat /x{z}y", []),
+                ("bash -c 'cat /x{z}y'", []),
+                ("cat ~nieistniejacy{z}/plik", []),  # `~nazwa`: `expanduser` pyta `pwd` o użytkownika
+                ("echo x > plik{z}.txt", []),
+                ("cd /x{z} && echo x > plik", [ah.F_ZAPIS]),
+                ("echo x > ~/.ssh/klucz{z}", [ah.F_POSW, ah.F_ZAPIS]),
+            ],
+        )
+        def test_lone_surrogate_path_judged_like_any_other(tmp_path, repo, monkeypatch, szablon, flagi):
+            """Przed zadaniem 026 `realpath` i `expanduser` rzucały tu UnicodeEncodeError (Linux) → wiersz
+            z `blad_analizy`, czyli polecenie bez oceny. Surogat ma dać te same flagi co zwykła litera."""
+            monkeypatch.setenv("HOME", str(tmp_path / "dom"))  # `~/.ssh` fikcyjne, w `tmp_path`
+            for znak in ("a", "\ud800", "\udd00"):
+    >           assert bash(tmp_path, repo, szablon.format(z=znak))["flagi"] == flagi, repr(znak)
+    E           AssertionError: '\ud800'
+    E           assert ['blad_analizy'] == []
+    E             
+    E             Left contains one more item: 'blad_analizy'
+    E             Use -v to get more diff
+
+    tests/test_audyt_hook.py:647: AssertionError
+    _ test_lone_surrogate_path_judged_like_any_other[cat ~nieistniejacy{z}/plik-flagi2] _
+
+    tmp_path = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge2')
+    repo = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge2/repo')
+    monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x784bddec2030>
+    szablon = 'cat ~nieistniejacy{z}/plik', flagi = []
+
+        @pytest.mark.parametrize(
+            ("szablon", "flagi"),
+            [
+                ("cat /x{z}y", []),
+                ("bash -c 'cat /x{z}y'", []),
+                ("cat ~nieistniejacy{z}/plik", []),  # `~nazwa`: `expanduser` pyta `pwd` o użytkownika
+                ("echo x > plik{z}.txt", []),
+                ("cd /x{z} && echo x > plik", [ah.F_ZAPIS]),
+                ("echo x > ~/.ssh/klucz{z}", [ah.F_POSW, ah.F_ZAPIS]),
+            ],
+        )
+        def test_lone_surrogate_path_judged_like_any_other(tmp_path, repo, monkeypatch, szablon, flagi):
+            """Przed zadaniem 026 `realpath` i `expanduser` rzucały tu UnicodeEncodeError (Linux) → wiersz
+            z `blad_analizy`, czyli polecenie bez oceny. Surogat ma dać te same flagi co zwykła litera."""
+            monkeypatch.setenv("HOME", str(tmp_path / "dom"))  # `~/.ssh` fikcyjne, w `tmp_path`
+            for znak in ("a", "\ud800", "\udd00"):
+    >           assert bash(tmp_path, repo, szablon.format(z=znak))["flagi"] == flagi, repr(znak)
+    E           AssertionError: '\ud800'
+    E           assert ['blad_analizy'] == []
+    E             
+    E             Left contains one more item: 'blad_analizy'
+    E             Use -v to get more diff
+
+    tests/test_audyt_hook.py:647: AssertionError
+    _ test_lone_surrogate_path_judged_like_any_other[echo x > plik{z}.txt-flagi3] __
+
+    tmp_path = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge3')
+    repo = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge3/repo')
+    monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x784bddec2a80>
+    szablon = 'echo x > plik{z}.txt', flagi = []
+
+        @pytest.mark.parametrize(
+            ("szablon", "flagi"),
+            [
+                ("cat /x{z}y", []),
+                ("bash -c 'cat /x{z}y'", []),
+                ("cat ~nieistniejacy{z}/plik", []),  # `~nazwa`: `expanduser` pyta `pwd` o użytkownika
+                ("echo x > plik{z}.txt", []),
+                ("cd /x{z} && echo x > plik", [ah.F_ZAPIS]),
+                ("echo x > ~/.ssh/klucz{z}", [ah.F_POSW, ah.F_ZAPIS]),
+            ],
+        )
+        def test_lone_surrogate_path_judged_like_any_other(tmp_path, repo, monkeypatch, szablon, flagi):
+            """Przed zadaniem 026 `realpath` i `expanduser` rzucały tu UnicodeEncodeError (Linux) → wiersz
+            z `blad_analizy`, czyli polecenie bez oceny. Surogat ma dać te same flagi co zwykła litera."""
+            monkeypatch.setenv("HOME", str(tmp_path / "dom"))  # `~/.ssh` fikcyjne, w `tmp_path`
+            for znak in ("a", "\ud800", "\udd00"):
+    >           assert bash(tmp_path, repo, szablon.format(z=znak))["flagi"] == flagi, repr(znak)
+    E           AssertionError: '\ud800'
+    E           assert ['blad_analizy'] == []
+    E             
+    E             Left contains one more item: 'blad_analizy'
+    E             Use -v to get more diff
+
+    tests/test_audyt_hook.py:647: AssertionError
+    _ test_lone_surrogate_path_judged_like_any_other[cd /x{z} && echo x > plik-flagi4] _
+
+    tmp_path = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge4')
+    repo = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge4/repo')
+    monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x784bddec8da0>
+    szablon = 'cd /x{z} && echo x > plik', flagi = ['zapis_poza_repo']
+
+        @pytest.mark.parametrize(
+            ("szablon", "flagi"),
+            [
+                ("cat /x{z}y", []),
+                ("bash -c 'cat /x{z}y'", []),
+                ("cat ~nieistniejacy{z}/plik", []),  # `~nazwa`: `expanduser` pyta `pwd` o użytkownika
+                ("echo x > plik{z}.txt", []),
+                ("cd /x{z} && echo x > plik", [ah.F_ZAPIS]),
+                ("echo x > ~/.ssh/klucz{z}", [ah.F_POSW, ah.F_ZAPIS]),
+            ],
+        )
+        def test_lone_surrogate_path_judged_like_any_other(tmp_path, repo, monkeypatch, szablon, flagi):
+            """Przed zadaniem 026 `realpath` i `expanduser` rzucały tu UnicodeEncodeError (Linux) → wiersz
+            z `blad_analizy`, czyli polecenie bez oceny. Surogat ma dać te same flagi co zwykła litera."""
+            monkeypatch.setenv("HOME", str(tmp_path / "dom"))  # `~/.ssh` fikcyjne, w `tmp_path`
+            for znak in ("a", "\ud800", "\udd00"):
+    >           assert bash(tmp_path, repo, szablon.format(z=znak))["flagi"] == flagi, repr(znak)
+    E           AssertionError: '\ud800'
+    E           assert [] == ['zapis_poza_repo']
+    E             
+    E             Right contains one more item: 'zapis_poza_repo'
+    E             Use -v to get more diff
+
+    tests/test_audyt_hook.py:647: AssertionError
+    _ test_lone_surrogate_path_judged_like_any_other[echo x > ~/.ssh/klucz{z}-flagi5] _
+
+    tmp_path = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge5')
+    repo = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_path_judge5/repo')
+    monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x784bddec3ad0>
+    szablon = 'echo x > ~/.ssh/klucz{z}'
+    flagi = ['poswiadczenia', 'zapis_poza_repo']
+
+        @pytest.mark.parametrize(
+            ("szablon", "flagi"),
+            [
+                ("cat /x{z}y", []),
+                ("bash -c 'cat /x{z}y'", []),
+                ("cat ~nieistniejacy{z}/plik", []),  # `~nazwa`: `expanduser` pyta `pwd` o użytkownika
+                ("echo x > plik{z}.txt", []),
+                ("cd /x{z} && echo x > plik", [ah.F_ZAPIS]),
+                ("echo x > ~/.ssh/klucz{z}", [ah.F_POSW, ah.F_ZAPIS]),
+            ],
+        )
+        def test_lone_surrogate_path_judged_like_any_other(tmp_path, repo, monkeypatch, szablon, flagi):
+            """Przed zadaniem 026 `realpath` i `expanduser` rzucały tu UnicodeEncodeError (Linux) → wiersz
+            z `blad_analizy`, czyli polecenie bez oceny. Surogat ma dać te same flagi co zwykła litera."""
+            monkeypatch.setenv("HOME", str(tmp_path / "dom"))  # `~/.ssh` fikcyjne, w `tmp_path`
+            for znak in ("a", "\ud800", "\udd00"):
+    >           assert bash(tmp_path, repo, szablon.format(z=znak))["flagi"] == flagi, repr(znak)
+    E           AssertionError: '\ud800'
+    E           assert ['blad_analizy'] == ['poswiadczen...is_poza_repo']
+    E             
+    E             At index 0 diff: 'blad_analizy' != 'poswiadczenia'
+    E             Right contains one more item: 'zapis_poza_repo'
+    E             Use -v to get more diff
+
+    tests/test_audyt_hook.py:647: AssertionError
+    __________________ test_lone_surrogate_in_write_path_and_cwd ___________________
+
+    tmp_path = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_in_write_p0')
+    repo = PosixPath('/tmp/pytest-of-dantey1/pytest-500/test_lone_surrogate_in_write_p0/repo')
+    monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x784bddec3e90>
+
+        def test_lone_surrogate_in_write_path_and_cwd(tmp_path, repo, monkeypatch):
+            monkeypatch.setenv("HOME", str(tmp_path / "dom"))
+            klucz = uruchom(tmp_path, repo, "Write", {"file_path": "~/.ssh/id_ed25519\ud800"})
+    >       assert klucz["flagi"] == [ah.F_POSW, ah.F_ZAPIS]
+    E       AssertionError: assert ['blad_analizy'] == ['poswiadczen...is_poza_repo']
+    E         
+    E         At index 0 diff: 'blad_analizy' != 'poswiadczenia'
+    E         Right contains one more item: 'zapis_poza_repo'
+    E         Use -v to get more diff
+
+    tests/test_audyt_hook.py:653: AssertionError
+    =========================== short test summary info ============================
+    FAILED tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[cat /x{z}y-flagi0]
+    FAILED tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[bash -c 'cat /x{z}y'-flagi1]
+    FAILED tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[cat ~nieistniejacy{z}/plik-flagi2]
+    FAILED tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[echo x > plik{z}.txt-flagi3]
+    FAILED tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[cd /x{z} && echo x > plik-flagi4]
+    FAILED tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[echo x > ~/.ssh/klucz{z}-flagi5]
+    FAILED tests/test_audyt_hook.py::test_lone_surrogate_in_write_path_and_cwd - ...
+    7 failed, 145 deselected in 0.17s
+   ---- koniec wydruku ----
+
+   $ rm -rf .hypothesis
+   $ OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 timeout 600 /home/dantey1/alpha/.venv/bin/python -m pytest -q -p no:cacheprovider \
+       tests/test_audyt_hook.py::test_property_nested_shell_analysis_never_raises --hypothesis-seed=11
+   kod wyjścia: 1
+   ---- pełny wydruk ----
+    F                                                                        [100%]
+    =================================== FAILURES ===================================
+    _______________ test_property_nested_shell_analysis_never_raises _______________
+
+        @settings(max_examples=150, deadline=None)
+    >   @given(polecenie=st.text(st.characters(blacklist_characters="\x00"), max_size=200))
+                       ^^^
+
+    tests/test_audyt_hook.py:612: 
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+    tests/test_audyt_hook.py:622: in test_property_nested_shell_analysis_never_raises
+        ah.analizuj_bash(wynik, zewnetrzne, "/nieistniejace/repo", HOSTY, "/nieistniejacy/audyt")
+    tools/audyt_hook.py:673: in analizuj_bash
+        sprawdz_sciezke(wynik, s, cwd, katalog_audytu, zapis=False, baza=baza)
+    tools/audyt_hook.py:532: in sprawdz_sciezke
+        pelna = rozwin(surowa, baza or cwd)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    tools/audyt_hook.py:442: in rozwin
+        return os.path.realpath(s)
+               ^^^^^^^^^^^^^^^^^^^
+    <frozen posixpath>:432: in realpath
+        ???
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    path = '/', rest = '', strict = False, seen = {}
+
+    >   ???
+    E   UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+    E   Failing test case: test_property_nested_shell_analysis_never_raises(
+    E       polecenie='\ud800',
+    E   )
+
+    <frozen posixpath>:476: UnicodeEncodeError
+    =========================== short test summary info ============================
+    FAILED tests/test_audyt_hook.py::test_property_nested_shell_analysis_never_raises
+    1 failed in 1.38s
+   ---- koniec wydruku ----
+   $ git checkout -- tools/audyt_hook.py      # powrót do 44d2257; `git status` czysty
+
+4. PO poprawce (w worktree: commit 44d2257, te same testy)
+   $ rm -rf .hypothesis
+   $ OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 timeout 600 /home/dantey1/alpha/.venv/bin/python -m pytest -v -p no:cacheprovider \
+       tests/test_audyt_hook.py -k lone_surrogate
+   kod wyjścia: 0
+   ---- pełny wydruk ----
+    ============================= test session starts ==============================
+    platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /home/dantey1/alpha/.venv/bin/python
+    hypothesis profile 'default'
+    rootdir: /home/dantey1/alpha/.claude/worktrees/agent-a2eddc620ffc2310a
+    configfile: pyproject.toml
+    plugins: hypothesis-6.163.0
+    collecting ... collected 152 items / 145 deselected / 7 selected
+
+    tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[cat /x{z}y-flagi0] PASSED [ 14%]
+    tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[bash -c 'cat /x{z}y'-flagi1] PASSED [ 28%]
+    tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[cat ~nieistniejacy{z}/plik-flagi2] PASSED [ 42%]
+    tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[echo x > plik{z}.txt-flagi3] PASSED [ 57%]
+    tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[cd /x{z} && echo x > plik-flagi4] PASSED [ 71%]
+    tests/test_audyt_hook.py::test_lone_surrogate_path_judged_like_any_other[echo x > ~/.ssh/klucz{z}-flagi5] PASSED [ 85%]
+    tests/test_audyt_hook.py::test_lone_surrogate_in_write_path_and_cwd PASSED [100%]
+
+    ====================== 7 passed, 145 deselected in 0.12s =======================
+   ---- koniec wydruku ----
+
+   $ rm -rf .hypothesis
+   $ OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 timeout 600 /home/dantey1/alpha/.venv/bin/python -m pytest -q -p no:cacheprovider \
+       tests/test_audyt_hook.py::test_property_nested_shell_analysis_never_raises --hypothesis-seed=11
+   kod wyjścia: 0
+   ---- pełny wydruk ----
+    .                                                                        [100%]
+    1 passed in 0.21s
+   ---- koniec wydruku ----
+
+5. CZĘSTOŚĆ PORAŻEK testu test_property_nested_shell_analysis_never_raises (seedy 1–110)
+   Na migawkach commitów (bez dotykania worktree):
+     $ git archive --format=tar -o SCR/026-A.tar efa0d48 tools tests config   → SCR/026-A
+     $ git archive --format=tar -o SCR/026-C.tar 44d2257 tools tests config   → SCR/026-C
+     SCR/026-B = rozpakowane 026-C.tar + `git show efa0d48:tools/audyt_hook.py` (testy nowe, hook stary)
+     $ bash SCR/026-pomiar.sh SCR/026-X tests/test_audyt_hook.py::test_property_nested_shell_analysis_never_raises 1 110 tylko-bledy
+   Skrypt: każdy seed to osobny proces pytest z czystą bazą hypothesis
+   (HYPOTHESIS_STORAGE_DIRECTORY w migawce, kasowana przed przebiegiem), własnym --basetemp,
+   PYTHONSAFEPATH=1 i PYTHONPATH=<migawka>; drukuje sumy sha256 plików i ścieżkę importu hooka.
+   Co z tego wynika: stary test łapał błąd w 7 na 110 przebiegów (ok. 6 %) — stąd „raz przechodzi,
+   raz nie”. Poszerzony test (ta sama strategia, dodana forma, w której losowe słowo zawsze jest
+   ścieżką) łapie go w 31 na 110 (ok. 28 %), w tym we wszystkich 7 seedach starego. Po poprawce:
+   0 porażek na 110. Każda porażka a) i b) to UnicodeEncodeError na surogacie (\ud800 lub \udd00).
+   Druga droga: te same pomiary wcześniej w worktree (ta sama treść plików, inny mechanizm) dały
+   te same seedy: a) 11, 18, 28, 29, 36, 56, 77 (7/110); b) na seedach 1–20: 3, 6, 8, 11, 18 (5/20);
+   c) 0/110 — przy stałym seedzie i czystej bazie wynik jest powtarzalny.
+
+   a) migawka A — test i hook z efa0d48 (kod bazowy)
+      migawka: 026-A | hook sha256 83bef1fff630… | testy sha256 8b029bb8fe17… | import: SCR/026-A/tools/audyt_hook.py
+      test: tests/test_audyt_hook.py::test_property_nested_shell_analysis_never_raises | seedy 1..110 | tryb: tylko-bledy
+      seed=11 rc=1 | 1 failed in 1.30s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=18 rc=1 | 1 failed in 1.60s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=28 rc=1 | 1 failed in 1.27s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 22: surrogates not allowed
+      seed=29 rc=1 | 1 failed in 1.07s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=36 rc=1 | 1 failed in 1.07s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=56 rc=1 | 1 failed in 0.95s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=77 rc=1 | 1 failed in 0.91s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      przebiegi: 110, z rc!=0: 7 (seedy: 11 18 28 29 36 56 77)
+   b) migawka B — test z 44d2257 (poszerzony), hook z efa0d48
+      migawka: 026-B | hook sha256 83bef1fff630… | testy sha256 e7fc12eb0ba6… | import: SCR/026-B/tools/audyt_hook.py
+      test: tests/test_audyt_hook.py::test_property_nested_shell_analysis_never_raises | seedy 1..110 | tryb: tylko-bledy
+      seed=3 rc=1 | 1 failed in 0.67s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=6 rc=1 | 1 failed in 1.00s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=8 rc=1 | 1 failed in 1.34s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=11 rc=1 | 1 failed in 1.39s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=18 rc=1 | 1 failed in 1.44s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=21 rc=1 | 1 failed in 0.81s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=28 rc=1 | 1 failed in 1.15s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=29 rc=1 | 1 failed in 1.11s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=36 rc=1 | 1 failed in 1.14s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=39 rc=1 | 1 failed in 1.23s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=40 rc=1 | 1 failed in 1.01s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=43 rc=1 | 1 failed in 1.24s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=44 rc=1 | 1 failed in 0.83s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=45 rc=1 | 1 failed in 1.03s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=49 rc=1 | 1 failed in 0.97s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=52 rc=1 | 1 failed in 1.46s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=56 rc=1 | 1 failed in 0.95s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=64 rc=1 | 1 failed in 0.86s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=65 rc=1 | 1 failed in 0.90s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=66 rc=1 | 1 failed in 0.88s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=73 rc=1 | 1 failed in 1.08s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=76 rc=1 | 1 failed in 0.90s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=77 rc=1 | 1 failed in 0.89s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=81 rc=1 | 1 failed in 1.00s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=82 rc=1 | 1 failed in 0.91s | UnicodeEncodeError: 'utf-8' codec can't encode character '\udd00' in position 1: surrogates not allowed
+      seed=93 rc=1 | 1 failed in 1.14s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=97 rc=1 | 1 failed in 0.98s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=99 rc=1 | 1 failed in 0.89s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=104 rc=1 | 1 failed in 0.90s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=105 rc=1 | 1 failed in 1.07s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      seed=108 rc=1 | 1 failed in 1.04s | UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 1: surrogates not allowed
+      przebiegi: 110, z rc!=0: 31 (seedy: 3 6 8 11 18 21 28 29 36 39 40 43 44 45 49 52 56 64 65 66 73 76 77 81 82 93 97 99 104 105 108)
+   c) migawka C — 44d2257 (poprawka)
+      migawka: 026-C | hook sha256 21ef02ef05fc… | testy sha256 e7fc12eb0ba6… | import: SCR/026-C/tools/audyt_hook.py
+      test: tests/test_audyt_hook.py::test_property_nested_shell_analysis_never_raises | seedy 1..110 | tryb: tylko-bledy
+      przebiegi: 110, z rc!=0: 0 (seedy: brak)
+
+6. tests/test_audyt_hook.py — 5 przebiegów z różnym seedem (44d2257, każdy z czystą bazą)
+   a) w worktree (seedy.sh: `rm -rf .hypothesis`, potem `timeout 300 ... pytest -q
+      -p no:cacheprovider tests/test_audyt_hook.py --hypothesis-seed=N`)
+      katalog: /home/dantey1/alpha/.claude/worktrees/agent-a2eddc620ffc2310a | test: tests/test_audyt_hook.py | seedy 1..5
+      seed=1 rc=0 | 152 passed in 1.36s | 
+      seed=2 rc=0 | 152 passed in 1.40s | 
+      seed=3 rc=0 | 152 passed in 1.63s | 
+      seed=4 rc=0 | 152 passed in 1.38s | 
+      seed=5 rc=0 | 152 passed in 1.34s | 
+      przebiegi: 5, z rc!=0: 0
+   b) na migawce D (= 44d2257); 1 skipped = test_every_tracked_repo_file_is_not_a_credential
+      („brak gita” — migawka nie jest repozytorium)
+      migawka: 026-D | hook sha256 21ef02ef05fc… | testy sha256 e7fc12eb0ba6… | import: SCR/026-D/tools/audyt_hook.py
+      test: tests/test_audyt_hook.py | seedy 1..5 | tryb: wszystko
+      seed=1 rc=0 | 151 passed, 1 skipped in 1.38s | 
+      seed=2 rc=0 | 151 passed, 1 skipped in 1.33s | 
+      seed=3 rc=0 | 151 passed, 1 skipped in 1.33s | 
+      seed=4 rc=0 | 151 passed, 1 skipped in 1.37s | 
+      seed=5 rc=0 | 151 passed, 1 skipped in 1.38s | 
+      przebiegi: 5, z rc!=0: 0 (seedy: brak)
+
+7. PEŁNY pytest (worktree, 44d2257)
+   $ rm -rf .hypothesis && OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 timeout 3300 /home/dantey1/alpha/.venv/bin/python -m pytest -q -p no:cacheprovider
+   start (UTC): 2026-09-29T12:23:43Z
+   rc=0 | koniec (UTC): 2026-09-29T12:27:59Z
+   ---- ostatnia linia wydruku ----
+    2071 passed, 3 skipped, 939 warnings in 254.88s (0:04:14)
+   Ostrzeżenia (939) pochodzą z innych modułów: w wydruku nie ma `audyt_hook`, a
+   tests/test_audyt_hook.py przechodzi także z `-W error::DeprecationWarning` (152 passed).
+   Druga droga liczby testów:
+   $ OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 timeout 600 /home/dantey1/alpha/.venv/bin/python -m pytest --co -q -p no:cacheprovider | tail -1
+     2074 tests collected in 1.52s        (2071 passed + 3 skipped = 2074; rc=0)
+   Linii FAILED/ERROR w wydruku: 0.
+
+8. ruff / black na dotkniętych plikach (tools/audyt_hook.py, tests/test_audyt_hook.py)
+   $ /home/dantey1/alpha/.venv/bin/python -m ruff check tools/audyt_hook.py tests/test_audyt_hook.py
+   $ /home/dantey1/alpha/.venv/bin/python -m black --check tools/audyt_hook.py tests/test_audyt_hook.py
+    All checks passed!
+    ruff rc=0
+    All done! ✨ 🍰 ✨
+    2 files would be left unchanged.
+    black rc=0
+
+9. RĘCZNE SPRAWDZENIE zachowania (hook_main w procesie; HOME i repo w katalogu tymczasowym;
+   lista hostów pusta). Wynik: (flagi, typ błędu, sciezki_oznaczone). Zapis do ~/.ssh ma tu
+   `zapis_tmp`, a nie `zapis_poza_repo`, bo fikcyjny HOME leżał w /tmp.
+   $ /home/dantey1/alpha/.venv/bin/python SCR/sprawdz_026.py
+    modul: /home/dantey1/alpha/.claude/worktrees/agent-a2eddc620ffc2310a/tools/audyt_hook.py
+    "bash -c 'cat /x\x00y'" -> (['blad_analizy'], 'ValueError', None)
+    'cat /x\ud800/y\x00z' -> (['blad_analizy'], 'ValueError', None)
+    'cat /x\x00y/\ud800' -> (['blad_analizy'], 'ValueError', None)
+    'cd /x\x00y && echo x > plik' -> ([], None, None)
+    'echo x > ~/.ssh/klucz\ud800' -> (['poswiadczenia', 'zapis_tmp'], None, ['SCR/tmpikhlzysl/dom/.ssh/klucz?'])
+    udc80 rozwin: '/x\udc80y'
+    udc80 _kodowalna bez zmian: True
+    ud800 _kodowalna: '/a/?b/?'
+
+10. PRZEGLĄD KODU — engineering:code-review (wczytany narzędziem Skill przed commitem;
+    rejestr: runs/skille/zadanie-026-audyt-hook-surogat.jsonl)
+    Werdykt: Approve — zmiana jest minimalna i poprawna: `_kodowalna` usuwa tylko przyczynę
+    wyjątku (znaki niekodowalne) przed `expanduser`/`realpath` w obu miejscach z tekstem
+    z wejścia hooka, bajt zerowy i surogaty \udc80–\udcff zachowują się jak dawniej, a testy
+    regresyjne padają przed poprawką i przechodzą po niej.
+    Uwagi z przeglądu (bez zmian w kodzie): w `sciezki_oznaczone` widać „?” zamiast oryginalnego
+    znaku (oryginał zostaje w polu `polecenie`); w napisie mieszanym (samotny surogat + surogat
+    \udc80–\udcff) oba zamieniają się na „?” — dotyczy tylko napisów, które wcześniej wywracały
+    analizę. Bezpieczeństwo: zamiana nie rusza separatorów, `.`, `..` ani liter, więc `.ssh`,
+    granica repo, /tmp i katalog audytu są oceniane na tym samym tekście.
+
+11. CZEGO NIE ZROBIONO / UWAGI
+   - Windows nie był uruchomiony (brak w sesji). Wniosek tylko z kodu: `os.fsencode` na Windows
+     używa surrogatepass, więc `_kodowalna` nic tam nie zmienia; ścieżki idą do API Windows jako
+     UTF-16, a `ntpath.realpath` (źródło 3.12.3 przeczytane tutaj) łapie ValueError wokół
+     `_getfinalpathname`. Analiza na Windows nie powinna więc rzucać ani przed, ani po poprawce.
+   - Poza zakresem, NIEZWERYFIKOWANE: ten sam kod `ntpath.realpath` łapie ValueError dla bajtu
+     zerowego (gh-106242, tryb nie-ścisły). Na Windows z tą wersją Pythona test
+     test_null_byte_in_nested_path_gives_analysis_error_row może być czerwony (hook oceni
+     ścieżkę zamiast wiersza `blad_analizy`). Do sprawdzenia na komputerze z Windows.
+   - Skille z tabeli zasady 19, których tu nie wczytano: engineering:debug (przyczyna była podana
+     w zadaniu i widoczna od razu), engineering:testing-strategy (to nie nowy moduł),
+     security-review (brak kluczy, zleceń i nowych połączeń sieciowych), update-config
+     (bez zmian w .claude/settings.json).
+
