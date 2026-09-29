@@ -219,6 +219,11 @@ kolektorów ani dziennika — działają dalej jako `dantey1`.
    ```
    `hooks/` i `config` bez prawa zapisu dla grupy — inaczej wykonawca mógłby podmienić bramkę albo ustawić
    `core.hooksPath`. Sprawdzenie: `sudo -u clas5wyk git -C <klon> push origin HEAD:master` → „odmowa”.
+   **Granica tej bramki:** grupa ma prawo zapisu w `refs/` repozytorium `/srv/clas5/alpha.git`, więc wykonawca
+   może przestawić `master` wprost na dysku, z pominięciem `pre-receive`. Bramka chroni przed pomyłką, nie przed
+   celowym obejściem. Prawdziwą ochroną jest to, że `dantey1` scala tylko w głównym repo
+   (`/home/dantey1/alpha`) i nigdy nie pobiera `master` z `/srv/clas5/alpha.git`; stamtąd bierze wyłącznie
+   gałęzie `zadanie-*`, i to po przeglądzie (przegląd 16c zadania 002).
 4. **Klon wykonawcy i środowisko Pythona** (`sudo -u`):
    ```bash
    sudo -u clas5wyk git clone /srv/clas5/alpha.git /home/clas5wyk/alpha
