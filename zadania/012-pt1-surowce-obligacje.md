@@ -2,7 +2,7 @@
 id: 012
 tytul: PT1 — carry i trend na surowcach i obligacjach na danych bazowych (szczebel 1 drabiny), nierozstrzygnięte
 typ: badawcze
-status: nowe
+status: czeka_na_decyzje
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: zgoda na wszystkie 008–014 („Wszystkie 008–014”); odczyty na historii startują tylko, jeśli mapa 007 uzna rodzinę za MIERZALNĄ"
 utworzono: 2026-09-29
@@ -38,3 +38,5 @@ Czy ten sprawdzian mechanizmu jest Ci potrzebny do decyzji o kapitale, czy go po
 ## Wynik
 
 **2026-09-29:** zgodnie z mapą 007 (BRAK DANYCH: brak krzywej terminowej; po 2013 wykrywalne dopiero SR ≈ 0,76) zadanie czeka — tylko na wyraźne życzenie użytkownika i tylko na pełnej bazie 1990–2026. Status bez zmian.
+
+**2026-09-29 (sesja chmurowa):** zgoda użytkownika „Wszystkie 008–014” ma warunek „tylko jeśli mapa 007 uzna rodzinę za MIERZALNĄ”. Mapa 007 dała BRAK DANYCH, więc status wraca do `czeka_na_decyzje`. Start tylko na osobne, wyraźne polecenie użytkownika po przeczytaniu noty mapy 007.
