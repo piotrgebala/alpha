@@ -23,8 +23,15 @@ Zasady:
 - cienka warstwa sieciowa `_connect` (aiohttp; tylko `wss://`, adres STAŁY w kodzie);
 - zapis append-only: jedna linia JSON na zdarzenie, plik per dzień UTC czasu zdarzenia `E`,
   `flush` po każdej linii; `status.json` (liczniki, ostatnie zdarzenie) do nadzoru z zewnątrz;
-- wiadomość o nieznanym schemacie jest POMIJANA i liczona (nie zrywa połączenia); każdy błąd
-  transportu = ponowne połączenie po wykładniczym odczekaniu 1 s → 60 s. Proces nie kończy się sam.
+- wiadomość o nieznanym schemacie (także bez któregoś z pól `ORDER_FIELDS`, np. bez `T`) jest
+  POMIJANA i liczona (nie zrywa połączenia); każdy błąd transportu = ponowne połączenie po
+  wykładniczym odczekaniu 1 s → 60 s. Proces nie kończy się sam;
+- czas transakcji `T` sprawdzany PRZY ZAPISIE tą samą funkcją co w indeksie i kopii
+  (`data/liquidation_time.event_time_ms`, zadanie 021 — bez nowego progu; `T` z poprzedniej doby
+  przy `E` tuż po północy jest poprawne). Rekord z `T` łamiącym regułę jest ZAPISYWANY bez zmian
+  (plik dnia wg `E`, danych nie gubimy), a `status.json` liczy go w `t_out_of_range`
+  (+ do `T_EXAMPLES` przykładów w `t_out_of_range_examples`); wpis w logu jak przy pominięciach
+  (pierwsze 5 i co 1000.). Dotąd widział go dopiero indeks albo kopia — dzień później.
 
     PYTHONUTF8=1 py -m data.collect_liquidations --dir ~/likwidacje       # kolektor (w tle, cron)
     PYTHONUTF8=1 py -m data.collect_liquidations --dir ~/likwidacje --status
@@ -41,6 +48,8 @@ import sys
 import time
 from pathlib import Path
 
+from data import liquidation_time as lt
+
 STREAM_URL = "wss://fstream.binance.com/market/ws/!forceOrder@arr"  # NIE `/ws/…` (docstring)
 DEFAULT_DIR = Path("data/raw/liquidations")
 RECEIVE_TIMEOUT_S = (
@@ -50,8 +59,11 @@ BACKOFF_MAX_S = 60.0
 STATUS_EVERY_S = 30.0
 MAX_MSG_BYTES = 4 * 1024 * 1024
 ORDER_FIELDS = ("s", "S", "o", "f", "q", "p", "ap", "X", "l", "z", "T")
-MIN_EVENT_MS, MAX_EVENT_MS = 1_546_300_800_000, 4_102_444_800_000  # 2019-01-01 … 2100-01-01 UTC
+# granice czasu: jedno źródło w `data/liquidation_time.py` (wspólne z indeksem i kopią)
+MIN_EVENT_MS, MAX_EVENT_MS = lt.MIN_EVENT_MS, lt.MAX_EVENT_MS  # 2019-01-01 … 2100-01-01 UTC
 NUMERIC_FIELDS = ("q", "p", "ap", "l", "z")
+T_EXAMPLES = 5  # tyle przykładów rekordów z `T` poza zakresem trzyma `status.json`
+LOG_FIRST, LOG_EVERY = 5, 1000  # log pominięć i `T` poza zakresem: pierwsze 5, potem co 1000.
 
 
 # ------------------------------------------------------------------ czyste funkcje
@@ -78,13 +90,35 @@ def parse_event(msg: dict) -> dict:
 
 
 def day_path(root: Path, event_ms: int) -> Path:
-    """Plik dnia UTC, w którym zaszło zdarzenie (po `E`, nie po czasie zapisu)."""
-    if not (
-        MIN_EVENT_MS <= int(event_ms) <= MAX_EVENT_MS
-    ):  # zamiast OSError/OverflowError z platformy
-        raise ValueError(f"likwidacje: czas zdarzenia poza zakresem: {event_ms}")
-    day = dt.datetime.fromtimestamp(event_ms / 1000.0, tz=dt.timezone.utc).date()
+    """Plik dnia UTC, w którym zaszło zdarzenie (po `E`, nie po czasie zapisu). Czas łamiący
+    wspólną regułę `event_time_ms` → ValueError (zamiast OSError/OverflowError z platformy)."""
+    try:
+        ms = lt.event_time_ms(event_ms)
+    except ValueError as exc:
+        raise ValueError(f"likwidacje: czas zdarzenia {exc}") from None
+    day = dt.datetime.fromtimestamp(ms / 1000.0, tz=dt.timezone.utc).date()
     return Path(root) / f"{day.isoformat()}.jsonl"
+
+
+def t_problem(rec: dict) -> str | None:
+    """Czas transakcji `T` rekordu wobec wspólnej reguły (`liquidation_time.event_time_ms` — ta sama
+    co w indeksie i kopii): None = poprawny; inaczej krótki opis do statusu i logu (symbol, `E`,
+    powód). Rekordu nie zmienia i nie odrzuca — o zapisie decyduje `run` (zapis bez zmian)."""
+    if "T" not in rec:
+        reason = "brak T"
+    else:
+        try:
+            lt.event_time_ms(rec["T"])
+        except ValueError as exc:
+            reason = f"T {exc}"
+        else:
+            return None
+    return f"{lt.short_repr(rec.get('s'))} E={lt.short_repr(rec.get('E'))}: {reason}"
+
+
+def _log_due(n: int) -> bool:
+    """Czy n-te zdarzenie danego rodzaju trafia do logu (pierwsze `LOG_FIRST`, potem co `LOG_EVERY`)."""
+    return n <= LOG_FIRST or n % LOG_EVERY == 0
 
 
 def backoff_s(attempt: int, cap: float = BACKOFF_MAX_S) -> float:
@@ -199,6 +233,8 @@ async def run(
         "pid": os.getpid(),
         "events": 0,
         "skipped": 0,
+        "t_out_of_range": 0,  # zapisane bez zmian, `T` łamie wspólną regułę (docstring modułu)
+        "t_out_of_range_examples": [],
         "reconnects": 0,
         "last_event_ms": None,
         "last_error": None,
@@ -207,6 +243,13 @@ async def run(
     def status() -> None:
         state.update(events=writer.count, last_event_ms=writer.last_event_ms)
         write_status(root, **state)
+
+    def count_bad_t(problem: str) -> None:
+        state["t_out_of_range"] += 1
+        if len(state["t_out_of_range_examples"]) < T_EXAMPLES:
+            state["t_out_of_range_examples"].append(problem)
+        if _log_due(state["t_out_of_range"]):
+            log(f"T poza zakresem ({state['t_out_of_range']}), zapisano bez zmian: {problem}")
 
     attempt, last_status = 0, -STATUS_EVERY_S
     while True:
@@ -217,12 +260,16 @@ async def run(
                 attempt = 0
                 async for msg in messages:
                     try:
-                        writer.write(parse_event(msg))
+                        rec = parse_event(msg)
+                        writer.write(rec)
                     except (ValueError, TypeError, OverflowError, OSError) as exc:  # zła ≠ zerwanie
                         state["skipped"] += 1
-                        if state["skipped"] <= 5 or state["skipped"] % 1000 == 0:
+                        if _log_due(state["skipped"]):
                             log(f"pominięto ({state['skipped']}): {exc}")
                         continue
+                    problem = t_problem(rec)  # po zapisie: rekord już jest w pliku, bez zmian
+                    if problem is not None:
+                        count_bad_t(problem)
                     if clock() - last_status >= STATUS_EVERY_S:
                         status()
                         last_status = clock()
@@ -277,10 +324,18 @@ def status_text(root: Path) -> str:
     )
     today = day_path(root, int(time.time() * 1000))
     n_today = sum(1 for _ in open(today, encoding="utf-8")) if today.exists() else 0
+    # licznik `T` poza zakresem (zadanie 021); status bez tego pola = proces sprzed zmiany albo Bybit
+    t_seg = t_examples = ""
+    if "t_out_of_range" in st:
+        t_seg = f"; T poza zakresem {st['t_out_of_range']} (zapisane bez zmian)"
+        examples = st.get("t_out_of_range_examples") or []
+        if examples:
+            t_examples = "; przykłady T poza zakresem: " + " | ".join(map(str, examples))
     return (
         f"kolektor pid {st.get('pid')} od {st.get('started_utc')}; status z {st.get('written_utc')}; "
-        f"zdarzeń {st.get('events')} (pominiętych {st.get('skipped')}), ostatnie {last_txt}; "
+        f"zdarzeń {st.get('events')} (pominiętych {st.get('skipped')}{t_seg}), ostatnie {last_txt}; "
         f"rozłączeń {st.get('reconnects')}, ostatni błąd: {st.get('last_error')}; dziś w pliku: {n_today}"
+        f"{t_examples}"
     )
 
 
