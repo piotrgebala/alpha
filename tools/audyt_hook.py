@@ -9,13 +9,15 @@ Każde wywołanie dopisuje JEDEN wiersz JSON do `~/.clas5_audyt/RRRR-MM-DD.jsonl
 listę `flagi`; pusta lista = nic podejrzanego. Flagi:
 
 - `siec_poza_lista` — polecenie sieciowe (curl, wget, git push/fetch/pull/clone/ls-remote,
-  pip install, python z requests/urllib/socket/…, nc, ssh, scp, sftp, rsync, telnet, WebFetch)
-  do hosta spoza `config/audyt_hosty.yaml` (hosty w polu `hosty_spoza_listy`);
+  pip install, python z requests/urllib/socket/…, nc, ssh, scp, sftp, rsync, telnet, `gh`
+  — domyślnie `api.github.com`, WebFetch) do hosta spoza `config/audyt_hosty.yaml` (hosty
+  w polu `hosty_spoza_listy`);
 - `siec_host_nieznany` — polecenie sieciowe, którego hosta nie da się ustalić z tekstu polecenia
   (np. `python -c` z `requests` i adresem w zmiennej);
 - `zapis_poza_repo` — zapis (Write/Edit/MultiEdit/NotebookEdit, a w Bash: `>`/`>>`, `tee`, cel
-  `cp`/`mv`) poza repozytorium bieżącego katalogu (`cwd` z wejścia hooka; dla worktree — poza
-  worktree i poza `runs/` oraz `data/` głównego checkoutu);
+  `cp`/`mv`, `sed -i`, `curl -o`, `wget -O`; ścieżki względne liczone po `cd` w poleceniu) poza
+  repozytorium bieżącego katalogu (`cwd` z wejścia hooka; dla worktree — poza worktree i poza
+  `runs/` oraz `data/` głównego checkoutu);
 - `zapis_tmp` — zapis w katalogu tymczasowym (`/tmp`, `$TMPDIR`): wspólny zasób wielu sesji,
   czyli możliwy boczny kanał; osobna flaga, bo scratchpad sesji leży właśnie tam;
 - `poswiadczenia` — dostęp (odczyt albo zapis) do `~/.ssh`, `.env`, `*.pem`, `*.key`, plików
@@ -35,8 +37,10 @@ adres, flagi, hosty i ścieżki, które flagi wywołały. NIGDY treść plików 
 i podobne pola nie są czytane) ani nieobcięte polecenie.
 
 Analiza jest tekstowa (własny, mały tokenizer powłoki): wykrywa typowe przypadki, nie jest
-piaskownicą. Obejście przez np. `bash -c "$(echo … | base64 -d)"` nie zostanie rozpoznane jako
-sieć — dlatego docelowa granica to osobny użytkownik systemu (docs/rag/13), a hook to widoczność.
+piaskownicą. Zagnieżdżone `bash -c '…'`, `sh -c '…'` i `eval …` są analizowane tą samą funkcją
+(do `MAKS_ZAGNIEZDZENIA` poziomów). Obejście przez np. `bash -c "$(echo … | base64 -d)"` nie
+zostanie rozpoznane jako sieć — dlatego docelowa granica to osobny użytkownik systemu
+(docs/rag/13), a hook to widoczność.
 
 Szybkość: tylko biblioteka standardowa, bez YAML (lista hostów w prostym formacie czytana
 ręcznie); podproces `git remote get-url` tylko dla `git push/fetch/pull` bez adresu w poleceniu.
@@ -72,6 +76,17 @@ POLE_SCIEZKI = {"NotebookEdit": "notebook_path"}  # reszta narzędzi plikowych: 
 
 # --- maskowanie sekretów w skrócie polecenia ------------------------------------------------------
 _MASKI = (
+    # hasło przyklejone do `-p` tylko tam, gdzie `-p<coś>` znaczy hasło: mysql/mariadb i sshpass;
+    # `-p` z odstępem (pytanie o hasło) i `-P` (port) zostają; psql: `-p` to port — nie maskujemy
+    (
+        re.compile(
+            r"((?:^|[\s;&|(/])(?:mysql[a-z_-]*|mariadb[a-z_-]*)\b"
+            r"(?:[^;&|\n]*?\s)?-p['\"]?)([^\s;&|'\"]+)"
+        ),
+        r"\1***",
+    ),
+    # sshpass: `-p hasło` i `-phasło` (hasło zawsze po `-p`)
+    (re.compile(r"(\bsshpass\s+(?:-[^p\s]\S*\s+)*-p\s*['\"]?)([^\s'\"]+)"), r"\1***"),
     (re.compile(r"(?i)(authorization\s*:\s*)(bearer\s+|basic\s+|token\s+)?[^\s'\"]+"), r"\1\2***"),
     (re.compile(r"(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]{8,}"), r"\1***"),
     (re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://)[^/\s:@]+:[^/\s@]+@"), r"\1***:***@"),
@@ -342,6 +357,15 @@ def siec_w_segmencie(
         return bool(hosty), hosty
     if program == "git":
         return _siec_git(args, cwd)
+    if program == "gh":  # GitHub CLI: każde polecenie poza pomocą/wersją idzie do API GitHuba
+        if not args or args[0] in ("help", "version", "--help", "-h", "--version", "completion"):
+            return None
+        for j, a in enumerate(args):
+            if a.startswith("--hostname="):
+                return True, [normalizuj_host(a.split("=", 1)[1])]
+            if a == "--hostname" and j + 1 < len(args):
+                return True, [normalizuj_host(args[j + 1])]
+        return True, ["api.github.com"]
     if program in ("pip", "pip3") or (PYTHON.match(program) and args[:2] == ["-m", "pip"]):
         if PYTHON.match(program):
             args = args[2:]
@@ -495,9 +519,17 @@ def sprawdz_siec(wynik: Wynik, znany: bool, hosty: list[str], dozwolone: frozens
 
 
 def sprawdz_sciezke(
-    wynik: Wynik, surowa: str, cwd: str, katalog_audytu: str, *, zapis: bool
+    wynik: Wynik,
+    surowa: str,
+    cwd: str,
+    katalog_audytu: str,
+    *,
+    zapis: bool,
+    baza: str | None = None,
 ) -> None:
-    pelna = rozwin(surowa, cwd)
+    """`cwd` wyznacza repozytorium (katalogi dozwolone), `baza` — katalog, względem którego
+    rozwija się ścieżkę względną (po `cd` w poleceniu; domyślnie `cwd`)."""
+    pelna = rozwin(surowa, baza or cwd)
     if czy_poswiadczenia(pelna):
         wynik.oznacz(F_POSW, sciezka=pelna)
     if _pod(pelna, katalog_audytu):
@@ -517,12 +549,109 @@ def _wyglada_na_sciezke(slowo: str) -> bool:
     )
 
 
+POWLOKI = {"bash", "sh", "dash", "zsh", "ksh", "ash"}
+MAKS_ZAGNIEZDZENIA = 3  # bash -c 'sh -c "…"' — głębiej nie schodzimy (i nie pętlimy)
+_PRZEKIEROWANIA = (">", ">>", "<", "<<")
+
+
+def polecenie_powloki(program: str, args: list[str]) -> str | None:
+    """Tekst wewnętrznego polecenia z `bash -c '…'`, `sh -lc '…'` albo `eval …`; inaczej None."""
+    if program == "eval":
+        return " ".join(args) or None
+    if program not in POWLOKI:
+        return None
+    ma_c, pomin = False, False
+    for a in args:
+        if pomin:  # argument opcji `-o`/`-O`/`+o`/`+O` (np. `bash -o pipefail -c '…'`)
+            pomin = False
+            continue
+        if a in _PRZEKIEROWANIA:
+            return None
+        if a in ("-o", "-O", "+o", "+O"):
+            pomin = True
+        elif a.startswith("-") and not a.startswith("--") and len(a) > 1:
+            ma_c = ma_c or "c" in a[1:]
+        elif a.startswith("--"):
+            continue
+        elif ma_c:
+            return a
+        else:
+            return None  # `bash skrypt.sh` — skrypt z pliku, nie z tekstu
+    return None
+
+
+def _cele_sed(args: list[str]) -> list[str]:
+    """Pliki zmieniane przez `sed -i` (także `-i.bak`, `-Ei`, `--in-place`); bez `-i` — brak."""
+    w_miejscu, jawny_skrypt, pliki, pomin = False, False, [], False
+    for a in args:
+        if pomin:
+            pomin = False
+        elif a in _PRZEKIEROWANIA:
+            break
+        elif a.startswith("--"):
+            w_miejscu = w_miejscu or a.startswith("--in-place")
+            if a in ("--expression", "--file"):
+                jawny_skrypt, pomin = True, True
+            elif a.startswith(("--expression=", "--file=")):
+                jawny_skrypt = True
+        elif a.startswith("-") and len(a) > 1:
+            litery = a[1:]
+            if litery.startswith("i"):
+                w_miejscu = True  # `-i` / `-i.bak`: reszta to przyrostek kopii
+                continue
+            for k, lit in enumerate(litery):
+                if lit == "i":
+                    w_miejscu = True
+                if lit in "ef":
+                    jawny_skrypt = True
+                    pomin = k == len(litery) - 1  # `-e skrypt` — argument w następnym słowie
+                    break
+        else:
+            pliki.append(a)
+    if not w_miejscu:
+        return []
+    return pliki if jawny_skrypt else pliki[1:]
+
+
+def _cele_pobrania(program: str, args: list[str]) -> list[str]:
+    """Plik zapisywany przez `curl -o/--output` albo `wget -O/--output-document`."""
+    opcje = ("-o", "--output") if program == "curl" else ("-O", "--output-document")
+    cele = []
+    for j, a in enumerate(args):
+        if a in opcje and j + 1 < len(args):
+            cele.append(args[j + 1])
+        elif a.startswith(opcje[1] + "="):
+            cele.append(a.split("=", 1)[1])
+        elif len(a) > 2 and a.startswith(opcje[0]) and not a.startswith("--"):
+            cele.append(a[2:])
+    return [c for c in cele if c != "-"]
+
+
 def analizuj_bash(
-    wynik: Wynik, polecenie: str, cwd: str, hosty: frozenset[str], katalog_audytu: str
+    wynik: Wynik,
+    polecenie: str,
+    cwd: str,
+    hosty: frozenset[str],
+    katalog_audytu: str,
+    baza: str | None = None,
+    glebokosc: int = 0,
 ) -> None:
+    """`cwd` = katalog sesji (wyznacza repozytorium); `baza` = bieżący katalog polecenia, zmieniany
+    przez `cd` w kolejnych segmentach (przybliżenie: bez rozróżniania podpowłok i `||`)."""
+    baza = baza or cwd
     for slowa in segmenty(polecenie):
         program, args = program_i_argumenty(slowa)
-        siec = siec_w_segmencie(program, args, polecenie, cwd)
+        if program == "cd":
+            if "-" not in args:  # `cd -` (poprzedni katalog) — nieznany, baza bez zmian
+                try:
+                    baza = rozwin(next((a for a in args if not a.startswith("-")), "~"), baza)
+                except ValueError:  # np. bajt zerowy w ścieżce — baza bez zmian
+                    pass
+            continue
+        wewnetrzne = polecenie_powloki(program, args)
+        if wewnetrzne is not None and glebokosc < MAKS_ZAGNIEZDZENIA:
+            analizuj_bash(wynik, wewnetrzne, cwd, hosty, katalog_audytu, baza, glebokosc + 1)
+        siec = siec_w_segmencie(program, args, polecenie, baza)
         if siec is not None:
             sprawdz_siec(wynik, siec[0], siec[1], hosty)
         cele: list[str] = []
@@ -533,11 +662,15 @@ def analizuj_bash(
             cele += [a for a in args if not a.startswith("-") and a not in (">", ">>")]
         elif program in ("cp", "mv", "install") and len(args) >= 2 and not args[-1].startswith("-"):
             cele.append(args[-1])
+        elif program == "sed":
+            cele += _cele_sed(args)
+        elif program in ("curl", "wget"):
+            cele += _cele_pobrania(program, args)
         for cel in cele:
-            sprawdz_sciezke(wynik, cel, cwd, katalog_audytu, zapis=True)
+            sprawdz_sciezke(wynik, cel, cwd, katalog_audytu, zapis=True, baza=baza)
         for s in slowa:  # odczyty i inne użycia ścieżek wrażliwych
             if s not in cele and _wyglada_na_sciezke(s):
-                sprawdz_sciezke(wynik, s, cwd, katalog_audytu, zapis=False)
+                sprawdz_sciezke(wynik, s, cwd, katalog_audytu, zapis=False, baza=baza)
 
 
 def analizuj(
