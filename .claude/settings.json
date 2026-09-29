@@ -66,6 +66,17 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "matcher": "Bash|Read|Write|Edit|MultiEdit|NotebookEdit|WebFetch|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py \"${CLAUDE_PROJECT_DIR:-.}/tools/audyt_hook.py\" hook 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/audyt_hook.py\" hook 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [
