@@ -3151,3 +3151,8 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   izolacji wykonawców [docs/rag/13](docs/rag/13_izolacja_wykonawcow.md). **Do decyzji użytkownika:** po tygodniu
   obserwacji (od 2026-09-29) — czy blokować; kroki z `sudo` z dokumentu 13. Luki wykrywania → zadanie 003.
   Ścieżka odwrotu: usunięcie grupy hooka z `.claude/settings.json`.
+- **Zadanie 001 / LH0 krok 0 (2026-09-29):** Hyperliquid darmowo na żywo daje tylko próbkę likwidacji (pełne pokrycie
+  = 2,6–8,6× limitu IP); kolektora nie zbudowano. **Do decyzji użytkownika:** tryb ograniczony / węzeł lub płatne S3 /
+  sam stan rynku co 60 s / stan pozycji przed kaskadą / zamknięcie — wniosek 110,
+  [runda](runs/2026-09-29_lh0-kolektor-hyperliquid/README.md), [zadanie](zadania/001-lh0-kolektor-hyperliquid.md).
+

@@ -56,7 +56,7 @@ TL1 przeliczony w RU4 (97); NL1 i P2 nie dotyczy.
 księguje każdy odczyt. Trend: szczebel 2 spełniony (post hoc); szczebel 1(b) TX1 NIEROZSTRZYGNIĘTY — działa 1990–2012, zanika po 2013 (84).
 
 **Otwarte:** dziennik prospektywny trend + Coinbase (jedyna droga do rozstrzygnięcia CP1). Likwidacje zbierane od
-2026-09-25 (LK0, 102, próbka Binance) i pełne z Bybit od 2026-09-27 (LB0, 106) — odczyt E1 po ≥ 1 roku. Nowe źródła
+2026-09-25 (LK0, 102, próbka Binance) i pełne z Bybit od 2026-09-27 (LB0, 106) — odczyt E1 po ≥ 1 roku. Hyperliquid (LH0, 110): darmowo na żywo tylko próbka; pełne źródło = decyzja użytkownika. Nowe źródła
 popytu: premia koreańska NIEMIERZALNA (KP1, 91; sygnał inny niż CP1, ale efekt z badań ~SR 0,15 wobec
 progu 0,86); stablecoiny i ETF — NIEMIERZALNE w SH1 (81). Kolejne sygnały kierunkowe na samym BTC
 wymagają priorytetu SR ≥ ~0,9 z badań po publikacji — inaczej nie startują (filtr przed pobraniem danych).
@@ -172,6 +172,7 @@ podsumowanie pod tabelą.
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 | **OS1** | 2026-09-28 | [os1-otwarcia-sesji](2026-09-28_os1-otwarcia-sesji/README.md) | Pomysł użytkownika: otwarcia sesji Tokio / Londyn / Nowy Jork na BTC perp 30m (czas letni/zimowy ze stref IANA); F1 dryf 60 min (znak z 365 dni), F2 momentum 30 min → 3,5 h; tylko rachunek mierzalności | **0 — oba ramiona łączne (i 6 per sesja) NIEMIERZALNE, nie startuje** | **Wymagana trafność łącznie: F1 65,0 / 60,2 %, F2 59,3 / 56,5 % (taker 0,14 % / limit 0,09 %) wobec prioru z literatury 53,5–53,8 %; konwencja 56 % też nie przechodzi. Nowy Jork: zmienność +26–45 %, kierunku nie mierzono.** Walidacja: **Caveats** — druga droga zgodna co do cyfry; przegląd: Approve z uwagami |
 | **PT1** | 2026-09-28 | [pt1-perpy-tradfi](2026-09-28_pt1-perpy-tradfi/README.md) | Perpetuale TradFi na Bybit/Binance jako instrument: spis, funding (modele A kopia krypto / B carry / C zero), koszty z migawek, zamknięty rynek bazowy, zgodność z FRED | **0 — opisowo** | **Stopa w fundingu = 0 (Binance 202/206; Bybit wzór 100 %) — brak automatycznego carry. 3 pary walutowe Bybit (20 dni): funding 0 w 90–100 % odczytów — różnica stóp dziś niewypłacana (USDJPY 61/62 zer wobec B −2,8 %/rok); D1 dosłownie „pozostały układ”; surowce i obligacje nierozstrzygnięte. Mediana kosztu rdzenia 0,034–0,046 %/stronę na komplecie 12 migawek (typowa akcja 0,065–0,094 %); β weekendu per klasa 0,88–1,06.** Carry walutowe na tych parach dziś niewykonalne; funding zbierany dalej; perp = wykonanie, badanie na danych rynku bazowego (109). Walidacja: **Caveats** (16a/16b po „Revision”); przegląd: Approve z uwagami |
+| **LH0** | 2026-09-29 | [lh0-kolektor-hyperliquid](2026-09-29_lh0-kolektor-hyperliquid/README.md) | Sonda wykonalności (krok 0) trzeciej bramy likwidacji: Hyperliquid, tylko publiczne API; zadanie 001 tablicy, decyzja użytkownika 2026-09-28 („trzeci kolektor likwidacji obok LK0 i LB0, tylko zbieranie, bez odczytu”) | **0 — POZA licznikami** (zbieranie danych, 0 odczytów; licznik E1 wspólny z LK0/LB0) | **TYLKO PRÓBKA darmowo na żywo: brak strumienia likwidacji; likwidacja rozpoznawalna (strona aktywna + pole `liquidation` w `userFillsByTime`), ale pełne pokrycie giełdy = 2,6–8,6× limitu 1 200 wagi/min IP. Kontrola 44 min (06:14–06:58 UTC): HL 78 BTC / 13 ETH / 0 SOL zleceń, LK0 29/61/13, LB0 10/21/4, 100 % shortów we wszystkich.** Stan rynku `metaAndAssetCtxs` co 60 s ≈ 19 MB/dobę gzip. Kolektora NIE zbudowano — STOP, czeka na decyzję użytkownika (110). Walidacja 16a: **Caveats** (jedno okno, 3 monety) |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -1043,6 +1044,17 @@ podsumowanie pod tabelą.
     per instrument. Strategii nie da się mierzyć na samych perpach — badanie na danych rynku bazowego, perp jako wykonanie
     z kosztem per instrument i fundingiem po stronie popytu jako kosztem; waluty, miedź i pallad tylko przy otwartym rynku.
     Różnica fundingu ropy między giełdami — tylko jako hipoteza do pre-rejestracji na PRZYSZŁYCH danych.
+
+110. **HYPERLIQUID NIE MA STRUMIENIA LIKWIDACJI; LIKWIDACJA JEST ROZPOZNAWALNA, ALE PEŁNE POKRYCIE GIEŁDY Z DARMOWEGO API NA ŻYWO PRZEKRACZA LIMIT (LH0 krok 0, 2026-09-29, 0 wariantów, zbieranie danych).**
+    Zlikwidowany jest stroną aktywną transakcji, a jego wypełnienie w `userFillsByTime` ma pole `liquidation` (metoda
+    `market`). Publiczne `trades` nie ma flagi likwidacji, więc trzeba odpytać każdą stronę aktywną: 476 adresów/min
+    (mediana) × 21,8 wagi ≈ 10 400 wagi/min wobec limitu 1 200 na IP (8,6×); raz na adres na 44 min — 2,6×; sama
+    trójka BTC/ETH/SOL zużyła 1 243 wagi/min (druga droga, suma wag). Skarbiec HLP widzi tylko backstop (4 z 7 adresów
+    podrzędnych). Kontrola pozytywna 44 min: HL 78 zleceń BTC i 13 ETH (109 + 17 wypełnień, 1:1 z `trades`), 0 SOL;
+    LK0 29/61/13, LB0 10/21/4; 100 % shortów we wszystkich trzech (cecha okna, rynek rósł). HL to dolna granica
+    (8 adresów uciętych na 2 000 wypełnień). Pełne źródła: własny węzeł albo płatne S3 `node_fills_by_block` — decyzja
+    użytkownika; tanie i od razu możliwe: stan rynku `metaAndAssetCtxs` co 60 s (≈ 19 MB/dobę gzip) i ~700 adresów
+    z pozycjami > 100 tys. USD co 1–3 min (stan przed kaskadą; osobna decyzja). Licznik E1 bez zmian (0 odczytów).
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

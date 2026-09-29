@@ -1,0 +1,125 @@
+### 1) python runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_hlp.py   (2026-09-29 ~06:12 UTC)
+czas sondy UTC: 2026-09-29T06:11:53+00:00
+vaultDetails: name = Hyperliquidity Provider (HLP) | leader = 0x677d831aef5328190852e24f13c46cac05f984e7
+description = This community-owned vault provides liquidity to Hyperliquid through multiple market making strategies, performs liquidations, and accrues platform fees.
+relationship.type = parent | childAddresses = ['0x010461c14e146ac35fe42271bdc1134ee31c703a', '0x2e3d94f0562703b25c83308a05046ddaf9a8dd14', '0x2ed5c4484ea3ff8b57d5f2fb152a40d9f2b68308', '0x31ca8395cf837de08b24da3f660e77761dfb974b', '0x469f690213c467c39a23efacfd2816896009d7d8', '0x5e177e5e39c0f4e421f5865a6d8beed8d921cb70', '0xb0a55f13d22f66e6d495ac98113841b2326e9540']
+
+0xdfc24b077bc1425ad1dea75bcb6f8158e10df303: fills=0 okno=- z polem liquidation=0 metody={}
+  liquidatedUser obecny: {}
+
+0x010461c14e146ac35fe42271bdc1134ee31c703a: fills=2000 okno=2026-09-29 05:54:28 .. 2026-09-29 06:11:55 z polem liquidation=0 metody={}
+  liquidatedUser obecny: {}
+
+0x2e3d94f0562703b25c83308a05046ddaf9a8dd14: fills=2000 okno=2026-05-18 13:12:59 .. 2026-08-22 05:14:01 z polem liquidation=2 metody={'backstop': 2}
+  przyklad: {"coin": "HMSTR", "px": "0.000255", "sz": "13385820.0", "side": "A", "time": 1787375624383, "startPosition": "0.0", "dir": "Liquidated Isolated Short", "closedPnl": "0.0", "hash": "0x3995b356b05a726a3b0f0442b43f850203cc003c4b5d913cdd5e5ea96f5e4c54", "oid": 522778434368, "crossed": true, "fee": "0.0", "tid": 802203254918732, "liquidation": {"liquidatedUser": "0xcb02837caaee310c178501855b63bf7f4f4b1
+  przyklad: {"coin": "PURR", "px": "0.11993", "sz": "882.0", "side": "A", "time": 1787167300900, "startPosition": "0.0", "dir": "Liquidated Isolated Short", "closedPnl": "0.0", "hash": "0xc9fed745b840c9dbcb780442878aed02069b002b5343e8ad6dc782987744a3c6", "oid": 520095532649, "crossed": true, "fee": "0.0", "tid": 366143013864568, "liquidation": {"liquidatedUser": "0xf4349a87d8c71a517ecadbefbbc4b0db70fc6108", "
+  liquidatedUser obecny: {True: 2}
+
+0x2ed5c4484ea3ff8b57d5f2fb152a40d9f2b68308: fills=2000 okno=2026-01-19 00:23:39 .. 2026-09-04 12:31:57 z polem liquidation=16 metody={'backstop': 16}
+  przyklad: {"coin": "JTO", "px": "0.37693", "sz": "250.0", "side": "B", "time": 1788525110923, "startPosition": "20278.0", "dir": "Liquidated Isolated Long", "closedPnl": "0.0", "hash": "0x82249bdcb03f50a6839e0443aa9690010300b3c24b326f7825ed472f6f332a91", "oid": 535990009891, "crossed": true, "fee": "0.0", "tid": 210112025429375, "liquidation": {"liquidatedUser": "0xe77b9e3c579a6cc981900dedefa8d95c1b9654f0",
+  przyklad: {"coin": "JTO", "px": "0.376953", "sz": "561.0", "side": "B", "time": 1788525110923, "startPosition": "19717.0", "dir": "Liquidated Isolated Long", "closedPnl": "0.0", "hash": "0xcf51254196ae0e2ad0ca0443aa96900102003d2731a12cfc7319d09455a1e815", "oid": 535990009890, "crossed": true, "fee": "0.0", "tid": 285070281072520, "liquidation": {"liquidatedUser": "0xd93397d1fd7ca764b96e09ab4696e830f9882dde"
+  przyklad: {"coin": "JTO", "px": "0.376804", "sz": "98.0", "side": "B", "time": 1788525110923, "startPosition": "19619.0", "dir": "Liquidated Isolated Long", "closedPnl": "0.0", "hash": "0x1c7daea67d1ccbaf1df70443aa9690010100c68c181fea81c04659f93c10a599", "oid": 535990009889, "crossed": true, "fee": "0.0", "tid": 938036855069271, "liquidation": {"liquidatedUser": "0xabd74bcc979d59d023388fcb591c3c29aee40fa5",
+  liquidatedUser obecny: {True: 16}
+
+0x31ca8395cf837de08b24da3f660e77761dfb974b: fills=2000 okno=2026-09-29 05:54:53 .. 2026-09-29 06:11:59 z polem liquidation=0 metody={}
+  liquidatedUser obecny: {}
+
+0x469f690213c467c39a23efacfd2816896009d7d8: fills=6 okno=2026-01-06 23:50:30 .. 2026-01-07 08:38:00 z polem liquidation=0 metody={}
+  liquidatedUser obecny: {}
+
+0x5e177e5e39c0f4e421f5865a6d8beed8d921cb70: fills=2000 okno=2026-08-22 05:22:01 .. 2026-09-23 14:17:49 z polem liquidation=46 metody={'backstop': 46}
+  przyklad: {"coin": "XPL", "px": "0.08409", "sz": "6177.0", "side": "B", "time": 1790172796967, "startPosition": "7612608.0", "dir": "Liquidated Isolated Long", "closedPnl": "0.0", "hash": "0x7a722ce2486341277beb04450993ff01130044c7e3665ff91e3ad83507671b12", "oid": 554208484683, "crossed": true, "fee": "0.0", "tid": 356170861864584, "liquidation": {"liquidatedUser": "0xfdba76029046e9385569fb13cfd8e1f5aa0ea95
+  przyklad: {"coin": "XPL", "px": "0.083061", "sz": "30000.0", "side": "B", "time": 1790172796967, "startPosition": "7582608.0", "dir": "Liquidated Isolated Long", "closedPnl": "0.0", "hash": "0xc79eb6472ed1feabc91804450993ff011200ce2cc9d51d7d6b676199edd5d896", "oid": 554208484682, "crossed": true, "fee": "0.0", "tid": 774406254015570, "liquidation": {"liquidatedUser": "0xfbd49b924ebd821c40e9fda0be98b76a840ec
+  przyklad: {"coin": "XPL", "px": "0.083876", "sz": "213.0", "side": "B", "time": 1790172796967, "startPosition": "7582395.0", "dir": "Liquidated Isolated Long", "closedPnl": "0.0", "hash": "0x14cb3fac1540bc30164404450993ff0111005791b043db02b893eafed444961a", "oid": 554208484681, "crossed": true, "fee": "0.0", "tid": 46030380648941, "liquidation": {"liquidatedUser": "0xe2e6902a67ed8439f49dd022f88e9ec189fbf7c3
+  liquidatedUser obecny: {True: 46}
+
+0xb0a55f13d22f66e6d495ac98113841b2326e9540: fills=2000 okno=2026-08-19 16:49:27 .. 2026-08-19 21:31:34 z polem liquidation=223 metody={'backstop': 223}
+  przyklad: {"coin": "ETH", "px": "2243.9", "sz": "0.0205", "side": "A", "time": 1787172675479, "startPosition": "-2259.8596", "dir": "Liquidated Isolated Short", "closedPnl": "0.0", "hash": "0x121e514070cfc9e81398044288b45d01330069260bc2e8bab5e6fc932fc3a3d2", "oid": 520156285512, "crossed": true, "fee": "0.0", "tid": 689305986021800, "liquidation": {"liquidatedUser": "0xfd65cc17a9a0d68eff0ba9f0c7cd5d7c0615aa
+  przyklad: {"coin": "ETH", "px": "2243.82", "sz": "0.7241", "side": "A", "time": 1787172675479, "startPosition": "-2259.1355", "dir": "Liquidated Isolated Short", "closedPnl": "0.0", "hash": "0x5f4adaa5573e876c60c4044288b45d013200f28af231a63e031385f816326157", "oid": 520156285511, "crossed": true, "fee": "0.0", "tid": 287841763373076, "liquidation": {"liquidatedUser": "0xf7af0c0e484f71f998649141c6206a098e9a0
+  przyklad: {"coin": "ETH", "px": "2243.92", "sz": "0.0382", "side": "A", "time": 1787172675479, "startPosition": "-2259.0973", "dir": "Liquidated Cross Short", "closedPnl": "0.0", "hash": "0xac77640a3dad44f0adf1044288b45d0131007befd8a063c250400f5cfca11edb", "oid": 520156285510, "crossed": true, "fee": "0.0", "tid": 565664572210766, "liquidation": {"liquidatedUser": "0xf649b3c03a43dc9bf4562cd0a3bfe6b1aa03422f
+  liquidatedUser obecny: {True: 223}
+
+### 2) python runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_trades.py --seconds 2700 --out <katalog tymczasowy>/trades45.jsonl   (06:13:51-06:58:51 UTC)
+start 2026-09-29T06:13:51+00:00 monet=178 adresy HLP (userFills)=7
+2026-09-29T06:27:32+00:00 wiadomosci=20000 trades=42324
+2026-09-29T06:42:58+00:00 wiadomosci=40000 trades=78490
+2026-09-29T06:57:55+00:00 wiadomosci=60000 trades=116070
+koniec 2026-09-29T06:58:51+00:00 czas=2700s wiadomosci=61306 subskrypcje ok=185 bledy=0
+okno transakcji (czas zrodla): 1790662415291 .. 1790665131021
+transakcji razem=118867 monet z transakcjami=178
+top 10 monet: [('BTC', 7919), ('NEAR', 6559), ('HYPE', 6293), ('GRASS', 6074), ('XPL', 5569), ('ZEC', 5470), ('PUMP', 5195), ('ETH', 5191), ('CRV', 3050), ('LIT', 3042)]
+userFills HLP z polem liquidation (adres, metoda): {('0x010461c14e146ac35fe42271bdc1134ee31c703a', 'market'): 1, ('0x31ca8395cf837de08b24da3f660e77761dfb974b', 'market'): 1}
+
+### 3) python runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_weryfikacja.py --trades <tymcz.>/trades45.jsonl --coins BTC,ETH,SOL --t0 1790662440000 --t1 1790665080000 --liq-out <tymcz.>/liq_btc_eth_sol.jsonl --weight-per-min 1000   (06:59-07:53 UTC)
+transakcji w oknie: 14726 per moneta: {'BTC': 7763, 'SOL': 1908, 'ETH': 5055}
+unikalnych adresow: wszystkich stron=3155 takerow=2506
+  200/2506 adresow, waga=5159, likwidacji=15, 301s
+  400/2506 adresow, waga=9562, likwidacji=25, 546s
+  600/2506 adresow, waga=13954, likwidacji=29, 790s
+  800/2506 adresow, waga=18305, likwidacji=34, 1080s
+  1000/2506 adresow, waga=22524, likwidacji=45, 1323s
+  1200/2506 adresow, waga=26968, likwidacji=54, 1568s
+  1400/2506 adresow, waga=31183, likwidacji=77, 1811s
+  1600/2506 adresow, waga=35402, likwidacji=77, 2053s
+  1800/2506 adresow, waga=39604, likwidacji=93, 2342s
+  2000/2506 adresow, waga=43803, likwidacji=104, 2584s
+  2200/2506 adresow, waga=48002, likwidacji=104, 2826s
+  2400/2506 adresow, waga=52456, likwidacji=126, 3073s
+odpytano adresow=2506 waga razem=54698 czas=3242s obciete(2000)=8
+sprawdzenie strony agresora: taker wg side i crossed=True: 10680, taker wg side ale crossed!=True: 0
+wypelnien likwidacyjnych (strona likwidowana) w monetach okna: 126; wszystkich: 131
+   ('BTC', 'market', 'Close Short') 109
+   ('ETH', 'market', 'Close Short') 17
+zlecen likwidacyjnych (user, oid) w monetach okna: 91
+wypelnien dopasowanych do transakcji z trades: 126
+   trade: {"coin": "BTC", "side": "B", "px": "83908.0", "sz": "0.62629", "time": 1790663581511, "hash": "0x2aa446fd8f5cc13c2c1e044571e4010207d000e32a5fe00ece6cf2504e509b26", "tid": 300317069107992, "users": ["0x6e5cdf7be2883c31a7657350ddf997cbfb1addff", "0x5c1b55d30981425dbc58dda9caba0171eb44a11d"]}
+   fill : {"coin": "BTC", "px": "83908.0", "sz": "0.62629", "side": "B", "time": 1790663581511, "startPosition": "-3.13147", "dir": "Close Short", "closedPnl": "-637.187446", "hash": "0x2aa446fd8f5cc13c2c1e044571e4010207d000e32a5fe00ece6cf2504e509b26", "oid": 559826124303, "crossed": true, "fee": "22.70192", "tid": 300317069107992, "liquidation": {"liquidatedUser": "0x6e5cdf7be2883c31a7657350ddf997cbfb1addff", "markPx": "83908.0", "method": "market"}, "feeToken": "USDC", "twapId": null}
+   trade: {"coin": "BTC", "side": "B", "px": "83920.0", "sz": "0.1718", "time": 1790664691320, "hash": "0xe6c887e61917c84fe842044572205d0000039fcbb41ae7218a913338d81ba23a", "tid": 521564413571882, "users": ["0xfafbf5af1024b52b2c5d4be7ea292409f2d3a8c9", "0x53069d0367e125510745b6c6af03cd2d428f878a"]}
+   fill : {"coin": "BTC", "px": "83920.0", "sz": "0.1718", "side": "B", "time": 1790664691320, "startPosition": "-0.57904", "dir": "Close Short", "closedPnl": "-178.27686", "hash": "0xe6c887e61917c84fe842044572205d0000039fcbb41ae7218a913338d81ba23a", "oid": 559837253111, "crossed": true, "fee": "5.766982", "tid": 521564413571882, "liquidation": {"liquidatedUser": "0xfafbf5af1024b52b2c5d4be7ea292409f2d3a8c9", "markPx": "83935.0", "method": "market"}, "feeToken": "USDC", "twapId": null}
+   trade: {"coin": "BTC", "side": "B", "px": "83920.0", "sz": "0.00024", "time": 1790664691320, "hash": "0xe6c887e61917c84fe842044572205d0000039fcbb41ae7218a913338d81ba23a", "tid": 635781196949952, "users": ["0xfafbf5af1024b52b2c5d4be7ea292409f2d3a8c9", "0xe4baa9cd51176265ef709a81307f9971030009e6"]}
+   fill : {"coin": "BTC", "px": "83920.0", "sz": "0.00024", "side": "B", "time": 1790664691320, "startPosition": "-0.40724", "dir": "Close Short", "closedPnl": "-0.249048", "hash": "0xe6c887e61917c84fe842044572205d0000039fcbb41ae7218a913338d81ba23a", "oid": 559837253111, "crossed": true, "fee": "0.008056", "tid": 635781196949952, "liquidation": {"liquidatedUser": "0xfafbf5af1024b52b2c5d4be7ea292409f2d3a8c9", "markPx": "83935.0", "method": "market"}, "feeToken": "USDC", "twapId": null}
+   trade: {"coin": "BTC", "side": "B", "px": "83920.0", "sz": "0.0019", "time": 1790664691320, "hash": "0xe6c887e61917c84fe842044572205d0000039fcbb41ae7218a913338d81ba23a", "tid": 733422075704961, "users": ["0xfafbf5af1024b52b2c5d4be7ea292409f2d3a8c9", "0xce7164b7ba9bc64b5a8624c90def60accfdfb1b6"]}
+   fill : {"coin": "BTC", "px": "83920.0", "sz": "0.0019", "side": "B", "time": 1790664691320, "startPosition": "-0.407", "dir": "Close Short", "closedPnl": "-1.97163", "hash": "0xe6c887e61917c84fe842044572205d0000039fcbb41ae7218a913338d81ba23a", "oid": 559837253111, "crossed": true, "fee": "0.063779", "tid": 733422075704961, "liquidation": {"liquidatedUser": "0xfafbf5af1024b52b2c5d4be7ea292409f2d3a8c9", "markPx": "83935.0", "method": "market"}, "feeToken": "USDC", "twapId": null}
+   trade: {"coin": "BTC", "side": "B", "px": "83922.0", "sz": "0.001", "time": 1790664691320, "hash": "0xe6c887e61917c84fe842044572205d0000039fcbb41ae7218a913338d81ba23a", "tid": 317961901928652, "users": ["0xfafbf5af1024b52b2c5d4be7ea292409f2d3a8c9", "0x4e3cd5223de585e3ac7e521ce0a7539eb0b7d33a"]}
+   fill : {"coin": "BTC", "px": "83922.0", "sz": "0.001", "side": "B", "time": 1790664691320, "startPosition": "-0.4051", "dir": "Close Short", "closedPnl": "-1.0397", "hash": "0xe6c887e61917c84fe842044572205d0000039fcbb41ae7218a913338d81ba23a", "oid": 559837253111, "crossed": true, "fee": "0.033568", "tid": 317961901928652, "liquidation": {"liquidatedUser": "0xfafbf5af1024b52b2c5d4be7ea292409f2d3a8c9", "markPx": "83935.0", "method": "market"}, "feeToken": "USDC", "twapId": null}
+
+### 4) python runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_podsumowanie.py <tymcz.>/liq_btc_eth_sol.jsonl <tymcz.>/trades45.jsonl 1790662440000 1790665080000
+droga 1 (userFillsByTime), okno 44 min:
+  BTC: wypelnien=109 zlecen(user,oid)=78 zlikwidowanych adresow=78 dir={'Close Short': 109} side={'B': 109} metoda={'market': 109} nominal~335,516 USD
+  ETH: wypelnien=17 zlecen(user,oid)=13 zlikwidowanych adresow=13 dir={'Close Short': 17} side={'B': 17} metoda={'market': 17} nominal~12,646 USD
+  SOL: wypelnien=0 zlecen(user,oid)=0 zlikwidowanych adresow=0 dir={} side={} metoda={} nominal~0 USD
+  razem zlecen=91 (2.07/min)
+droga 2 (publiczne trades, taker = zlikwidowany, ten sam czas i hash): {'BTC': 109, 'ETH': 17} razem=126
+
+### 5) python runs/2026-09-29_lh0-kolektor-hyperliquid/porownanie_lk0_lb0.py 1790662440000 1790665080000 BTC,ETH,SOL
+okno T w [1790662440000, 1790665080000) ms = 44.0 min (tylko odczyt ~/likwidacje, ~/likwidacje_bybit)
+
+LK0 Binance (probka <= 1/s/symbol): zdarzen razem=845 (19.2/min), monet=145
+  BTC: 29 (zlikwidowane longi 0 / shorty 29); symbole {'BTCUSDT': 26, 'BTCUSDC': 3}
+  ETH: 61 (zlikwidowane longi 0 / shorty 61); symbole {'ETHUSDT': 54, 'ETHUSDC': 7}
+  SOL: 13 (zlikwidowane longi 1 / shorty 12); symbole {'SOLUSDT': 13}
+  wszystkie monety: longi 223 / shorty 622
+
+LB0 Bybit (pelne): zdarzen razem=195 (4.4/min), monet=51
+  BTC: 10 (zlikwidowane longi 0 / shorty 10); symbole {'BTCUSDT': 10}
+  ETH: 21 (zlikwidowane longi 0 / shorty 21); symbole {'ETHUSDT': 21}
+  SOL: 4 (zlikwidowane longi 0 / shorty 4); symbole {'SOLUSDT': 4}
+  wszystkie monety: longi 62 / shorty 133
+
+### 6) python runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_skala.py <tymcz.>/trades45.jsonl 1790662440000 1790665080000
+okno 44 min: transakcji=110742 (2517/min)
+unikalnych adresow: wszystkich stron=7532 takerow=6275
+unikalnych takerow na minute: mediana=476 min=366 max=823
+surowe trades (JSON bez spacji): 30.3 MB w oknie -> 992 MB/dobe
+
+### 7) python runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_budzet.py --trades <tymcz.>/trades45.jsonl --sample 400   (~07:55 UTC)
+0c metaAndAssetCtxs: surowo bajtow/zrzut=[72328, 72310, 72203] gzip jeden=13555 gzip trzy razem=40108
+0c MB/dobe (1440 zrzutow): surowo=104.1 gzip(ostroznie: jak jeden zrzut)=19.5 gzip(srednia z 3)=19.3
+0b unikalnych adresow stron transakcji w nasluchu: 7832 (okno 177.2 min)
+0b proba=400 (bledy 0): z pozycjami=323 z pozycjami > 100 tys. USD=36 udzial=0.090
+0b szacunek adresow > 100 tys. USD wsrod 7832 adresow z nasluchu: ~705
+0b srednia liczba pozycji na adres z pozycjami: 6.9
+
+### 8) df -h $HOME   (2026-09-29T07:57:43Z)
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p2  1.8T  310G  1.4T  18% /
