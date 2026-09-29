@@ -2,7 +2,7 @@
 id: 017
 tytul: Cena likwidacji — płaski próg 1/dźwignia − 1 % wobec progów depozytu Binance i ceny mark, 0 wariantów
 typ: przeglad
-status: w_toku
+status: zrobione
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „tak wrzuć na tablicę z zadaniami” (po przeglądzie bibliotek)"
 utworzono: 2026-09-29
@@ -59,4 +59,25 @@ liczbę likwidacji, szczególnie na altach bez stopa. Źródło: przegląd bibli
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **Zrobione 2026-09-29.** Runda LP1: `runs/2026-09-29_lp1-likwidacja-progi-binance/` (README, `raw_output.txt`,
+  `progi_per_moneta.csv`, `przekroczenia.csv`, migawka progów `.json.gz`, `hashe.txt`). Kod: `backtest/liq_binance.py`,
+  `data/fetch_mark_1d.py`, `backtest/run_lp1_likwidacja_progi.py` (zamrożony), testy `tests/test_liq_binance.py`.
+  Wniosek 111 w `runs/INDEX.md`, wiersz 59 w `runs/odczyty_historii.csv` (opis z wynikiem, nie odczyt programu,
+  0 wariantów), zdanie w `STATUS.md`. Gałąź `zadanie-017-likwidacja-progi-binance` (`fe2a98d`, `eea3049`, `924ea7d`,
+  `340a4ae`), scalona do master (`54a6ca3`).
+- **Wynik:** przy 10 tys. USDT na monetę i oknie 7 dni płaski próg z ceny ostatniej daje prawie tyle likwidacji co progi
+  Binance z ceny mark: 2× 1 530 wobec 1 552 (+1,4 %, 95 % [−2,4; +6,5]), 3× 4 578 wobec 4 482 (−2,1 %, [−4,6; +0,5]).
+  Próg decyzji ±10 % → **Poprawki MMR nie proponować**. Błędy się znoszą: longi zawyżone o 5–9 %, shorty zaniżone
+  o 3–4 %. Przy 100 tys. na monetę różnica +14…+17 % (post hoc, dzisiejsze progi). Bramka 16a: Caveats (migawka
+  z 2026-06-18, nominał stały od wejścia, 8 monet bez progów, ucięte okna); 16c: Approve.
+- **Dowody (sprawdził orkiestrator):** przebieg odtworzony — oba CSV bajt w bajt, stdout różni się tylko ścieżką zapisu
+  (4 linie); sha256 progów `5db817c1…608353` zgodny po rozpakowaniu; liczby z okna 7 dni przeliczone awk z surowych cen
+  w `przekroczenia.csv` (te same 1 530 / 1 552 / 4 578 / 4 482); wzór sprawdzony ręcznie (BTC, MMR 0,40 %:
+  49,80 / 49,40 / 33,07 / 32,80; ADA 10 tys., MMR 1 %, cum 50 → 50,00 dla 2× long). Pełny pytest na master po scaleniu:
+  1 928 passed, 2 skipped, kod 0. Dane `data/raw/mark_1d` i `data/raw/binance_tiers` skopiowane z worktree do
+  `data/raw/` (poza gitem), żeby komenda z README działała z katalogu repo.
+- **Zostało:** dwie luki danych z raportu wykonawcy, do decyzji użytkownika: (1) 4 pliki w `data/raw/universe_full`
+  mają nazwy w kodowaniu cp866 (symbol 币安人生 wypada z kroku 2 na 1 miesiąc) — `naprawa`; (2) przy wstrzymaniu lub
+  wycofaniu kontraktu cena ostatnia zamarza, a dziennik nie rozlicza wtedy likwidacji ani ceny rozliczenia (FTT 2022-12,
+  LUNA 2022-05, ALPACA 2025-05) — typ `dziennik`, zmiana tylko jako Poprawka. Temat MMR wraca przy pozycjach rzędu
+  100 tys. USDT na monetę.
