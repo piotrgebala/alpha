@@ -2,7 +2,7 @@
 id: 007
 tytul: Mapa strategii nierozstrzygniętych i niesprawdzonych — filtr (a)–(f) i rachunek mocy bez danych
 typ: dokumentacja
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „zaplanuj zadania na strategie nierozstrzygnięte i niesprawdzone”"
 utworzono: 2026-09-29
