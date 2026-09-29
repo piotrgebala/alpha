@@ -49,7 +49,7 @@ class Settlements:
     day: np.ndarray  # pozycja dnia floor(s) w indeksie dziennym (−1 = poza indeksem)
     frac: np.ndarray  # część doby od 00:00 (0 dla rozliczenia o północy)
     rate: np.ndarray  # stawka (NaN zostaje NaN — decyzja o zerze należy do wywołującego)
-    ts: np.ndarray  # znacznik czasu zaokrąglony do minuty (datetime64[ns, UTC] jako int64)
+    ts: np.ndarray  # znacznik czasu UTC zaokrąglony do minuty, nanosekundy od 1970 (int64)
 
     @property
     def midnight(self) -> np.ndarray:
@@ -76,7 +76,10 @@ def build_settlements(
                     "day": pos,
                     "frac": frac.to_numpy(dtype=float),
                     "rate": df["funding_rate"].to_numpy(dtype=float),
-                    "ts": ts.astype("int64").to_numpy(),
+                    "ts": ts.dt.tz_convert(None)
+                    .to_numpy()
+                    .astype("datetime64[ns]")
+                    .astype("int64"),
                 }
             )
         )
@@ -298,6 +301,94 @@ def xs_positions(
             ws = ws * (1.0 + r)
             ws = ws / ws.sum() * capital_per_leg if ws.sum() > 0 else ws
     return Positions(W, W_eng, R, alive_end, first, gross, in_phase)
+
+
+# ----------------------------------------------------------------------------- druga droga (dolarowo)
+
+
+def dollar_way_b1(
+    holdings: list[tuple[pd.Timestamp, pd.Timestamp, pd.Series]],
+    returns: pd.DataFrame,
+    settle: dict[str, tuple[np.ndarray, np.ndarray]],
+    ratio_fn,
+    capital: pd.Series | None = None,
+    low_rel: pd.DataFrame | None = None,
+    high_rel: pd.DataFrame | None = None,
+    lev: float = 2.0,
+    mmr: float = 0.01,
+) -> pd.Series:
+    """
+    DRUGA DROGA liczby głównej (niezależna od tablic `Positions`): opłata w „dolarach” = ilość × cena(s) × stawka,
+    rozliczenie po rozliczeniu, konwencja (wejście, wyjście], podzielona przez kapitał fazy z początku dnia,
+    do którego trafia opłata.
+
+    - `holdings` = [(pierwszy dzień, ostatni dzień, wagi ze znakiem w chwili formowania — ułamek kapitału)];
+    - `returns` = dzienne zwroty tak, jak widzi je silnik (NaN → 0 = pozycja stoi w miejscu);
+    - `settle[sym]` = (znaczniki czasu datetime64[ns] zaokrąglone do minuty, rosnąco; stawki);
+    - `ratio_fn(sym, ts: DatetimeIndex) -> np.ndarray` = cena(s) / cena(00:00 tego dnia) poza północą;
+    - `capital` = kapitał fazy na początek dnia (TS1: iloczyn 1 + gross silnika); None → kapitał stałej
+      ilości liczony w okresie od 1 (X1: 1 + Σ w·(wzrost − 1));
+    - `low_rel` / `high_rel` (TS1): minimum / maksimum dnia ÷ zamknięcie poprzedniego dnia → likwidacja
+      izolowana jak w silniku (próg 1/lev − mmr od ceny wejścia); dzień likwidacji: rozliczenia w ciągu
+      dnia płacone, północ kończąca dzień już nie.
+    Zwraca szereg dziennych opłat (indeks = dni z `returns`).
+    """
+    days = returns.index
+    out = np.zeros(len(days))
+    one_day = pd.Timedelta(days=1)
+    thr = 1.0 / lev - mmr
+    for entry, last, w in holdings:
+        w = w[w != 0]
+        if w.empty:
+            continue
+        span = days[(days >= entry) & (days <= last)]
+        r = returns.loc[span, w.index].fillna(0.0)
+        g_end = (1.0 + r).cumprod()  # wzrost ceny od wejścia do końca dnia
+        g_start = g_end.shift(1).fillna(1.0)  # do początku dnia
+        if capital is not None:
+            cap = capital.loc[span]
+            cap_entry = float(cap.iloc[0])
+        else:
+            cap = 1.0 + (g_start * w).sum(axis=1) - float(w.sum())
+            cap_entry = 1.0
+        liq_day = pd.Series(pd.NaT, index=w.index, dtype="datetime64[ns, UTC]")
+        if low_rel is not None:
+            lr = low_rel.loc[span, w.index].fillna(1.0)
+            hr = high_rel.loc[span, w.index].fillna(1.0)
+            hit = ((w > 0) & (1.0 - g_start * lr >= thr)) | ((w < 0) & (g_start * hr - 1.0 >= thr))
+            for sym in w.index[hit.any(axis=0).to_numpy()]:
+                liq_day[sym] = hit.index[hit[sym].to_numpy()][0]
+        for sym, wi in w.items():
+            if sym not in settle:
+                continue
+            ts, rate = settle[sym]
+            lo_t = np.datetime64(entry.tz_convert(None), "ns")
+            if pd.isna(liq_day[sym]):  # (wejście, wyjście]: północ wyjścia wlicza się
+                hi_t = np.datetime64((last + one_day).tz_convert(None), "ns")
+                sel = (ts > lo_t) & (ts <= hi_t)
+            else:  # likwidacja: do końca dnia likwidacji, bez północy kończącej ten dzień
+                hi_t = np.datetime64((liq_day[sym] + one_day).tz_convert(None), "ns")
+                sel = (ts > lo_t) & (ts < hi_t)
+            if not sel.any():
+                continue
+            s = pd.DatetimeIndex(ts[sel]).tz_localize("UTC")
+            f = np.nan_to_num(rate[sel], nan=0.0)
+            day = s.floor("D")
+            mid = np.asarray(s == day)
+            attr = day.where(~mid, day - one_day)  # północ → dzień poprzedni (stara pozycja)
+            notional = np.empty(len(s))
+            # północ: nominał z końca poprzedniego dnia = cena zamknięcia
+            notional[mid] = wi * cap_entry * g_end[sym].reindex(attr[mid]).to_numpy()
+            if (~mid).any():
+                notional[~mid] = (
+                    wi
+                    * cap_entry
+                    * g_start[sym].reindex(day[~mid]).to_numpy()
+                    * ratio_fn(sym, s[~mid])
+                )
+            denom = cap.reindex(attr).to_numpy()
+            np.add.at(out, days.get_indexer(attr), -notional * f / denom)
+    return pd.Series(out, index=days)
 
 
 # ----------------------------------------------------------------------------- statystyka
