@@ -432,13 +432,26 @@ _SLOWA_POSW = re.compile(
 )
 
 
+def _kodowalna(sciezka: str) -> str:
+    """Ścieżka, którą system plików umie zakodować. Znak spoza kodowania — np. samotny surogat
+    `\\ud800` z JSON-a wejścia (Linux: UnicodeEncodeError w `expanduser` i `realpath`) — zamienia
+    się na „?”: takiej nazwy i tak nie ma na dysku, a resztę ścieżki ocenia się jak każdą inną.
+    Bajt zerowy zostaje (dalej ValueError → wiersz z `blad_analizy`)."""
+    try:
+        os.fsencode(sciezka)
+        return sciezka
+    except UnicodeEncodeError:
+        kodowanie = sys.getfilesystemencoding()
+        return sciezka.encode(kodowanie, "replace").decode(kodowanie)
+
+
 def rozwin(sciezka: str, cwd: str) -> str:
     """Ścieżka bezwzględna z rozwiniętym `~`/`$HOME` i rozwiązanymi dowiązaniami."""
     dom = os.path.expanduser("~")
-    s = sciezka.replace("${HOME}", dom).replace("$HOME", dom)
+    s = _kodowalna(sciezka).replace("${HOME}", dom).replace("$HOME", dom)
     s = os.path.expanduser(s)
     if not os.path.isabs(s):
-        s = os.path.join(cwd or os.getcwd(), s)
+        s = os.path.join(_kodowalna(cwd or os.getcwd()), s)
     return os.path.realpath(s)
 
 
@@ -464,7 +477,7 @@ def _pod(sciezka: str, katalog: str) -> bool:
 def katalogi_dozwolone(cwd: str) -> list[str]:
     """Korzeń repozytorium z `cwd` (szukanie `.git` w górę); dla worktree dodatkowo `runs/`
     i `data/` głównego checkoutu (plik `.git` worktree wskazuje `<główne>/.git/worktrees/<n>`)."""
-    start = os.path.realpath(cwd or os.getcwd())
+    start = os.path.realpath(_kodowalna(cwd or os.getcwd()))
     korzen, sciezka = start, start
     while True:
         if os.path.exists(os.path.join(sciezka, ".git")):
