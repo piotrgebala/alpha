@@ -239,6 +239,10 @@ Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opi
 8. **Windows: linia statusu strażnika kontekstu** — sprawdzić, czy się pokazuje
    ([docs/rag/12](docs/rag/12_zuzycie_tokenow.md), „Wdrożenie”).
 9. **Do decyzji przy następnej wersji skilla:** odchudzenie SKILL.md skilla `clas5-quant`.
+10. **Wgrać na claude.ai nową wersję skilla `quant-strategy-catalog` (2026-09-29)** — paczka i jej sha256
+    w [zadaniu 022](zadania/022-skill-katalog-lowvol-d1-tl1.md): nowa rodzina B5 (niska zmienność/BAB), TL1
+    przeniesiony z D1 do nowej E3 (open interest, nie funding), statusy po wnioskach 103–110 i mapie 007;
+    treść zmiany: [docs/skille/quant-strategy-catalog_2026-09-29.diff](docs/skille/quant-strategy-catalog_2026-09-29.diff).
 
 ---
 

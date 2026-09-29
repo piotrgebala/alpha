@@ -1,0 +1,670 @@
+# Skill konta `quant-strategy-catalog`: wersja 2026-09-25 -> 2026-09-29 (zadanie 022,
+# gałąź zadanie-022-skill-katalog-lowvol-d1-tl1). Repo nie trzyma kopii skilli (CLAUDE.md: skille projektu
+# mieszkają w chmurze konta) — ten plik jest śladem treści zmiany w repo.
+# a/ = stara wersja: pamięć podręczna ~/.claude/skills/synced/<konto>/quant-strategy-catalog (plik z 2026-09-25).
+# b/ = nowa wersja: zawartość paczki quant-strategy-catalog.skill do wgrania przez użytkownika na claude.ai.
+# sha256 paczki: 11daffd2b77a161fe395793d5913febe04860963910e07daee4c6da20ff8517b
+# sha256 plików nowej wersji (sprawdzenie po wgraniu i synchronizacji: sha256sum w katalogu synced):
+#   bbed5a95dfb69084dd673167d6b5380c3e74016db962ccd32907626190d5dda8  SKILL.md
+#   c8ad4dcf9c975a94e1628d584e117efaac4858969c43764ba2e54bce7a37d32a  references/crypto-perp-specifics.md
+#   5d67c8e146702055b95febf1a7321510c86dd6901bccf1ebf395a7aa6f37bb7b  references/families.md
+#   061309c71f65e13a3255a915fd9b7f199d68cd37b2602ad7aa242334326bdaec  scripts/hypothesis_card.py
+# Zastosowanie: w katalogu, który zawiera quant-strategy-catalog/ w starej wersji: patch -p1 < ten_plik
+
+--- a/quant-strategy-catalog/SKILL.md
++++ b/quant-strategy-catalog/SKILL.md
+@@ -1,12 +1,14 @@
+ ---
+ name: quant-strategy-catalog
+-description: Katalog rodzin strategii ilościowych (QuantConnect Strategy Library / Strategies, Quantpedia, literatura krypto) uporządkowany po ZBIORZE INFORMACYJNYM, formule (przekrojowa vs jednoaktywowa) i targecie, ze statusem każdej rodziny wobec wyników projektu CLAS-5 (repo alpha, stan 2026-09-25, wnioski 1–102). Użyj ZAWSZE, gdy użytkownik chce nowej strategii lub hipotezy, pyta "co jeszcze można przetestować", "co dalej", "czy warto sprawdzić X" (momentum, carry, funding, likwidacje, on-chain, sentyment, Fear & Greed, premie między giełdami, pary, zmienność, kalendarz, listingi, halving), chce ocenić pomysł tradingowy, przenieść strategię z equities/FX na krypto perpetuals, dołożyć nowe źródło danych albo zamienić luźny pomysł w pre-rejestrowalną hipotezę (mechanizm → dane → formuła → target → moc). Zawiera workflow "od rodziny do karty hipotezy", generator karty i listę błędów, które projekt już popełnił. Nie zawiera procedury rundy (skill clas5-runda) ani metodologii pomiaru (skill clas5-quant) — odsyła do nich.
++description: Katalog rodzin strategii ilościowych (QuantConnect Strategy Library / Strategies, Quantpedia, literatura krypto) uporządkowany po ZBIORZE INFORMACYJNYM, formule (przekrojowa vs jednoaktywowa) i targecie, ze statusem każdej rodziny wobec wyników projektu CLAS-5 (repo alpha, stan 2026-09-29, wnioski 1–110). Użyj ZAWSZE, gdy użytkownik chce nowej strategii lub hipotezy, pyta "co jeszcze można przetestować", "co dalej", "czy warto sprawdzić X" (momentum, carry, funding, likwidacje, on-chain, sentyment, Fear & Greed, premie między giełdami, pary, zmienność, niska zmienność/BAB, kalendarz, listingi, halving), chce ocenić pomysł tradingowy, przenieść strategię z equities/FX na krypto perpetuals, dołożyć nowe źródło danych albo zamienić luźny pomysł w pre-rejestrowalną hipotezę (mechanizm → dane → formuła → target → moc). Zawiera workflow "od rodziny do karty hipotezy", generator karty i listę błędów projektu. Nie zawiera procedury rundy (clas5-runda) ani metodologii pomiaru (clas5-quant) — odsyła do nich.
+ ---
+ 
+ # Katalog rodzin strategii — od biblioteki do hipotezy
+ 
+-Wersja: **2026-09-25** (po wnioskach 1–102: Faza 0, serie A/W/N/M/F/H2, C/D, R, X/X2, TS/TR/TP/TX, TL/TF,
+-NL, O/L/V/G, SW, Y1/Y2, WF, CP/CP2/KP1, SZ1/KR1/KR2/KO1/PR1, RU1–RU4, AU1–AU4, P3/P4, HC1, LK0).
++Wersja: **2026-09-29** (po wnioskach 1–110: Faza 0, serie A/W/N/M/F/H2, C/D, R, X/X2, TS/TR/TP/TX, TL/TF,
++NL, O/L/V/G, SW, Y1/Y2, WF, CP/CP2/KP1, SZ1/KR1/KR2/KO1/PR1, RU1–RU4, AU1–AU4, P3/P4, HC1, LK0,
++MX1/MX2, TP1, LB0, ETAP 6, OS1, PT1, LH0; oraz mapa hipotez 007 — `docs/mapa_hipotez_2026-10.md`,
++rachunek mocy 10 rodzin na papierze, 0 odczytów).
+ 
+ ## Po co ten katalog istnieje
+ 
+@@ -15,17 +17,22 @@
+ target był kierunkowy, horyzont intraday. Od tego czasu projekt zmierzył ~40 odczytów na historii
+ 2021–2026 i ma dziś: **dwa ślady bez dowodu** (trend tygodniowy na koszyku, premia Coinbase → BTC)
+ w dzienniku papierowym od 2026-09-24, jeden ślad słabszy (momentum przekrojowe, X1) osobno w dzienniku,
+-oraz długą listę rodzin zmierzonych i odrzuconych. Biblioteki strategii są cenne nie jako kod, ale jako
++oraz długą listę rodzin zmierzonych i odrzuconych albo zamkniętych na papierze, bez odczytu (mapa 007).
++Biblioteki strategii są cenne nie jako kod, ale jako
+ **mapa rodzin, które mierzą coś innego** — inny zbiór informacyjny, inny target, inna formuła.
+ Ten skill porządkuje je tak, żeby następna hipoteza nie była kolejnym podejściem do tej samej ściany —
+ a przede wszystkim, żeby nie był to kolejny odczyt na historii, która już niczego nie rozstrzygnie.
+ 
+-**Stan gry (2026-09-25):** historia 2021–2026 jest wyczerpana jako sędzia — po ~40 odczytach najlepszy
+-pusty pomysł ma t ≥ 2,09 w 40 % przypadków (deflated Sharpe CP1 = 0,52; 96). O kapitale decyduje
+-drabina dowodów (ADR-09): mechanizm poza naszymi danymi → spójność → dziennik ≥ 3 miesiące → ≤ 5 %
+-kapitału jako depozyt → skalowanie. Trzy dźwignie, które zostały: **czas** (dziennik; odczyt
+-~2026-12-25), **niezależne nogi** (korelacja ≤ ~0,35 do obecnych; 95, 101) i **nowe dane per moneta**
+-(likwidacje zbierane od 2026-09-25; sentyment/on-chain płatne dopiero po bramie pokrycia ≥ 70 %).
++**Stan gry (2026-09-29):** historia 2021–2026 jest wyczerpana jako sędzia — po ~40 odczytach najlepszy
++pusty pomysł ma t ≥ 2,09 w 40 % przypadków (deflated Sharpe CP1 = 0,52; 96), a rejestr odczytów
++(N = 40, metoda AU4) każe 41. odczytowi mieć t ≈ 3,84 — roczny SR ~1,6 na 5,5 roku (107). Mapa 007
++policzyła moc 10 rodzin bez odczytu: żadna nie jest dziś MIERZALNA — sześć NIEMIERZALNYCH (zamknięte
++bez odczytu), cztery bez danych. O kapitale decyduje drabina dowodów (ADR-09): mechanizm poza naszymi
++danymi → spójność → dziennik ≥ 3 miesiące → ≤ 5 % kapitału jako depozyt → skalowanie. Trzy dźwignie,
++które zostały: **czas** (dziennik; pierwszy odczyt 2026-12-24 z progami z góry; 107), **niezależne
++nogi** (korelacja ≤ ~0,35 do obecnych; 95, 101) i **nowe dane** (likwidacje: Binance próbka od
++2026-09-25, Bybit pełne od 2026-09-27 — 102, 106; Hyperliquid: sonda historii, pełne likwidacje =
++decyzja użytkownika — 110; sentyment/on-chain płatne dopiero po bramie pokrycia ≥ 70 %).
+ 
+ ## Zasada porządkująca: zbiór informacyjny × formuła × target
+ 
+@@ -35,11 +42,11 @@
+ 
+ | Pole | Wartości | Dlaczego to pole |
+ |---|---|---|
+-| **Zbiór informacyjny** | OHLCV własne · OHLCV innych aktywów · funding/basis · pozycjonowanie/OI/likwidacje · on-chain · opcje/vol · zdarzenia/kalendarz · sentyment · ceny tej samej monety na innych giełdach | wniosek 11: to on decyduje, czy `p` ma szansę ruszyć |
++| **Zbiór informacyjny** | OHLCV własne · OHLCV innych aktywów · funding/basis · pozycjonowanie/OI/likwidacje · on-chain · opcje/vol · zdarzenia/kalendarz · sentyment · ceny tej samej monety na innych giełdach · rynki tradycyjne (dane bazowe) | wniosek 11: to on decyduje, czy `p` ma szansę ruszyć |
+ | **Formuła** | jednoaktywowa (time-series) · przekrojowa (ranking uniwersum) · parowa/spread | zmienia PRZYRZĄD pomiaru (`clas5-quant` methodology §9; AU2) |
+ | **Target** | kierunek · carry/przepływ · spread/kointegracja · premia rebalansowa · zmienność | premia rebalansowa i carry ZMIERZONE (57, 54/61); inny target ≠ automatycznie inny wynik |
+ | **Horyzont** | intraday · dzienny · tygodniowy · miesięczny | godzinowe konsekwentnie przeczą, tygodniowe dają ślady (69, 70); horyzont zmienia próg kosztowy, breadth i rozdzielczość |
+-| **Status CLAS-5** | ZMIERZONE-odrzucone · ŚLAD-bez-dowodu · NIETKNIĘTE · WYKLUCZONE-danymi · ZBIERANE-dane · WYKLUCZONE-strukturalnie | nie testuj ponownie tego, co zmierzone (zasada 14); ŚLAD rozstrzyga tylko dziennik |
++| **Status CLAS-5** | ZMIERZONE-odrzucone · ŚLAD-bez-dowodu · NIETKNIĘTE · NIEMIERZALNE-bez-odczytu · WYKLUCZONE-danymi · ZBIERANE-dane · WYKLUCZONE-strukturalnie | nie testuj ponownie tego, co zmierzone (zasada 14); ŚLAD rozstrzyga tylko dziennik; NIEMIERZALNE-bez-odczytu wraca tylko z nowymi danymi albo mechanizmem (mapa 007) |
+ 
+ ## Workflow: od rodziny do karty hipotezy
+ 
+@@ -49,7 +56,9 @@
+ **Status** w `references/families.md`. Rodzina ZMIERZONA-odrzucona wraca do gry tylko przy jawnie
+ innym zbiorze informacyjnym, formule LUB targecie — i z uzasadnieniem, dlaczego to nie jest powtórka.
+ ŚLAD-bez-dowodu NIE wraca do gry przez kolejny odczyt na tej samej historii (zakazane w licznikach
+-serii) — tylko przez dziennik. Wniosek 12 wymienia, czego Faza 0 NIE wykazała; wniosek 87 — co było
++serii) — tylko przez dziennik. NIEMIERZALNE-bez-odczytu (mapa 007) wraca tylko z nowym źródłem
++danych spoza historii 2021–2026 albo z nowym mechanizmem — jako nowe zadanie, nie odczyt „na próbę”.
++Wniosek 12 wymienia, czego Faza 0 NIE wykazała; wniosek 87 — co było
+ powiedziane za mocno (cechy spoza wykresu jako 5. cecha modelu 4h: „model nie zarabia, cecha
+ niezmierzona").
+ 
+@@ -65,14 +74,17 @@
+ ### 3. Brama danych — historia, point-in-time, koszt, kontrola pozytywna
+ 
+ - Ile lat historii ma zbiór informacyjny NA KRYPTO? Sprawdź REST **i** archiwum plików **i** dumpy —
+-  P1 skreśliło pozycjonowanie po 30 dniach REST, archiwum miało 6 lat (59). Likwidacje: tylko na żywo,
+-  zbierane od 2026-09-25 (102). On-chain per moneta: darmowe pokrywa 4–46 % koszyka (98).
++  P1 skreśliło pozycjonowanie po 30 dniach REST, archiwum miało 6 lat (59). Likwidacje: tylko na żywo —
++  Binance próbka od 2026-09-25, Bybit pełne od 2026-09-27, Hyperliquid bez strumienia (102, 106, 110).
++  Perpetuale TradFi mają ≤ 10 mies. historii — mierzyć na danych rynku bazowego (109). On-chain per
++  moneta: darmowe pokrywa 4–46 % koszyka (98).
+ - Czy uniwersum jest point-in-time (z delistowanymi) i KOMPLETNE? Obcięte o pół alfabetu przeszło
+   przez ~10 rund (82).
+ - Czy dane są natywne per interwał (Z9)? Czy sygnał z zewnątrz nie ma przecieku czasowego (test
+   opóźnienia sygnału o 1–2 dni: łagodny spadek vs zapaść; 72)?
+ - Kontrola pozytywna źródła: przy nowym strumieniu/API najpierw kanał, który na pewno nadaje —
+-  dokumentowany adres Binance milczał przy poprawnym handshake'u (102).
++  dokumentowany adres Binance milczał przy poprawnym handshake'u (102);
++  Bybit nadał 58 zdarzeń w 180 s, te same główne monety i kierunek co próbka Binance (106).
+ - Ile kosztuje dostęp — i czy koszt jest uzasadniony PRZED rachunkiem mocy (płatne on-chain: brama
+   pokrycia ≥ 70 % przed cennikiem; decyzja użytkownika 2026-09-25: nie).
+ 
+@@ -95,7 +107,11 @@
+ MDE 0,022 (top-50) — sprawdź, czy próg IC z kosztów jest od tego odróżnialny (92); szum nóg z sygnału
+ ×1,3–1,55 (65, 68). Przepływ: N_eff z kanonicznej funkcji autokorelacji, epizody stawki (56, 63).
+ Różnica dwóch strategii: szum z symulacji różnic, nie z proxy (58). **Liczba dotychczasowych odczytów
+-programu wchodzi do rachunku (DSR; 96).** Werdykt NIEMIERZALNA = nie startuje. To nie jest opcjonalne.
++programu wchodzi do rachunku (DSR; 96):** `py -m backtest.dsr --k <warianty>` drukuje próg t dla bieżącego
++N z `runs/odczyty_historii.csv` (41. odczyt → t 3,84, roczny SR ~1,6 na 5,5 roku); wynik poniżej progu
++to najwyżej „kandydat do dziennika” (107). Nowe dane spoza historii = własny licznik, próg t 1,96
++(mapa 007 §1). Werdykt NIEMIERZALNA = nie startuje, a rodzina, która przegrywa na papierze nawet przy
++hojnych założeniach, zamyka się bez odczytu (mapa 007). To nie jest opcjonalne.
+ 
+ ### 6. Karta hipotezy
+ 
+@@ -110,7 +126,8 @@
+ 
+ 1. **Przenieść strategię z equities na krypto bez sprawdzenia, czy mechanizm istnieje.**
+    Earnings drift nie ma odpowiednika; index rebalance ma (listingi — zmierzone NL1: short nowych
+-   monet nie zarabia, 71); quality factor wymaga on-chain, a on-chain nie pokrywa koszyka (98).
++   monet nie zarabia, 71); quality factor wymaga on-chain, a on-chain nie pokrywa koszyka (98);
++   BAB żyje z ograniczenia dźwigni, a na perpetualach dźwignia jest tania (B5; `docs/rag/11` §5).
+ 2. **Wziąć "OOS 3M Sharpe" z tablicy za dowód.** 3 miesiące OOS, tablica ocalałych. To prior,
+    który obniża próg zainteresowania, nie zastępuje pomiaru.
+ 3. **Uznać nową nazwę za nową hipotezę.** Sprawdź pięć pól. Jeśli wszystkie pokrywają się
+@@ -129,12 +146,14 @@
+ 
+ ## Pliki
+ 
+-- `references/families.md` — katalog rodzin (A–J + overlaye), każda z pięcioma polami, mechanizmem,
+-  statusem z numerami wniosków, pułapkami; na końcu ranking priorytetów po PR1/LK0.
++- `references/families.md` — katalog rodzin (A–K + overlaye), każda z pięcioma polami, mechanizmem,
++  statusem z numerami wniosków i odnośnikami do mapy 007, pułapkami; na końcu ranking
++  priorytetów po mapie 007.
+ - `references/crypto-perp-specifics.md` — co w perpetualach jest inne niż w equities/FX: funding,
+   basis, likwidacje/pozycjonowanie, koszty (KO1), fragmentacja, breadth (zmierzona), dane w repo,
+-  rozdzielczość przyrządu, osobliwości API Binance.
++  rozdzielczość przyrządu, osobliwości API Binance, Bybit i Hyperliquid, perpetuale TradFi.
+ - `scripts/hypothesis_card.py` — generator karty pre-rejestracji (szkielet markdown).
+ 
+ Metodologia pomiaru: skill `clas5-quant`. Procedura rundy: skill `clas5-runda` (w chmurze konta).
+-Uruchomienie w LEAN: skill `lean-research`. Analiza techniczna: `ta-toolkit` (rodziny zamknięte 7/7).
++Uruchomienie w LEAN: skill `lean-research`. Analiza techniczna: `ta-toolkit` (rodziny zamknięte 7/7;
++MACD + EMA na 1h niemierzalne — 103, 104).
+--- a/quant-strategy-catalog/references/crypto-perp-specifics.md
++++ b/quant-strategy-catalog/references/crypto-perp-specifics.md
+@@ -1,4 +1,4 @@
+-# Perpetuale krypto — co jest inne niż w equities/FX (stan 2026-09-25)
++# Perpetuale krypto — co jest inne niż w equities/FX (stan 2026-09-29)
+ 
+ Biblioteki strategii są pisane głównie pod akcje, ETF-y i FX. Przenosząc rodzinę na perpetuale,
+ sprawdź każdy z poniższych punktów — większość "nie zadziałało na krypto" to nieprzeniesiony
+@@ -11,14 +11,20 @@
+ - **Masa punktowa:** 35,85 % obserwacji funding BTC to dokładnie stawka bazowa 0,0100 % (COIN-M:
+   42,7 % na 0,0001; 15, 60). Percentyle są bezużyteczne — progi absolutne. Autokorelacja lag-1 (8 h)
+   = +0,797 — sygnał trwały, więc "ekstremalny funding" trwa dniami, nie godzinami.
+-- Funding jako **sygnał kierunkowy**: zmierzony w CZTERECH formach i za każdym razem ≈ 0 — cecha 4h
+-  (F1), filtr trendu (TF1, 73), tłok lewara na przekroju (TL1, 75/97), reguła od mediany (SW, 90).
++- Funding jako **sygnał kierunkowy**: zmierzony w TRZECH formach i za każdym razem ≈ 0 — cecha 4h
++  (F1), filtr trendu (TF1, 73), reguła od mediany (SW, 90). TL1 („tłok lewara”, 75/97) NIE był formą
++  fundingu — jego sygnał to zmiana open interest × kierunek ruchu (§3; `families.md` E3).
+   Funding jako **target carry**: działa jako przepływ za dźwignię (C1a +5,4 %/rok kapitału, COIN-M
+   +9,1 %; 54, 61), ale przełączanie po znaku przegrywa z kosztem przełączeń (55); użytkownik odpuścił.
+ - W backteście funding MUSI być w modelu kosztu każdej pozycji trzymanej przez timestamp
+   (w repo: składnik funding w silnikach `ts_momentum`/`xs_momentum`). Rachunek mocy dla przepływu:
+   N_eff z kanonicznej funkcji autokorelacji, nie z lag-1 (zawyża próbę 8×; 63); liczba niezależnych
+   obserwacji = liczba EPIZODÓW stawki (56).
++- **Perpetuale TradFi** (akcje, ETF-y, surowce, waluty; Bybit 257, Binance 206 kontraktów): stopa
++  w fundingu = 0 (Binance `interestRate` = 0 dla 202/206), więc różnica stóp nie płynie automatycznie;
++  najczęstszy odczyt fundingu to 0, ale długie w typowej akcji płacą 2,1 %/rok (Bybit) / 4,5 %
++  (Binance), w popularnych 10–16 %; ten sam instrument ma na obu giełdach prawie ten sam funding
++  (PT1, 109; `families.md` K1).
+ 
+ ## 2. Basis i struktura terminowa
+ 
+@@ -34,11 +40,18 @@
+   taker ratio co 5 min od **2020-09-01** (99,9 % bazy); P1 („30 dni") sprawdziło tylko REST (59, 60).
+   Zanim źródło dostanie status „niemierzalne danymi": sprawdź REST **i** archiwum plików **i** dumpy.
+ - **Likwidacji w archiwum NIE ma** (P3), REST `allForceOrders` zniknął w 2021, płatni dostawcy nie
+-  dokumentują głębokości → jedyne darmowe źródło to strumień na żywo, zbierany od 2026-09-25 (LK0):
++  dokumentują głębokości → darmowe są tylko strumienie na żywo: Binance od 2026-09-25 (LK0) —
+   PRÓBKA ≤ 1 zlecenie/s/symbol (w kaskadach zaniżony wolumen), ~40 zdarzeń/min, dane poza repo
+-  (`$HOME/likwidacje`), odczyt po ≥ 1 roku (102).
++  (`$HOME/likwidacje`) (102); **Bybit `allLiquidation.*` od 2026-09-27 (LB0) — PEŁNE** (dokumentacja
++  + kontrola pozytywna 58 zdarzeń / 180 s, 78/78 subskrypcji; w gęstej serii Binance gubi zdarzenia,
++  ENA 13 wobec 25) — karta E1 liczy z Bybit, Binance to drugi nośnik (106). **Hyperliquid nie ma
++  strumienia likwidacji** (LH0, 110): zlikwidowany jest stroną aktywną transakcji z polem `liquidation`
++  w `userFillsByTime`, ale publiczne `trades` nie ma flagi, a odpytanie każdej strony aktywnej to
++  ~10 400 wagi/min wobec limitu 1 200 na IP (8,6×); pełne źródła (własny węzeł, płatne S3
++  `node_fills_by_block`) = decyzja użytkownika. Odczyt E1 po ≥ 1 roku.
+ - OI jako informacja: zmiana OI 24h jako cecha 4h — NEGATYWNA, ale jedyna cecha spoza wykresu, która
+-  w ogóle poruszała model (66); tłok lewara na przekroju — szum, znak zależny od danych (97).
++  w ogóle poruszała model (66); tłok lewara na przekroju (TL1: Δlog OI 7 dni × znak zwrotu 7 dni —
++  OI, nie funding) — szum, znak zależny od danych (75, 97); `families.md` E3.
+ 
+ ## 4. Koszty — inne dla shorta niż dla longa
+ 
+@@ -59,7 +72,8 @@
+ 
+ - CEX dominuje price discovery, informacja płynie CEX → DEX. Premie między giełdami jako sygnał
+   popytu: Coinbase → BTC tydzień to jedyny odczyt spełniający kryterium (t 2,09), ale DSR 0,52 (72, 96);
+-  premia koreańska — inny sygnał, niemierzalny (91). Premia ETH ≈ premia BTC (0,95): replikacja na
++  premia koreańska — inny sygnał, niemierzalny (91); Hyperliquid vs Binance (HL-P) — brak danych do sondy
++  historii (mapa 007). Premia ETH ≈ premia BTC (0,95): replikacja na
+   inne monety nie daje nowej informacji (80).
+ - Uniwersum: "top-N po obrocie" na jednej giełdzie ma survivorship (delistingi) i fałszywy wolumen
+   na małych parach. Point-in-time z delistowanymi — w repo `data/raw/universe_full` (685 kontraktów);
+@@ -77,7 +91,7 @@
+ - Wniosek 40 („20 monet ≈ 2 niezależne") dotyczy EKSPOZYCJI KIERUNKOWEJ (carry bez hedgu), nie
+   koszyka long/short.
+ 
+-## 7. Dane — horyzonty i natywność (co jest w repo, 2026-09-25)
++## 7. Dane — horyzonty i natywność (co jest w repo, 2026-09-29)
+ 
+ - OHLCV Binance perp: **4h od 2019-09**, 1d natywne, 5m/1h od 2023-07; baza pomiarowa od 2021-01-01
+   (zasada 20). Resample z 5m psuje wolumen (Z9) — dane per interwał natywne.
+@@ -85,8 +99,9 @@
+   funding COIN-M 8h od 2020-08; 24 kontrakty kwartalne 8h; DVOL BTC/ETH 1d od 2021-03-24;
+   CoinMetrics on-chain 1d — pełne dla BTC/ETH, koszyk top-50 pokryty w 4–46 % (98); Fear & Greed 1d;
+   Coinbase BTC-USD 1d; Upbit KRW-BTC + FRED `DEXKOUS`; FRED (stopy, dolar, S&P, VIX) i PAXG
+-  jako złoto; pełny panel OI 185 monet; archiwum listingów point-in-time; likwidacje na żywo od
+-  2026-09-25. Opcje (Deribit) — brak; on-chain per moneta płatne — NIE na razie (decyzja 2026-09-25).
++  jako złoto; pełny panel OI 185 monet; archiwum listingów point-in-time; likwidacje na żywo (poza
++  repo): Binance próbka od 2026-09-25, Bybit pełne od 2026-09-27 (102, 106). Opcje (Deribit) — brak;
++  on-chain per moneta płatne — NIE na razie (decyzja 2026-09-25).
+ - Rachunek mocy z HISTORIĄ zbioru informacyjnego, nie z historią ceny; sonda źródła = REST + archiwum
+   + dumpy (59); przy nowym strumieniu — kontrola pozytywna (strumień, który na pewno nadaje; 102).
+ 
+@@ -101,11 +116,14 @@
+   tygodniowym liczyć jako średnią 7 faz startu — pojedyncza faza to jeden z siedmiu losów (89).
+ - **Liczba odczytów programu jest częścią przyrządu:** po ~28–40 odczytach na tej samej historii
+   najlepszy pusty pomysł ma t ≥ 2,09 w 40 % przypadków; deflated Sharpe (Bailey & López de Prado)
+-  z licznikiem z `runs/INDEX.md` — PRZED nazwaniem czegokolwiek pozytywnym (96).
++  z licznikiem z `runs/INDEX.md` — PRZED nazwaniem czegokolwiek pozytywnym (96). Rejestr
++  `runs/odczyty_historii.csv` (N = 40, metoda AU4) + `py -m backtest.dsr --k <warianty>`: 41. odczyt
++  → t 3,84 (DSR 0,95), roczny SR ~1,6 na 5,5 roku; wynik poniżej progu to najwyżej „kandydat do
++  dziennika” (107).
+ - Kryterium werdyktu: `t_neff > 1,96` zwrotu netto ORAZ (przy trafności) `ci_low(p) > p*`; N_eff ≤ n
+   zawsze; naprawa N_eff w AU3 nie zmieniła żadnego werdyktu (93, 94).
+ 
+-## 9. Osobliwości API Binance, które kosztowały czas
++## 9. Osobliwości API (Binance, Bybit, Hyperliquid), które kosztowały czas
+ 
+ - Strumienie futures są rozdzielone na kategorie: dokumentowany `wss://fstream.binance.com/ws/<stream>`
+   odpowiada handshake'iem i **milczy**; `trade`/`depth` nadają pod `/public/ws/…`, reszta (w tym
+@@ -114,3 +132,7 @@
+ - Archiwum `data.binance.vision`: znaczniki czasu w µs od 2025 (nie ms), zdublowane wiersze metrics
+   w 2020-09, 330 pustych świec po wygaśnięciu kontraktów kwartalnych (P3).
+ - REST `futures/data/*` zwraca ~30 dni i HTTP 400 dalej — to nie jest głębokość historii (59).
++- **Bybit** `allLiquidation.*`: strona `S` ma ODWROTNE znaczenie niż u Binance — Bybit „Buy” =
++  zlikwidowany long, Binance SELL = zlikwidowany long (106).
++- **Hyperliquid:** brak strumienia likwidacji; limit 1 200 wagi/min na IP; `userFillsByTime` z polem
++  `liquidation` (metoda `market`) rozpoznaje likwidację, ale wymaga odpytania każdej strony aktywnej (110).
+--- a/quant-strategy-catalog/references/families.md
++++ b/quant-strategy-catalog/references/families.md
+@@ -3,12 +3,17 @@
+ Pola: **Info** (zbiór informacyjny) · **Formuła** · **Target** · **Horyzont** · **Status CLAS-5**.
+ Źródło każdej rodziny: QC = QuantConnect Strategy Library / Strategies, QCR = QuantConnect
+ community research, LIT = literatura akademicka (odnośnik w nawiasie), CR = repo/wiki
+-krypto-specyficzne. Status wg `runs/INDEX.md` (stan **2026-09-25, wnioski 1–102**; po AU1/AU2/AU4,
+-PR1, LK0). Numery w nawiasach = wnioski skumulowane w `runs/INDEX.md` — tam są pełne liczby.
++krypto-specyficzne. Status wg `runs/INDEX.md` (stan **2026-09-29, wnioski 1–110**; po MX1/MX2, TP1,
++LB0, ETAP 6, OS1, PT1, LH0) i **mapy 007** (`docs/mapa_hipotez_2026-10.md`, zadanie 007, 2026-09-29:
++rachunek mocy 10 rodzin na papierze, 0 odczytów). Numery w nawiasach = wnioski skumulowane
++w `runs/INDEX.md` — tam są pełne liczby; „mapa 007 §N” = sekcja mapy.
+ 
+ Statusy: **ZMIERZONE-odrzucone** (nie testuj ponownie w tej samej formule/targecie) ·
+ **ŚLAD-bez-dowodu** (odczyt dodatni punktowo, kryterium niespełnione albo bez korekty na liczbę prób;
+ seria zamknięta regułą STOP, rozstrzyga WYŁĄCZNIE dziennik prospektywny) · **NIETKNIĘTE** ·
++**NIEMIERZALNE-bez-odczytu** (rachunek mocy na papierze, 0 odczytów historii: rodzina przegrywa
++z progiem przyrządu nawet przy hojnych założeniach; zamknięta bez odczytu — wraca tylko z nowym
++źródłem danych spoza historii 2021–2026 albo z nowym mechanizmem, jako nowe zadanie; mapa 007) ·
+ **WYKLUCZONE-danymi** (brak historii/dostępu) · **ZBIERANE-dane** (historia dopiero rośnie) ·
+ **WYKLUCZONE-strukturalnie** (mechanizm nie istnieje na krypto perp albo koszt > próg z definicji).
+ 
+@@ -16,6 +21,9 @@
+ przyrząd widzi dopiero SR ≥ ~0,86 (half-width ±31 %/rok; 87, 91); przekrojowo na top-50 najmniejsze
+ wykrywalne IC to 0,022 (17,7 niezależnych zakładów po odjęciu rynku; 92); po ~40 odczytach na tej
+ samej historii najlepszy wynik z pustych pomysłów ma t ≥ 2,09 w 40 % przypadków (deflated Sharpe, 96).
++Rejestr `runs/odczyty_historii.csv` liczy N = 40 (metoda AU4), więc 41. odczyt potrzebuje t ≈ 3,84
++dla DSR 0,95 — rocznego SR ~1,6 na 5,5 roku (`py -m backtest.dsr --k <warianty>`; 107). Na NOWYCH
++danych (własny licznik) próg to t 1,96 (mapa 007 §1).
+ „Nierozstrzygnięty” w strategiach tygodniowych znaczy „za mało lat” (moc 25 % przy +10 %/rok), nie
+ „brak efektu” — i odwrotnie: dodatni punkt bez DSR to nie dowód.
+ 
+@@ -31,11 +39,17 @@
+   po 2013 ≈ 0 — mechanizm istnieje i jest „wyjadany” na dojrzałych rynkach (84, 87).
+ - Źródło: QC "Crypto Trend Follower", "commodity trend following", Moskowitz–Ooi–Pedersen (2012).
+ - Status: **BTC intraday/1h/4h — ZMIERZONE-odrzucone** (M1 49,74 %; Y1 1h 48,3 % NEGATYWNE z zapasem
+-  41×; Y2 1d niezmierzony, n 978 — 69). **Tygodniowy trend na koszyku top-20 (TS1) — ŚLAD-bez-dowodu:**
++  41×; 69). **Tygodniowy trend na koszyku top-20 (TS1) — ŚLAD-bez-dowodu:**
+   znak zwrotu 28 dni per moneta, skalowanie zmiennością, 7 faz: po korekcie danych +11 %/rok
+   [−4; +26], t 1,43 (70, 82, 87); dodatni 6/6 lat i 7/7 faz; replika na miejscach 21–50 (TR1) +15,5 %,
+   t 1,99, ale znana z góry i z korelacją 0,86 do TS1 — nie jest niezależnym potwierdzeniem (74, 88).
+-  Seria TS 2/2 zamknięta STOP; w dzienniku papierowym od 2026-09-24 (ADR-09, szczebel 3).
++  Seria TS 2/2 zamknięta STOP; w dzienniku papierowym od 2026-09-24 (ADR-09, szczebel 3); pierwszy
++  odczyt 2026-12-24 z progami z góry (z = 2,31 na trzech odczytach 92/182/365 dni; 107).
++- **BTC 1d (Y2) — NIEMIERZALNE-bez-odczytu** (mapa 007 §4–5 Y2; zadanie 013 zamknięte bez odczytu
++  2026-09-29): efekt trendu po publikacji to SR ~0,3–0,5, i to na portfelu wielu rynków — dla samego
++  BTC 1d źródła brak; na 5,5 roku przyrząd widzi SR 1,19 (t 1,96) albo 2,00 (t 3,84), więc przy SR 0,5
++  moc 22 % bez korekty i 0,4 % z nią. W trafności: próg opłacalności 51,7 %, wykrywalne dopiero 54,8 %
++  (n 978) albo 53,9 % (reguła bez modelu, n 2 007).
+ - Zmierzone dodatki, które NIE pomagają: filtr tłoku fundingu (TF1: −1,4 pkt, 73), skalowanie siłą
+   sygnału (SC1: niemierzalne, szum ±13–17 %/rok, 78), dźwignia 3× na altach (LQ1: −3,6 pkt/rok
+   w likwidacjach, 76), hamulec po stracie (SZ1: −9 pkt bez mniejszego obsunięcia, 77).
+@@ -49,8 +63,9 @@
+ - Mechanizm: przesadna reakcja, presja płynnościowa (market makerzy odbudowują inwentarz).
+ - Źródło: QC "short term reversal", "RSI Reversion".
+ - Status: **ZMIERZONE-odrzucone na 5m/1h/4h** (Faza 0 50,37 %; Y1 1h 48,34 % [47,70; 48,98] — cechy
+-  wskazują kierunek ODWROTNY, trzeci raz w projekcie; 69). 1d niezmierzony (n 978, half-width 3,1 pp) —
+-  efekt 52–53 % byłby tam niewidzialny (23, 69). Dłuższe okno uczenia nie ratuje (WF1: 49,6/48,5 %, 85).
++  wskazują kierunek ODWROTNY, trzeci raz w projekcie; 69). 1d — NIEMIERZALNE-bez-odczytu
++  (Y2, zob. A1; mapa 007 §5): n 978, half-width 3,1 pp — efekt 52–53 % byłby tam niewidzialny
++  (23, 69). Dłuższe okno uczenia nie ratuje (WF1: 49,6/48,5 %, 85).
+ 
+ ### A3. Volatility breakout / range expansion
+ - Info: OHLCV własne · Formuła: jednoaktywowa · Target: kierunek · Horyzont: intraday→dzienny
+@@ -73,9 +88,17 @@
+   49,87 %; Fibonacci 51,5 % [49,4; 53,6] (nierozstrzygnięte przez pasmo 2,1 pp, zwrot ≤ 0); grupa
+   zdarzeń (wybicie, podwójny szczyt/dno, RGR, przecięcie EMA, linia trendu) 48,3 %; model + 10 cech AT
+   bez zmian. Reguły „z ruchem" na 4h BTC konsekwentnie POD monetą (A1 46,4 %, W1c 46,1 %, A2.1 48,2 %).
++- **MACD jako „potwierdzenie” przecięcia EMA na 1h BTC — NIEMIERZALNE** (MX1, 103): MACD przepuszcza
++  77 % przecięć EMA 10/30 (w 3/4 ten sam sygnał); 1 254 sygnały w 5,4 roku wymagają ≥ 56,8 % trafności
++  wobec obietnicy podręcznika 56 % (sprawdzian potwierdziłby regułę w 29 % przypadków). Filtry (trend
++  28 dni, ADX > 25, wolumen, sesja USA) odcinają po 45–76 % sygnałów i podnoszą wymaganą trafność do
++  59–61 %, moc 4–6 %; RSI nie odcina nic (MX2, 104). Seria MX zamknięta.
+ - Pułapki (zmierzone): reguły stanowe nakładają pozycje i pogłębiają obsunięcia (52); rzadkie
+   zdarzenia (86–988 sygnałów) niemierzalne na 5,5 roku — test rodziny zamiast pięciu losów (53);
+-  „grajmy przeciw" = hipoteza post hoc (49); kombinacja filtrów = przecięcie zbiorów (A1).
++  „grajmy przeciw" = hipoteza post hoc (49); kombinacja filtrów = przecięcie zbiorów (A1);
++  kombinacje wskaźników z tego samego zbioru (ważone średnie przeszłej ceny) nie dodają informacji,
++  a na jednym aktywie zdarzenia rzadsze niż ~2 500 w historii są niemierzalne przy progu 1h ~54 % (103);
++  podzbiór zbioru niemierzalnego przy tej samej zakładanej trafności nie może być mierzalny (104).
+ 
+ ---
+ 
+@@ -106,25 +129,56 @@
+   ½·CSV (mylił się 3×; 58).
+ 
+ ### B3. Residual / idiosyncratic momentum (po odjęciu faktora rynkowego)
+-- Status: **NIETKNIĘTE**, ale rodzina B1 jest zamknięta STOP po dwóch odczytach — B3 to jej wariant
+-  (ten sam zbiór, formuła, target), więc nowy odczyt = decyzja użytkownika z własną kartą. Prior
+-  niski: zysk B1 mieszka w ogonach i nodze short, a nie w rankingu (68); AU2 (92) daje gotowy rachunek
+-  mocy (IC ≥ 0,025 na top-50).
++- Status: **NIEMIERZALNE-bez-odczytu** (mapa 007 §4–5 B3; zadanie 008 zamknięte bez odczytu decyzją
++  użytkownika 2026-09-29). To wariant B1 pod STOP (ten sam zbiór, formuła, target). Efektu po
++  publikacji dla krypto brak w repo: założenie IC 0,010–0,015 (`docs/rag/11` §5) wobec pomiaru surowego
++  momentum top-50 IC −0,006 (68). Przyrząd AU2 widzi IC 0,022 przy t 1,96, a po korekcie na 41 odczytów
++  dopiero **0,0365** (t 3,84; 92, 107); przy IC 0,015 moc 48 % bez korekty i ~3 % z korektą. To samo
++  dotyczy „reszty po becie do BTC / opóźnienia altów” z przeglądu 2026-09-27 (`docs/rag/11` §5). Prior
++  niski: zysk B1 mieszka w ogonach i nodze short, a nie w rankingu (68).
+ 
+ ### B4. PCA residual mean reversion / statystyczny arbitraż na koszyku
+-- Status: **NIETKNIĘTE.** STATUS ETAP 5 pkt 7: najpierw rachunek mocy bez odczytu (reszta po PCA,
+-  target powrót). Prior niski: R1 i X1 mówią, że ruchy względne w krypto TRWAJĄ, nie wracają (57, 64).
+-  W krypto PC1 dominuje — reszty małe; PCA point-in-time (okno trailing), inaczej leak.
++- Status: **NIEMIERZALNE-bez-odczytu** (mapa 007 §4–5 B4 — rachunek mocy z ETAP 5 pkt 7, bez odczytu):
++  efektu po publikacji dla krypto brak w repo; przy założonym SR 0,5–0,9 moc na 5,5 roku 22–56 %
++  (t 1,96) i 0,4–4 % (t 3,84), do mocy 80 % trzeba 10–88 lat. Prior niski: R1 i X1 mówią, że ruchy
++  względne w krypto TRWAJĄ, nie wracają (57, 64). W krypto PC1 dominuje — reszty małe; PCA
++  point-in-time (okno trailing), inaczej leak.
++
++### B5. Niska zmienność / betting against beta (BAB)
++- Info: OHLCV wielu aktywów (zmienność 30 dni, beta 90 dni do BTC) · Formuła: przekrojowa (long niska
++  zmienność/beta, short wysoka; w BAB nogi lewarowane do bety 1) · Target: kierunek relatywny ·
++  Horyzont: tygodniowy→miesięczny
++- Mechanizm: (a) ograniczenie dźwigni — kto nie może lewarować, kupuje aktywa o wysokiej becie zamiast
++  lewarować niską, więc wysoka beta jest przepłacona (BAB); (b) preferencja „loterii” i benchmarki
++  instytucji (anomalia niskiej zmienności).
++- Źródło: Quantpedia/QC „low volatility factor effect”, „betting against beta” (akcje, też futures
++  i obligacje); LIT Frazzini–Pedersen (2014), Ang–Hodrick–Xing–Zhang (2006), Baker–Bradley–Wurgler (2011).
++- Status: **NIEMIERZALNE-bez-odczytu; mechanizm (a) WYKLUCZONY-strukturalnie** — przegląd kandydatów
++  2026-09-27 (`docs/rag/11` §5; kandydat `xs-niska-zmiennosc-bab-top50-1w` odrzucony, 0 odczytów): na
++  perpetualach dźwignia jest tania i dostępna każdemu, więc ograniczenie, które tworzy premię BAB,
++  nie wiąże; literatura krypto wskazuje raczej znak przeciwny; przy IC 0,01 wykrycie wymaga 26–46 lat
++  (przyrząd przekrojowy AU2: MDE IC 0,022 na top-50; 92). To wariant BB1 — kolejny ranking z cen
++  koszyka, odrzucony przy scalaniu sondy SH1 (81) — i ten sam zbiór informacyjny co B1, więc odczyt na
++  historii 2021–2026 zużywa ten sam budżet (41. odczyt → t 3,84; 107).
++- Pułapki: `vol30` i `beta90` były cechami modelu w AU2 (zestaw „ryzyko”), ale z PERMUTOWANYM celem —
++  to kalibracja przyrządu, nie pomiar rodziny (92, 93); AU2 nie jest wynikiem BAB. Zmienność i beta
++  w krypto idą z wielkością i płynnością monety. Short monet o wysokiej zmienności to sprzedaż
++  ubezpieczenia od wystrzału — profil jak short nowych listingów (G2: 11,8 % podwojeń; 71) — analogia,
++  nie pomiar.
+ 
+ ---
+ 
+ ## C. Informacja: pary / kointegracja / inne rynki tej samej monety
+ 
+ ### C1. Pairs trading na kointegracji
+-- Status: **NIETKNIĘTE.** Lekcja z replikacji (74, 80): w krypto „inne monety" to prawie ten sam
+-  czynnik (korelacja szeregów 0,86; premia ETH vs BTC 0,95) — para BTC/ETH ma mało własnej
+-  informacji; kandydaci to ta sama moneta między giełdami (C2) albo spot vs perp (D2/D3). Test
+-  kointegracji na oknie trailing, OOS; pasmo wejścia > 2× koszt round-trip (koszt jest bramką).
++- Status: **NIEMIERZALNE-bez-odczytu** (mapa 007 §4–5 C1): 16–29 transakcji na parę w 5,5 roku,
++  a 10 par przy korelacji 0,86 to ~1,1 pary niezależnej (n ≈ 33) — przedział trafności ±17 pp; nawet
++  hojne 70 % trafności nie sięga wymaganych ~80 % (margines −9,6 pp, moc 0,18). Relacja ETH/BTC nie
++  jest stała (0,025 → 0,088 → 0,018 → 0,027; `docs/rag/11` §5). Wersja koszykowa to B4 (też
++  NIEMIERZALNE). Lekcja z replikacji (74, 80): w krypto „inne monety” to prawie ten sam czynnik
++  (korelacja szeregów 0,86; premia ETH vs BTC 0,95) — para BTC/ETH ma mało własnej informacji;
++  kandydaci to ta sama moneta między giełdami (C2) albo spot vs perp (D2/D3). Test kointegracji na
++  oknie trailing, OOS; pasmo wejścia > 2× koszt round-trip (koszt jest bramką).
+ 
+ ### C2. Premia między giełdami jako sygnał popytu (Coinbase, Korea)
+ - Info: ceny tej samej monety na innych giełdach (spot USD/KRW vs perp Binance) · Formuła:
+@@ -138,19 +192,29 @@
+   pomysłów (96); bez 10 najlepszych dni +16 %; poza próbą (lip–wrz 2026) bez potwierdzenia. Replikacja
+   na ETH/SOL NIEMIERZALNA — ten sam sygnał (94 % zgodności znaku; 80). Premia koreańska (KP1, 91):
+   inny sygnał niż CP1 (zgodność 53 %), ale efekt z badań ~SR 0,15 wobec progu przyrządu 0,86 → moc
+-  5 %, NIEMIERZALNA. Seria CP 1/1 STOP; w dzienniku od 2026-09-24; odczyt ~2026-12-25 (ADR-09).
++  5 %, NIEMIERZALNA. Seria CP 1/1 STOP; w dzienniku od 2026-09-24; pierwszy odczyt 2026-12-24
++  z progami z góry (ADR-09; 107).
+ - Pułapki: pierwszy „POZYTYWNY" w licznym programie wymaga danych nieoglądanych (72); test opóźnienia
+   sygnału = tani detektor przecieku; przed replikacją zmierz zgodność SYGNAŁÓW (80).
++- **Premia i funding Hyperliquid vs Binance (HL-P) — WYKLUCZONE-danymi do sondy historii** (mapa 007
++  §4–5 HL-P: BRAK DANYCH; zadanie 010): inna populacja traderów (portfele on-chain) jako sygnał popytu,
++  jak CP1. Bez historii przyrząd na nowych danych widzi dopiero SR 2,8 po roku (1,6 po 3 latach); nawet
++  analog CP1 (SR 0,89, zawyżony wyborem) daje po 3 latach moc 34 %; przekrojowo top-50 po 3 latach
++  IC 0,029 — o ile HL pokrywa koszyk. MIERZALNA możliwa tylko przy historii ≥ 3 lat i pokryciu koszyka;
++  przed czymkolwiek zmierzyć zgodność znaku z CP1 (lekcja KP1, 91).
+ 
+ ---
+ 
+ ## D. Informacja: funding / basis (specyficzne dla perpetuali)
+ 
+ ### D1. Funding jako SYGNAŁ kierunkowy
+-- Status: **ZMIERZONE-odrzucone w czterech formach** — cecha 4h (F1 50,34 %), filtr trendu (TF1, 73),
+-  tłok lewara na przekroju (TL1: t 0,62 na pełnych danych, znak zależny od danych = szum; 75, 97),
++- Status: **ZMIERZONE-odrzucone w trzech formach** — cecha 4h (F1 50,34 %), filtr trendu (TF1, 73),
+   reguła „za/przeciw odchyleniu od mediany 365 dni" (SW: NEGATYWNA, 90). Masa punktowa 35,85 %
+   na stawce bazowej — progi absolutne (15).
++- **TL1 („tłok lewara na przekroju”) NIE jest formą fundingu:** jego sygnał to Δlog(OI, 7 dni) × znak
++  zwrotu 7 dni, czyli open interest (README TL1: „TL1 używa OI, nie fundingu”); funding wchodził tylko
++  do kosztu portfela. TL1 należy do E3 (75, 97). Wniosek 75 liczy CZTERY formy POZYCJONOWANIA (O1 i TL1
++  z OI, F1 i TF1 z fundingu) — nie cztery formy fundingu.
+ 
+ ### D2. Funding-rate harvesting / carry (cash-and-carry)
+ - Info: funding + spot/perp · Formuła: jednoaktywowa LUB przekrojowa · Target: carry (przepływ) ·
+@@ -165,11 +229,18 @@
+ - Pułapki metodologiczne (56, 63): N_eff dla przepływu liczyć kanoniczną funkcją autokorelacji
+   (funding acf1 0,84; lag-1 proxy zawyża próbę 8×); liczba niezależnych obserwacji = liczba EPIZODÓW
+   stawki, nie rozliczeń.
++- Poza krypto: perpetuale TradFi NIE mają automatycznego carry — stopa w fundingu = 0, a różnica stóp
++  na 3 młodych parach walutowych jest dziś niewypłacana (PT1, 109) → rodzina K1. COIN-M z tej rodziny
++  jest w dzienniku papierowym od 2026-09-29 tylko do sprawdzenia rozliczeń (Poprawka 12), nie jako
++  kandydat (`runs/INDEX.md`, skrót).
+ 
+ ### D3. Basis trade (perp vs kwartalny)
+ - Status: **ZMIERZONE-opisowo (D1, 62):** 24 kontrakty kwartalne USDT-M w repo (P3); basis frontu
+   mediana 5,9 %/rok ≈ funding zrealizowany (różnica median +1,8 / −0,9 pp, rozstęp ±17 pp) — kontrakt
+   zamyka stopę, nie podnosi jej. Bez własnej przewagi względem D2.
++  Jako reguła „basis bije funding” — **NIEMIERZALNE-bez-odczytu** (mapa 007 §4–5 D3): n = 22 kontrakty,
++  przedział ±21 pp; hojne 60 % wobec wymaganych ~71 % (margines −10,9 pp, moc 0,16); kierunek carry
++  i tak zamknięty decyzją użytkownika (61).
+ 
+ ---
+ 
+@@ -180,21 +251,47 @@
+   Horyzont: godziny–dni
+ - Mechanizm: wymuszone zamknięcia lewarowanych pozycji przesuwają cenę poza wartość; po kaskadzie
+   powrót. To jedyna rodzina z mocnym mechanizmem „ktoś MUSI handlować" wykluczona wyłącznie danymi.
+-- Status: **ZBIERANE-dane od 2026-09-25 (LK0, 102):** archiwum Binance nie ma likwidacji (P3), REST
+-  zniknął w 2021, płatni dostawcy nie dokumentują głębokości; kolektor zapisuje strumień
+-  `!forceOrder@arr` (PRÓBKA: ≤ 1 zlecenie/s/symbol — w kaskadach wolumen zaniżony) do plików dziennych
+-  poza repo (`$HOME/likwidacje`); rząd wielkości ~40 zdarzeń/min. Odczyt najwcześniej po ≥ 1 roku,
+-  z rachunkiem mocy z REALNEJ częstości zdarzeń PRZED kartą. Uwaga techniczna: dokumentowany adres
+-  `/ws/…` milczy — nadaje `/market/ws/…` (Binance rozdzielił strumienie na kategorie; 102).
+-- OI (bez likwidacji) jest już zmierzone: zmiana OI 24h jako cecha 4h NEGATYWNA, ale jedyna cecha
+-  spoza OHLCV, która w ogóle poruszała model (20,6 % zmienionych decyzji; 66); archiwum pozycjonowania
+-  5 min od 2020-09 (99,9 % bazy) — P1 („30 dni") było błędem sondy REST (59, 60).
++- Status: **ZBIERANE-dane:** archiwum Binance nie ma likwidacji (P3), REST zniknął w 2021, płatni
++  dostawcy nie dokumentują głębokości; darmowe są tylko strumienie na żywo — Binance `!forceOrder@arr`
++  od 2026-09-25 to PRÓBKA (≤ 1 zlecenie/s/symbol, ~40 zdarzeń/min; LK0, 102), Bybit `allLiquidation.*`
++  od 2026-09-27 to PEŁNE likwidacje (kontrola pozytywna 58 zdarzeń / 180 s; w gęstej serii Binance
++  gubi zdarzenia; LB0, 106). Hyperliquid nie ma strumienia: likwidację rozpoznaje pole `liquidation`
++  w `userFillsByTime`, ale pełne pokrycie giełdy z darmowego API przekracza limit 8,6× — pełne źródło
++  (własny węzeł, płatne S3) = decyzja użytkownika (LH0, 110). Karta E1 liczy kaskady z Bybit, Binance
++  to drugi, próbkowany nośnik; jeden licznik E1 (106).
++- Moc (mapa 007 §4–5 E1): przy σ 5 % na 24 h i 150–300 epizodach/rok (do potwierdzenia z liczników)
++  MDE po roku 0,9–1,3 % na epizod, po 3 latach 0,5–0,7 %, wobec kosztu w kaskadzie 0,3–1 % → mierzalna
++  po 1–3 latach tylko przy efekcie ≥ ~1 %. Nowe dane = własny licznik (N = 1), próg t 1,96. Kartę
++  zapisać TERAZ, przed zestawieniem likwidacji z cenami (zadanie 011); rachunek mocy z realnej
++  częstości — z samych liczników, bez cen (106). Odczyt najwcześniej 2027-09.
++- **Mapa cen likwidacji HL (HL-L) — WYKLUCZONE-danymi** (mapa 007 §4–5 HL-L: BRAK DANYCH): pozycje
++  dużych adresów HL i ich ceny likwidacji; bez kolektora pozycji i częstości zdarzeń mocy nie da się
++  policzyć. ~700 adresów z pozycjami > 100 tys. USD co 1–3 min jest technicznie możliwe (110; osobna
++  decyzja); w karcie E1 najwyżej jako OPIS stanu przed kaskadą, nie druga zmienna (mapa 007 §5).
++- OI bez likwidacji jako sygnał kierunkowy — zob. E3 (66, 75, 90, 97). Szczegóły techniczne źródeł
++  (adresy strumieni, odwrotne znaczenie strony `S` w Bybit, limity HL): `crypto-perp-specifics.md` §3, §9.
+ 
+ ### E2. Long/short ratio, whale positioning jako sygnał kontrariański
+ - Status: **ZMIERZONE-odrzucone jako reguły 4h (SW, 90):** L/S dużych graczy („za nimi") NEGATYWNE,
+   L/S wszystkich kont przed kosztami +0,054 %/tr [+0,023; +0,085] — ślad realny, ale koszt 0,08 %/tr
+-  zjada go 2–3×; jedyna droga to wolniejszy horyzont = NOWA hipoteza (decyzja użytkownika). Pozostałe
+-  kolumny archiwum (taker ratio, OI w USD) — decyzja użytkownika, jedna na rundę.
++  zjada go 2–3×; jedyna droga to wolniejszy horyzont = NOWA hipoteza (decyzja użytkownika). Przewaga
++  kupujących (taker ratio) zmierzona w tej samej serii (SW `taker_imbalance_24h`: netto −0,057 %/tr,
++  brutto +0,024 [−0,008; +0,057]; 90). Pozostała kolumna archiwum (OI w USD) — decyzja użytkownika,
++  jedna na rundę.
++
++### E3. Open interest / tłok lewara jako SYGNAŁ kierunkowy
++- Info: OI (archiwum `metrics` 5 min od 2020-09; dzienny panel OI 185 monet) · Formuła: jednoaktywowa
++  (BTC 4h) albo przekrojowa (top-20) · Target: kierunek · Horyzont: 4h→tydzień
++- Mechanizm: dźwignia dokładana za ruchem to tłok, który się rozładuje (bez zdarzenia likwidacji — to E1).
++- Status: **ZMIERZONE-odrzucone w trzech formach** — zmiana OI 24h jako 5. cecha modelu 4h (O1:
++  NEGATYWNE, ale jedyna cecha spoza OHLCV, która w ogóle poruszała model — 20,6 % zmienionych decyzji;
++  66); ta sama zmiana jako reguła 4h „przeciw” (SW: netto −0,042 %/tr, brutto +0,040 — mniej niż koszt
++  0,08 %; 90); **tłok lewara na przekroju (TL1: Δlog OI 7 dni × znak zwrotu 7 dni, top-20, tydzień,
++  7 faz): +8,1 %/rok [−17,5; +33,7], t 0,62 na pełnych danych, a na obciętych −10,5 % — znak zależny od
++  danych = szum; seria TL zamknięta, znaku nie odwracać (75, 97).**
++- Dane: archiwum pozycjonowania 5 min od 2020-09 (99,9 % bazy) — P1 („30 dni”) było błędem sondy REST
++  (59, 60); pełny panel OI 185 monet w repo danych (97). Uwaga przyrządu (97): H0 z przesunięciem
++  sygnału miało 6× niższą zmienność niż strategia — rozstrzyga t_neff, nie pozycja wobec H0.
+ 
+ ---
+ 
+@@ -212,11 +309,19 @@
+ 
+ ## G. Informacja: zdarzenia i kalendarz
+ 
+-### G1. Efekty kalendarzowe perpetuali (cykl funding 8h, weekend, wygaśnięcia opcji, FOMC/CPI)
+-- Status: **NIETKNIĘTE jako reguła 8h; makro-zdarzenia NIEMIERZALNE (SH1, 81):** FOMC/CPI,
++### G1. Efekty kalendarzowe perpetuali (cykl funding 8h, otwarcia sesji, weekend, wygaśnięcia opcji, FOMC/CPI)
++- Status: **cykl fundingu 8h — NIEMIERZALNE-bez-odczytu** (mapa 007 §4–5 G1; zadanie 009 zamknięte bez
++  odczytu 2026-09-29): 6 022 zdarzeń daje dokładny przyrząd (±1,26 pp), ale koszt 0,08 % wobec typowego
++  ruchu w godzinie 0,56 % stawia próg opłacalności 57,2 % trafności, a założenie to 50,9 % (bez źródła
++  po publikacji) — reguła traci przy KAŻDYM n (test w granicy dużego n); brutto trzeba ≥ 0,105 % na
++  zdarzenie. **Otwarcia sesji Tokio / Londyn / Nowy Jork na BTC — NIEMIERZALNE (OS1, 108):** koszt to
++  16–27 % ruchu w oknie, wymagana trafność 56,5–65,0 % wobec literatury 53,5–53,8 %; seria OS STOP
++  (0/2); reguły pory doby w horyzoncie godzin nie startują bez efektu z badań po publikacji
++  ≥ 0,15–0,20 % brutto na transakcję. **Makro-zdarzenia NIEMIERZALNE (SH1, 81):** FOMC/CPI,
+   odblokowania tokenów, Wikipedia — niepewność 2–5× większa niż realistyczny efekt na 5,5 roku.
+   Wykrywalne są tylko efekty ≥ 20–25 %/rok na koszyku albo kilka % na zdarzenie przy setkach zdarzeń.
+-  Filtr: efekt z badań po publikacji ≥ 1,4 × niepewność — PRZED sondą.
++  Filtr: efekt z badań po publikacji ≥ 1,4 × niepewność — PRZED sondą. Weekend i wygaśnięcia opcji/CME:
++  odróżnienie 50,9 % od 50 % wymaga ~23 lat (przegląd `docs/rag/11` §5).
+ 
+ ### G2. Listing / delisting / index rebalance
+ - Status: **ZMIERZONE-odrzucone (NL1, 71):** short 1× przez 14 dni na 569 pierwszych listingach
+@@ -256,11 +361,37 @@
+ 
+ ---
+ 
++## K. Informacja: rynki tradycyjne (dane bazowe; perpetuale TradFi tylko jako wykonanie)
++
++### K1. Carry i trend na surowcach, obligacjach i walutach (PT1, TX1)
++- Info: dane rynku bazowego (ceny, krzywa terminowa, stopy) · Formuła: przekrojowa albo jednoaktywowa ·
++  Target: carry albo kierunek · Horyzont: tydzień→miesiąc
++- Mechanizm: ktoś płaci za ubezpieczenie ceny (hedging producentów), więc carry z krzywej niesie premię;
++  trend — jak A1. Rola: SPRAWDZIAN mechanizmu poza naszymi danymi (szczebel 1 ADR-09), nie noga.
++- Status: **trend (TX1, 84): działa 1990–2012, zanika po 2013** — szczebel 1(b) NIEROZSTRZYGNIĘTY.
++  **Carry na perpetualach TradFi — niewypłacane automatycznie (PT1, 109):** Bybit 257 i Binance 206
++  kontraktów, stopa w fundingu = 0, więc carry przychodzi tylko przez premię utrzymywaną arbitrażem poza
++  martwą strefą ±0,05 %/8 h; na 3 młodych parach walutowych Bybit funding = 0 w 90–100 % odczytów —
++  różnica stóp dziś niewypłacana. **Surowce i obligacje — WYKLUCZONE-danymi** (krzywej terminowej nie
++  ma w repo; mapa 007 §4–5 PT1): na pełnych 36 latach przyrząd widzi SR ≈ 0,47–0,50, po 2013 dopiero
++  0,76, więc przy SR 0,3–0,5 moc po 2013 to 20–46 %; baza tradfi ma własny licznik (2. odczyt → t 2,16).
++  Tylko na życzenie użytkownika i tylko na pełnej bazie 1990–2026 (zadanie 012).
++- Pułapki (109): strategii nie mierzyć na samych perpach (najdłuższa historia 9,6 mies.) — badanie na
++  danych rynku bazowego, perp = wykonanie z kosztem per instrument i fundingiem po stronie popytu jako
++  kosztem; waluty, miedź i pallad tylko przy otwartym rynku; różnica fundingu ropy między giełdami —
++  tylko jako hipoteza na PRZYSZŁYCH danych.
++
++---
++
+ ## I. Overlaye, sizing, portfel (NIE są źródłem edge'u — ale są zmierzone)
+ 
+ Regime filter, volatility targeting, drawdown cap, trailing stop — **modyfikatory sizingu**, nie sygnały.
+ Lekcja Fazy 0: bramka reżimu zagładza próbę (20). Reguły wykonania i zarządzania pozycją zmierzone
+ (serie W i N, 42–45): przesuwają pieniądze między typami wyjść, nie tworzą informacji.
++Cel zysku +1–2 % „większym wolumenem” na nogach dziennika — NIEROZSTRZYGALNY na historii (TP1
++z 2026-09-26, 105): przy równym ryzyku szum różnicy ±17,6–20,1 pp/rok, wykrycie zmiany o 5 pp wymaga
++67–83 lat; wersja z celem to inna strategia (korelacja 0,55–0,66), a prior (teoria zatrzymania, N1)
++mówi, że cel nie dodaje wartości oczekiwanej i dokłada koszty.
+ 
+ **Portfel nóg (SZ1, KR1, KR2, PR1; 77, 95, 100, 101):** dwie słabo skorelowane strategie razem >
+ każda osobno (trend + premia Coinbase, korelacja tyg. 0,24; w złych dniach trendu 0,09); reguła
+@@ -274,20 +405,30 @@
+ 
+ ---
+ 
+-## Ranking priorytetów po PR1/LK0 (2026-09-25; propozycja, decyzje są bramkowe)
+-
+-**Historia 2021–2026 jest wyczerpana:** ~40 odczytów, DSR najlepszego 0,52; kolejny odczyt na tej
+-samej historii tylko zwiększa szansę przypadkowego sukcesu (96). Zostają trzy dźwignie:
+-
+-1. **Czas** — dziennik prospektywny (TS1 + CP1 w R1; X1 osobno; odczyt ~2026-12-25, szczebel 3
+-   ADR-09). Jedyna rzecz, która może przesunąć ŚLAD-bez-dowodu w dowód.
++## Ranking priorytetów po mapie 007 (2026-09-29; propozycja, decyzje są bramkowe)
++
++**Historia 2021–2026 jest wyczerpana:** rejestr liczy N = 40 odczytów (AU4); 41. potrzebuje t ≈ 3,84
++(DSR 0,95; 107), a DSR najlepszego dotąd to 0,52 (96). Mapa 007: z 10 rodzin żadna nie jest dziś
++MIERZALNA — sześć NIEMIERZALNYCH na papierze (B3, B4, C1, D3, G1, Y2; zamknięte bez odczytu), cztery
++BRAK DANYCH (E1, HL-P, HL-L, PT1). Zostają trzy dźwignie:
++
++1. **Czas** — dziennik prospektywny (TS1 + CP1 w R1; X1 osobno); pierwszy odczyt 2026-12-24 z progami
++   z góry (z = 2,31 na trzech odczytach; 107), szczebel 3 ADR-09. Jedyna rzecz, która może przesunąć
++   ŚLAD-bez-dowodu w dowód.
+ 2. **Niezależne nogi** — kolejna noga tylko z korelacją ≤ ~0,35 do obecnych i z własną drabiną
+    dowodów; przy 2 nogach ERC = 1/σ, różnica zaczyna się od trzeciej (101).
+-3. **Nowe dane per moneta** — likwidacje (E1, zbierane od 2026-09-25; odczyt po ≥ 1 roku); sentyment
+-   i on-chain per moneta tylko po bramie pokrycia ≥ 70 % (P4; decyzja: płatne NIE na razie).
++3. **Nowe dane** — (a) likwidacje E1: karta teraz (zadanie 011), odczyt najwcześniej 2027-09 (Bybit
++   pełne, Binance próbka; 102, 106); (b) Hyperliquid: sonda historii HL-P (zadanie 010), pełne
++   likwidacje HL = decyzja użytkownika (110); (c) PT1 tylko jako sprawdzian mechanizmu, na życzenie
++   (zadanie 012; mapa 007 §6); (d) sentyment i on-chain per moneta tylko po bramie pokrycia ≥ 70 %
++   (P4; decyzja: płatne NIE na razie).
+ 
+ Filtr PRZED każdą nową rodziną: (a) jednoaktywowa na BTC — efekt z badań po publikacji o SR ≥ ~0,9
+-(przyrząd ±31 %/rok; 91), (b) przekrojowa — IC ≥ 0,025 na top-50 (92), (c) JEDNA reguła zapisana
+-z góry, bez przeszukiwania (93), (d) średnia 7 faz startu (89), (e) licznik odczytów programu do DSR
+-(96), (f) kontrola pozytywna źródła danych — strumień/plik, który na pewno nadaje (102).
+-Każda: własna karta, własny licznik, własny STOP, rachunek mocy PRZED — wniosek 13.
++(przyrząd ±31 %/rok; 91; na historii 2021–2026 po korekcie DSR ~1,6; 107), (b) przekrojowa — IC ≥ 0,025
++na top-50 (92; na historii po korekcie DSR 0,0365; mapa 007), (c) JEDNA reguła zapisana z góry, bez
++przeszukiwania (93), (d) średnia 7 faz startu (89), (e) licznik odczytów programu do DSR —
++`py -m backtest.dsr --k <warianty>` (96, 107), (f) kontrola pozytywna źródła danych — strumień/plik,
++który na pewno nadaje (102, 106).
++Każda: własna karta, własny licznik, własny STOP, rachunek mocy PRZED — wniosek 13. Rodzina, która
++przegrywa na papierze nawet przy hojnych założeniach, zamyka się BEZ odczytu — każdy odczyt podnosi
++próg dla wszystkich następnych (mapa 007 §1, 107).
+--- a/quant-strategy-catalog/scripts/hypothesis_card.py
++++ b/quant-strategy-catalog/scripts/hypothesis_card.py
+@@ -34,11 +34,11 @@
+ 
+ | Pole | Wartość |
+ |---|---|
+-| Zbiór informacyjny | ??? (OHLCV własne / OHLCV wielu aktywów / funding / OI-likwidacje / on-chain / opcje / zdarzenia / sentyment / ceny tej samej monety na innych giełdach) |
++| Zbiór informacyjny | ??? (OHLCV własne / OHLCV wielu aktywów / funding / OI-likwidacje / on-chain / opcje / zdarzenia / sentyment / ceny tej samej monety na innych giełdach / rynki tradycyjne (dane bazowe)) |
+ | Formuła | {formula_label} |
+ | Target | ??? (kierunek / carry / spread / premia rebalansowa / zmienność) |
+ | Horyzont | ??? |
+-| Status CLAS-5 | ??? (NIETKNIĘTE / ŚLAD-bez-dowodu / ZBIERANE-dane / ZMIERZONE-odrzucone — jeśli to ostatnie: DLACZEGO to nie jest powtórka; ŚLAD: tylko dziennik, nie kolejny odczyt) |
++| Status CLAS-5 | ??? (NIETKNIĘTE / ŚLAD-bez-dowodu / ZBIERANE-dane / ZMIERZONE-odrzucone / NIEMIERZALNE-bez-odczytu — przy dwóch ostatnich: DLACZEGO to nie jest powtórka (nowe dane spoza historii 2021–2026 albo nowy mechanizm); ŚLAD: tylko dziennik, nie kolejny odczyt) |
+ 
+ **Sprawdzenie równoważności (zasada 14):** czy istnieje run w `runs/INDEX.md` z tym samym
+ zbiorem informacyjnym + formułą + targetem? ??? (ID runu albo "brak")
+@@ -63,7 +63,7 @@
+ | Uniwersum point-in-time (z delistowanymi)? | ??? |
+ | Dane natywne per interwał (nie resample z 5m)? | ??? |
+ | Koszt dostępu i czy uzasadniony PRZED rachunkiem mocy | ??? |
+-| Kontrola pozytywna źródła (kanał/strumień, który NA PEWNO nadaje — wniosek 102) | ??? |
++| Kontrola pozytywna źródła (kanał/strumień, który NA PEWNO nadaje — wnioski 102, 106) | ??? |
+ | Test opóźnienia sygnału o 1–2 dni (łagodny spadek = brak przecieku — wniosek 72) | ??? |
+ 
+ ## 6. Przyrząd pomiaru i próg z kosztów
+@@ -74,11 +74,13 @@
+ 
+ {power_block}
+ 
+-Liczba dotychczasowych odczytów programu na tej historii (licznik z `runs/INDEX.md`, do deflated
+-Sharpe — wniosek 96): ???   Rebalans kalendarzowy? → liczone jako ŚREDNIA wszystkich faz startu
+-(wniosek 89): ???
++Liczba dotychczasowych odczytów programu na tej historii (rejestr `runs/odczyty_historii.csv`, do
++deflated Sharpe — wnioski 96, 107): ???   Próg t z `py -m backtest.dsr --k <warianty>` (41. odczyt
++→ t 3,84; nowe dane = własny licznik, t 1,96 — mapa 007): ???   Rebalans kalendarzowy? → liczone
++jako ŚREDNIA wszystkich faz startu (wniosek 89): ???
+ 
+-**Werdykt mierzalności:** ??? (MIERZALNA / NIEMIERZALNA — jeśli NIEMIERZALNA: runda NIE startuje)
++**Werdykt mierzalności:** ??? (MIERZALNA / NIEMIERZALNA — jeśli NIEMIERZALNA: runda NIE startuje,
++rodzina zamyka się bez odczytu — mapa 007)
+ 
+ ## 8. Kryterium sukcesu / porażki — i jego test w granicy dużego n (wniosek 28)
+ 
