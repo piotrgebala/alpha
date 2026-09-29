@@ -190,7 +190,9 @@ def test_cache_path_does_not_collide_with_ohlcv():
     """Funding i świece leżą w tym samym katalogu — nazwy nie mogą się zderzyć."""
     from data.fetch_ohlcv import _cache_path as ohlcv_cache_path
 
-    funding = _cache_path("data/raw", "BTC/USDT:USDT", "2019-09-10T00:00:00Z", "2026-07-01T00:00:00Z")
+    funding = _cache_path(
+        "data/raw", "BTC/USDT:USDT", "2019-09-10T00:00:00Z", "2026-07-01T00:00:00Z"
+    )
     candles = ohlcv_cache_path(
         "data/raw", "BTC/USDT:USDT", "4h", "2019-09-10T00:00:00Z", "2026-07-01T00:00:00Z"
     )
