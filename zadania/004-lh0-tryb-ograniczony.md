@@ -76,4 +76,10 @@ katalog w `data/liquidation_backup.py` i `data/liquidation_index.py`.
 
 ## Wynik
 
-(dopisuje orkiestrator)
+**Stan 2026-09-29 (w toku, krok A):** gałąź `zadanie-004-lh0-tryb-ograniczony` (wypchnięta, niescalona):
+`6f7e10c` pre-rejestracja (08:21 UTC, przed próbą i pomiarem), `c9cd2bd` skrypt `data/measure_hl_weights.py` + 21 testów
+bez sieci, `ed639cf` README (sekcja „Krok 1 — tryb ograniczony”) + rejestr skilli. Pełny pytest: 1 935 passed, 3 skipped,
+kod 0. Pomiar 26 h od 08:33:37 UTC (koniec ≈ 2026-09-30 10:33 UTC), kopia skryptu w `~/likwidacje_hl/pomiar_krok1/`
+(sha256 `3bf50945…84bbe1` = `c9cd2bd`, sprawdzone przez orkiestratora). Własne zużycie pomiaru ≈ 330–360 wagi/min, 0 × 429.
+Próg (pre-rejestracja): średnio ≤ 600 wagi/min i p95 ≤ 1 200; filtr nie gubi, gdy górna granica 95 % (Clopper–Pearson)
+udziału zgubionych likwidacji ≤ 5 %. Dalej: `--podsumuj` → `raw_output.txt`, werdykt A, potem B–D albo STOP.
