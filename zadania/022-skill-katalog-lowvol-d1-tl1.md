@@ -2,7 +2,7 @@
 id: 022
 tytul: Nowa wersja skilla `quant-strategy-catalog` — rodzina low-vol/BAB, poprawka opisu D1 vs TL1, statusy po mapie 007
 typ: dokumentacja
-status: w_toku
+status: czeka_na_decyzje
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29
@@ -40,4 +40,17 @@ wnioski 103–110 i mapa hipotez z zadania 007 (008, 009 i 013 zamknięte bez od
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **Przygotowane 2026-09-29, czeka na wgranie przez użytkownika.** Gałąź `zadanie-022-skill-katalog-lowvol-d1-tl1`
+  (`822e18f`), scalona do master. W repo: `docs/skille/quant-strategy-catalog_2026-09-29.diff` (+273 / −89, 4 pliki
+  skilla, sumy w nagłówku) i notka w `STATUS.md` (lista „czeka na użytkownika”, punkt 10).
+- **Paczka:** `~/pakiety_skilli/quant-strategy-catalog_2026-09-29.skill`, sha256 `11daffd2b77a161fe395793d5913febe04860963910e07daee4c6da20ff8517b`
+  (4 pliki, `name: quant-strategy-catalog`; walidator skill-creatora przeszedł; kopia synced + diff = paczka bajt w bajt).
+- **Zmiany:** nowa rodzina B5 niska zmienność / BAB (NIEMIERZALNE-bez-odczytu; `docs/rag/11` §5, wnioski 81, 92, 107);
+  D1: TL1 to open interest, nie funding → nowa rodzina E3 (66, 75, 90, 97); statusy z mapy 007 (B3, G1, Y2, B4, C1, D3,
+  HL-P, HL-L), K1 rynki tradycyjne (84, 109), próg t 3,84 dla 41. odczytu (107). 22 z 22 zmienionych statusów
+  z odnośnikiem. Wniosek 111 (LP1) nieujęty — zakres „do 110”, statusu rodziny nie zmienia.
+- **Dowody (sprawdził orkiestrator):** hash paczki zgodny, zawartość (SKILL.md, nazwa) sprawdzona; diff gałęzi = 3 pliki
+  dokumentacji; pytest wykonawcy 1 927 passed, kod 0; strażniki dokumentacji na master po scaleniu zielone.
+- **Zostało:** użytkownik wgrywa paczkę na claude.ai jako zamiennik `quant-strategy-catalog`; potem orkiestrator
+  porównuje sumy w `~/.claude/skills/synced/` z nagłówkiem diffu, zmienia status na `zrobione` i usuwa punkt 10
+  ze `STATUS.md`.
