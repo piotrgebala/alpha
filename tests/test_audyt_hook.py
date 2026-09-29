@@ -304,6 +304,26 @@ def test_record_never_contains_file_content_and_masks_secrets(tmp_path, repo):
     assert "content" not in rekord and maskowany["polecenie"].startswith("curl -H")
 
 
+@pytest.mark.parametrize(
+    "polecenie",
+    [
+        "curl -u jan:hunter2x https://api.github.com",
+        "curl --user=jan:hunter2x https://api.github.com",
+        "curl -ujan:hunter2x https://api.github.com",
+        "curl -U jan:hunter2x -x http://p:8080 https://api.github.com",
+    ],
+)
+def test_basic_auth_user_password_is_masked(tmp_path, repo, polecenie):
+    rekord = bash(tmp_path, repo, polecenie)
+    assert "hunter2x" not in rekord["polecenie"] and "jan:***" in rekord["polecenie"]
+
+
+def test_user_flag_without_password_is_kept(tmp_path, repo):
+    assert bash(tmp_path, repo, "git push -u origin zadanie-002")["polecenie"].endswith(
+        "zadanie-002"
+    )
+
+
 def test_long_command_is_truncated(tmp_path, repo):
     rekord = bash(tmp_path, repo, "echo " + "a " * 1000)
     assert len(rekord["polecenie"]) <= ah.MAKS_ZNAKOW + 1

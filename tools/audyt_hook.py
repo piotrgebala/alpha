@@ -75,6 +75,11 @@ _MASKI = (
     (re.compile(r"(?i)(authorization\s*:\s*)(bearer\s+|basic\s+|token\s+)?[^\s'\"]+"), r"\1\2***"),
     (re.compile(r"(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]{8,}"), r"\1***"),
     (re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://)[^/\s:@]+:[^/\s@]+@"), r"\1***:***@"),
+    # curl/wget `-u user:haslo`, `--user=user:haslo`, `--proxy-user …` — maskowane tylko w formie z „:”
+    (
+        re.compile(r"(?i)((?:^|\s)(?:-u|-U|--user|--proxy-user)[ =]?['\"]?[^\s:'\"]*:)[^\s'\"]+"),
+        r"\1***",
+    ),
     (
         re.compile(
             r"(?i)(--?[a-z0-9_-]*(?:key|token|secret|password|passwd|pass|pwd)[a-z0-9_-]*[ =])"
