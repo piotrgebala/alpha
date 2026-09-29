@@ -297,3 +297,36 @@ def test_dollar_way_matches_numpy_x1_fixed_quantity():
     mine = pd.Series(b["b1"].sum(axis=1), index=close.index)
     assert np.allclose(mine.to_numpy(), dollars.to_numpy(), atol=1e-13)
     assert abs(mine.sum()) > 1e-4
+
+
+# ----------------------------------------------------------------------------- kapitał i ruina
+
+
+def test_cap_end_ts1_is_compounded_engine_gross_within_holding():
+    close, _ = _panel(9)
+    rets = close.pct_change(fill_method=None).to_numpy()
+    nan = np.full(close.shape, np.nan)
+    forms = [(30, np.full(close.shape[1], 0.05)), (40, np.full(close.shape[1], -0.05))]
+    pos = fs.ts_liq_positions(rets, forms, nan, nan, 2.0, 0.01)
+    assert pos.cap_end[31:41] == pytest.approx(np.cumprod(1.0 + pos.gross[31:41]))
+    assert pos.cap_end[41:] == pytest.approx(np.cumprod(1.0 + pos.gross[41:]))
+    assert not fs.ruin_days(pos).any()
+
+
+def test_ruin_days_marks_whole_holding_when_short_squeeze_wipes_capital():
+    """X1 stała ilość: short 1/6 kapitału w monecie, która rośnie 10× w dniu → kapitał ≤ 0 → cały okres."""
+    idx = pd.date_range("2024-01-01", periods=50, freq="D", tz="UTC")
+    cols = [f"S{i}" for i in range(6)]
+    rng = np.random.default_rng(10)
+    path = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, (50, 6)), axis=0))
+    path[:, 0] = np.linspace(100, 50, 50)  # najgorszy zwrot 28 dni → short
+    path[33:, 0] *= 10.0  # skok ×10 w drugim dniu okresu
+    close = pd.DataFrame(path, index=idx, columns=cols)
+    members = {idx[0]: cols}
+    dates = [idx[31], idx[38], idx[45]]
+    pos = fs.xs_positions(close, members, dates, rank_legs, 0.5, 3, signal_panel(close))
+    assert pos.W_eng[32, 0] < 0  # kontrola: moneta jest w krótkiej nodze
+    ruin = fs.ruin_days(pos)
+    assert ruin[32:39].all()  # cały okres 32–38 (formowanie 31 → 38)
+    assert not ruin[39:].any() and not ruin[:32].any()
+    assert np.nanmin(pos.cap_end[32:39]) <= 0

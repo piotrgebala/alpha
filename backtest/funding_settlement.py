@@ -189,6 +189,9 @@ class Positions:
     first: np.ndarray
     gross: np.ndarray  # zwrot brutto fazy w dniu (do kontroli zgodności z silnikiem)
     in_phase: np.ndarray  # dzień należy do szeregu fazy
+    cap_end: (
+        np.ndarray
+    )  # kapitał fazy na KONIEC dnia względem początku okresu (≤ 0 = ruina stałej ilości)
 
 
 def ts_liq_positions(
@@ -207,6 +210,7 @@ def ts_liq_positions(
     first = np.zeros(n_days, dtype=bool)
     gross = np.zeros(n_days)
     in_phase = np.zeros(n_days, dtype=bool)
+    cap_end = np.full(n_days, np.nan)
     thr = 1.0 / lev - mmr
     for k, (t_pos, w_new) in enumerate(formations):
         t_next = formations[k + 1][0] if k + 1 < len(formations) else n_days - 1
@@ -234,7 +238,8 @@ def ts_liq_positions(
             alive = alive & ~liq
             alive_end[d] = alive
             equity += float(pnl.sum())
-    return Positions(W, W.copy(), R, alive_end, first, gross, in_phase)
+            cap_end[d] = equity
+    return Positions(W, W.copy(), R, alive_end, first, gross, in_phase, cap_end)
 
 
 def xs_positions(
@@ -263,6 +268,7 @@ def xs_positions(
     first = np.zeros(n_days, dtype=bool)
     gross = np.zeros(n_days)
     in_phase = np.zeros(n_days, dtype=bool)
+    cap_end = np.full(n_days, np.nan)
     month_starts = sorted(members)
     for k, t in enumerate(dates):
         t_next = dates[k + 1] if k + 1 < len(dates) else idx[-1] + pd.Timedelta(days=1)
@@ -296,11 +302,31 @@ def xs_positions(
             gross[d] = capital_per_leg * (r_long - r_short)
             alive_end[d] = (w0 != 0).astype(float)
             pf = pf * (1.0 + r)
+            cap_end[d] = 1.0 + float((w0 * (pf - 1.0)).sum())
             wl = wl * (1.0 + r)
             wl = wl / wl.sum() * capital_per_leg if wl.sum() > 0 else wl
             ws = ws * (1.0 + r)
             ws = ws / ws.sum() * capital_per_leg if ws.sum() > 0 else ws
-    return Positions(W, W_eng, R, alive_end, first, gross, in_phase)
+    return Positions(W, W_eng, R, alive_end, first, gross, in_phase, cap_end)
+
+
+def ruin_days(pos: Positions) -> np.ndarray:
+    """
+    Dni okresów trzymania, w których kapitał fazy (stała ilość od formowania) spadł na koniec któregoś dnia
+    do ≤ 0 — cały okres (od formowania do następnego). Po ruinie wagi W = w·cena/kapitał tracą sens
+    (dzielenie przez kapitał bliski zera albo ujemny), a realne konto byłoby wcześniej zlikwidowane.
+    """
+    n = len(pos.first)
+    out = np.zeros(n, dtype=bool)
+    starts = np.where(pos.first & pos.in_phase)[0]
+    ends = np.append(starts[1:], n)
+    for s, e in zip(starts, ends, strict=True):
+        seg = np.arange(s, e)
+        seg = seg[pos.in_phase[seg]]
+        c = pos.cap_end[seg]
+        if np.any(np.isfinite(c) & (c <= 0)):
+            out[seg] = True
+    return out
 
 
 # ----------------------------------------------------------------------------- druga droga (dolarowo)
