@@ -3142,3 +3142,8 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   **wdrożenie T5 — decyzja użytkownika 28.09:** „Bierz opusta cały czas tylko do prostszych zadań z medium effort” — agenci `lokalizator` (dotąd Haiku)
   i nowy `wykonawca` na Opusie z wysiłkiem medium.
 
+#### Tablica zadań od 2026-09-29
+
+- Decyzja użytkownika 2026-09-29: zadania w `zadania/` ([README](zadania/README.md)), orkiestrator na polecenie
+  „wykonaj zadania z tablicy”, CLAUDE.md zasada 21. Kolejność: tablica (000) → izolacja wykonawców (002) → ewentualny
+  harmonogram (osobna decyzja). Ścieżka odwrotu: usunięcie zasady 21 i katalogu `zadania/`.

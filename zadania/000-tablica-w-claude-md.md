@@ -2,7 +2,7 @@
 id: 000
 tytul: Wdrożenie tablicy zadań — reguła w CLAUDE.md i sposób pracy orkiestratora
 typ: dokumentacja
-status: nowe
+status: zrobione
 zlecil: cowork
 decyzja_uzytkownika: "2026-09-29: tablica zadań w katalogu zadania/, Cowork pisze tylko w zadania/"
 utworzono: 2026-09-29
@@ -43,4 +43,11 @@ musi być o niej reguła w `CLAUDE.md`. Cowork nie może edytować `CLAUDE.md`.
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **Co zrobiono:** `CLAUDE.md` — zasada 21 (tablica zadań) i wiersz `zadania/` w „Strukturze projektu”; pełne brzmienie
+  zasady 21 w `docs/rag/08_zasady_pelne_brzmienie.md` (ta sama numeracja, jak wymaga CLAUDE.md); sekcja „Tablica zadań”
+  w `docs/rag/10_preferencje_uzytkownika.md`; notka „Tablica zadań od 2026-09-29” na końcu `STATUS.md`. Innych reguł nie
+  zmieniano; harmonogramu nie uruchomiono.
+- **Commity i gałęzie:** gałąź `zadanie-000-tablica`, scalona do `master` (hash w `git log --grep='zadanie 000'`).
+- **Dowody:** `git diff master~1 -- CLAUDE.md`; `OMP_NUM_THREADS=4 py -m pytest -q` → 1768 passed, 2 skipped (250 s,
+  kod wyjścia 0, 2026-09-29).
+- **Co zostało:** nic w tym zadaniu. Kolejne kroki według decyzji: 002 (izolacja), harmonogram osobną decyzją.

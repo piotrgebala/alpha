@@ -215,6 +215,19 @@ Te pliki zmieniają się często — traktuj jako aktualny stan, nie jako źród
     (`data.min_start`) nakładany przez `backtest/checkpoint_lib.py::fetch_window` (nowe skrypty
     wołają `fetch_window`, nie `fetch_native`) — nie w każdym skrypcie z osobna; skrypty
     zamrożone (zasada 13) wołają `fetch_native` bez filtra i pozostają odtwarzalne.
+21. **Tablica zadań = `zadania/` (decyzja użytkownika 2026-09-29: tablica zadań w katalogu
+    `zadania/`, Cowork pisze tylko w `zadania/`).** Po co: jedno miejsce, z którego sesja na serwerze
+    bierze pracę zleconą przez użytkownika lub Cowork, z widocznym statusem i wynikiem. Na polecenie
+    „wykonaj zadania z tablicy” sesja staje się orkiestratorem: bierze zadania `nowe` w kolejności
+    numerów z uwzględnieniem `zalezy_od`, dzieli je na kroki i zleca wykonawcom (subagent, osobny
+    worktree, gałąź `zadanie-NNN-<slug>`), sama przegląda i scala — kontekst orkiestratora ma zostać
+    mały (`docs/rag/12`). Zadania `badawcze`, `dziennik` i `konto` bez zapisanej decyzji użytkownika
+    przechodzą w `czeka_na_decyzje`: pętla „wynik → nowe zadanie → wynik” byłaby maszyną do
+    przeszukiwania hipotez (wniosek 107, `runs/odczyty_historii.csv`). Scalanie tylko na dowodach
+    (testy, `raw_output.txt` lub log, powtarzalna komenda, hash, druga droga kluczowej liczby); brak
+    danych zgłasza się jako „BRAK DANYCH”. Cowork zmienia tylko pliki `zadania/` o statusie `nowe`.
+    Automat według harmonogramu dopiero po izolacji wykonawców (zadanie 002) i osobnej decyzji
+    użytkownika. Pełne zasady: `zadania/README.md`.
 
 ## Wytyczne (miękkie — do rewizji, gdy zmienią się dane)
 
