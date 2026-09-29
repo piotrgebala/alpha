@@ -96,19 +96,21 @@ def test_komunikat_uciety_do_kilkudziesieciu_znakow():
 
 
 def test_granice_w_kodzie_tylko_w_jednym_miejscu():
-    """Jedno źródło granic: żaden moduł likwidacji (kolektory, indeks, kopia) nie ma własnej kopii
-    liczb (zadanie 021). Inne moduły `data/` (np. `fetch_tradfi_perps`) mają własne, niezależne."""
+    """Jedno źródło granic: żaden moduł likwidacji (kolektory, indeks, kopia — także przyszłe
+    `collect_liquidations*.py` / `liquidation_*.py`) nie ma własnej kopii liczb (zadanie 021).
+    Inne moduły `data/` (np. `fetch_tradfi_perps`) mają własne, niezależne granice."""
     data_dir = Path(__file__).resolve().parents[1] / "data"
     modules = sorted(
         {*data_dir.glob("collect_liquidations*.py"), *data_dir.glob("liquidation_*.py")}
     )
-    assert [p.name for p in modules] == [
+    known = {
         "collect_liquidations.py",
         "collect_liquidations_bybit.py",
         "liquidation_backup.py",
         "liquidation_index.py",
         "liquidation_time.py",
-    ]
+    }
+    assert known <= {p.name for p in modules}  # wzorce plików trafiają (test nie jest pusty)
     owners = [
         p.name
         for p in modules
