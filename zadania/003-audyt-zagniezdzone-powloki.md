@@ -2,7 +2,7 @@
 id: 003
 tytul: Hook audytowy — luki wykrywania z przeglądu 002 (bash -c, gh api, hasła przy opcjach)
 typ: infra
-status: nowe
+status: w_toku
 zlecil: orkiestrator
 decyzja_uzytkownika: "2026-09-29: kolejność tablica → izolacja → ewentualny harmonogram (podzadanie typu infra z zadania 002)"
 utworzono: 2026-09-29
