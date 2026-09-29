@@ -17,6 +17,7 @@ from backtest.liq_binance import (
     bracket,
     contingency,
     crossing_flags,
+    flagged_cells,
     flat_distance,
     forward_extremes,
     parse_tiers,
@@ -131,6 +132,18 @@ def test_contingency():
     b = pd.DataFrame({"X": [True, False, True, False]}, index=idx)
     v = pd.DataFrame({"X": [True, True, True, False]}, index=idx)
     assert contingency(a, b, v) == {"n": 3, "tylko_last": 1, "tylko_mark": 1, "oba": 1, "zaden": 0}
+
+
+def test_bracket_empty_list_is_value_error():
+    with pytest.raises(ValueError):
+        bracket([], 1_000)
+
+
+def test_flagged_cells_respects_valid_mask():
+    idx = pd.date_range("2021-01-01", periods=3, tz="UTC")
+    flags = pd.DataFrame({"A": [True, False, True], "B": [False, True, False]}, index=idx)
+    valid = pd.DataFrame({"A": [True, True, False], "B": [True, True, True]}, index=idx)
+    assert flagged_cells(flags, valid) == [(idx[0], "A"), (idx[1], "B")]
 
 
 def test_tier_dataclass_frozen():

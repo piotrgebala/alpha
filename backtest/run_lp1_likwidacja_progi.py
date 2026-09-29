@@ -239,6 +239,9 @@ def step2(members: dict, tiers: dict, last: dict, mark: dict, out_dir: Path) -> 
     print("\n=== 2. PRZEKROCZENIA PROGU: ekstremum ceny ostatniej vs ceny mark ===")
     idx = last["close"].index
     cols = last["close"].columns
+    # forward_extremes liczy okno w wierszach — indeks musi być ciągły, dzień po dniu
+    if not (idx.to_series().diff().dropna() == pd.Timedelta(days=1)).all():
+        raise ValueError("indeks dni nieciągły — okno w wierszach ≠ okno w dniach")
     mlow = mark["low"].reindex(index=idx, columns=cols)
     mhigh = mark["high"].reindex(index=idx, columns=cols)
     member = member_mask(idx, cols, members)

@@ -86,6 +86,8 @@ def bracket(tiers: list[Tier], notional: float) -> Tier:
     """Próg, do którego wpada nominał: floor ≤ N < cap. N ≥ ostatni cap → błąd (poza tabelą giełdy)."""
     if notional <= 0:
         raise ValueError("nominał musi być dodatni")
+    if not tiers:
+        raise ValueError("pusta lista progów")
     for t in tiers:
         if t.floor <= notional < t.cap:
             return t
@@ -117,7 +119,8 @@ def forward_extremes(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Dla dnia t: min(low) i max(high) w dniach t+1…t+h (NaN, gdy w oknie brakuje choć jednego dnia).
-    Patrzy w przód CELOWO: to pomiar ścieżki po wejściu, nie cecha modelu.
+    Patrzy w przód CELOWO: to pomiar ścieżki po wejściu, nie cecha modelu. Okno liczone w WIERSZACH,
+    więc indeks musi być ciągły (jeden wiersz = jeden dzień) — pilnuje tego wywołujący.
     """
     lo = low.rolling(h, min_periods=h).min().shift(-h)
     hi = high.rolling(h, min_periods=h).max().shift(-h)
