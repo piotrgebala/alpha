@@ -7,6 +7,7 @@ zlecil: uzytkownik
 decyzja_uzytkownika: "brak"
 utworzono: 2026-09-29
 zalezy_od: [004]
+nie_wczesniej_niz: 2026-09-30
 budzet: "Opus"
 ---
 
@@ -39,4 +40,4 @@ Zgoda na zapisanie karty teraz (odczyt dopiero za rok)?
 
 ## Wynik
 
-(dopisuje orkiestrator)
+**2026-09-29:** decyzja dopiero po wyniku pomiaru wag z zadania 004 (koniec ≈ 2026-09-30 10:33 UTC); wtedy orkiestrator przedstawi rekomendację (kolejność z mapy 007: E1 → sonda HL). Status bez zmian.

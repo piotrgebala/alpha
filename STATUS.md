@@ -3159,3 +3159,4 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   (zadanie 004); przegląd tygodnia hooka audytowego od 2026-10-06 (005); kroki z `sudo` izolacji — użytkownik, sprawdzenie
   orkiestrator (006).
 - **Zadanie 007 (2026-09-29, backlog, 0 odczytów):** [mapa hipotez](docs/mapa_hipotez_2026-10.md) — z 10 rodzin żadna nie jest dziś mierzalna (B3, B4, C1, D3, G1, Y2 NIEMIERZALNE przy progu t 3,84; E1, PT1 i dwie z Hyperliquid BRAK DANYCH); proponowana kolejność: karta E1 (011) → sonda HL (010) → PT1 na życzenie (012), reszta zamknąć bez odczytu — decyzja użytkownika.
+- **Po mapie 007 (2026-09-29, decyzja użytkownika):** 008 (B3), 009 (G1), 013 (Y2) zamknięte bez odczytu; 010 i 011 — decyzja po pomiarze 004 (30.09); 012 (PT1) tylko na życzenie, pełna baza 1990–2026; 014 bez zmian.

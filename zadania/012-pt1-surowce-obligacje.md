@@ -37,4 +37,4 @@ Czy ten sprawdzian mechanizmu jest Ci potrzebny do decyzji o kapitale, czy go po
 
 ## Wynik
 
-(dopisuje orkiestrator)
+**2026-09-29:** zgodnie z mapą 007 (BRAK DANYCH: brak krzywej terminowej; po 2013 wykrywalne dopiero SR ≈ 0,76) zadanie czeka — tylko na wyraźne życzenie użytkownika i tylko na pełnej bazie 1990–2026. Status bez zmian.

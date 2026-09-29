@@ -2,9 +2,9 @@
 id: 013
 tytul: Y2 — kierunek BTC na świecy dziennej: rachunek mocy, najpewniej zamknięcie bez odczytu
 typ: badawcze
-status: czeka_na_decyzje
+status: odrzucone
 zlecil: uzytkownik
-decyzja_uzytkownika: "brak"
+decyzja_uzytkownika: "2026-09-29: „wykonaj tak jak uwazasz” (akceptacja rekomendacji orkiestratora po zadaniu 007)"
 utworzono: 2026-09-29
 zalezy_od: [007]
 budzet: "Opus, krótko"
@@ -32,4 +32,4 @@ Akapit w mapie 007 i wniosek w `runs/INDEX.md` (0 odczytów).
 
 ## Wynik
 
-(dopisuje orkiestrator)
+**Zamknięte bez odczytu 2026-09-29** decyzją użytkownika. Powód: `docs/mapa_hipotez_2026-10.md` (zadanie 007) — rodzina NIEMIERZALNA nawet przy hojnych założeniach; odczyt nic by nie rozstrzygnął, a jako 41. odczyt historii podniósłby próg dla kolejnych hipotez. 0 odczytów, 0 wierszy w `runs/odczyty_historii.csv`. Powrót tylko przy nowym źródle danych poza historią 2021–2026 albo nowym mechanizmie — jako nowe zadanie.

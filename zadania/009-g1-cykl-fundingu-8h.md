@@ -2,9 +2,9 @@
 id: 009
 tytul: G1 — reguła cyklu fundingu 8h (godziny przed i po rozliczeniu), rachunek mocy przed kartą
 typ: badawcze
-status: czeka_na_decyzje
+status: odrzucone
 zlecil: uzytkownik
-decyzja_uzytkownika: "brak"
+decyzja_uzytkownika: "2026-09-29: „wykonaj tak jak uwazasz” (akceptacja rekomendacji orkiestratora po zadaniu 007)"
 utworzono: 2026-09-29
 zalezy_od: [007]
 budzet: "Opus"
@@ -37,4 +37,4 @@ Zgoda na rachunek mocy i — jeśli wyjdzie MIERZALNA — na jeden odczyt?
 
 ## Wynik
 
-(dopisuje orkiestrator)
+**Zamknięte bez odczytu 2026-09-29** decyzją użytkownika. Powód: `docs/mapa_hipotez_2026-10.md` (zadanie 007) — rodzina NIEMIERZALNA nawet przy hojnych założeniach; odczyt nic by nie rozstrzygnął, a jako 41. odczyt historii podniósłby próg dla kolejnych hipotez. 0 odczytów, 0 wierszy w `runs/odczyty_historii.csv`. Powrót tylko przy nowym źródle danych poza historią 2021–2026 albo nowym mechanizmie — jako nowe zadanie.
