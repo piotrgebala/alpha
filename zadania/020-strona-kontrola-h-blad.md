@@ -2,7 +2,7 @@
 id: 020
 tytul: Strona dziennika — kontrola (h): alarm, gdy ostatnia linia `przebiegi.log` ma pole z „BŁĄD”
 typ: infra
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29

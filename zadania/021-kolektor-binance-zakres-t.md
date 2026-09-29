@@ -2,7 +2,7 @@
 id: 021
 tytul: Kolektor likwidacji Binance — sprawdzanie zakresu czasu T przy zapisie (dziś sprawdza je dopiero indeks/kopia)
 typ: naprawa
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29

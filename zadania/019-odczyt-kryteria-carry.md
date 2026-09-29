@@ -2,7 +2,7 @@
 id: 019
 tytul: Odczyt dziennika — kryteria carry (a)–(c) z Poprawki 12 w `backtest/odczyt_dziennika.py`, przed odczytem 1
 typ: infra
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29

@@ -2,7 +2,7 @@
 id: 022
 tytul: Nowa wersja skilla `quant-strategy-catalog` — rodzina low-vol/BAB, poprawka opisu D1 vs TL1, statusy po mapie 007
 typ: dokumentacja
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29

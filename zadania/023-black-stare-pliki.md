@@ -2,7 +2,7 @@
 id: 023
 tytul: Porządki formatu — `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`)
 typ: naprawa
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md na tablicę)"
 utworzono: 2026-09-29
