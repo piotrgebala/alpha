@@ -19,6 +19,8 @@ każdej rundzie; limit ~40 linii (dłuższe = przenieś do wniosków).
   użytkownika (zwroty rzędu zakładu o kierunek). Od 2026-09-29 COIN-M w dzienniku papierowym tylko do
   weryfikacji rozliczeń (Poprawka 12), nie jako kandydat.
 - Skalowanie pozycji siłą sygnału — niemierzalne na 5 latach (78).
+- Carry walutowe na perpach TradFi (3 pary Bybit, 20 dni): stopa w fundingu = 0, funding = 0 w 90–100 % odczytów — różnica stóp
+  dziś niewypłacana; surowce i obligacje nierozstrzygnięte (PT1, 109). Perp TradFi = wykonanie (koszt per instrument), badać na danych bazowych.
 
 **Kandydaci — ślady, nie dowody (każdy wybrany spośród ~30 odczytów na tej samej historii):**
 - Premia Coinbase → BTC na tydzień (CP1): jedyny POZYTYWNY, ~+32 %/rok, t 2,09; po korekcie na ~28 prób DSR 0,52
@@ -169,6 +171,7 @@ podsumowanie pod tabelą.
 | **LB0** | 2026-09-27 | [lb0-kolektor-bybit](2026-09-27_lb0-kolektor-bybit/README.md) | Kolektor PEŁNYCH likwidacji Bybit (`allLiquidation.*`, wszystkie zdarzenia, nie próbka) od 2026-09-27 do `$HOME/likwidacje_bybit` (poza repo) — druga brama danych rodziny E1 obok LK0; decyzja użytkownika („wykonaj wszystkie”, docs/rag/11) | **0 — POZA licznikami** (zbieranie danych, 0 odczytów; jeden licznik E1 dla LK0 i LB0) | **Uruchomiony. Kontrola pozytywna 180 s: 777 symboli na 2 połączeniach, subskrypcje 78/78, 58 likwidacji z 16 monet (14 longów, 44 shortów); LK0 w tym samym oknie 62 zdarzenia, te same główne monety i kierunek (ENA: Bybit 25, Binance 13 — próbkowanie Binance).** Nadzór w `tools/likwidacje.sh` (bez nowej linii crona), wyłącznik `WYLACZONY`; kopia + dzienny indeks obu giełd (`data/liquidation_backup.py`). Walidacja 16a: **Caveats** (jedno krótkie okno) |
 | **HC1** | 2026-09-24 | [hc1-cykl-halvingowy](2026-09-24_hc1-cykl-halvingowy/README.md) | Opis cyklu halvingowego BTC (FRED CBBTCUSD od 2015-03, 3–4 cykle), fazy 0–48 mies., trend TS1 na BTC per faza; decyzja użytkownika | **0 — opisowo** | 0–18 mies.: BTC dodatni 9/9; 18–24 mies.: 0/3 (−31…−59 %); 24–30 mies.: 1/4, trend 0/4. Dziś 29 mies. po halvingu 2024. Opis, nie dowód. Walidacja: **READY (Caveats)** |
 | **OS1** | 2026-09-28 | [os1-otwarcia-sesji](2026-09-28_os1-otwarcia-sesji/README.md) | Pomysł użytkownika: otwarcia sesji Tokio / Londyn / Nowy Jork na BTC perp 30m (czas letni/zimowy ze stref IANA); F1 dryf 60 min (znak z 365 dni), F2 momentum 30 min → 3,5 h; tylko rachunek mierzalności | **0 — oba ramiona łączne (i 6 per sesja) NIEMIERZALNE, nie startuje** | **Wymagana trafność łącznie: F1 65,0 / 60,2 %, F2 59,3 / 56,5 % (taker 0,14 % / limit 0,09 %) wobec prioru z literatury 53,5–53,8 %; konwencja 56 % też nie przechodzi. Nowy Jork: zmienność +26–45 %, kierunku nie mierzono.** Walidacja: **Caveats** — druga droga zgodna co do cyfry; przegląd: Approve z uwagami |
+| **PT1** | 2026-09-28 | [pt1-perpy-tradfi](2026-09-28_pt1-perpy-tradfi/README.md) | Perpetuale TradFi na Bybit/Binance jako instrument: spis, funding (modele A kopia krypto / B carry / C zero), koszty z migawek, zamknięty rynek bazowy, zgodność z FRED | **0 — opisowo** | **Stopa w fundingu = 0 (Binance 202/206; Bybit wzór 100 %) — brak automatycznego carry. 3 pary walutowe Bybit (20 dni): funding 0 w 90–100 % odczytów — różnica stóp dziś niewypłacana (USDJPY 61/62 zer wobec B −2,8 %/rok); D1 dosłownie „pozostały układ”; surowce i obligacje nierozstrzygnięte. Mediana kosztu rdzenia 0,034–0,046 %/stronę na komplecie 12 migawek (typowa akcja 0,065–0,094 %); β weekendu per klasa 0,88–1,06.** Carry walutowe na tych parach dziś niewykonalne; funding zbierany dalej; perp = wykonanie, badanie na danych rynku bazowego (109). Walidacja: **Caveats** (16a/16b po „Revision”); przegląd: Approve z uwagami |
 
 ## Liczniki budżetu multiple-testing (per baza danych / per hipoteza)
 
@@ -192,6 +195,7 @@ podsumowanie pod tabelą.
 - **NOWA SERIA TP — cel zysku na nogach dziennika (TP1, 2026-09-26, decyzja użytkownika): 0/4 — NIEMIERZALNA, warianty niezużyte, SERIA ZAMKNIĘTA.** Zakazane bez nowej decyzji użytkownika: inne cele, cele ruchome, częściowe wyjścia, stopy, ponowne wejście po celu w tygodniu. Jedyna droga: druga wersja papierowa na danych prospektywnych.
 - **NOWA SERIA MX — MACD + EMA 10/30 na 1h (MX1 + MX2, 2026-09-25, decyzje użytkownika): 0/6 — WSZYSTKIE NIEMIERZALNE (MX1 bez filtra, MX2 pięć filtrów), warianty niezużyte, SERIA ZAMKNIĘTA.** Zakazane bez nowej decyzji użytkownika: inne okna MACD/EMA, okno czasu między przecięciami, wersja „stan”, inne interwały, V/bariery, odwrócenie znaku, podzbiory. Jedyna droga do mierzalności: wiele monet naraz (nowa pre-rejestracja).
 - **NOWA SERIA OS — otwarcia sesji na BTC 30m (OS1, 2026-09-28, pomysł użytkownika): 0/2 — OBA RAMIONA ŁĄCZNE NIEMIERZALNE, nie wystartowała, SERIA ZAMKNIĘTA.** Własny licznik (rodzina G1; zbiór informacyjny: zegar + OHLCV własne). Zakazane bez nowej decyzji użytkownika: inne okna i czasy trzymania, inne sesje (Sydney, Hongkong, Frankfurt osobno), odwrócenie znaku (odwrót zamiast momentum), filtry (zmienność, dzień tygodnia), podzbiory sesji, inne monety. Jedyna droga do mierzalności: wiele monet naraz (mały zysk mocy przy korelacji w ciągu dnia, 40) albo dłuższa historia.
+- **SERIA PT — perpetuale TradFi jako instrument wykonawczy (PT1, 2026-09-28): 0 wariantów — opis przyrządu, POZA licznikami.** Hipotezy wykonywane na tych kontraktach dostają własne liczniki (per hipoteza, dane rynku bazowego).
 - **NOWA SERIA TL — tłok przekrojowy (od TL1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne okna/nogi, odwrócenie znaku (post hoc).
 - **SERIA TS — uzupełnienie (TR1/TP1, 2026-09-24, decyzja użytkownika): 2/2 ZUŻYTE — zamknięta na historii.** Dalej tylko dziennik prospektywny tej samej reguły (0 wariantów).
 - **NOWA SERIA TF — trend z filtrem tłoku (od TF1, 2026-09-24): 1/1 ZUŻYTE — ZAMKNIĘTA REGUŁĄ STOP.** Zakazane: inne progi/okna fundingu, OI jako filtr trendu bez nowego mechanizmu.
@@ -1015,6 +1019,30 @@ podsumowanie pod tabelą.
     2016–2025 po teście SPA nieistotne; K33 2026: mit „wyprzedaży o 10:00” obalony); konwencja 56 % też nie przechodzi. Nowy Jork
     wyróżnia zmienność (σ 60 min 0,99 % wobec 0,69–0,73 %; kierunku nie mierzono). → Reguły pory doby na BTC w horyzoncie godzin nie startują bez
     efektu z badań po publikacji ≥ 0,15–0,20 % brutto na transakcję (moc 80 %, limit / taker); seria OS zamknięta regułą STOP (0/2).
+
+109. **PERPETUALE TRADFI NIE MAJĄ AUTOMATYCZNEGO CARRY (STOPA W FUNDINGU = 0); NA 3 MŁODYCH PARACH WALUTOWYCH RÓŻNICA STÓP DZIŚ NIE JEST WYPŁACANA, SUROWCE I OBLIGACJE NIEROZSTRZYGNIĘTE (PT1, 2026-09-28, 0 wariantów, opis).**
+    Bybit 257 i Binance 206 kontraktów (akcje, ETF-y — obligacyjne TLT/TBT/TMF, 4–8 surowców, waluty: 3 pary Bybit od 09-08,
+    USDBRL Binance od 09-21); najdłuższa historia 9,6 mies. (złoto, Binance). Binance `interestRate` = 0 dla 202/206 (BTC 0,0001);
+    Bybit: wzór z I = 0 odtwarza 100 % odczytów EURUSD / USDJPY / XAU w 0,05 pb, z I = 0,01 % — 2–53 % (kontrola BTC odwrotnie).
+    Carry może więc przyjść tylko przez premię utrzymywaną arbitrażem poza martwą strefą ±0,05 %/8 h. Waluty Bybit (20 dni, obrót
+    28–670 tys. USDT/dobę): funding = 0 w 90–100 % odczytów; USDJPY 61/62 zer wobec −2,80 %/rok w modelu B → B wykluczone;
+    EURUSD −2,28 %/rok [−10,0; +5,4] (N_eff ≈ 31) i GBPUSD (62/62 zer) nie odróżniają B od C; A (10,95) poza przedziałem każdej
+    pary. Opis po przeglądzie (post hoc, nie test): gdzie działa arbitraż, funding wygląda na koszt carry — złoto 3,6–4,0 %/rok
+    ≈ r_USD 3,6 %, w ropie długie dostają 12–28 %/rok, USDBRL +16 %/rok w stronę B; porównania per instrument z „r_USD − dochód
+    aktywa” nie wykonano. Najczęstszy odczyt fundingu to 0, ale długie w typowej akcji płacą 2,1 %/rok (Bybit) / 4,5 % (Binance),
+    w popularnych 10–16 %. Ten sam instrument na wspólnym oknie ma na obu giełdach prawie ten sam funding (166 instrumentów:
+    mediana |różnicy| 2,2 pkt/rok; XAU 4,0 vs 3,6, MU 16,4 vs 15,1) — różnice median klas to paradoks Simpsona; > 10 pkt/rok
+    różni się 19 instrumentów bez stałego kierunku, m.in. ropa CL (−12 vs −28). Koszt strony (12 migawek pn 18:19–23:49 UTC): mediana
+    rdzenia 0,034 % (Bybit) / 0,046 % (Binance) ≤ 0,07 % KO1 w każdej migawce, w sesji USA i po niej, ale powyżej jest 6/23
+    i 5/24 instrumentów rdzenia; typowa akcja 0,094 / 0,065 % (na Bybit akcje tego wieczoru po zamknięciu sesji USA drożały, a
+    azjatyckie przy zamkniętej giełdzie macierzystej kosztowały 0,18 %). Weekend: β per klasa 0,88–1,06 (dolne granice 95 % CI przy n = liczbie zamknięć 0,53–0,78); Binance miedź
+    0,54 i pallad 0,63 — przedział obejmuje próg 0,5; waluty 3 weekendy. Zgodność z FRED: waluty i ETF-y ≥ 0,997 (ETF-y przy
+    zamknięciu NYSE); WTI 0,956–0,958 o 19:00 UTC (post hoc — pora), Brent ≤ 0,89 o każdej godzinie → flaga. → Carry walutowe
+    na tych 3 parach dziś niewykonalne; D1 dosłownie = „pozostały układ” → dalsze zbieranie fundingu (tanie; w 1–4 mies. może
+    rozstrzygnąć B/C dla EURUSD i USDBRL; GBPUSD B ≈ C); carry na surowcach i obligacjach tylko po pre-rejestrowanym porównaniu
+    per instrument. Strategii nie da się mierzyć na samych perpach — badanie na danych rynku bazowego, perp jako wykonanie
+    z kosztem per instrument i fundingiem po stronie popytu jako kosztem; waluty, miedź i pallad tylko przy otwartym rynku.
+    Różnica fundingu ropy między giełdami — tylko jako hipoteza do pre-rejestracji na PRZYSZŁYCH danych.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

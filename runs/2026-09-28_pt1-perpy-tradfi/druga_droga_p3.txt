@@ -1,0 +1,30 @@
+migawki: 12 (18:19–23:49 UTC), w sesji USA: 4, poza: 8
+binance  rdzeń (z BTC, 25): spread 1.15 pb, koszt strony 0.0458 % (w sesji 0.0455, poza 0.0458; stawka standard 0.0557) | bez BTC (24): 0.0458 %, > 0,07 %: 5 — EWZ 0.074, GDX 0.099, TBT 0.076, TMF 0.097, XLE 0.076
+bybit    rdzeń (z BTC, 24): spread 1.05 pb, koszt strony 0.0343 % (w sesji 0.0351, poza 0.0343; stawka standard 0.0602) | bez BTC (23): 0.0329 %, > 0,07 %: 6 — EWJ 0.079, EWZ 0.089, GDX 0.096, TBT 0.172, TLT 0.142, TMF 0.141
+binance  ETF        n= 35 spread med   5.9 (sesja   5.5, poza   5.5) p90  10.8 pb | koszt strony med 0.0695 % (sesja 0.0675, poza 0.0677) | udział > 0,07 %: 48.6%
+binance  ETF_oblig  n=  2 spread med   9.3 (sesja  12.1, poza   9.3) p90  10.9 pb | koszt strony med 0.0864 % (sesja 0.1006, poza 0.0863) | udział > 0,07 %: 100.0%
+binance  akcje      n=156 spread med   5.0 (sesja   5.5, poza   4.7) p90  13.7 pb | koszt strony med 0.0650 % (sesja 0.0675, poza 0.0633) | udział > 0,07 %: 43.6%
+binance  przed_IPO  n=  4 spread med   2.6 (sesja   1.8, poza   1.9) p90   5.5 pb | koszt strony med 0.0531 % (sesja 0.0490, poza 0.0493) | udział > 0,07 %: 25.0%
+binance  surowce    n=  8 spread med   1.2 (sesja   1.1, poza   1.2) p90   2.1 pb | koszt strony med 0.0458 % (sesja 0.0456, poza 0.0460) | udział > 0,07 %: 0.0%
+binance  waluty     n=  1 spread med   0.2 (sesja   0.2, poza   0.2) p90   0.2 pb | koszt strony med 0.0410 % (sesja 0.0410, poza 0.0410) | udział > 0,07 %: 0.0%
+bybit    ETF        n= 51 spread med  12.4 (sesja  11.3, poza  13.8) p90  28.9 pb | koszt strony med 0.0894 % (sesja 0.0842, poza 0.0964) | udział > 0,07 %: 62.7%
+bybit    ETF_oblig  n=  3 spread med  22.8 (sesja  26.5, poza  21.5) p90  27.6 pb | koszt strony med 0.1415 % (sesja 0.1598, poza 0.1351) | udział > 0,07 %: 100.0%
+bybit    akcje      n=196 spread med  13.3 (sesja  11.0, poza  13.5) p90  43.3 pb | koszt strony med 0.0940 % (sesja 0.0826, poza 0.0952) | udział > 0,07 %: 65.3%
+bybit    surowce    n=  4 spread med   1.0 (sesja   1.1, poza   1.0) p90   1.5 pb | koszt strony med 0.0327 % (sesja 0.0328, poza 0.0327) | udział > 0,07 %: 0.0%
+bybit    waluty     n=  3 spread med   0.5 (sesja   1.2, poza   0.7) p90   2.8 pb | koszt strony med 0.0301 % (sesja 0.0335, poza 0.0309) | udział > 0,07 %: 0.0%
+zakres po migawkach (16b) — mediana po instrumentach policzona osobno w każdej migawce:
+  bybit    rdzeń 0.0327–0.0363 %, akcje 0.0807–0.1015 % (12 migawek)
+  binance  rdzeń 0.0452–0.0462 %, akcje 0.0585–0.0678 % (12 migawek)
+akcje wg regionu (giełda macierzysta akcji z HK/KR/CN zamknięta we wszystkich migawkach):
+  binance  USA      n=134 koszt strony med 0.0656 % (sesja 0.0682, poza 0.0633) | udział > 0,07 %: 44.8%
+  binance  HK/KR/CN n= 22 koszt strony med 0.0594 % (sesja 0.0594, poza 0.0624) | udział > 0,07 %: 36.4%
+  bybit    USA      n=168 koszt strony med 0.0896 % (sesja 0.0809, poza 0.0926) | udział > 0,07 %: 63.1%
+  bybit    HK/KR/CN n= 28 koszt strony med 0.1827 % (sesja 0.1911, poza 0.1586) | udział > 0,07 %: 78.6%
+interestRate Binance we wszystkich migawkach (klasa → wartość: liczba odczytów):
+  BTC_kontrola {0.0001: 12}
+  ETF          {0.0: 420}
+  ETF_oblig    {0.0: 24}
+  akcje        {0.0: 1872}
+  przed_IPO    {5e-05: 48}
+  surowce      {0.0: 96}
+  waluty       {0.0: 12}
