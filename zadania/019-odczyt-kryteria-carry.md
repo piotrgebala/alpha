@@ -2,7 +2,7 @@
 id: 019
 tytul: Odczyt dziennika — kryteria carry (a)–(c) z Poprawki 12 w `backtest/odczyt_dziennika.py`, przed odczytem 1
 typ: infra
-status: w_toku
+status: zrobione
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29
@@ -52,4 +52,10 @@ później) nie ma dla carry reguł w kodzie. Pozycja z backlogu `STATUS.md` §17
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **Zrobione 2026-09-29.** Kryterium 6 (carry COIN-M, (a)–(c) z Poprawki 12) w `backtest/odczyt_dziennika.py`;
+  krok (c) z siecią tylko na żądanie (`--carry-sprawdz-gielde`). Kod dziennika bez zmian.
+- Gałąź `zadanie-019-odczyt-kryteria-carry` (`ea10b72`), merge do master `dee873d`.
+- Dowody: testy `tests/test_odczyt_dziennika_carry.py`, w tym `test_carry_criteria_wording_and_thresholds_match_readme`
+  (progi skryptu = `dziennik/README.md`); podgląd bez sieci `zadania/logi/019-podglad-odczytu.txt`; pełny `pytest -q` po scaleniu 019 + 020 + 024 (master `9e78436`, OMP_NUM_THREADS=4): 2 065 passed, 2 skipped, kod 0, 256 s; `ruff check .` czysto; `black --check .` — jedyny plik do przeformatowania to `data/fetch_ohlcv.py` (sprzed zadań, łańcuch dziennika, czeka na decyzję użytkownika).
+- **Zostało (decyzja użytkownika):** czy dopisać `--carry-sprawdz-gielde` do komend odczytów wiążących
+  w `dziennik/README.md:598–600`.

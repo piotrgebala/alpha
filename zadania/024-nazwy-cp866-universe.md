@@ -2,7 +2,7 @@
 id: 024
 tytul: Nazwy plików w data/raw/universe_full w kodowaniu cp866 — naprawa nazw bez zmiany treści
 typ: naprawa
-status: w_toku
+status: zrobione
 zlecil: orkiestrator
 decyzja_uzytkownika: "2026-09-29: „Wykonaj” (zgoda na dopisanie luk danych z LP1 i wykonanie zadań z tablicy)"
 utworzono: 2026-09-29
@@ -39,4 +39,19 @@ w `data/raw/universe_full` z nazwą w cp866 zamiast UTF-8. Skład koszyka dostaj
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **Zrobione 2026-09-29.** Narzędzie `tools/napraw_nazwy_cp866.py` (`--sprawdz` / `--wykonaj`, test
+  `tests/test_napraw_nazwy_cp866.py`); dowody wykonawcy w `zadania/024-dowody/` (plan, próba na kopii, druga droga,
+  lista skryptów). Gałąź `zadanie-024-nazwy-cp866-universe` (`5c4aaf7`), merge do master `9e78436`. pełny `pytest -q` po scaleniu 019 + 020 + 024 (master `9e78436`, OMP_NUM_THREADS=4): 2 065 passed, 2 skipped, kod 0, 256 s; `ruff check .` czysto; `black --check .` — jedyny plik do przeformatowania to `data/fetch_ohlcv.py` (sprzed zadań, łańcuch dziennika, czeka na decyzję użytkownika).
+- **Zmiana nazw (orkiestrator, 2026-09-29 ~12:05 UTC):** 20 plików w `data/raw/universe_full` (6),
+  `data/raw/universe_2026q3` (8) i `data/raw/live` (6); treść bez zmian. Log z komendami:
+  `zadania/024-dowody/wykonanie_2026-09-29.txt` (przed: DO_ZMIANY 20; po: POPRAWNA 20, DO_ZMIANY 0).
+- **Druga droga (niezależna od narzędzia):** posortowana lista sha256 treści 3 202 plików trzech katalogów przed i po
+  jest identyczna (`f4342855…`). Testy czytające te katalogi po zmianie: `tests/test_rebalance_premium.py`
+  + `tests/test_napraw_nazwy_cp866.py` — 33 passed.
+- **Dziennik nie jest dotknięty:** klon `~/alpha-dziennik/data/raw/live` (tylko odczyt) ma 6 nazw spoza ASCII i wszystkie
+  są poprawne; to osobny katalog (inny i-węzeł). Poprawka niepotrzebna. `data/raw/live` w katalogu głównym włączono do
+  naprawy po tym sprawdzeniu: ma teraz te same nazwy co klon dziennika i Windows.
+- **Zostało (decyzje użytkownika, poza tym zadaniem):** TP1 i LP1 uruchomione ponownie mogą dać trochę inne liczby
+  (1 moneta × 1 miesiąc, `zadania/024-dowody/skrypty.txt` sekcja C); zapisanych wyników nie przeliczano.
+  `mark_1d.parquet` i `oi_daily_full.parquet` nie mają 币安人生USDT (kolektor pytał o zniekształcony symbol) —
+  uzupełnienie to osobne zadanie `zbieranie_danych`.

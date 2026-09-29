@@ -243,6 +243,11 @@ Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opi
     w [zadaniu 022](zadania/022-skill-katalog-lowvol-d1-tl1.md): nowa rodzina B5 (niska zmienność/BAB), TL1
     przeniesiony z D1 do nowej E3 (open interest, nie funding), statusy po wnioskach 103–110 i mapie 007;
     treść zmiany: [docs/skille/quant-strategy-catalog_2026-09-29.diff](docs/skille/quant-strategy-catalog_2026-09-29.diff).
+11. **Wkleić w Cowork nową instrukcję rutyny „Dziennik CLAS-5”** (`trig_013XEDboNXSkb6CF17K1eSGf`): cała treść
+    `tools/rutyna_dziennika.md` (suma skryptu `1a9934a2…`, kontrola (h)); nie w 06:30–06:50 UTC. Agent nie ma tu
+    narzędzia do rutyn — [zadanie 020](zadania/020-strona-kontrola-h-blad.md).
+12. **Restart kolektora likwidacji LK0 z nowym kodem** — procedura w [zadaniu 021](zadania/021-kolektor-binance-zakres-t.md)
+    (tryb auto blokuje agentowi ingerencję w działający proces); 29.09 12:00 UTC nadal stary proces z 25.09.
 
 ---
 
@@ -3170,3 +3175,8 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **Zadanie 017 / LP1 (2026-09-29, przegląd, 0 odczytów zwrotu):** płaski próg likwidacji dziennika (MMR 1 %, cena ostatnia) daje prawie tę samą liczbę likwidacji co progi Binance + cena mark przy ~10 tys. USDT/monetę (2× +1,4 %, 3× −2,1 %; próg decyzji 10 %) — **Poprawki nie proponujemy**; warunek powrotu: pozycja > ~50–100 tys. USDT/monetę (post hoc +14…+17 %) albo małe alty. Luki danych do osobnych zadań: zamrożona cena ostatnia przy wstrzymaniu/wycofaniu kontraktu (FTT, ALPACA, LUNA); 4 nazwy plików `universe_full` na serwerze w cp866 — wniosek 111, [runda](runs/2026-09-29_lp1-likwidacja-progi-binance/README.md), [zadanie](zadania/017-likwidacja-progi-binance.md).
 - **Zadanie 016 / FD1 (2026-09-29, 0 wariantów):** funding liczony rozliczenie po rozliczeniu wobec skrótu silników (dzienna suma × waga) — TS1 −0,004 %/rok, X1 na wagach silnika −0,17 %/rok (≤ 5 % kosztów KO1) → wzoru nie poprawiać. **Do decyzji użytkownika:** model pozycji X1 — silnik przywraca nogi codziennie, dziennik handluje raz w tygodniu; przy stałej ilości short MYX 2025-09 zeruje kapitał 5 okresów faz (wniosek 112, [runda](runs/2026-09-29_fd1-funding-druga-droga/README.md)).
 - **Zadanie 020 (2026-09-29, infra):** kontrola (h) na stronie dziennika — powiadomienie „UWAGA: (h) <pole>: <treść>”, gdy pole ostatniego przebiegu w `przebiegi.log` ma „BŁĄD” (X1, stan rynku, F&G, transakcje, opisy, rozbicie, fazy, koszyk; carry dalej przez (f)). `stan.json` bez zmian (bajt w bajt), więc sama strona (h) nie pokazuje. Nowa suma skryptu 1a9934a2… w [`tools/rutyna_dziennika.md`](tools/rutyna_dziennika.md): **po scaleniu instrukcję trzeba wstawić do rutyny Cowork** (poza 06:30–06:50 UTC) — [zadanie](zadania/020-strona-kontrola-h-blad.md).
+- **Zadanie 019 (2026-09-29, infra):** kryterium 6 (carry COIN-M) w skrypcie odczytu dziennika; do decyzji: flaga
+  `--carry-sprawdz-gielde` w komendach odczytów wiążących — [zadanie](zadania/019-odczyt-kryteria-carry.md).
+- **Zadanie 024 (2026-09-29, naprawa danych):** 20 nazw plików w `data/raw` (cp866) poprawionych, treść bez zmian (druga
+  droga: sha256 3 202 plików). Klon dziennika był poprawny. Ryzyko: TP1/LP1 przeliczone od nowa mogą się lekko różnić
+  (1 moneta × 1 miesiąc) — [zadanie](zadania/024-nazwy-cp866-universe.md).

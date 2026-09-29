@@ -2,7 +2,7 @@
 id: 020
 tytul: Strona dziennika — kontrola (h): alarm, gdy ostatnia linia `przebiegi.log` ma pole z „BŁĄD”
 typ: infra
-status: w_toku
+status: do_przegladu
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29
@@ -43,4 +43,14 @@ wychwycić. Pozycja z backlogu `STATUS.md` §17, ETAP 6.
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **Kod scalony 2026-09-29; instrukcja rutyny czeka na wklejenie przez użytkownika.** Kontrola (h) w
+  `tools/strona_dziennika.py::checks()`, testy `tests/test_strona_dziennika.py`, instrukcja przebudowana
+  `tools/rutyna_dziennika.md` (suma skryptu `1a9934a2…40f5`; `tests/test_pulpit_clas5.py` zielony na master).
+- Gałąź `zadanie-020-strona-kontrola-h-blad` (`3a61a82`), merge do master `1dfb400`.
+- Dowody: pełny `pytest -q` po scaleniu 019 + 020 + 024 (master `9e78436`, OMP_NUM_THREADS=4): 2 065 passed, 2 skipped, kod 0, 256 s; `ruff check .` czysto; `black --check .` — jedyny plik do przeformatowania to `data/fetch_ohlcv.py` (sprzed zadań, łańcuch dziennika, czeka na decyzję użytkownika).
+- Punkt 3 (podmiana instrukcji w rutynie `trig_013XEDboNXSkb6CF17K1eSGf`) **nie wykonany przez agenta**: w sesji
+  wykonawcy nie ma narzędzia RemoteTrigger (sprawdzone 2026-09-29 11:57 UTC; rutyna nietknięta). W głównej sesji
+  podmiana wymagałaby przepisania całej konfiguracji (~120 KB, prompty Cowork) — ryzyko przekłamań, więc nie.
+- **Zostało:** użytkownik wkleja w Cowork całą treść `tools/rutyna_dziennika.md` jako instrukcję rutyny (nie w oknie
+  06:30–06:50 UTC). Potem orkiestrator sprawdza, że przebieg rutyny kończy się „Dziennik odświeżony”, i zmienia status
+  na `zrobione`. Do tego czasu rutyna działa na starej wersji skryptu (bez (h)).
