@@ -2,7 +2,7 @@
 id: 007
 tytul: Mapa strategii nierozstrzygniętych i niesprawdzonych — filtr (a)–(f) i rachunek mocy bez danych
 typ: dokumentacja
-status: w_toku
+status: zrobione
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „zaplanuj zadania na strategie nierozstrzygnięte i niesprawdzone”"
 utworzono: 2026-09-29
@@ -43,4 +43,13 @@ tabela: która rodzina w ogóle przechodzi filtr przed danymi, a która jest NIE
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **Zrobione 2026-09-29.** `docs/mapa_hipotez_2026-10.md` + skrypt `docs/mapa_hipotez_2026-10_moc.py` i wydruk `.txt`;
+  wiersz w `docs/INDEX.md`, zdanie w `STATUS.md`. Gałąź `zadanie-007-mapa-hipotez`, commit `439b9f3`, scalone do master.
+- **Wynik:** 10 rodzin, żadna dziś mierzalna. NIEMIERZALNE: B3, B4, C1, D3, G1, Y2 (jako 41. odczyt historii próg t ≈ 3,84).
+  BRAK DANYCH: PT1, E1, HL-premia/funding, HL-mapa likwidacji. Proponowana kolejność: E1 (011) → sonda HL (010) →
+  PT1 (012) tylko na życzenie → zamknąć 008, 009, 013 bez odczytu.
+- **Dowody:** pytest 1 914 passed, 3 skipped, kod 0; wydruk mocy odtworzony przez orkiestratora (md5 `a06740ba…` identyczne);
+  `measurability_report(0.70, 0.625, 33)` → 0,7956 i `(0.509, 0.5716, 6022)` → 0,5842 przeliczone ponownie; skrypt bez sieci
+  i danych; 0 wierszy w `runs/odczyty_historii.csv`.
+- **Zostało:** BRAK ŹRÓDŁA efektu po publikacji dla większości rodzin (użyte założenia z `docs/rag/11`, oznaczone);
+  korelacje nowych rodzin z nogami tylko z analogii. Decyzje o 008–013 — użytkownik.
