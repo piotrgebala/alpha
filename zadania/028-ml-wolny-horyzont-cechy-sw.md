@@ -157,3 +157,18 @@ ruszy. Uwaga środowiskowa: sesja chmurowa nie ma dostępu do Binance / Deribit 
   Testy: pełny zestaw zielony na starcie (2070 passed, 4 skipped); po zmianach strażnicy INDEX/zamrożenia zieloni.
   **Rekomendacja: zamknąć bez odczytu (jak 013), modelu nie uczyć.** Czeka na decyzję użytkownika: zamknięcie / tor P mimo
   horyzontu lat (wtedy najpierw kolektory 5 cech jako osobne zadanie `zbieranie_danych`).
+
+- **2026-09-30, decyzja użytkownika: „Dopisz”** — reguła „mało transakcji, wysoka pewność” jako wymóg karty
+  (słowa użytkownika: „po co nam aż tyle transakcji, nie lepiej skupić się na wyższym prawdopodobieństwie i ograniczyć
+  liczbę transakcji w modelu”). Warunki:
+  1. **Jeden** próg pewności, zapisany w karcie `runs/DRAFT_028.md` przed uczeniem, jako udział sygnałów
+     (np. „górne 20 % pewności”), a nie wartość prawdopodobieństwa. Wartość progu liczona **wyłącznie** na danych
+     2021-01-01 → 2025-12-31 (predykcje OOS z walk-forward) i zamrożona razem z modelem (hash).
+  2. Zero przeszukiwania progów na rozbiegu 2026 ani na torze P. Zmiana progu = nowa hipoteza, nowy licznik.
+  3. Tor P raportuje dwa szeregi z góry zapisane: wszystkie sygnały i sygnały ponad progiem. Licznik wariantów = 2
+     (liczony do DSR).
+  4. Rachunek mierzalności dla progu w karcie: oczekiwane n rocznie przy tym udziale, `measurability_report` dla
+     zakładanej trafności, oraz trafność potrzebna do dowodu po 6, 12 i 24 miesiącach.
+  5. Kontrola kalibracji na danych treningowych (przed zamrożeniem): trafność w kubełkach pewności OOS 2021–2025.
+     Brak rosnącej trafności z pewnością → zapisać w karcie jako ryzyko (precedens: C2.13, pewność ≥ 75 % dała
+     45,5 % zamiast 49,9 %), ale reguły nie zmieniać.
