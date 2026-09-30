@@ -60,3 +60,73 @@ ML1 — MIERZALNOŚĆ REGUŁY PROGU: górne 20% pewności; p* 0.5089; abstynencj
     n  36.3: 16.2657 pp (metrics.wald_half_width: 16.2654 pp)
     n  72.5: 11.5095 pp (metrics.wald_half_width: 11.5093 pp)
 ==============================================================================================================
+
+## KROK 2 — $ PYTHONUTF8=1 OMP_NUM_THREADS=4 py -m backtest.run_ml1_wolny_horyzont wf   (kod 35cd2c7)
+==============================================================================================================
+ML1 WF — walk-forward 365/91/91 dni na świecach 1d 2021-01-01 → 2025-12-31; V = 7; pre-rejestracja e99dc82; HEAD 35cd2c7
+==============================================================================================================
+1. Braki cech w ramce uczenia (świece, na których cecha = NaN):
+            return_lag_1: NaN    1 / 1826; pierwsza wartość 2021-01-02
+        volume_zscore_20: NaN   19 / 1826; pierwsza wartość 2021-01-20
+                  rsi_14: NaN   14 / 1826; pierwsza wartość 2021-01-15
+         price_zscore_20: NaN   19 / 1826; pierwsza wartość 2021-01-20
+            funding_rate: NaN    0 / 1826; pierwsza wartość 2021-01-01
+           oi_change_24h: NaN    1 / 1826; pierwsza wartość 2021-01-02
+           global_ls_log: NaN   19 / 1826; pierwsza wartość 2021-01-01
+     taker_imbalance_24h: NaN  128 / 1826; pierwsza wartość 2021-01-01
+                 vrp_30d: NaN   83 / 1826; pierwsza wartość 2021-03-25
+     ex_supply_change_7d: NaN    0 / 1826; pierwsza wartość 2021-01-01
+               fng_level: NaN    0 / 1826; pierwsza wartość 2021-01-01
+  świece z kompletem 11 cech: 1615 / 1826
+
+2. Usuwanie duplikatów (|Spearman| > 0,9) na pierwszym oknie uczenia (2021-01-01 + 365 dni):
+                     return_lag_1  volume_zscore_20  rsi_14  price_zscore_20  funding_rate  oi_change_24h  global_ls_log  taker_imbalance_24h  vrp_30d  ex_supply_change_7d  fng_level
+return_lag_1                 1.00             -0.18    0.32             0.39         -0.02           0.05          -0.27                 0.30     0.07                -0.11       0.01
+volume_zscore_20            -0.18              1.00   -0.28            -0.28         -0.10          -0.05           0.07                 0.05    -0.02                 0.16      -0.09
+rsi_14                       0.32             -0.28    1.00             0.91          0.50          -0.09          -0.15                -0.29     0.37                -0.10       0.71
+price_zscore_20              0.39             -0.28    0.91             1.00          0.39          -0.04          -0.26                -0.17     0.18                -0.10       0.50
+funding_rate                -0.02             -0.10    0.50             0.39          1.00          -0.01           0.48                -0.52     0.33                 0.00       0.74
+oi_change_24h                0.05             -0.05   -0.09            -0.04         -0.01           1.00          -0.04                 0.17    -0.08                 0.02      -0.15
+global_ls_log               -0.27              0.07   -0.15            -0.26          0.48          -0.04           1.00                -0.53     0.16                 0.07       0.31
+taker_imbalance_24h          0.30              0.05   -0.29            -0.17         -0.52           0.17          -0.53                 1.00    -0.31                 0.07      -0.50
+vrp_30d                      0.07             -0.02    0.37             0.18          0.33          -0.08           0.16                -0.31     1.00                -0.14       0.50
+ex_supply_change_7d         -0.11              0.16   -0.10            -0.10          0.00           0.02           0.07                 0.07    -0.14                 1.00      -0.07
+fng_level                    0.01             -0.09    0.71             0.50          0.74          -0.15           0.31                -0.50     0.50                -0.07       1.00
+  cechy modelu (10): ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'funding_rate', 'oi_change_24h', 'global_ls_log', 'taker_imbalance_24h', 'vrp_30d', 'ex_supply_change_7d', 'fng_level']; odpadły: ['price_zscore_20']
+
+3. Foldy: 15/16 aktywnych; trening 1 s
+  fold |    test od |    test do | ocenione | bez kier. | bramka koszt. | sygnały | early stop | best_it
+     0 | POMINIĘTY: n_train_valid=281, n_test_valid=1 < min_train_rows=30
+     1 | 2022-04-02 | 2022-07-02 |       54 |        34 |             0 |      20 |       True |      30
+     2 | 2022-07-02 | 2022-10-01 |       91 |        28 |             0 |      63 |       True |       0
+     3 | 2022-10-01 | 2022-12-31 |       91 |        29 |             0 |      62 |       True |       0
+     4 | 2022-12-31 | 2023-04-01 |       91 |        12 |             0 |      79 |       True |       0
+     5 | 2023-04-01 | 2023-07-01 |       91 |         7 |             0 |      84 |       True |      25
+     6 | 2023-07-01 | 2023-09-30 |       91 |        17 |             0 |      74 |       True |      36
+     7 | 2023-09-30 | 2023-12-30 |       91 |        12 |             0 |      79 |       True |       0
+     8 | 2023-12-30 | 2024-03-30 |       91 |        34 |             0 |      57 |       True |       2
+     9 | 2024-03-30 | 2024-06-29 |       91 |        43 |             0 |      48 |       True |      15
+    10 | 2024-06-29 | 2024-09-28 |       91 |        69 |             0 |      22 |       True |       8
+    11 | 2024-09-28 | 2024-12-28 |       91 |        29 |             0 |      62 |       True |       0
+    12 | 2024-12-28 | 2025-03-29 |       91 |        14 |             0 |      77 |       True |       0
+    13 | 2025-03-29 | 2025-06-28 |       91 |        32 |             0 |      59 |       True |       2
+    14 | 2025-06-28 | 2025-09-27 |       91 |        32 |             0 |      59 |       True |       0
+    15 | 2025-09-27 | 2025-12-27 |       91 |        25 |             0 |      65 |       True |       9
+  razem: świece ocenione 1328, bez kierunku 417 (abstynencja 31.4 %), sygnały 910
+
+4. PRÓG (§14.1): kwantyl 0.80 pewności 910 sygnałów OOS = 0.424963; ponad progiem 182 (20.0 %); long/short wszystkie 343/567, ponad progiem 29/153
+  pewność: min 0.3336, mediana 0.3487, max 0.6883; sygnały per rok OOS: 2022: 145, 2023: 318, 2024: 191, 2025: 256
+
+5. KALIBRACJA (§14.6): trafność sygnału = kierunek zgodny z ruchem do pierwszej bariery ±1,5·ATR albo do zamknięcia po 7 dniach; bez kosztów, bez zwrotu; ±Wald bez korekty na nakładanie
+ kubelek   n  pewnosc_od  pewnosc_do  trafnosc  wald_95
+       1 182      0.3336      0.3409    0.4451   0.0722
+       2 182      0.3409      0.3452    0.4725   0.0725
+       3 182      0.3453      0.3540    0.5989   0.0712
+       4 182      0.3540      0.4249    0.6264   0.0703
+       5 182      0.4253      0.6883    0.4945   0.0726
+  wszystkie sygnały: n 910, trafność 52.75 % ±3.24 pp
+  ponad progiem:     n 182, trafność 49.45 % ±7.26 pp
+  korelacja rang kubełek–trafność +0.70; warunek „rosnąca trafność” (§14.6: górny kubełek > wszystkie ORAZ korelacja > 0): NIESPEŁNIONY → ryzyko do karty, reguła bez zmian
+
+  zapisano: runs/2026-09-30_ml1-wolny-horyzont/wf_prog.json, kalibracja_wf.csv, sygnaly_oos_wf.csv
+==============================================================================================================
