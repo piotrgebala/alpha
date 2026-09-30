@@ -1,0 +1,68 @@
+{
+  "runda": "ML1 (zadanie 028)",
+  "model_file": "model_ml1.json",
+  "model_sha256": "d1a39ee440dcea6a490d3b86181d8f8d7a9dd6172fec46c0b808cbb5b165195c",
+  "features": [
+    "return_lag_1",
+    "volume_zscore_20",
+    "rsi_14",
+    "funding_rate",
+    "oi_change_24h",
+    "global_ls_log",
+    "taker_imbalance_24h",
+    "vrp_30d",
+    "ex_supply_change_7d",
+    "fng_level"
+  ],
+  "train_first_candle": "2021-01-01 00:00:00+00:00",
+  "train_last_candle": "2025-12-31 00:00:00+00:00",
+  "train_rows_with_label_and_features": 1608,
+  "train_rows_used_after_embargo": 1601,
+  "label_counts": {
+    "-1.0": 484,
+    "0.0": 595,
+    "1.0": 529
+  },
+  "xgb_params": {
+    "max_depth": 4,
+    "eta": 0.05,
+    "objective": "multi:softprob",
+    "num_class": 3,
+    "eval_metric": "mlogloss",
+    "seed": 42
+  },
+  "num_boost_round": 200,
+  "early_stopping_rounds": 20,
+  "validation_fraction": 0.2,
+  "embargo_candles": 7,
+  "class_weight_mode": "balanced",
+  "direction_policy": "argmax3",
+  "confidence_mode": "class",
+  "best_iteration": 23,
+  "early_stopping_used": true,
+  "vertical_barrier_candles": 7,
+  "atr_multiplier": 1.5,
+  "timeframe": "1d",
+  "top_share": 0.2,
+  "threshold": 0.42496348023414615,
+  "threshold_source": "kwantyl 0,80 pewności sygnałów OOS walk-forward 2021–2025 (wf_prog.json)",
+  "prereg_commit": "e99dc82530229f5acff22eb527bc86f2535e7109",
+  "code_commit": "35cd2c73aa00d776f60cb08bedf49e0bc20ac6c3",
+  "worktree_clean_code": true,
+  "data_dir": "data/raw/ml1",
+  "data_sha256": {
+    "BTC-USDT-USDT_1d_20190910T000000Z_20260930T000000Z.parquet": "5cb7cfc906158cf8b8f7a5a3bd9234df34a7d4632ff662328cf8728095a27360",
+    "BTC-USDT-USDT_funding_20190910T000000Z_20260930T000000Z.parquet": "2354a253e912da360781d9c66324508d8708e05fa51954d6402743ba70c37119",
+    "binance_metrics_BTCUSDT_5m.parquet": "d9d6e1dd766d9101a59c155a5c36c09d32daefb27e72740b1d5cf241c4bbba48",
+    "deribit_dvol_BTC_1d.parquet": "b828b6620dbf28232233a573cd40a3630b457269c75057371e75e7d3eee10055",
+    "coinmetrics_btc_1d.parquet": "8ca6b041b5a28835056912018a7a0660d8a8e18398d2aafe0b08be4359045516",
+    "alternative_fng_1d.parquet": "0830a98f8538e7c54f764a0825febea6d68eae77e7c876da76b6aa5820789ac4"
+  },
+  "versions": {
+    "python": "3.12.3",
+    "xgboost": "3.2.0",
+    "pandas": "3.0.2",
+    "numpy": "2.4.4"
+  },
+  "frozen_at_utc": "2026-09-30T18:29:53+00:00"
+}

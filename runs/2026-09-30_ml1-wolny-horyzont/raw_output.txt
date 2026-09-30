@@ -130,3 +130,23 @@ fng_level                    0.01             -0.09    0.71             0.50    
 
   zapisano: runs/2026-09-30_ml1-wolny-horyzont/wf_prog.json, kalibracja_wf.csv, sygnaly_oos_wf.csv
 ==============================================================================================================
+
+## KROK 3 — $ PYTHONUTF8=1 OMP_NUM_THREADS=4 py -m backtest.run_ml1_wolny_horyzont zamroz   (kod 35cd2c7)
+==============================================================================================================
+ML1 ZAMROŻENIE — jeden model na 2021-01-01 → 2025-12-31
+==============================================================================================================
+  model_sha256: d1a39ee440dcea6a490d3b86181d8f8d7a9dd6172fec46c0b808cbb5b165195c
+  features: ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'funding_rate', 'oi_change_24h', 'global_ls_log', 'taker_imbalance_24h', 'vrp_30d', 'ex_supply_change_7d', 'fng_level']
+  train_rows_with_label_and_features: 1608
+  train_rows_used_after_embargo: 1601
+  label_counts: {'-1.0': 484, '0.0': 595, '1.0': 529}
+  best_iteration: 23
+  early_stopping_used: True
+  threshold: 0.42496348023414615
+  prereg_commit: e99dc82530229f5acff22eb527bc86f2535e7109
+  code_commit: 35cd2c73aa00d776f60cb08bedf49e0bc20ac6c3
+  worktree_clean_code: True
+  versions: {'python': '3.12.3', 'xgboost': '3.2.0', 'pandas': '3.0.2', 'numpy': '2.4.4'}
+  predykcje z pamięci == predykcje z pliku (dane uczenia, 1608 świec): True
+  zapisano runs/2026-09-30_ml1-wolny-horyzont/model_ml1.json i runs/2026-09-30_ml1-wolny-horyzont/manifest.json
+==============================================================================================================
