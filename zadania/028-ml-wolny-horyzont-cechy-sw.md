@@ -2,9 +2,9 @@
 id: 028
 tytul: ML na rzadszym handlu (dni zamiast 4h) z pełnym zestawem cech spoza wykresu — krok 0 na papierze, odczyt tylko prospektywny
 typ: badawcze
-status: czeka_na_decyzje
+status: w_toku
 zlecil: uzytkownik
-decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii”; 2026-09-30: wybór „a” — opcja A (uczenie do 2025-12-31, model zamrożony, 2026-01…09 rozbieg bez werdyktu, tor P prospektywny)"
+decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii”; 2026-09-30: wybór „a” — opcja A (uczenie do 2025-12-31, model zamrożony, 2026-01…09 rozbieg bez werdyktu, tor P prospektywny); 2026-09-30: „Wykonaj zadanie 28”"
 utworzono: 2026-09-30
 zalezy_od: []
 budzet: "Opus, 1 wykonawca na krok 0 (metodologia); bez sieci poza danymi już w repo"
@@ -172,3 +172,10 @@ ruszy. Uwaga środowiskowa: sesja chmurowa nie ma dostępu do Binance / Deribit 
   5. Kontrola kalibracji na danych treningowych (przed zamrożeniem): trafność w kubełkach pewności OOS 2021–2025.
      Brak rosnącej trafności z pewnością → zapisać w karcie jako ryzyko (precedens: C2.13, pewność ≥ 75 % dała
      45,5 % zamiast 49,9 %), ale reguły nie zmieniać.
+
+- **2026-09-30, decyzja użytkownika: „Wykonaj zadanie 28”** (po rekomendacji zamknięcia — czyli realizacja opcji A
+  z regułą progu). Zakres zlecony wykonawcy (gałąź `zadanie-028-ml1-wolny-horyzont`): (1) reguła progu w karcie
+  + rachunek mierzalności progu + tabela pokrycia danych na serwerze, commit karty PRZED uczeniem; (2) walk-forward
+  2021–2025 → wartość progu i kalibracja, (3) jeden model 2021-01-01 → 2025-12-31 zamrożony (hash), (4) rozbieg 2026
+  tylko jako kontrola mechaniki. Tor P jako proces (kolektory 5 cech, wpięcie w harmonogram) — osobne zadania
+  i osobna decyzja użytkownika.
