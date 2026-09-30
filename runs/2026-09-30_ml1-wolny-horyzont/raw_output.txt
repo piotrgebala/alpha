@@ -150,3 +150,66 @@ ML1 ZAMROŻENIE — jeden model na 2021-01-01 → 2025-12-31
   predykcje z pamięci == predykcje z pliku (dane uczenia, 1608 świec): True
   zapisano runs/2026-09-30_ml1-wolny-horyzont/model_ml1.json i runs/2026-09-30_ml1-wolny-horyzont/manifest.json
 ==============================================================================================================
+
+## KROK 4 — $ PYTHONUTF8=1 OMP_NUM_THREADS=4 py -m backtest.run_ml1_wolny_horyzont rozbieg   (kod 35cd2c7, model 6ff7960)
+==============================================================================================================
+ML1 ROZBIEG — 2026-01-01 → 2026-09-29 (272 świec); model d1a39ee440dc… (sha256 zgodny z manifestem: True); próg 0.424963
+  TYLKO MECHANIKA: bez etykiet, trafności, zwrotu i t (decyzja użytkownika 2026-09-30, opcja A)
+==============================================================================================================
+1. Dziury w cechach (świece 2026 z NaN):
+            return_lag_1: 0 []
+        volume_zscore_20: 0 []
+                  rsi_14: 0 []
+         price_zscore_20 (poza modelem): 0 []
+            funding_rate: 0 []
+           oi_change_24h: 0 []
+           global_ls_log: 0 []
+     taker_imbalance_24h: 0 []
+                 vrp_30d: 0 []
+     ex_supply_change_7d: 0 []
+               fng_level: 0 []
+
+2. Sygnały: świece z predykcją 272/272; long 58, short 53, bez kierunku 161 (abstynencja 59.2 %)
+   ponad progiem: 10 z 111 sygnałów z kierunkiem (9.0 %; zapisany udział 20 %)
+   pewność sygnałów z kierunkiem: min 0.3370, mediana 0.3698, max 0.5220
+
+3. Per miesiąc:
+         swiece  z_predykcja  long  short  ponad_progiem
+miesiac                                                 
+2026-01      31           31    10     17              3
+2026-02      28           28     1      0              0
+2026-03      31           31     5      4              0
+2026-04      30           30    13      1              0
+2026-05      31           31     9      7              0
+2026-06      30           30     0      4              1
+2026-07      31           31     5     12              0
+2026-08      31           31     7      7              4
+2026-09      29           29     8      1              2
+
+4. Ostatnia świeca 2026-09-29: kierunek 1.0, pewność 0.4442, ponad progiem True
+  zapisano runs/2026-09-30_ml1-wolny-horyzont/sygnaly_rozbieg_2026.csv
+==============================================================================================================
+
+## DIAGNOSTYKA PO FAKCIE (niepre-rejestrowana; tylko pewność, bez etykiet) — $ PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont foldy
+==============================================================================================================
+ML1 FOLDY — sygnały ponad progiem 0.424963 per fold walk-forward (best_iteration: tabela trybu wf)
+==============================================================================================================
+          sygnaly  ponad_progiem  pewnosc_mediana  pewnosc_max
+fold_idx                                                      
+1              20             14           0.4605       0.6130
+2              63              0           0.3491       0.3533
+3              62              0           0.3434       0.3503
+4              79              0           0.3414       0.3517
+5              84             77           0.4999       0.6351
+6              74             53           0.4828       0.6883
+7              79              0           0.3409       0.3513
+8              57              0           0.3593       0.3931
+9              48             20           0.4169       0.5355
+10             22              0           0.3681       0.4075
+11             62              0           0.3442       0.3506
+12             77              0           0.3444       0.3497
+13             59              0           0.3528       0.3797
+14             59              0           0.3394       0.3486
+15             65             18           0.4002       0.4646
+  foldy, w których ŻADEN sygnał nie sięga progu: 10/15; 4 foldy z największą liczbą dają 92.3 % sygnałów ponad progiem (foldy [5, 6, 9, 15])
+==============================================================================================================

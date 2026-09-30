@@ -662,6 +662,37 @@ def rozbieg() -> None:
     print(SEP)
 
 
+# ------------------------------------------------------------------ foldy (diagnostyka progu, bez etykiet)
+def foldy() -> None:
+    """Skąd pochodzą sygnały ponad progiem: per fold walk-forward (tylko pewność, bez etykiet i trafności)."""
+    import json
+
+    sig = pd.read_csv(f"{RUN_DIR}/sygnaly_oos_wf.csv")
+    with open(f"{RUN_DIR}/wf_prog.json", encoding="utf-8") as f:
+        thr = json.load(f)["threshold"]
+    g = sig.groupby("fold_idx").agg(
+        sygnaly=("signal_confidence", "size"),
+        ponad_progiem=("ponad_progiem", "sum"),
+        pewnosc_mediana=("signal_confidence", "median"),
+        pewnosc_max=("signal_confidence", "max"),
+    )
+    print(SEP)
+    print(
+        f"ML1 FOLDY — sygnały ponad progiem {thr:.6f} per fold walk-forward (best_iteration: tabela trybu wf)"
+    )
+    print(SEP)
+    print(g.round(4).to_string())
+    below = int((g["pewnosc_max"] < thr).sum())
+    top = g.sort_values("ponad_progiem", ascending=False)
+    share4 = float(top["ponad_progiem"].iloc[:4].sum() / g["ponad_progiem"].sum())
+    print(
+        f"  foldy, w których ŻADEN sygnał nie sięga progu: {below}/{len(g)}; "
+        f"4 foldy z największą liczbą dają {100 * share4:.1f} % sygnałów ponad progiem "
+        f"(foldy {top.index[:4].tolist()})"
+    )
+    print(SEP)
+
+
 MODES = {
     "dane": dane,
     "pokrycie": pokrycie,
@@ -669,6 +700,7 @@ MODES = {
     "wf": wf,
     "zamroz": zamroz,
     "rozbieg": rozbieg,
+    "foldy": foldy,
 }
 
 if __name__ == "__main__":
