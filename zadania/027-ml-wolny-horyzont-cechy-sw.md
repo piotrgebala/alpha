@@ -2,9 +2,9 @@
 id: 027
 tytul: ML na rzadszym handlu (dni zamiast 4h) z pełnym zestawem cech spoza wykresu — krok 0 na papierze, odczyt tylko prospektywny
 typ: badawcze
-status: nowe
+status: czeka_na_decyzje
 zlecil: uzytkownik
-decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech” — obejmuje krok 0 (papier, 0 odczytów); krok 1 i 2 wymagają osobnej decyzji po kroku 0"
+decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii” — test na 2026 NIEMIERZALNY, czeka na wybór A/B/C"
 utworzono: 2026-09-30
 zalezy_od: []
 budzet: "Opus, 1 wykonawca na krok 0 (metodologia); bez sieci poza danymi już w repo"
@@ -94,6 +94,42 @@ jak dla dziennika trend + Coinbase (wniosek 107).
 - Tabela pokrycia danych dziennych dla 11 cech (od, do, dziury) — dla BTC i, przy formule (b), per moneta.
 - Akapit w mapie 007 + wniosek w `runs/INDEX.md`; 0 nowych wierszy w `runs/odczyty_historii.csv`.
 - `py -m pytest -q` zielone.
+
+## Decyzja użytkownika 2026-09-30 (druga) i rachunek mocy
+
+Słowa użytkownika: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii”.
+Czyli: **jeden model uczony na danych 2021-01-01 → 2025-12-31, zamrożony; test 2026-01-01 → 2026-09-29**
+(272 dni), bez douczania w trakcie testu.
+
+Rachunek mierzalności (zasada 18) policzony w sesji chmurowej 2026-09-30, `backtest/metrics.py`, bez danych
+rynkowych. Wejścia: koszt 0,08 %, ATR 1d BTC ~3 % → bariera 4,5 % → p* ≈ 50,9 % (dla ATR 2,5–3,5 %: 50,8–51,1 %).
+Zakładana trafność 52–55 % jest hojna: ślad z SW (+0,02…+0,05 % na transakcję przed kosztami) odpowiada
+~50,5–51 %.
+
+| wariant | oczekiwane n | ± przedział | trafność potrzebna do dowodu | werdykt przy p 53 % |
+|---|---|---|---|---|
+| BTC, abstynencja 50 % | 136 | ±8,4 pp | 59,3 % | NIEMIERZALNA |
+| BTC, bez abstynencji | 272 | ±5,9 pp | 56,8 % | NIEMIERZALNA |
+| panel top-20, ~3 niezależne monety (wniosek 40) | 408 | ±4,9 pp | 55,7 % | NIEMIERZALNA |
+| panel top-20 liczony jak 20 niezależnych (zawyżone) | 2 720 | ±1,9 pp | 52,8 % | na styk (tylko przy p 53 %) |
+
+Liczby n są optymistyczne. Przy trzymaniu pozycji do 7 dni transakcje BTC nakładają się i niezależnych jest
+~2–4 razy mniej. Dodatkowo lata 2026 były już czytane przez inne rundy (SW na 4h z tymi samymi cechami,
+CP1, TS1), więc test jest odczytem historii z progiem t ≈ 3,84 (wniosek 107), a nie świeżym sprawdzianem.
+
+**Werdykt: NIEMIERZALNA we wszystkich uczciwych wariantach → runda na samym 2026 nie startuje (zasada 18).**
+Status `czeka_na_decyzje`. Opcje dla użytkownika:
+
+- **A (rekomendacja):** podział zostaje (uczenie do 2025-12-31, model zamrożony), ale 2026-01 → 2026-09
+  jest tylko rozruchem bez werdyktu, a test biegnie DALEJ prospektywnie od 2026-10-01 jako dziennik
+  papierowy (tor P). Werdykt dopiero, gdy rachunek mocy pokaże mierzalność — krok 0 policzy kiedy.
+- **B:** przebieg na 2026 jako opis bez werdyktu. To odstępstwo od zasady 18, więc wymaga wpisu decyzji
+  w `STATUS.md` z powodem.
+- **C:** zamknąć zadanie bez odczytu, jak 013.
+
+Dowód: `moc_027.txt` (wydruk `measurability_report` wszystkich wariantów), wklejony do README rundy, jeśli
+ruszy. Uwaga środowiskowa: sesja chmurowa nie ma dostępu do Binance / Deribit / alternative.me / CoinMetrics
+(polityka sieci), więc przebieg z danymi musi iść na serwerze.
 
 ## Wynik
 
