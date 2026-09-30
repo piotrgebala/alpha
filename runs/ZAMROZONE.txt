@@ -100,3 +100,5 @@ runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_trades.py   # LH0
 runs/2026-09-29_lh0-kolektor-hyperliquid/sonda_weryfikacja.py   # LH0
 backtest/run_lp1_likwidacja_progi.py         # LP1 (zadanie 017)
 backtest/run_fd1_funding.py                  # FD1
+backtest/run_ml1_wolny_horyzont.py            # ML1 (zadanie 028)
+runs/2026-09-30_ml1-wolny-horyzont/druga_droga.py  # ML1 — bramka 16a

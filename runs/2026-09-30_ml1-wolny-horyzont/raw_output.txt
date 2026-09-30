@@ -213,3 +213,22 @@ fold_idx
 15             65             18           0.4002       0.4646
   foldy, w których ŻADEN sygnał nie sięga progu: 10/15; 4 foldy z największą liczbą dają 92.3 % sygnałów ponad progiem (foldy [5, 6, 9, 15])
 ==============================================================================================================
+
+## BRAMKA 16a — druga droga (niezależnie od agents/ml1_features i agents/labeling) — $ PYTHONUTF8=1 py runs/2026-09-30_ml1-wolny-horyzont/druga_droga.py
+1. próg: skrypt 0.424963480, ręcznie 0.424963480, różnica 5.55e-17
+2. zgodność trafienia sygnału (niezależna pętla vs skrypt): 910/910
+   trafność wszystkie 52.75 % (n 910); ponad progiem 49.45 % (n 182)
+   kubełek 1: trafność 44.51 %
+   kubełek 2: trafność 47.25 %
+   kubełek 3: trafność 59.89 %
+   kubełek 4: trafność 62.64 %
+   kubełek 5: trafność 49.45 %
+3. ±Wald z n nienakładających się sygnałów (odstęp ≥ 7 dni) — przybliżenie N_eff
+   wszystkie: n 910, nienakładające się 166, trafność 52.75 % ±7.6 pp
+   ponad progiem: n 182, nienakładające się 46, trafność 49.45 % ±14.4 pp
+   kubełek 1: nienakładające się 59, ±12.7 pp
+   kubełek 2: nienakładające się 63, ±12.3 pp
+   kubełek 3: nienakładające się 59, ±12.5 pp
+   kubełek 4: nienakładające się 59, ±12.3 pp
+   kubełek 5: nienakładające się 46, ±14.4 pp
+4. rozbieg z CSV: świec 272, long 58, short 53, zero 161, ponad progiem 10

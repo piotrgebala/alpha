@@ -405,3 +405,17 @@ Tryb `pokrycie` (2026-09-30 ~18:20 UTC; pliki w `data/raw/ml1`, poza gitem): wsz
 działa). OHLCV i funding przedłużone zgodne z kopią repo głównego do 2026-06-30 co do bitu; DVOL różni się
 w 1 dniu (ostatni dzień kopii z 2026-09-23 był niepełny), CoinMetrics i F&G bez różnic. Archiwum `metrics`:
 kopia do 2026-09-22 + 8 dni z `data.binance.vision` (do 2026-09-29 23:55).
+
+## 15. Zapis PO wyniku (2026-09-30; reguł §4–§5 i §14 NIE zmienia) — ryzyka
+
+Wynik: `runs/2026-09-30_ml1-wolny-horyzont/README.md`. Zapisane zgodnie z warunkiem 5 i §14.6:
+
+- **RYZYKO 1 — brak rosnącej trafności (warunek 5 niespełniony).** Kalibracja OOS 2022–2025: górny kubełek (ponad progiem)
+  49,5 % wobec 52,8 % wszystkich sygnałów (±14,4 / ±7,6 pp przy N_eff z sygnałów nienakładających się); kubełki 44,5 /
+  47,3 / 59,9 / 62,6 / 49,5 %. Jak C2.13. Reguła bez zmian.
+- **RYZYKO 2 — pewność mierzy liczbę drzew foldu.** W 7 z 15 foldów early stopping zatrzymał model po 1 drzewie; w 10 z 15
+  foldów żaden sygnał nie sięga progu; 4 foldy dają 92,3 % sygnałów ponad progiem.
+- **RYZYKO 3 — próg nie przenosi się na model zamrożony.** Rozbieg 2026: 10 z 111 sygnałów ponad progiem (9 %, zapisane 20 %);
+  ~13 ponad progiem rocznie zamiast ~45 z §14.3 → trafność potrzebna 87,9 / 78,1 / 67,7 % po 1 / 2 / 5 latach.
+- Model zamrożony: `model_ml1.json`, sha256 `d1a39ee440dcea6a490d3b86181d8f8d7a9dd6172fec46c0b808cbb5b165195c`, 10 cech
+  (dedup: `price_zscore_20` odpadła, ρ 0,91 z `rsi_14`), próg 0,424963480, `best_iteration` 23.
