@@ -1,16 +1,16 @@
 ---
-id: 027
+id: 028
 tytul: ML na rzadszym handlu (dni zamiast 4h) z pełnym zestawem cech spoza wykresu — krok 0 na papierze, odczyt tylko prospektywny
 typ: badawcze
-status: czeka_na_decyzje
+status: nowe
 zlecil: uzytkownik
-decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii” — test na 2026 NIEMIERZALNY, czeka na wybór A/B/C"
+decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii”; 2026-09-30: wybór „a” — opcja A (uczenie do 2025-12-31, model zamrożony, 2026-01…09 rozbieg bez werdyktu, tor P prospektywny)"
 utworzono: 2026-09-30
 zalezy_od: []
 budzet: "Opus, 1 wykonawca na krok 0 (metodologia); bez sieci poza danymi już w repo"
 ---
 
-# 027 — ML z rzadszym handlem i większą liczbą cech
+# 028 — ML z rzadszym handlem i większą liczbą cech
 
 ## Po co
 
@@ -39,7 +39,7 @@ tłumu i fundingu żyje dniami (acf1 ≥ 0,98, wniosek 67).
 ### Krok 0 — papier, 0 odczytów (ten krok obejmuje decyzja z 2026-09-30)
 
 Wykonawca wczytuje skille `clas5-quant` i `quant-strategy-catalog` (zasada 19) i przygotowuje kartę
-pre-rejestracji `runs/DRAFT_027.md` (generator: `scripts/hypothesis_card.py` ze skilla katalogu):
+pre-rejestracji `runs/DRAFT_028.md` (generator: `scripts/hypothesis_card.py` ze skilla katalogu):
 
 - **Cechy (stałe, 11):** 4 cechy REVERSION modelu kontrolnego + 7 cech SW etapu 2 (bez `toptrader_ls_log`,
   dziura 2021-12 → 2022-12). Wszystkie przeliczone na świecę dzienną. Test przecieku każdej cechy na nowej
@@ -88,7 +88,7 @@ jak dla dziennika trend + Coinbase (wniosek 107).
 
 ## Kryteria odbioru (dowody)
 
-- `runs/DRAFT_027.md` z wypełnioną kartą: cechy, target, formuła, walk-forward, licznik wariantów = 1.
+- `runs/DRAFT_028.md` z wypełnioną kartą: cechy, target, formuła, walk-forward, licznik wariantów = 1.
 - Wydruk `measurability_report` i `backtest.dsr` dla obu formuł i obu torów, z komendą i hashem commita.
   Druga droga kluczowej liczby (połowa szerokości przedziału z `wald_half_width` przeliczona ręcznie).
 - Tabela pokrycia danych dziennych dla 11 cech (od, do, dziury) — dla BTC i, przy formule (b), per moneta.
@@ -127,10 +127,22 @@ Status `czeka_na_decyzje`. Opcje dla użytkownika:
   w `STATUS.md` z powodem.
 - **C:** zamknąć zadanie bez odczytu, jak 013.
 
-Dowód: `moc_027.txt` (wydruk `measurability_report` wszystkich wariantów), wklejony do README rundy, jeśli
+Dowód: `moc_028.txt` (wydruk `measurability_report` wszystkich wariantów), wklejony do README rundy, jeśli
 ruszy. Uwaga środowiskowa: sesja chmurowa nie ma dostępu do Binance / Deribit / alternative.me / CoinMetrics
 (polityka sieci), więc przebieg z danymi musi iść na serwerze.
 
 ## Wynik
 
 (dopisuje orkiestrator)
+
+- **2026-09-30, decyzja użytkownika: opcja A** (słowa: „wybrałem decyzję a”, potem „przejdź do zadania z realizacją ML
+  uczenie do końca 2025, a później test na 2026”). Przenumerowane 027 → 028 (kolizja z `027-audyt-hook-surogat.md`).
+  Kolejność dla orkiestratora na serwerze (sesja chmurowa nie ma dostępu do źródeł danych):
+  1. Krok 0 (papier + brama danych) i karta `runs/DRAFT_028.md` z hashem commita **przed** uczeniem modelu.
+  2. Jeden model uczony na 2021-01-01 → 2025-12-31, zamrożony (hash commita, parametry, lista cech, hash pliku modelu).
+  3. 2026-01-01 → dzień zamrożenia: rozbieg bez werdyktu. Wynik tego okresu nie wchodzi do testu i nie zmienia modelu.
+     Można go opisać tylko jako kontrolę mechaniki (czy sygnały się liczą), bez zwrotów w raporcie werdyktowym.
+  4. Tor P: sygnały dzień po dniu **od dnia zamrożenia** (nie wcześniej, nawet jeśli to po 2026-10-01), własny licznik,
+     próg t 1,96, werdykt dopiero, gdy krok 0 pokaże mierzalność.
+  5. Tor P to nowy, osobny proces papierowy. Nie wolno zmieniać `backtest/live_journal.py` ani jego importów; wpięcie
+     w harmonogram serwera = osobna decyzja użytkownika.
