@@ -2,7 +2,7 @@
 id: 028
 tytul: ML na rzadszym handlu (dni zamiast 4h) z pełnym zestawem cech spoza wykresu — krok 0 na papierze, odczyt tylko prospektywny
 typ: badawcze
-status: nowe
+status: czeka_na_decyzje
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii”; 2026-09-30: wybór „a” — opcja A (uczenie do 2025-12-31, model zamrożony, 2026-01…09 rozbieg bez werdyktu, tor P prospektywny)"
 utworzono: 2026-09-30
@@ -146,3 +146,14 @@ ruszy. Uwaga środowiskowa: sesja chmurowa nie ma dostępu do Binance / Deribit 
      próg t 1,96, werdykt dopiero, gdy krok 0 pokaże mierzalność.
   5. Tor P to nowy, osobny proces papierowy. Nie wolno zmieniać `backtest/live_journal.py` ani jego importów; wpięcie
      w harmonogram serwera = osobna decyzja użytkownika.
+- **2026-09-30, krok 0 zrobiony (sesja chmurowa, 0 odczytów zwrotu, 0 nowych wierszy w `runs/odczyty_historii.csv`).**
+  Karta `runs/DRAFT_028.md`, wydruk `runs/DRAFT_028_moc.txt` (komendy + hash), wniosek 113 w `runs/INDEX.md`, akapit ML1
+  w `docs/mapa_hipotez_2026-10.md`. Formuła wybrana przed danymi: (a) BTC (panel ~3 niezależne szybszy tylko 3,0×, nie
+  pokonuje kary AU2; gorsza brama danych). Tor H: NIEMIERZALNY (próg t 3,84 potwierdzony `backtest.dsr --k 1`, N 41).
+  Tor P (próg 1,96): potrzeba ~2 155 niezależnych transakcji przy p 53 % → BTC ~19 lat; przy 55 % ~5 lat; przy realistycznym
+  p ≤ 52 % ponad 50 lat. Druga droga (orkiestrator, ręcznie 1,96²·p(1−p)/(p−p*)²): 2 170 przy p* 50,9 % — zgodne.
+  Brama danych: 5 z 11 cech (OI, L/S kont, taker, VRP, podaż on-chain) bez zbieracza na żywo na serwerze → tor P wymagałby
+  nowych kolektorów; daty pokrycia = BRAK DANYCH w chmurze (komenda do uzupełnienia na serwerze w karcie §8).
+  Testy: pełny zestaw zielony na starcie (2070 passed, 4 skipped); po zmianach strażnicy INDEX/zamrożenia zieloni.
+  **Rekomendacja: zamknąć bez odczytu (jak 013), modelu nie uczyć.** Czeka na decyzję użytkownika: zamknięcie / tor P mimo
+  horyzontu lat (wtedy najpierw kolektory 5 cech jako osobne zadanie `zbieranie_danych`).

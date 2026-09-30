@@ -198,6 +198,7 @@ podsumowanie pod tabelą.
 - **NOWA HIPOTEZA F — funding jako cecha, zmierzony (od F1, 2026-09-22): 1/1 ZUZYTY — SERIA ZAMKNIETA REGULA STOP.** Licznik od zera; H2 pozostaje zamkniete i NIE zostalo wznowione. F1 wyszedl **NEGATYWNY** (ci_high 51,43% < prog 52,94%, n = 8 127 = 1,81x wymaganej proby). Ramie A liczone za **0 wariantow** — to samo uzasadnienie co w H2.1 i M1.
 - **Diagnostyka wykonalnosci zrodel (P1) — POZA licznikami: 0 wariantow.** Odczyt API, zero spojrzen na target.
 - **Przegląd modelu likwidacji (LP1, 2026-09-29, zadanie 017) — POZA licznikami: 0 wariantów, 0 odczytów zwrotu.** Liczy tylko progi i liczbę przekroczeń progu (bez P&L); wiersz 59 w `runs/odczyty_historii.csv` jako `opis-z-wynikiem`, `odczyt_programu = nie` (N bez zmian). Wynik post hoc przy 100 tys. USDT/monetę nie jest wariantem — przy powrocie do tematu to nowa pre-rejestracja.
+- **NOWA HIPOTEZA ML1 — ML na rzadszym handlu, 11 cech na świecy 1d (zadanie 028, krok 0, 2026-09-30, decyzja użytkownika: opcja A): 0/1 — krok 0 na papierze, wariant niezużyty.** Tor H (historia, próg t 3,84) NIEMIERZALNY — zamknięty bez odczytu; tor P (nowe dane od dnia zamrożenia, własny licznik, próg 1,96) mierzalny dopiero po ~5–19 latach (wniosek 113). Zakazane: podzbiory cech, siatki, inne V/ATR, douczanie w teście, dokładanie cech. Karta: `runs/DRAFT_028.md`.
 - **NOWA SERIA TP — cel zysku na nogach dziennika (TP1, 2026-09-26, decyzja użytkownika): 0/4 — NIEMIERZALNA, warianty niezużyte, SERIA ZAMKNIĘTA.** Zakazane bez nowej decyzji użytkownika: inne cele, cele ruchome, częściowe wyjścia, stopy, ponowne wejście po celu w tygodniu. Jedyna droga: druga wersja papierowa na danych prospektywnych.
 - **NOWA SERIA MX — MACD + EMA 10/30 na 1h (MX1 + MX2, 2026-09-25, decyzje użytkownika): 0/6 — WSZYSTKIE NIEMIERZALNE (MX1 bez filtra, MX2 pięć filtrów), warianty niezużyte, SERIA ZAMKNIĘTA.** Zakazane bez nowej decyzji użytkownika: inne okna MACD/EMA, okno czasu między przecięciami, wersja „stan”, inne interwały, V/bariery, odwrócenie znaku, podzbiory. Jedyna droga do mierzalności: wiele monet naraz (nowa pre-rejestracja).
 - **NOWA SERIA OS — otwarcia sesji na BTC 30m (OS1, 2026-09-28, pomysł użytkownika): 0/2 — OBA RAMIONA ŁĄCZNE NIEMIERZALNE, nie wystartowała, SERIA ZAMKNIĘTA.** Własny licznik (rodzina G1; zbiór informacyjny: zegar + OHLCV własne). Zakazane bez nowej decyzji użytkownika: inne okna i czasy trzymania, inne sesje (Sydney, Hongkong, Frankfurt osobno), odwrócenie znaku (odwrót zamiast momentum), filtry (zmienność, dzień tygodnia), podzbiory sesji, inne monety. Jedyna droga do mierzalności: wiele monet naraz (mały zysk mocy przy korelacji w ciągu dnia, 40) albo dłuższa historia.
@@ -1085,6 +1086,20 @@ podsumowanie pod tabelą.
     kapitał 5 okresów faz ≤ 0) → wzoru fundingu nie poprawiać (ani w silnikach, ani w dzienniku); model pozycji X1 (silnik
     przywraca nogi codziennie, dziennik handluje raz w tygodniu) — do decyzji użytkownika; porównania „stała ilość” bez
     likwidacji nie powtarzać (dwie zmienne naraz: wzór i model pozycji).
+
+113. **ML NA RZADSZYM HANDLU (1d, 11 CECH, V = 7 DNI): NA HISTORII NIEMIERZALNE, NA NOWYCH DANYCH MIERZALNE DOPIERO PO LATACH
+    (ML1 krok 0, zadanie 028, 2026-09-30, 0 wariantów, 0 odczytów zwrotu).** Jeden model XGBoost (parametry SW etap 2) na 4 cechach
+    REVERSION + 7 cechach SW (bez `toptrader_ls_log`), opcja A użytkownika: uczenie 2021–2025, model zamrożony, 2026 = rozbieg,
+    tor P od dnia zamrożenia. p\* = 50,9 % (ATR 1d 3 % → bariera 4,5 %, koszt 0,08 %; 50,8–51,1 % przy ATR 2,5–3,5 %). Ślad SW
+    (+0,02 … +0,05 %/tr na 12 h) przeskalowany pierwiastkiem czasu na 7 dni → p ≈ 50,8–52,1 % (założenie jawne; liniowo 53,1–57,8 %).
+    Tor H (t 3,84, `backtest.dsr --k 1`, N 40 → 41): BTC na całej historii przy najhojniejszych założeniach n 1 733, potrzebne 55,5 %;
+    na samym 2026 62,5 % → NIEMIERZALNA. Tor P (1,96): potrzeba 2 155 niezależnych transakcji przy p 53 % (568 przy 55 %) → BTC
+    ~228 mies. (19 lat) / ~61 mies. (5 lat) przy abstynencji 37,8 % i nakładaniu 2×; realistyczne p ≤ 52 % → > 50 lat. Panel
+    ~3 niezależne: 76 / 21 mies. — dokładnie 3× szybciej, nie pokonuje kary AU2 (93), gorsza brama danych → formuła BTC.
+    Brama danych: 5 z 11 cech (OI, L/S kont, taker, VRP, podaż on-chain) bez zbieracza na żywo na serwerze; wolumen na żywo tylko
+    w USDT. Druga droga `wald_half_width` ręcznie: zgodna do 0,0002 pp; tabela zadania 028 odtworzona co do 0,1 pp.
+    → Rekomendacja: zamknąć bez odczytu (jak 013), modelu nie uczyć — decyzja użytkownika. Karta `runs/DRAFT_028.md`,
+    wydruk `runs/DRAFT_028_moc.txt`. 0 nowych wierszy w `runs/odczyty_historii.csv`.
 
 ## Jak dodać nowy wpis (procedura rundy — CLAUDE.md zasady 11, 14 i 19)
 

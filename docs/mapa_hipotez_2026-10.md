@@ -160,6 +160,22 @@ Brak kolektora pozycji i nieznana częstość zdarzeń. Nie ma z czego liczyć m
 **Wniosek:** BRAK DANYCH; ewentualnie dołączyć jako opis do E1 (tak mówi karta 011: „stan pozycji przed kaskadą
 tylko jako opis, nie druga zmienna”).
 
+### ML1 — ML na rzadszym handlu, 11 cech (zadanie 028, krok 0, dopisane 2026-09-30)
+
+Jeden model XGBoost (parametry jak SW etap 2) na 11 cechach zapisanych z góry: 4 cechy wykresu (REVERSION) i 7 cech
+spoza wykresu z SW, na świecy dziennej BTC, pozycja do bariery 1,5 × ATR albo 7 dni. Opcja A użytkownika: uczenie
+2021–2025, model zamrożony, 2026 do dnia zamrożenia = rozbieg, test prospektywny (tor P) od dnia zamrożenia.
+Próg opłacalności p\* (trafność, przy której zysk pokrywa koszt 0,08 %) to 50,9 %. Ślad z SW przeliczony z 12 godzin
+na 7 dni daje realnie ok. 50,8–52,1 % trafności (założenie: ruch rośnie jak pierwiastek czasu).
+Na historii (tor H, próg t 3,84) potrzeba co najmniej 55,5 % trafności nawet w najhojniejszym wariancie — NIEMIERZALNA.
+Na nowych danych (próg 1,96) BTC staje się mierzalny po ok. 19 latach przy trafności 53 % i po ok. 5 latach przy 55 %
+(środkowe założenia: 37,8 % dni bez transakcji, transakcje 7-dniowe nachodzą na siebie → niezależnych 2× mniej).
+Panel top-20 (~3 niezależne monety) jest dokładnie 3× szybszy, ale nie pokonuje kary AU2 za model i ma gorszą bramę
+danych — wybrana formuła: BTC. 5 z 11 cech (OI, proporcja kont long/short, przewaga kupujących, VRP, podaż
+na giełdach) nie ma dziś zbieracza na żywo na serwerze. Karta: `runs/DRAFT_028.md`, wydruk: `runs/DRAFT_028_moc.txt`.
+**Wniosek:** tor H zamknięty bez odczytu; tor P formalnie uczciwy, ale werdykt nie przyjdzie w rozsądnym czasie →
+rekomendacja: zamknąć bez odczytu (jak 013), modelu nie uczyć. Decyzja użytkownika.
+
 ## 6. Proponowana kolejność
 
 | Krok | Rodzina / zadanie | Dlaczego | Odczyty historii |
