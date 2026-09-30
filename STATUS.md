@@ -241,6 +241,9 @@ Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opi
 9. **Do decyzji przy następnej wersji skilla:** odchudzenie SKILL.md skilla `clas5-quant`.
 10. **Restart kolektora likwidacji LK0 z nowym kodem** — procedura w [zadaniu 021](zadania/021-kolektor-binance-zakres-t.md)
     (tryb auto blokuje agentowi ingerencję w działający proces); 29.09 12:00 UTC nadal stary proces z 25.09.
+11. **Do decyzji: PRD programu `alpha-ml` (modele matematyczne i ML)** — [docs/prd/PRD_alpha-ml_v0.1.md](docs/prd/PRD_alpha-ml_v0.1.md),
+    §15: D1 (osobne repo czy katalog), D2 (kolejność filarów), D3 (rola oceny sekwencyjnej wobec ADR-09 — przed
+    2026-12-24), D4 (dane 5m top-20), D5 (nazwa repo), D6 (DVOL). Szkic 2026-09-30, 0 odczytów.
 
 ---
 

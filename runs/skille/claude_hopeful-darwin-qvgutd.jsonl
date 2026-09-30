@@ -1,0 +1,2 @@
+{"czas": "2026-09-30T10:45:00+00:00", "zdarzenie": "PostToolUse", "kto": "claude", "skill": "anthropic-skills:clas5-quant", "wtyczka": "anthropic-skills", "argumenty": "", "galaz": "claude/hopeful-darwin-qvgutd", "sesja": "8862d547-e294-5837-b4c3-832638f34145", "agent": ""}
+{"czas": "2026-09-30T10:45:01+00:00", "zdarzenie": "PostToolUse", "kto": "claude", "skill": "anthropic-skills:quant-strategy-catalog", "wtyczka": "anthropic-skills", "argumenty": "", "galaz": "claude/hopeful-darwin-qvgutd", "sesja": "8862d547-e294-5837-b4c3-832638f34145", "agent": ""}
