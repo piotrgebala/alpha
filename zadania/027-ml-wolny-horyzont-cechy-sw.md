@@ -1,0 +1,100 @@
+---
+id: 027
+tytul: ML na rzadszym handlu (dni zamiast 4h) z pełnym zestawem cech spoza wykresu — krok 0 na papierze, odczyt tylko prospektywny
+typ: badawcze
+status: nowe
+zlecil: uzytkownik
+decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech” — obejmuje krok 0 (papier, 0 odczytów); krok 1 i 2 wymagają osobnej decyzji po kroku 0"
+utworzono: 2026-09-30
+zalezy_od: []
+budzet: "Opus, 1 wykonawca na krok 0 (metodologia); bez sieci poza danymi już w repo"
+---
+
+# 027 — ML z rzadszym handlem i większą liczbą cech
+
+## Po co
+
+Seria SW (wniosek 90) pokazała ślad w cechach spoza wykresu: +0,01…+0,05 % na transakcję przed kosztami,
+IC (korelacja rang sygnału ze zwrotem) +0,02…+0,03 w 5 z 8 cech. Koszt handlu co 4 godziny (~0,08 % na
+transakcję) zjada ten ślad 2–3 razy. README SW (Rekomendacja 2) zostawia jedną otwartą drogę: **wolniejszy
+horyzont**, czyli mniej transakcji i koszt dzielony na większy ruch. To NOWA hipoteza, nie wariant SW.
+
+Hipoteza jednym zdaniem: model uczony na stałym, z góry zapisanym zestawie cech z wykresu i spoza wykresu,
+trzymający pozycję kilka dni, ma zwrot netto > 0, bo koszt spada 5–40 razy, a informacja o pozycjonowaniu
+tłumu i fundingu żyje dniami (acf1 ≥ 0,98, wniosek 67).
+
+## Dwie przeszkody do nazwania z góry
+
+1. **Historia 2021–2026 jest wyczerpana jako sędzia.** Rejestr ma 60 odczytów (`runs/odczyty_historii.csv`),
+   a kolejny odczyt tej historii potrzebuje t ≈ 3,84 (wniosek 107; `py -m backtest.dsr`). Na samym BTC
+   z danych dziennych przyrząd widzi dopiero SR ≥ ~0,86 (wnioski 87, 91). Zadanie 013 (BTC 1d) zamknięto
+   z tego powodu bez odczytu. Najbardziej prawdopodobny wynik kroku 0 na historii to **NIEMIERZALNA**.
+2. **„Więcej cech” a zasada 4** (jedna cecha na raz, bez przeszukiwania kombinacji). Rozwiązanie: **jeden
+   zestaw cech zapisany z góry = jeden wariant**, bez podzbiorów i bez strojenia. Każda cecha spoza wykresu
+   była już mierzona osobno w SW, więc zestaw nie wprowadza cech niezmierzonych. Bez siatki
+   hiperparametrów: parametry XGBoost jak w SW etap 2.
+
+## Zakres
+
+### Krok 0 — papier, 0 odczytów (ten krok obejmuje decyzja z 2026-09-30)
+
+Wykonawca wczytuje skille `clas5-quant` i `quant-strategy-catalog` (zasada 19) i przygotowuje kartę
+pre-rejestracji `runs/DRAFT_027.md` (generator: `scripts/hypothesis_card.py` ze skilla katalogu):
+
+- **Cechy (stałe, 11):** 4 cechy REVERSION modelu kontrolnego + 7 cech SW etapu 2 (bez `toptrader_ls_log`,
+  dziura 2021-12 → 2022-12). Wszystkie przeliczone na świecę dzienną. Test przecieku każdej cechy na nowej
+  świecy przed wejściem do modelu (zasada 2); dostępność danych jak w SW (on-chain +2 dni, VRP +1 dzień).
+- **Target:** triple-barrier na świecy 1d, bariery 1,5 × ATR (zasada 3, `labeling.ATR_MULTIPLIER`),
+  bariera czasowa V = 7 dni. Stop-loss w silniku z tego samego mnożnika.
+- **Formuła — policzyć moc dla dwóch i wybrać jedną PRZED danymi:**
+  - (a) jednoaktywowa: BTC, decyzja raz dziennie, pozycja do bariery;
+  - (b) panel: ten sam model na koszyku top-20 z `universe_full`, jeśli cechy spoza wykresu istnieją per
+    moneta (funding i archiwum pozycjonowania Binance — sprawdzić pokrycie; VRP, podaż i F&G są tylko
+    dla BTC/rynku → w panelu wspólne dla wszystkich monet). Uwaga: AU2 (wniosek 93) — ML przekrojowe
+    traci ~2/3 mocy; panel liczy się tylko wtedy, gdy rachunek mocy to przetrzyma.
+- **Walk-forward:** okno uczenia 365 dni (jak SW), purging i embargo ≥ V; reguła z kalendarzem →
+  średnia wszystkich faz startu (wniosek 89).
+- **Rachunek mierzalności (zasada 18):** `expected_trades(n_świec, abstynencja, admission_rate)` →
+  `measurability_report(zakładana_trafność, p*, oczekiwane_n)`. Zakładany efekt z SW przed kosztami
+  (+0,02…+0,05 %/tr na 4h, przeskalowany do 7 dni — przeskalowanie zapisać jawnie jako założenie), koszt
+  0,08 % na transakcję. Plus próg DSR: `py -m backtest.dsr --k 1` dla bieżącego N odczytów.
+- **Dwa tory odczytu — policzyć oba:**
+  - **Tor H (historia 2021–2026):** próg t ≈ 3,84. Jeśli NIEMIERZALNA → tor H zamknięty bez odczytu.
+  - **Tor P (prospektywny):** model uczony na historii i **zamrożony** (hash commita, parametry, cechy)
+    przed 2026-10-01; sygnały zapisywane dzień po dniu jako dziennik papierowy. Nowe dane = własny licznik,
+    próg t 1,96 (mapa 007 §1). Policzyć, po ilu miesiącach tor P osiąga mierzalność przy zakładanym efekcie.
+- **Brama danych:** czy zbieracze funding / OI / L/S / taker / VRP / podaż / F&G działają na żywo i dają
+  dane dzienne bez dziur (tor P ich wymaga). Braki zgłaszać jako BRAK DANYCH.
+- **Wynik kroku 0:** akapit w `docs/mapa_hipotez_2026-10.md`, wniosek w `runs/INDEX.md` (0 odczytów),
+  rekomendacja: tor H / tor P / zamknięcie.
+
+### Krok 1 — tor H, runda na historii (TYLKO po decyzji użytkownika i gdy krok 0 = MIERZALNA)
+
+Procedura `clas5-runda`, katalog `runs/2026-MM-DD_ML1-wolny-horyzont/`, wiersz w `runs/odczyty_historii.csv`.
+
+### Krok 2 — tor P, dziennik prospektywny (TYLKO po decyzji użytkownika)
+
+To typ `dziennik`: Poprawka N w `dziennik/README.md`, bez zmian w nogach TS1/CP1. Odczyt z progami z góry,
+jak dla dziennika trend + Coinbase (wniosek 107).
+
+## Czego NIE robić
+
+- Żadnego odczytu zwrotu w kroku 0 — ani na historii, ani „na próbę”.
+- Bez podzbiorów cech, bez rankingu ważności cech po wyniku, bez siatki hiperparametrów, bez innych V ani
+  mnożników ATR (zasady 1, 3, 4).
+- Bez dokładania cech spoza listy 11 (np. `toptrader_ls_log`, likwidacje — zbierane dopiero od 2026-09-25).
+- Bez zmian w kodzie, z którego korzysta dziennik papierowy (CLAUDE.md, „Dziennik papierowy”).
+- Bez LLM w ścieżce decyzji (zasada 6).
+
+## Kryteria odbioru (dowody)
+
+- `runs/DRAFT_027.md` z wypełnioną kartą: cechy, target, formuła, walk-forward, licznik wariantów = 1.
+- Wydruk `measurability_report` i `backtest.dsr` dla obu formuł i obu torów, z komendą i hashem commita.
+  Druga droga kluczowej liczby (połowa szerokości przedziału z `wald_half_width` przeliczona ręcznie).
+- Tabela pokrycia danych dziennych dla 11 cech (od, do, dziury) — dla BTC i, przy formule (b), per moneta.
+- Akapit w mapie 007 + wniosek w `runs/INDEX.md`; 0 nowych wierszy w `runs/odczyty_historii.csv`.
+- `py -m pytest -q` zielone.
+
+## Wynik
+
+(dopisuje orkiestrator)
