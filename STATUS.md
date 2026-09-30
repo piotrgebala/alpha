@@ -3174,6 +3174,7 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **Zadanie 020 (2026-09-29, infra):** kontrola (h) na stronie dziennika — powiadomienie „UWAGA: (h) <pole>: <treść>”, gdy pole ostatniego przebiegu w `przebiegi.log` ma „BŁĄD” (X1, stan rynku, F&G, transakcje, opisy, rozbicie, fazy, koszyk; carry dalej przez (f)). `stan.json` bez zmian (bajt w bajt), więc sama strona (h) nie pokazuje. Nowa suma skryptu 1a9934a2… w [`tools/rutyna_dziennika.md`](tools/rutyna_dziennika.md): **po scaleniu instrukcję trzeba wstawić do rutyny Cowork** (poza 06:30–06:50 UTC) — [zadanie](zadania/020-strona-kontrola-h-blad.md).
 - **Zadanie 019 (2026-09-29, infra):** kryterium 6 (carry COIN-M) w skrypcie odczytu dziennika; do decyzji: flaga
   `--carry-sprawdz-gielde` w komendach odczytów wiążących — [zadanie](zadania/019-odczyt-kryteria-carry.md).
+- **Zadanie 026 (2026-09-30, przegląd): BRAK DANYCH** — proxy środowiska chmurowego blokuje strony publikacji (arXiv, SSRN, NBER, DOI); status `nowe`, tropy niezweryfikowane w [zadaniu](zadania/026-przeglad-literatury-cp1-e1.md).
 - **Zadanie 024 (2026-09-29, naprawa danych):** 20 nazw plików w `data/raw` (cp866) poprawionych, treść bez zmian (druga
   droga: sha256 3 202 plików). Klon dziennika był poprawny. Ryzyko: TP1/LP1 przeliczone od nowa mogą się lekko różnić
   (1 moneta × 1 miesiąc) — [zadanie](zadania/024-nazwy-cp866-universe.md).

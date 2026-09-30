@@ -57,4 +57,18 @@ To praca biurkowa: 0 odczytów historii, licznik DSR bez zmian.
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **2026-09-30 (orkiestrator, sesja w chmurze): BRAK DANYCH — przerwane, nic nie napisano.** Wyszukiwarka działa, ale
+  proxy środowiska blokuje otwarcie stron publikacji (EGRESS_BLOCKED): arxiv.org, papers.ssrn.com, www.nber.org,
+  doi.org, www.sciencedirect.com, ideas.repec.org, api.crossref.org, api.openalex.org, scholar.google.com i inne.
+  Kryterium odbioru wymaga sprawdzonego linku przy każdej liczbie, więc raportu nie pisano z pamięci ani ze streszczeń
+  wyszukiwarki. Status zostaje `nowe`. **Warunek wznowienia:** użytkownik dopuszcza te domeny w ustawieniach sieci
+  środowiska chmurowego albo zadanie idzie na serwer.
+- **Tropy do sprawdzenia (NIE ZWERYFIKOWANO — nie cytować):** Makarov i Schoar, JFE 2020 (premie między krajami;
+  sygnał pokrewny, nie ten sam co CP1); working paper o premii GBTC i dziennym zwrocie BTC (SSRN 2023, strona SMU
+  ink/7447 — najbliższy trop dla CP1 i dla 1(b)); prace o premii Kimchi (Finance Research Letters 2021 i nowsze —
+  mierzą samą premię, nie prognozę zwrotu); Coval i Stafford, JFE 2007 (fire sales, NBER w11357); arXiv 2102.04591
+  (likwidacje i depozyt na futures BTC). Wyszukiwarka nie zwróciła żadnej pracy naukowej o samej premii Coinbase —
+  to wskazówka, nie dowód braku.
+- Uwaga wykonawcy do 1(b): próg t 3,84 pochodzi z wniosku 107 (N = 40); `runs/odczyty_historii.csv` ma dziś 41
+  wariantów w sumie, więc próg trzeba przeliczyć przed następnym odczytem.
+- Gałąź `zadanie-026-przeglad-literatury-cp1-e1` bez commitów (usunięta razem z worktree).
