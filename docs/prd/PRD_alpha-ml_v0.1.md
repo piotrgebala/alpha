@@ -1,4 +1,4 @@
-# PRD — program `alpha-ml`: modele matematyczne i uczenie maszynowe na perpetualach krypto
+# PRD — program `beta` (roboczo `alpha-ml`): modele matematyczne i uczenie maszynowe na perpetualach krypto
 
 | | |
 |---|---|
@@ -7,7 +7,7 @@
 | Autor | Claude (na polecenie użytkownika); decyzje: użytkownik |
 | Gałąź robocza | `claude/hopeful-darwin-qvgutd` (repo `alpha`) |
 | Źródła | `runs/INDEX.md` (wnioski 1–111), `docs/rag/01–13`, `docs/mapa_hipotez_2026-10.md`, skille `clas5-quant` i `quant-strategy-catalog` |
-| Status | Nic z tego dokumentu nie jest jeszcze uruchomione. Otwarte decyzje: §15 |
+| Status | Nic z tego dokumentu nie jest jeszcze uruchomione. **D1 i D5 rozstrzygnięte 2026-09-30** (osobne repo `beta`); otwarte: D2, D3, D4, D6 — §15 |
 
 ---
 
@@ -520,11 +520,11 @@ Uwaga: **wynik negatywny z wystarczającą mocą jest sukcesem przyrządu**, tak
 
 | ID | pytanie | opcje | rekomendacja |
 |---|---|---|---|
-| D1 | Gdzie mieszka program? | (a) nowe repo `alpha-ml` z portem `miara`; (b) katalog `ml/` w alpha; (c) nowe repo + wspólny pakiet `miara` importowany przez oba | **(a) teraz, (c) po E2** — nowe repo nie dotyka dziennika ani zamrożonych skryptów; wspólny pakiet, gdy przyrząd się ustabilizuje |
+| D1 ✅ | Gdzie mieszka program? **Decyzja użytkownika 2026-09-30: „osobne repo”.** | (a) nowe repo `alpha-ml` z portem `miara`; (b) katalog `ml/` w alpha; (c) nowe repo + wspólny pakiet `miara` importowany przez oba | **(a) teraz, (c) po E2** — nowe repo nie dotyka dziennika ani zamrożonych skryptów; wspólny pakiet, gdy przyrząd się ustabilizuje |
 | D2 | Kolejność filarów | F0 → F1 → F2 → F3 → F4 → F5 → F6 | **tak, z F3 równolegle do F2** (termin 2026-12-24) |
 | D3 | Rola F3 wobec ADR-09 | (a) tylko reporter obok z = 2,31; (b) kandydat na kryterium od odczytu 6-miesięcznego | **(a)**; ewentualna zmiana na (b) zapisana przed 2026-12-24 |
 | D4 | Dane 5m dla top-20 od 2021 | pobrać (~kilkaset MB parquet) / nie | **pobrać** — bez nich HAR-RV nie ma sensu |
-| D5 | Nazwa i utworzenie repo na GitHubie | `alpha-ml` / inna | do Twojej decyzji; po niej Claude zakłada repo i zadanie 001 |
+| D5 ✅ | Nazwa i utworzenie repo na GitHubie. **Decyzja użytkownika 2026-09-30: „niech nazywa się beta”** → `piotrgebala/beta`. | `alpha-ml` / inna | do Twojej decyzji; po niej Claude zakłada repo i zadanie 001 |
 | D6 | Opcje (Deribit) jako źródło danych dla F2 | DVOL darmowy / pełne opcje płatne | **tylko DVOL**; pełne opcje dopiero, gdy F2 pokaże wartość |
 
 ---
