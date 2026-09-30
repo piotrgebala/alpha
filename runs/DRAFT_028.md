@@ -1,6 +1,6 @@
 # Karta hipotezy ML1 — ML na rzadszym handlu (dni zamiast 4h), 11 cech zapisanych z góry (2026-09-30)
 
-> **STATUS: KROK 0 — PAPIER. 0 odczytów zwrotu, 0 danych rynkowych, 0 nowych wierszy w `runs/odczyty_historii.csv`.**
+> **STATUS: KROK 0 — PAPIER (§0–§13) + §14: reguła progu i uzupełnienia PRZED uczeniem (2026-09-30, pre-rejestracja rundy ML1).** Krok 0: 0 odczytów zwrotu, 0 danych rynkowych.
 > Zadanie `zadania/028-ml-wolny-horyzont-cechy-sw.md`, opcja A z decyzji użytkownika 2026-09-30.
 > Szkielet z generatora `quant-strategy-catalog/scripts/hypothesis_card.py --family E2 --formula single`
 > (rodzina E2 = proporcje long/short, najmocniejszy ślad SW; model łączy też D1, E1, E3, F1, H1, J1 i A2),
@@ -221,16 +221,16 @@ p 55 %, po ~19 latach przy p 53 %, nigdy w rozsądnym czasie przy realistycznym 
 ## 8. Brama danych — pokrycie 11 cech (tor P wymaga danych dziennych na żywo)
 
 Sesja chmurowa nie ma sieci do Binance / Deribit / alternative.me / CoinMetrics ani plików w `data/raw/`
-(tylko katalogi dziennika); daty „do” i dziury — do uzupełnienia na serwerze. Ustalone z kodu i `STATUS.md`:
+(tylko katalogi dziennika); daty „do” i dziury uzupełnione na serwerze 2026-09-30 (§14.7, wydruk `pokrycie` w `runs/2026-09-30_ml1-wolny-horyzont/raw_output.txt`). Ustalone z kodu i `STATUS.md`:
 
 | cecha | historia (od) — źródło informacji | do / dziury | zbieracz na żywo na serwerze |
 |---|---|---|---|
-| 1–4 (OHLCV 1d BTC) | od 2021-01-01 (zasada 20; baza Y2 w `data/raw`) | BRAK DANYCH (sesja chmurowa bez danych) | **TAK** — `data/fetch_live.py` w przebiegu dziennika (cron serwera 02:30 UTC); **zastrzeżenie:** plik na żywo ma tylko `quote_volume` (USDT), a `volume_zscore_20` w bazie liczono z wolumenu w BTC → niezgodność definicji dla toru P |
-| 5 `funding_rate` | historia: cache `get_funding_rate_history_cached` | BRAK DANYCH | **TAK** — `fetch_live` pobiera funding BTC i członków koszyka od 2025-09-01, nadpisuje co przebieg |
-| 6–8 (`oi_change_24h`, `global_ls_log`, `taker_imbalance_24h`) | archiwum `metrics` BTCUSDT 5 min od 2020-09-01, 2 213 dni bez luki, 473 zerowe OI (P3, `STATUS.md`) | BRAK DANYCH | **NIE** — `data/fetch_external.py --only metrics` bez crona; `data/collect_positioning.py` (REST 1h, BTC/ETH/SOL/BNB, 30 dni wstecz) tylko w Harmonogramie Windows komputera użytkownika („Interactive only”), stan po 2026-09-23 nieznany |
-| 9 `vrp_30d` | DVOL BTC od 2021-03-24, pokrycie 95,9 % (P3) | BRAK DANYCH | **NIE** — `fetch_external --only dvol` bez crona |
-| 10 `ex_supply_change_7d` | CoinMetrics `SplyExNtv`, 0 braków (P3) | BRAK DANYCH | **NIE** — `fetch_external --only coinmetrics` bez crona |
-| 11 `fng_level` | alternative.me (pełna historia) | BRAK DANYCH | **TAK** — `fetch_live.fetch_fng_safe` (poprawka 8); awaria nie zatrzymuje dziennika → możliwe dziury |
+| 1–4 (OHLCV 1d BTC) | od 2021-01-01 (zasada 20; baza Y2 w `data/raw`) | **serwer 2026-09-30:** 2021-01-01 → 2026-09-29, 0 dziur; zgodne z kopią repo głównego do 2026-06-30 co do bitu (§14.7) | **TAK** — `data/fetch_live.py` w przebiegu dziennika (cron serwera 02:30 UTC); **zastrzeżenie:** plik na żywo ma tylko `quote_volume` (USDT), a `volume_zscore_20` w bazie liczono z wolumenu w BTC → niezgodność definicji dla toru P |
+| 5 `funding_rate` | historia: cache `get_funding_rate_history_cached` | **serwer:** 2021-01-01 → 2026-09-29 16:00, 0 dni bez rozliczenia | **TAK** — `fetch_live` pobiera funding BTC i członków koszyka od 2025-09-01, nadpisuje co przebieg |
+| 6–8 (`oi_change_24h`, `global_ls_log`, `taker_imbalance_24h`) | archiwum `metrics` BTCUSDT 5 min od 2020-09-01, 2 213 dni bez luki, 473 zerowe OI (P3, `STATUS.md`) | **serwer:** OI 2021-01-01 → 2026-09-29, 0 dziur; `count_long_short_ratio` dziura 2021-12-31 → 2022-01-18 (19 d); `sum_taker_long_short_vol_ratio` dziury 2021-12-31 → 2022-01-29 (30 d) i 2022-01-31 → 2022-05-08 (98 d); 7 dni z < 276/288 odczytów | **NIE** — `data/fetch_external.py --only metrics` bez crona; `data/collect_positioning.py` (REST 1h, BTC/ETH/SOL/BNB, 30 dni wstecz) tylko w Harmonogramie Windows komputera użytkownika („Interactive only”), stan po 2026-09-23 nieznany |
+| 9 `vrp_30d` | DVOL BTC od 2021-03-24, pokrycie 95,9 % (P3) | **serwer:** 2021-03-24 → 2026-09-30, 0 dziur | **NIE** — `fetch_external --only dvol` bez crona |
+| 10 `ex_supply_change_7d` | CoinMetrics `SplyExNtv`, 0 braków (P3) | **serwer:** 2021-01-01 → 2026-09-29, 0 dziur | **NIE** — `fetch_external --only coinmetrics` bez crona |
+| 11 `fng_level` | alternative.me (pełna historia) | **serwer:** 2021-01-01 → 2026-09-30, 1 dzień bez wartości (2024-10-26) | **TAK** — `fetch_live.fetch_fng_safe` (poprawka 8); awaria nie zatrzymuje dziennika → możliwe dziury |
 
 Per moneta (formuła b, odrzucona w §7.3): funding i OHLCV 1d — TAK (`fetch_live`, koszyk); pozycjonowanie alt
 z archiwum dopiero od 2021-12 (`data/fetch_oi_panel.py`, tylko OI), bez zbieracza na żywo; DVOL tylko BTC/ETH;
@@ -294,3 +294,114 @@ likwidacje), odwrócenie kierunku po wyniku, wybór podokresu. Wynik NIEROZSTRZY
 
 Krok 0 nie zmienia kodu ani konfiguracji. Odwrót: usunąć `runs/DRAFT_028.md`, `runs/DRAFT_028_moc.txt`, akapit ML1
 w `docs/mapa_hipotez_2026-10.md`, wniosek 113 i linię licznika ML1 w `runs/INDEX.md`.
+
+## 14. Uzupełnienie PRZED uczeniem (2026-09-30, gałąź `zadanie-028-ml1-wolny-horyzont`) — reguła progu pewności
+
+Dopisane po decyzjach użytkownika 2026-09-30 (opcja A; „Dopisz” — reguła „mało transakcji, wysoka pewność”,
+warunki 1–5; „Wykonaj zadanie 28”) i PRZED jakimkolwiek uczeniem modelu, predykcją i obejrzeniem etykiet.
+Do chwili commita tej sekcji obejrzano wyłącznie daty i dziury w danych (tryb `pokrycie`) oraz rachunek
+mierzalności bez danych rynkowych (tryb `moc`). **Commit z tą sekcją = pre-rejestracja rundy ML1**; jego hash
+podaje README rundy `runs/2026-09-30_ml1-wolny-horyzont/` i manifest modelu. Od tego commita reguły z §4–§5
+i §14 się nie zmieniają. Sekcje 0–13 zostają jako zapis kroku 0 (w tym rekomendacja zamknięcia, którą użytkownik
+świadomie zastąpił decyzją „Wykonaj zadanie 28”).
+
+Skrypt: `backtest/run_ml1_wolny_horyzont.py` (tryby `dane`, `pokrycie`, `moc` istnieją w tym commicie; tryby
+`wf`, `zamroz`, `rozbieg` dochodzą po nim i realizują dokładnie §14.4–§14.6).
+
+### 14.1. Reguła progu (warunek 1) — JEDNA wartość, jako udział sygnałów
+
+- **Próg = górne 20 % pewności** wśród sygnałów z kierunkiem (górny kwintyl). Pewność = `signal_confidence`
+  w trybie `class` silnika (prawdopodobieństwo wybranej klasy, jak SW etap 2 — bez zmiany trybu).
+- **Wartość progu** = kwantyl 0,80 (`numpy.quantile`, interpolacja liniowa) pewności wszystkich sygnałów
+  z kierunkiem z predykcji OOS walk-forward 2021-01-01 → 2025-12-31 (§14.4). Sygnał jest „ponad progiem”,
+  gdy pewność ≥ wartości progu. Wartość zamraża się razem z modelem (manifest, §14.5).
+- **Dlaczego 20 %, zapisane przed danymi:** (a) słowa użytkownika — „ograniczyć liczbę transakcji” i „skupić się
+  na wyższym prawdopodobieństwie”; (b) 20 % = górny kubełek tabeli kalibracji (kwintyle, §14.6), więc próg i
+  kontrola kalibracji to ta sama liczba, a nie dwa wybory; (c) jedyny precedens projektu (C2.13) użył górnego
+  kwartyla (25 %) i dał trafność niższą niż bez progu — nie ma przesłanki, by szukać innej wartości; węższy
+  udział (10 %) połowi i tak znikomą liczbę transakcji (§14.3), szerszy (33 %) przestaje być „wysoką pewnością”.
+- **Warunek 2:** zero przeszukiwania progów — ani na walk-forward, ani na rozbiegu 2026, ani na torze P.
+  Zmiana udziału = nowa hipoteza z nowym licznikiem.
+
+### 14.2. Warianty i licznik (warunek 3)
+
+Tor P raportuje DWA szeregi zapisane z góry: **(1) wszystkie sygnały z kierunkiem**, **(2) sygnały ponad
+progiem**. **Licznik wariantów ML1 = 2** (liczony do DSR toru P; licznik własny, nowe dane, próg bazowy t 1,96
+z poprawką na 2 warianty przy odczycie). Ta runda nie odczytuje żadnego z nich (brak zwrotu i werdyktu).
+
+### 14.3. Rachunek mierzalności progu (warunek 4, zasada 18) — tor P
+
+Komenda: `PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont moc`. Założenia jak §7: p\* 50,89 %, abstynencja
+37,8 %, nakładanie 2×; n = `expected_trades(dni / 2, 0,378, udział)`, werdykt `measurability_report(p, p*, n)`.
+
+| szereg | 6 mies. | 12 mies. | 24 mies. | 60 mies. |
+|---|---|---|---|---|
+| wszystkie sygnały: n niezależnych / ±Wald / trafność potrzebna | 56,9 / ±13,0 pp / 63,9 % | 113,5 / ±9,2 pp / 60,1 % | 227,0 / ±6,5 pp / 57,4 % | 567,9 / ±4,1 pp / 55,0 % |
+| **ponad progiem (20 %)**: n niezależnych / ±Wald / trafność potrzebna | 11,4 / ±29,1 pp / **80,4 %** | 22,7 / ±20,6 pp / **71,3 %** | 45,4 / ±14,5 pp / **65,5 %** | 113,6 / ±9,2 pp / 60,1 % |
+
+- **n rocznie ponad progiem: ~22,7 niezależnych** (227 decyzji z kierunkiem rocznie × 20 % / nakładanie 2).
+- Werdykt przy zakładanej trafności 52 / 53 / 55 %: **NIEMIERZALNA** w każdym horyzoncie do 5 lat dla OBU
+  szeregów; przy 60 % mierzalne są tylko „wszystkie sygnały” po ≥ 24 mies. Ponad progiem przy p 60 % potrzeba
+  ~116 niezależnych = ~5,1 roku; przy 55 % ~25 lat; przy 53 % ~95 lat.
+- Prostym językiem: reguła progu zmniejsza liczbę transakcji 5×, więc dowód wymaga 5× dłuższego czekania albo
+  dużo wyższej trafności. Żeby po roku cokolwiek wykazać, transakcje ponad progiem musiałyby trafiać w ~71 %
+  przypadków — nic w historii projektu tego nie zapowiada.
+- **Druga droga (ręcznie, bez `metrics.py`):** ±Wald = 1,96·√(0,25/n): n 18,0 → 23,0988 pp (funkcja 23,0984);
+  n 36,3 → 16,2657 (16,2654); n 72,5 → 11,5095 (11,5093) — zgodne do 0,0004 pp (1,96 vs 1,959964).
+- **Zasada 18 a ta runda:** NIEMIERZALNA = żaden werdykt nie startuje. Runda ML1 NIE czyta zwrotu ani werdyktu:
+  buduje i zamraża model (decyzja użytkownika „Wykonaj zadanie 28”, opcja A), a tor P jako proces i jego odczyt
+  to osobne zadania i osobne decyzje użytkownika.
+
+### 14.4. Walk-forward 2021-01-01 → 2025-12-31 (uzupełnienie §5.3; zasada 1)
+
+- Dane: `fetch_window` (min_start 2021-01-01, zasada 20) na natywnych świecach 1d przedłużonych do 2026-09-29;
+  ramka do walk-forward UCIĘTA na świecy 2025-12-31 PRZED liczeniem etykiet (etykiety ostatnich 7 świec = NaN
+  → purging końca uczenia; 2026 nie wpływa na żadną etykietę).
+- Okna **365 / 91 / 91 dni** (uczenie / test / krok), jak Y2 na 1d: przy 28-dniowym teście fold ma 28 wierszy,
+  a bezpiecznik silnika `MIN_TRAIN_ROWS = 30` pominąłby każdy fold. Start foldów = pierwsza świeca ramki.
+- Silnik bez zmian (`backtest.engine.collect_signals`, parametry §5.2): `REGIME_ALL`, V = 7, `candles_per_day = 1`,
+  embargo = V = 7 świec (ogon uczenia przed testem), walidacja early stopping = chronologiczny ogon 20 % uczenia.
+  **Sprostowanie §5.3 przed uczeniem:** silnik NIE robi przerwy między częścią uczącą a ogonem walidacyjnym
+  (tak samo było w SW); zdanie „między ogonem walidacyjnym a częścią uczącą — embargo V” w §5.3 opisywało silnik
+  błędnie. Zostaje silnik jak w SW (parametry „jak SW etap 2”); skutek: liczba drzew bywa wybrana na ogonie,
+  którego pierwsze 7 etykiet dzieli ruch z końcem części uczącej — dotyczy tylko liczby drzew, nie danych testowych.
+- **Usuwanie duplikatów (§5.2) raz, na pierwszym oknie uczenia** (pierwsza świeca + 365 dni, jak SW): |Spearman|
+  > 0,9 → odpada cecha późniejsza w kolejności §4.1. **Ta sama lista cech** trafia do wszystkich foldów i do modelu
+  zamrożonego — jedna lista = jeden wariant, a próg z OOS dotyczy tej samej struktury modelu.
+- Wiersze z brakiem którejkolwiek cechy (dziury §8: L/S i taker 2021-12-31 → 2022-05-08; DVOL przed 2021-04)
+  silnik pomija w uczeniu i w predykcji — raportowane liczbą, bez uzupełniania.
+- Z predykcji OOS: wartość progu (§14.1) i tabela kalibracji (§14.6). **Bez zwrotu, t zwrotu i symulacji portfela.**
+
+### 14.5. Model zamrożony (krok 3)
+
+Jeden model: `train_regime_model` na świecach 2021-01-01 → 2025-12-31 z etykietą (purging jak §14.4), lista cech
+z §14.4, parametry §5.2, embargo 7, walidacja ogon 20 %, ziarno 42. Zapis: `model_ml1.json` (XGBoost) +
+`manifest.json` w katalogu rundy: sha256 pliku modelu, lista cech w kolejności, parametry, `best_iteration`,
+wartość progu i udział, hash commita pre-rejestracji i commita kodu, wersje bibliotek, sha256 plików danych.
+Bez douczania.
+
+### 14.6. Kalibracja (warunek 5) i rozbieg (krok 4)
+
+- **Kalibracja** na sygnałach OOS walk-forward 2022–2025: 5 kubełków = kwintyle pewności (granice z tych samych
+  sygnałów); w każdym n i **trafność sygnału** = udział sygnałów, w których kierunek zgadza się ze znakiem ruchu
+  ceny od zamknięcia świecy decyzji do pierwszej bariery ±1,5 × ATR albo do zamknięcia po 7 dniach (z etykiety
+  triple-barrier; bez symulacji portfela, bez kosztów, bez zwrotu) + ±Wald. Przyrząd: przy ~800 sygnałach kubełek
+  ma ~160 sygnałów → ±7,7 pp (a sygnały nachodzą na siebie — realnie szerzej); wykryje tylko duże różnice.
+- **Brak rosnącej trafności** (trafność górnego kubełka ≤ trafność wszystkich sygnałów albo brak dodatniej
+  korelacji rang kubełek–trafność) → zapis jako RYZYKO w README i tu; **reguły nie zmienia się** (precedens C2.13).
+- **Odczyt historii (wniosek 107, `runs/odczyty_historii.csv`):** tabela kalibracji pokazuje związek sygnału modelu
+  z ruchem ceny na historii 2022–2025 → to JEST odczyt programu. Wiersz: `opis-z-wynikiem`, `odczyt_programu = tak`,
+  `wariantow = 0` (bez werdyktu i bez wyboru wariantu, jak D1/SZ1/PR1) — w metodzie „z odczytami 0-wariantowymi”
+  liczy się za 1. Tor H pozostaje zamknięty: z tej tabeli nie wolno wyprowadzić werdyktu ani wyboru udziału.
+- **Rozbieg 2026-01-01 → 2026-09-29:** model z pliku (sprawdzony sha256) → czy sygnały się liczą, ile z kierunkiem,
+  jaki udział ponad progiem, ile dni z brakiem cech (per cecha). Bez etykiet, trafności, zwrotu i t.
+
+### 14.7. Brama danych na serwerze (uzupełnienie §8)
+
+Tryb `pokrycie` (2026-09-30 ~18:20 UTC; pliki w `data/raw/ml1`, poza gitem): wszystkie źródła od 2021-01-01
+(DVOL od 2021-03-24) do 2026-09-29/30; dziury: `count_long_short_ratio` 19 dni (2021-12-31 → 2022-01-18),
+`sum_taker_long_short_vol_ratio` 128 dni (2021-12-31 → 2022-01-29 i 2022-01-31 → 2022-05-08), F&G 1 dzień
+(2024-10-26); pozostałe 0. `fetch_window`: 2 098 świec 1d od 2021-01-01 00:00 do 2026-09-29 (filtr zasady 20
+działa). OHLCV i funding przedłużone zgodne z kopią repo głównego do 2026-06-30 co do bitu; DVOL różni się
+w 1 dniu (ostatni dzień kopii z 2026-09-23 był niepełny), CoinMetrics i F&G bez różnic. Archiwum `metrics`:
+kopia do 2026-09-22 + 8 dni z `data.binance.vision` (do 2026-09-29 23:55).

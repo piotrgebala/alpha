@@ -1,0 +1,62 @@
+# raw_output.txt — runda ML1 (zadanie 028). Pełny stdout trybów w kolejności wykonania.
+# KROK 1 (przed uczeniem): tryby dane, pokrycie, moc. HEAD przed commitem karty: 94eaa89c66191d651f059565f2624c5965396633
+
+## $ PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont dane   (2026-09-30 18:20 UTC)
+==============================================================================================================
+ML1 — DANE do 2026-09-30T00:00:00Z w data/raw/ml1 (dziś 2026-09-30 18:20 UTC)
+==============================================================================================================
+  OHLCV 1d: 2577 świec 2019-09-10 00:00:00+00:00 → 2026-09-29 00:00:00+00:00
+  funding: 7730 rozliczeń 2019-09-10 08:00:00+00:00 → 2026-09-29 16:00:00+00:00
+  metrics: kopia do 2026-09-22; dni do pobrania ['2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29']
+  metrics: 638726 odczytów 2020-09-01 00:00:00+00:00 → 2026-09-29 23:55:00+00:00
+[external] dvol BTC: 2017 dni
+[external] coinmetrics btc: 2829 dni, 14 metryk
+[external] fng: 3160 dni
+==============================================================================================================
+
+## $ PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont pokrycie
+==============================================================================================================
+ML1 — POKRYCIE DANYCH DZIENNYCH 11 CECH (BTC), od 2021-01-01 (zasada 20), pliki data/raw/ml1
+==============================================================================================================
+  1–4 OHLCV 1d BTCUSDT perp (volume w BTC)                     od 2021-01-01 do 2026-09-29 | dni bez odczytu   0 | —
+  5 funding_rate (rozliczenia 8h)                              od 2021-01-01 do 2026-09-29 | dni bez odczytu   0 | —
+  6 oi_change_24h (sum_open_interest > 0)                      od 2021-01-01 do 2026-09-29 | dni bez odczytu   0 | —
+  7 global_ls_log (count_long_short_ratio > 0)                 od 2021-01-01 do 2026-09-29 | dni bez odczytu  19 | 2021-12-31→2022-01-18 (19 d)
+  8 taker_imbalance_24h (sum_taker_long_short_vol_ratio > 0)   od 2021-01-01 do 2026-09-29 | dni bez odczytu 128 | 2021-12-31→2022-01-29 (30 d); 2022-01-31→2022-05-08 (98 d)
+  9 vrp_30d (DVOL BTC 1d)                                      od 2021-03-24 do 2026-09-30 | dni bez odczytu   0 | —
+  10 ex_supply_change_7d (SplyExNtv)                           od 2021-01-01 do 2026-09-29 | dni bez odczytu   0 | —
+  11 fng_level (alternative.me)                                od 2021-01-01 do 2026-09-30 | dni bez odczytu   1 | 2024-10-26
+  metrics: dni z < 276 z 288 odczytów 5-min: 7 ['2021-01-20', '2021-02-19', '2021-02-20', '2021-04-27', '2021-06-22', '2021-06-23', '2024-02-16']
+  fetch_window (min_start 2021-01-01T00:00:00Z): 2098 świec 2021-01-01 00:00:00+00:00 → 2026-09-29 00:00:00+00:00
+  zgodność OHLCV 1d z kopią repo głównego (do 2026-06-30): wspólnych 2486/2486, max |różnica| 0
+  zgodność funding z kopią repo głównego (do 2026-06-30): wspólnych 7457/7457, max |różnica| 0
+  zgodność DVOL.close z kopią z 2026-09-23 (od 2021-01-01): wspólnych 2010, dni z różnicą 1, max |różnica| 0.69
+  zgodność CoinMetrics.SplyExNtv z kopią z 2026-09-23 (od 2021-01-01): wspólnych 2091, dni z różnicą 0, max |różnica| 0
+  zgodność F&G.value z kopią z 2026-09-23 (od 2021-01-01): wspólnych 2091, dni z różnicą 0, max |różnica| 0
+==============================================================================================================
+
+## $ PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont moc
+==============================================================================================================
+ML1 — MIERZALNOŚĆ REGUŁY PROGU: górne 20% pewności; p* 0.5089; abstynencja 0.378; nakładanie 2×
+==============================================================================================================
+                  szereg | mies. | decyzje | n niezal. |   ±Wald | p potrzebne | p 52 % | p 53 % | p 55 % | p 60 %
+       wszystkie sygnały |     6 |     183 |      56.9 |  12.99pp |      63.87% |   NIEM |   NIEM |   NIEM |   NIEM
+       wszystkie sygnały |    12 |     365 |     113.5 |   9.20pp |      60.07% |   NIEM |   NIEM |   NIEM |   NIEM
+       wszystkie sygnały |    24 |     730 |     227.0 |   6.50pp |      57.39% |   NIEM |   NIEM |   NIEM |   MIER
+       wszystkie sygnały |    60 |    1826 |     567.9 |   4.11pp |      55.00% |   NIEM |   NIEM |   NIEM |   MIER
+     ponad progiem (20%) |     6 |     183 |      11.4 |  29.05pp |      80.44% |   NIEM |   NIEM |   NIEM |   NIEM
+     ponad progiem (20%) |    12 |     365 |      22.7 |  20.57pp |      71.32% |   NIEM |   NIEM |   NIEM |   NIEM
+     ponad progiem (20%) |    24 |     730 |      45.4 |  14.54pp |      65.50% |   NIEM |   NIEM |   NIEM |   NIEM
+     ponad progiem (20%) |    60 |    1826 |     113.6 |   9.20pp |      60.07% |   NIEM |   NIEM |   NIEM |   NIEM
+
+  n niezależnych rocznie ponad progiem: 22.7 (decyzji z kierunkiem rocznie 227)
+  p 52 %: potrzeba n ≈    7795 niezależnych → ponad progiem ≈  343.3 lat
+  p 53 %: potrzeba n ≈    2157 niezależnych → ponad progiem ≈   95.0 lat
+  p 55 %: potrzeba n ≈     569 niezależnych → ponad progiem ≈   25.0 lat
+  p 60 %: potrzeba n ≈     116 niezależnych → ponad progiem ≈    5.1 lat
+
+  Druga droga (ręcznie, bez metrics.py): ±Wald = 1,96·√(0,25/n)
+    n  18.0: 23.0988 pp (metrics.wald_half_width: 23.0984 pp)
+    n  36.3: 16.2657 pp (metrics.wald_half_width: 16.2654 pp)
+    n  72.5: 11.5095 pp (metrics.wald_half_width: 11.5093 pp)
+==============================================================================================================
