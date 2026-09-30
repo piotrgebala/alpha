@@ -243,10 +243,7 @@ Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opi
     w [zadaniu 022](zadania/022-skill-katalog-lowvol-d1-tl1.md): nowa rodzina B5 (niska zmienność/BAB), TL1
     przeniesiony z D1 do nowej E3 (open interest, nie funding), statusy po wnioskach 103–110 i mapie 007;
     treść zmiany: [docs/skille/quant-strategy-catalog_2026-09-29.diff](docs/skille/quant-strategy-catalog_2026-09-29.diff).
-11. **Wkleić w Cowork nową instrukcję rutyny „Dziennik CLAS-5”** (`trig_013XEDboNXSkb6CF17K1eSGf`): cała treść
-    `tools/rutyna_dziennika.md` (suma skryptu `1a9934a2…`, kontrola (h)); nie w 06:30–06:50 UTC. Agent nie ma tu
-    narzędzia do rutyn — [zadanie 020](zadania/020-strona-kontrola-h-blad.md).
-12. **Restart kolektora likwidacji LK0 z nowym kodem** — procedura w [zadaniu 021](zadania/021-kolektor-binance-zakres-t.md)
+11. **Restart kolektora likwidacji LK0 z nowym kodem** — procedura w [zadaniu 021](zadania/021-kolektor-binance-zakres-t.md)
     (tryb auto blokuje agentowi ingerencję w działający proces); 29.09 12:00 UTC nadal stary proces z 25.09.
 
 ---

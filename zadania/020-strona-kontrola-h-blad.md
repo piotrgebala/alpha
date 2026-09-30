@@ -54,3 +54,6 @@ wychwycić. Pozycja z backlogu `STATUS.md` §17, ETAP 6.
 - **Zostało:** użytkownik wkleja w Cowork całą treść `tools/rutyna_dziennika.md` jako instrukcję rutyny (nie w oknie
   06:30–06:50 UTC). Potem orkiestrator sprawdza, że przebieg rutyny kończy się „Dziennik odświeżony”, i zmienia status
   na `zrobione`. Do tego czasu rutyna działa na starej wersji skryptu (bez (h)).
+- **2026-09-30 ~05:45 UTC:** użytkownik: „rutyna dziennika dodana” — nowa instrukcja w rutynie (słowo użytkownika
+  wystarcza według kryteriów odbioru). Zostało: przebieg 06:30 UTC zakończony „Dziennik odświeżony” — sprawdzić
+  `RemoteTrigger list_runs` / `get_run_log` w następnej sesji orkiestratora i wtedy zmienić status na `zrobione`.

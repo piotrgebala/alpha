@@ -2,7 +2,7 @@
 id: 022
 tytul: Nowa wersja skilla `quant-strategy-catalog` — rodzina low-vol/BAB, poprawka opisu D1 vs TL1, statusy po mapie 007
 typ: dokumentacja
-status: czeka_na_decyzje
+status: do_przegladu
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29
@@ -54,3 +54,7 @@ wnioski 103–110 i mapa hipotez z zadania 007 (008, 009 i 013 zamknięte bez od
 - **Zostało:** użytkownik wgrywa paczkę na claude.ai jako zamiennik `quant-strategy-catalog`; potem orkiestrator
   porównuje sumy w `~/.claude/skills/synced/` z nagłówkiem diffu, zmienia status na `zrobione` i usuwa punkt 10
   ze `STATUS.md`.
+- **2026-09-30 ~05:45 UTC:** użytkownik: „skill załadowany” (paczkę wysłano mu jeszcze raz, sha256 `11daffd2…`).
+  Sumy w `~/.claude/skills/synced/` o 05:47 UTC nadal stare: kopia lokalna odświeża się przy starcie sesji,
+  a `/reload-skills` jej nie pobiera. Zostało: porównanie sum w następnej sesji, potem `zrobione` i usunięcie
+  punktu 10 ze `STATUS.md`.
