@@ -57,3 +57,7 @@ wychwycić. Pozycja z backlogu `STATUS.md` §17, ETAP 6.
 - **2026-09-30 ~05:45 UTC:** użytkownik: „rutyna dziennika dodana” — nowa instrukcja w rutynie (słowo użytkownika
   wystarcza według kryteriów odbioru). Zostało: przebieg 06:30 UTC zakończony „Dziennik odświeżony” — sprawdzić
   `RemoteTrigger list_runs` / `get_run_log` w następnej sesji orkiestratora i wtedy zmienić status na `zrobione`.
+- **2026-09-30 11:00 UTC (orkiestrator, sesja w chmurze):** `get_trigger` — rutyna ma instrukcję z sumą `1a9934a2…40f5`
+  (zmiana 05:44 UTC). Jedyny przebieg od tej chwili nie istnieje: ostatni (`SUCCEEDED`, 05:31 UTC) był ręcznym
+  uruchomieniem **przed** podmianą instrukcji, więc nie jest dowodem. Pierwszy przebieg z nową instrukcją:
+  2026-10-01 04:31 UTC. Status bez zmian (`do_przegladu`) do sprawdzenia tego przebiegu.
