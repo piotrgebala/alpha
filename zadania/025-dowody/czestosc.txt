@@ -1,0 +1,64 @@
+==============================================================================================================
+Zadanie 025 / B — częstość wstrzymań i wycofań w koszyku top-20 (opis, 0 wariantów, bez zwrotów)
+komenda: PYTHONUTF8=1 PYTHONPATH=. .venv/bin/python zadania/025-dowody/czestosc.py /home/dantey1/alpha/data/raw
+dane: /home/dantey1/alpha/data/raw/universe_full (świece 1d + obrót), /home/dantey1/alpha/data/raw/universe_ohlc_full/ohlc_1d.parquet (OHLC członków), /home/dantey1/alpha/data/raw/mark_1d/mark_1d.parquet (mark, sekcja 4); od 2021-01-01
+miesiące koszyka: 2021-02 … 2026-06 (65); zdarzenie: seria ≥ 3 dni
+==============================================================================================================
+1. DROGA 1 — `monthly_members` (funkcja dziennika) na panelu `universe_full`, okno W = miesiąc koszyka
+   mianownik: 1300 par (moneta, miesiąc) w koszyku = 65 miesięcy × 20; różnych monet: 195
+   par ze zdarzeniem: 6  →  częstość 0.46 %  (Wilson 95 % [0.21; 1.00] %, dokładny Clopper–Pearson [0.17; 1.00] %)
+   wg rodzaju (para liczona w każdym rodzaju, który w niej wystąpił): {'koniec': 2, 'zamrozenie': 4}
+   miesięcy koszyka z ≥ 1 zdarzeniem: 5 z 65 → na miesiąc 7.7 % (Wilson [3.3; 16.8] %)
+   różnych monet ze zdarzeniem: 6
+   lista (okno W):
+     LUNAUSDT       koszyk 2022-05  koniec     ostatnia normalna świeca 2022-05-12; start 2022-05-13, ostatnia świeca 2022-05-13 (sama oflagowana: True)
+     FTTUSDT        koszyk 2022-12  zamrozenie ostatnia normalna świeca 2022-11-14; start 2022-11-15, seria 1324.0 dni (zero)
+     BNXUSDT        koszyk 2025-03  zamrozenie ostatnia normalna świeca 2025-03-17; start 2025-03-18, seria 470.0 dni (zero)
+     ALPACAUSDT     koszyk 2025-05  zamrozenie ostatnia normalna świeca 2025-04-30; start 2025-05-01, seria 426.0 dni (zero)
+     EOSUSDT        koszyk 2025-05  koniec     ostatnia normalna świeca 2025-05-21; start 2025-05-21, ostatnia świeca 2025-05-21 (sama oflagowana: False)
+     TONUSDT        koszyk 2026-06  zamrozenie ostatnia normalna świeca 2026-06-23; start 2026-06-24, seria 7.0 dni (zero+plaska)
+   okno rozszerzone W+ (+7 dni po końcu miesiąca, opis): 6 par; dodatkowe: []
+   wg roku (pary ze zdarzeniem / 240 par rocznie, 2021: 220): {2022: 2, 2025: 3, 2026: 1}
+==============================================================================================================
+2. ZNANE PRZYPADKI (LP1): czy były w koszyku i czy droga 1 je widzi
+   FTTUSDT     2022-11: w koszyku = False; zdarzenia: brak
+   FTTUSDT     2022-12: w koszyku = True; zdarzenia: ['zamrozenie']
+   LUNAUSDT    2022-05: w koszyku = True; zdarzenia: ['koniec']
+   ALPACAUSDT  2025-05: w koszyku = True; zdarzenia: ['zamrozenie']
+   FTTUSDT     miesiące w koszyku: ['2022-12']
+   LUNAUSDT    miesiące w koszyku: ['2021-04', '2021-09', '2021-10', '2021-11', '2022-01', '2022-02', '2022-03', '2022-04', '2022-05']
+   ALPACAUSDT  miesiące w koszyku: ['2025-05']
+==============================================================================================================
+3. DRUGA DROGA — pliki osobno, własny ranking top-20 (bez `monthly_members`), serie pętlą
+   skład identyczny z drogą 1 we wszystkich miesiącach: True (różne: [])
+   par ze zdarzeniem: droga 1 = 6, droga 2 = 6; zdarzeń (para, rodzaj): 6 vs 6
+   tylko w drodze 1: []
+   tylko w drodze 2: []
+==============================================================================================================
+4. TRZECIA DROGA (częściowa) — cena ostatnia stoi (high = low), a mark się rusza (`mark_1d`, jak LP1)
+   dni „ostatnia stoi, mark się rusza” u członka koszyka: 86 dni łącznie w archiwum; par (moneta, miesiąc) w koszyku: [('ALPACAUSDT', '2025-05'), ('BNXUSDT', '2025-03'), ('FTTUSDT', '2022-12'), ('LUNAUSDT', '2022-05'), ('TONUSDT', '2026-06')]
+   te pary są wśród zdarzeń drogi 1: True
+     ALPACAUSDT 2025-05: 31 dni, cena ostatnia 1.19, mark w tych dniach od -95.1 % do -42.4 % wobec niej
+     BNXUSDT 2025-03: 1 dni, cena ostatnia 2, mark w tych dniach od -22.7 % do +2.4 % wobec niej
+     FTTUSDT 2022-12: 31 dni, cena ostatnia 1.59, mark w tych dniach od -59.5 % do +24.3 % wobec niej
+     LUNAUSDT 2022-05: 1 dni, cena ostatnia 0.008, mark w tych dniach od -99.5 % do -92.6 % wobec niej
+     TONUSDT 2026-06: 6 dni, cena ostatnia 1.5901, mark w tych dniach od -3.8 % do +1.8 % wobec niej
+==============================================================================================================
+5. KOGO NIE MA W ZBIORZE DZIENNIKA — skład z `data/raw/live` (pobrany raz, tylko TRADING) vs archiwum, 2025-09 … 2026-06
+   plików świec w live: 526, ostatnia świeca 2026-09-23
+     2026-02: tylko w archiwum ['IPUSDT']; tylko w live ['LINKUSDT']
+       IPUSDT: plik w live = False; w archiwum ostatnia świeca 2026-06-30
+     2026-06: tylko w archiwum ['TONUSDT']; tylko w live ['FILUSDT']
+       TONUSDT: plik w live = False; w archiwum ostatnia świeca 2026-06-30
+   miesięcy z innym składem: 2 z 10
+==============================================================================================================
+6. CO SILNIK DZIENNIKA ZROBIŁBY Z TĄ MONETĄ W MIESIĄCU ZDARZENIA (pozycje, bez zwrotów; archiwum, start faz 2021-02-01)
+   TS1 (trend): znak i waga w jednostkach kapitału fazy przy formowaniach w W od dnia zdarzenia; X1: noga
+     LUNAUSDT    2022-05 (koniec, od 2022-05-13): WNIESIONE w zdarzenie (formowania D−7…D−1): TS1 7 faz (['short'], |waga| 0.0159), X1 4 faz ['short']; NOWE od zdarzenia w W: formowań 19, TS1 z pozycją 1 (['short'], |waga| 0.0052–0.0052), X1 nogi {'-': 18, 'short': 1}
+     FTTUSDT     2022-12 (zamrozenie, od 2022-11-15): WNIESIONE w zdarzenie (formowania D−7…D−1): TS1 0 faz ([], |waga| 0.0000), X1 0 faz []; NOWE od zdarzenia w W: formowań 31, TS1 z pozycją 11 (['long', 'short'], |waga| 0.0065–0.0071), X1 nogi {'long': 14, 'short': 10, '-': 7}
+     BNXUSDT     2025-03 (zamrozenie, od 2025-03-18): WNIESIONE w zdarzenie (formowania D−7…D−1): TS1 7 faz (['long', 'short'], |waga| 0.0062), X1 7 faz ['long']; NOWE od zdarzenia w W: formowań 14, TS1 z pozycją 14 (['long'], |waga| 0.0060–0.0067), X1 nogi {'long': 14}
+     ALPACAUSDT  2025-05 (zamrozenie, od 2025-05-01): WNIESIONE w zdarzenie (formowania D−7…D−1): TS1 0 faz ([], |waga| 0.0000), X1 0 faz []; NOWE od zdarzenia w W: formowań 31, TS1 z pozycją 27 (['long'], |waga| 0.0015–0.0019), X1 nogi {'long': 27, '-': 4}
+     EOSUSDT     2025-05 (koniec, od 2025-05-21): WNIESIONE w zdarzenie (formowania D−7…D−1): TS1 7 faz (['long'], |waga| 0.0178), X1 0 faz []; NOWE od zdarzenia w W: formowań 11, TS1 z pozycją 1 (['long'], |waga| 0.0178–0.0178), X1 nogi {'-': 11}
+     TONUSDT     2026-06 (zamrozenie, od 2026-06-24): WNIESIONE w zdarzenie (formowania D−7…D−1): TS1 7 faz (['short'], |waga| 0.0194), X1 0 faz []; NOWE od zdarzenia w W: formowań 7, TS1 z pozycją 7 (['short'], |waga| 0.0195–0.0204), X1 nogi {'-': 4, 'long': 3}
+==============================================================================================================
+Miesiące 2026-07 … 2026-09 (okres dziennika): BRAK DANYCH w archiwum (koniec 2026-06-30); `data/raw/live` nie ma wycofanych.
