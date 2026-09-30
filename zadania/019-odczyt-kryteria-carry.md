@@ -59,3 +59,4 @@ później) nie ma dla carry reguł w kodzie. Pozycja z backlogu `STATUS.md` §17
   (progi skryptu = `dziennik/README.md`); podgląd bez sieci `zadania/logi/019-podglad-odczytu.txt`; pełny `pytest -q` po scaleniu 019 + 020 + 024 (master `9e78436`, OMP_NUM_THREADS=4): 2 065 passed, 2 skipped, kod 0, 256 s; `ruff check .` czysto; `black --check .` — jedyny plik do przeformatowania to `data/fetch_ohlcv.py` (sprzed zadań, łańcuch dziennika, czeka na decyzję użytkownika).
 - **Zostało (decyzja użytkownika):** czy dopisać `--carry-sprawdz-gielde` do komend odczytów wiążących
   w `dziennik/README.md:598–600`.
+- **2026-09-30, decyzja użytkownika: „19 ok”** (rekomendacja: krok (c) nie w komendzie wiążącej). Dopisano w `dziennik/README.md` osobną komendę (c) w dniu odczytu; wydruk wiążący zostaje bez sieci i powtarzalny.

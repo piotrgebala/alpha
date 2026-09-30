@@ -8,6 +8,7 @@ decyzja_uzytkownika: "brak"
 utworzono: 2026-09-29
 zalezy_od: []
 budzet: "Opus, główna sesja (nie w roju)"
+nie_wczesniej_niz: 2026-12-01
 ---
 
 # 015 — Warstwa wykonania dla szczebla 4
@@ -60,4 +61,4 @@ z 2026-09-29 (użytkownik: „tak wrzuć na tablicę z zadaniami”). To zgoda n
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **2026-09-30, decyzja użytkownika: „15 czekamy do grudnia”.** Przed startem kroku A orkiestrator pyta jeszcze raz (typ `konto`).

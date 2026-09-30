@@ -2,7 +2,7 @@
 id: 025
 tytul: Dziennik przy wstrzymaniu lub wycofaniu kontraktu — zamarzła cena ostatnia, brak rozliczenia likwidacji i zamknięcia
 typ: dziennik
-status: czeka_na_decyzje
+status: w_toku
 zlecil: orkiestrator
 decyzja_uzytkownika: "brak"
 utworzono: 2026-09-29
@@ -36,4 +36,4 @@ zmiana dziennika wymaga osobnej decyzji.
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **2026-09-30, decyzja użytkownika: „25 zgoda”.** Krok 1 (przegląd kodu, bez zmian i bez wyników dziennika) zlecony wykonawcy razem z policzeniem, jak często moneta z koszyka top-20 była wstrzymana lub wycofana. Poprawka dziennika = osobna decyzja.

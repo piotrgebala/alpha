@@ -46,4 +46,4 @@ Postęp: etap 1 — nie rozpoczęty; etap 2 — nie rozpoczęty; etap 3 — nie 
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **2026-09-30, decyzja użytkownika: „6 czekaj”.** Wraca po przeglądzie 005 (od 2026-10-06), razem z decyzją o blokowaniu.
