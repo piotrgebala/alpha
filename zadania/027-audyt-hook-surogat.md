@@ -1,5 +1,5 @@
 ---
-id: 026
+id: 027
 tytul: Hook audytowy — analiza wywraca się na samotnym surogacie (\ud800) w os.path.realpath
 typ: naprawa
 status: zrobione
@@ -10,7 +10,7 @@ zalezy_od: [002, 021]
 budzet: "Opus medium, 1 wykonawca"
 ---
 
-# 026 — Samotny surogat w ścieżce wywraca analizę hooka audytowego
+# 027 — Samotny surogat w ścieżce wywraca analizę hooka audytowego
 
 ## Po co
 
@@ -60,3 +60,7 @@ oceniane, a test raz przechodzi, raz nie. Niestabilny test osłabia DoD (zasada 
 - **Zostało:** Windows niesprawdzony. `ntpath.realpath` łapie `ValueError`, więc
   `test_null_byte_in_nested_path_gives_analysis_error_row` może być tam czerwony (sprawa sprzed zadania). Sprawdzić
   przy najbliższym `py -m pytest -q` na Windows.
+- **Numer (2026-09-30):** zadanie założono lokalnie jako 026. W tym czasie Cowork zapisał na origin inne zadanie 026
+  (`49e406c`, przegląd literatury CP1/E1), więc to dostało numer 027. Stary numer został w nazwie gałęzi
+  `zadanie-026-audyt-hook-surogat`, w logu `zadania/logi/026-audyt-hook-surogat.txt`, w rejestrze skilli
+  i w opisach commitów.
