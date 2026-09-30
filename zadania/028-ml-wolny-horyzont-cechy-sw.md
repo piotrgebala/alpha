@@ -2,7 +2,7 @@
 id: 028
 tytul: ML na rzadszym handlu (dni zamiast 4h) z pełnym zestawem cech spoza wykresu — krok 0 na papierze, odczyt tylko prospektywny
 typ: badawcze
-status: w_toku
+status: czeka_na_decyzje
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii”; 2026-09-30: wybór „a” — opcja A (uczenie do 2025-12-31, model zamrożony, 2026-01…09 rozbieg bez werdyktu, tor P prospektywny); 2026-09-30: „Wykonaj zadanie 28”"
 utworzono: 2026-09-30
@@ -179,3 +179,14 @@ ruszy. Uwaga środowiskowa: sesja chmurowa nie ma dostępu do Binance / Deribit 
   2021–2025 → wartość progu i kalibracja, (3) jeden model 2021-01-01 → 2025-12-31 zamrożony (hash), (4) rozbieg 2026
   tylko jako kontrola mechaniki. Tor P jako proces (kolektory 5 cech, wpięcie w harmonogram) — osobne zadania
   i osobna decyzja użytkownika.
+
+- **2026-09-30, kroki 1–4 zrobione, scalone (`ab67483`).** Runda `runs/2026-09-30_ml1-wolny-horyzont/`, wniosek 114.
+  Karta z progiem `e99dc82` przed wynikiem `ea073a6`. Próg = górne 20 % pewności = 0,424963 (910 sygnałów OOS 2022–2025).
+  Kalibracja (bez kosztów): kubełki 44,5 / 47,3 / 59,9 / 62,6 / **49,5 %** (górny poniżej średniej 52,8 %) — pewność
+  mierzy głównie liczbę drzew foldu (7/15 foldów zatrzymane po 1 drzewie). Model zamrożony sha256 `d1a39ee4…195c`
+  (23 drzewa, 10 cech po usunięciu `price_zscore_20`). Rozbieg 2026: 111 sygnałów, 10 ponad progiem (9 %, nie 20 %).
+  Mierzalność progu: potrzebna trafność 71 % po roku / 66 % po 2 latach → przy 52–55 % NIEMIERZALNA do 5 lat.
+  Wiersz 61 w `runs/odczyty_historii.csv` (kalibracja = odczyt). Druga droga orkiestratora: kubełki przeliczone
+  z `sygnaly_oos_wf.csv` — zgodne; sha256 modelu zgodny.
+  **Czeka na decyzję użytkownika:** tor P na tym modelu (wymaga 2 zadań: kolektory 5 cech + proces papierowy poza
+  `live_journal.py`) albo zamknięcie (rekomendacja).
