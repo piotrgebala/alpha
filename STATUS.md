@@ -3173,3 +3173,4 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **Zadanie 024 (2026-09-29, naprawa danych):** 20 nazw plików w `data/raw` (cp866) poprawionych, treść bez zmian (druga
   droga: sha256 3 202 plików). Klon dziennika był poprawny. Ryzyko: TP1/LP1 przeliczone od nowa mogą się lekko różnić
   (1 moneta × 1 miesiąc) — [zadanie](zadania/024-nazwy-cp866-universe.md).
+- **Zadanie 028 / ML1 (2026-09-30, 0 wariantów, 0 zwrotów):** model XGBoost 1d BTC (10 cech, V = 7) uczony na 2021–2025 i zamrożony (sha256 `d1a39ee4…`, pre-rejestracja `e99dc82`); próg „górne 20 % pewności” = 0,424963, ale kalibracja nie rośnie (49,5 % vs 52,8 %) i na rozbiegu 2026 próg daje 9 % sygnałów (~13/rok) → tor P niemierzalny przez lata; tor P i kolektory 5 cech = decyzja użytkownika — wniosek 114, [runda](runs/2026-09-30_ml1-wolny-horyzont/README.md).
