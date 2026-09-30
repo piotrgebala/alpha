@@ -45,6 +45,15 @@ from agents.sw_features import (
 )
 from agents.funding_features import attach_funding_rate
 from agents.labeling import compute_triple_barrier_labels
+from agents.ml1_features import (
+    ML1_EXTERNAL,
+    ML1_FEATURES,
+    ML1_FEATURE_FUNCTIONS,
+    attach_daily_sources,
+    attach_funding_1d,
+    attach_metrics_1d,
+    build_ml1_frame,
+)
 
 FEATURE_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "agents" / "feature_registry.yaml"
 
@@ -517,3 +526,187 @@ def test_sw_rule_score_is_trailing() -> None:
     pd.testing.assert_series_equal(full.iloc[:1500], past, check_exact=True)
     assert full.iloc[:199].isna().all() and full.iloc[250:].notna().all()
     assert set(full.dropna().unique()) <= {-1.0, 0.0, 1.0}
+
+
+# ------------------------------------------------------------------ ML1 (2026-09-30, zadanie 028)
+# Karta runs/DRAFT_028.md §4.2: sześć testów przecieku dla 11 cech na świecy 1d PRZED uczeniem.
+
+ML1_DAYS = 400
+ML1_CUT = 300
+
+
+def _ml1_sources(n_days: int, seed: int = 21) -> dict:
+    """Syntetyczne świece 1d (UTC) + wszystkie źródła cech ML1 z siatkami jak w realnych plikach."""
+    rng = np.random.default_rng(seed)
+    days = pd.date_range("2024-01-01", periods=n_days, freq="1D", tz="UTC")
+    close = 40_000.0 * np.exp(np.cumsum(rng.normal(0.0, 0.03, n_days)))
+    open_ = np.r_[close[0], close[:-1]]
+    ohlcv = pd.DataFrame(
+        {
+            "timestamp": days,
+            "open": open_,
+            "high": np.maximum(open_, close) * (1 + rng.uniform(0, 0.02, n_days)),
+            "low": np.minimum(open_, close) * (1 - rng.uniform(0, 0.02, n_days)),
+            "close": close,
+            "volume": rng.uniform(1e4, 1e5, n_days),
+        }
+    )
+    f_ts = pd.date_range(days[0], periods=n_days * 3 + 3, freq="8h", tz="UTC")
+    funding = pd.DataFrame({"timestamp": f_ts, "funding_rate": rng.normal(1e-4, 5e-5, len(f_ts))})
+    m_ts = pd.date_range(days[0], periods=(n_days + 1) * 288, freq="5min", tz="UTC")
+    metrics = pd.DataFrame(
+        {
+            "timestamp": m_ts,
+            "sum_open_interest": 80_000.0 * np.exp(np.cumsum(rng.normal(0, 0.001, len(m_ts)))),
+            "count_long_short_ratio": np.exp(rng.normal(0.3, 0.1, len(m_ts))),
+            "sum_taker_long_short_vol_ratio": np.exp(rng.normal(0.0, 0.2, len(m_ts))),
+        }
+    )
+    ddays = pd.date_range(days[0] - pd.Timedelta(days=10), periods=n_days + 12, freq="1D", tz="UTC")
+    dvol = pd.DataFrame({"date": ddays, "close": rng.uniform(30, 90, len(ddays))})
+    cm = pd.DataFrame(
+        {"date": ddays, "SplyExNtv": 2e6 * np.exp(np.cumsum(rng.normal(0, 0.002, len(ddays))))}
+    )
+    fng = pd.DataFrame({"date": ddays, "value": rng.integers(5, 96, len(ddays)).astype(float)})
+    return {
+        "ohlcv": ohlcv,
+        "funding": funding,
+        "metrics": metrics,
+        "dvol": dvol,
+        "coinmetrics": cm,
+        "fng": fng,
+    }
+
+
+def _ml1_truncate(src: dict, t: pd.Timestamp) -> dict:
+    """Wszystko, co znane ŚCIŚLE przed chwilą t (zamknięcie ostatniej zachowanej świecy)."""
+    return {
+        "ohlcv": src["ohlcv"][src["ohlcv"]["timestamp"] < t].reset_index(drop=True),
+        "funding": src["funding"][src["funding"]["timestamp"] < t].reset_index(drop=True),
+        "metrics": src["metrics"][src["metrics"]["timestamp"] < t].reset_index(drop=True),
+        "dvol": src["dvol"][src["dvol"]["date"] < t].reset_index(drop=True),
+        "coinmetrics": src["coinmetrics"][src["coinmetrics"]["date"] < t].reset_index(drop=True),
+        "fng": src["fng"][src["fng"]["date"] < t].reset_index(drop=True),
+    }
+
+
+def _ml1_frame(src: dict) -> pd.DataFrame:
+    out = build_ml1_frame(**src)
+    for name, fn in FEATURE_FUNCTIONS.items():
+        out[name] = fn(out)
+    return out
+
+
+def test_ml1_functions_match_registry() -> None:
+    """ML1: siedem cech 1d (agents/ml1_features.py) 1:1 z sekcją `ml1_1d:` registry."""
+    with open(FEATURE_REGISTRY_PATH, encoding="utf-8") as f:
+        registry = list(yaml.safe_load(f)["ml1_1d"].keys())
+    assert registry == list(ML1_FEATURE_FUNCTIONS) == ML1_EXTERNAL
+
+
+@pytest.mark.parametrize("feature_name", ML1_FEATURES)
+def test_ml1_feature_no_leakage_all_sources_truncated(feature_name: str) -> None:
+    """
+    §4.2 pkt 1 i 5: cecha świecy d policzona ze WSZYSTKICH źródeł uciętych przed zamknięciem świecy
+    CUT−1 = cecha z pełnych danych, bit w bit (dotyczy też 4 cech REVERSION na świecy 1d).
+    """
+    src = _ml1_sources(ML1_DAYS)
+    t = src["ohlcv"]["timestamp"].iloc[ML1_CUT]  # otwarcie CUT = zamknięcie CUT−1
+    full = _ml1_frame(src)
+    past = _ml1_frame(_ml1_truncate(src, t))
+    assert len(past) == ML1_CUT
+    pd.testing.assert_series_equal(
+        past[feature_name].reset_index(drop=True),
+        full[feature_name].iloc[:ML1_CUT].reset_index(drop=True),
+        check_names=False,
+        check_exact=True,
+    )
+    assert full[feature_name].iloc[60:ML1_CUT].notna().all()
+
+
+def test_ml1_metrics_reading_at_open_and_close_not_in_candle() -> None:
+    """§4.2 pkt 2: odczyt o `open` należy do świecy poprzedniej, o `open + 24h` do następnej."""
+    src = _ml1_sources(5)
+    df = src["ohlcv"]
+    m = src["metrics"]
+    base = attach_metrics_1d(df, m)
+    for shift_at in (
+        df["timestamp"].iloc[2],
+        df["timestamp"].iloc[3],
+    ):  # open świecy 2 i jej zamknięcie
+        m2 = m.copy()
+        hit = m2["timestamp"] == shift_at
+        assert hit.sum() == 1
+        m2.loc[
+            hit, ["sum_open_interest", "count_long_short_ratio", "sum_taker_long_short_vol_ratio"]
+        ] *= 9.0
+        changed = attach_metrics_1d(df, m2)
+        cols = ["oi_close", "global_ls_close", "taker_log_mean"]
+        pd.testing.assert_frame_equal(base.loc[[2], cols], changed.loc[[2], cols])
+    # odczyt o open + 23h55m NALEŻY do świecy (ostatni odczyt = wartość świecy)
+    last = df["timestamp"].iloc[2] + pd.Timedelta(hours=23, minutes=55)
+    assert base.loc[2, "oi_close"] == m.loc[m["timestamp"] == last, "sum_open_interest"].iloc[0]
+
+
+def test_ml1_daily_sources_publication_lags() -> None:
+    """§4.2 pkt 3: DVOL dnia x od świecy x+1, CoinMetrics od x+2, F&G od x+1 (klucz = otwarcie)."""
+    src = _ml1_sources(40)
+    df = src["ohlcv"]
+    base = attach_daily_sources(df, src["dvol"], src["coinmetrics"], src["fng"])
+    i = 20
+    x = df["timestamp"].iloc[i]  # dzień x = otwarcie świecy i
+    for name, frame, col, dst, lag in (
+        ("dvol", src["dvol"], "close", "dvol_d", 1),
+        ("fng", src["fng"], "value", "fng_d", 1),
+        ("coinmetrics", src["coinmetrics"], "SplyExNtv", "ex_supply_change_7d_d", 2),
+    ):
+        f2 = frame.copy()
+        f2.loc[f2["date"] == x, col] *= 3.0
+        kw = {"dvol": src["dvol"], "coinmetrics": src["coinmetrics"], "fng": src["fng"], name: f2}
+        changed = attach_daily_sources(df, **kw)
+        first = int(np.flatnonzero(~np.isclose(base[dst], changed[dst], equal_nan=True))[0])
+        assert first == i + lag, (name, first)
+
+
+def test_ml1_funding_settled_at_close_is_next_candle() -> None:
+    """§4.2 pkt 4: rozliczenie o 00:00 d+1 niewidoczne dla świecy d; rozliczenie 16:00 d widoczne."""
+    days = pd.date_range("2024-01-01", periods=3, freq="1D", tz="UTC")
+    df = pd.DataFrame({"timestamp": days})
+    fund = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(
+                ["2024-01-01 00:00", "2024-01-01 08:00", "2024-01-01 16:00", "2024-01-02 00:00"],
+                utc=True,
+            ),
+            "funding_rate": [1.0, 2.0, 3.0, 4.0],
+        }
+    )
+    out = attach_funding_1d(df, fund)
+    assert out["funding_raw"].tolist()[:2] == [3.0, 4.0]
+
+
+def test_ml1_label_first_barrier_after_decision_candle() -> None:
+    """§4.2 pkt 6: przy V = 7 bariera szukana w d+1 … d+7 — ruch w świecy d nie liczy się."""
+    n = 40
+    close = np.full(n, 100.0)
+    high = close * 1.001
+    low = close * 0.999
+    df = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2024-01-01", periods=n, freq="1D", tz="UTC"),
+            "open": close,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": 1.0,
+        }
+    )
+    d = 25
+    df.loc[d, "high"] = 150.0  # świeca decyzji przebija każdą barierę — nie może dać etykiety
+    labels = compute_triple_barrier_labels(df, vertical_barrier_candles=7)
+    assert labels.loc[d, "label"] == 0.0
+    df.loc[d + 7, "high"] = 150.0  # ostatnia świeca okna — liczy się
+    assert compute_triple_barrier_labels(df, vertical_barrier_candles=7).loc[d, "label"] == 1.0
+    df.loc[d + 7, "high"] = high[d + 7]
+    df.loc[d + 8, "high"] = 150.0  # poza oknem — nie liczy się
+    assert compute_triple_barrier_labels(df, vertical_barrier_candles=7).loc[d, "label"] == 0.0

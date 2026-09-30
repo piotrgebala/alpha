@@ -264,7 +264,412 @@ def moc() -> None:
     print(SEP)
 
 
-MODES = {"dane": dane, "pokrycie": pokrycie, "moc": moc}
+# ------------------------------------------------------------------ wspólne: ramka 11 cech
+RUN_DIR = "runs/2026-09-30_ml1-wolny-horyzont"
+PREREG_COMMIT = "e99dc82530229f5acff22eb527bc86f2535e7109"  # commit karty §14 (pre-rejestracja)
+V_CANDLES = 7
+CANDLES_PER_DAY = 1
+TRAIN_DAYS, TEST_DAYS, STEP_DAYS = 365, 91, 91
+MODEL_FILE = "model_ml1.json"
+
+
+def _frame() -> pd.DataFrame:
+    """Świece 1d od 2021-01-01 (fetch_window, zasada 20) + 7 cech ML1 + 4 cechy REVERSION i ATR."""
+    from agents.feature_miner import compute_all_features
+    from agents.ml1_features import build_ml1_frame, load_ml1_sources
+
+    ohlcv = fetch_window(ml1_data_cfg(), TIMEFRAME)
+    frame = build_ml1_frame(ohlcv, **load_ml1_sources(ML1_DIR))
+    rule = load_config()["regime_rule"]
+    return compute_all_features(
+        frame,
+        trend_threshold=rule["trend_threshold"],
+        range_threshold=rule["range_threshold"],
+        candles_per_day=CANDLES_PER_DAY,
+    )
+
+
+def _sha256(path: str) -> str:
+    import hashlib
+
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def _git(*args: str) -> str:
+    import subprocess
+
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout.strip()
+
+
+# ------------------------------------------------------------------ wf (krok 2)
+def wf() -> None:
+    """Walk-forward 2021–2025 (karta §14.4): wartość progu i kalibracja. Bez zwrotu i t zwrotu."""
+    import json
+    import time
+
+    from scipy.stats import spearmanr
+
+    from agents.ml1_features import (
+        ML1_FEATURES,
+        calibration_table,
+        confidence_threshold,
+        dedup_features,
+        signal_hits,
+    )
+    from backtest.checkpoint_lib import PRIMARY_SEED
+    from backtest.engine import REGIME_ALL, collect_signals
+
+    t0 = time.time()
+    frame = _frame()
+    ts = frame["timestamp"]
+    train = frame.loc[ts <= TRAIN_END].reset_index(drop=True)  # ucięte PRZED etykietami
+    first_window = train["timestamp"] < train["timestamp"].min() + pd.Timedelta(days=TRAIN_DAYS)
+    rho = train.loc[first_window, ML1_FEATURES].corr(method="spearman")
+    kept = dedup_features(train.loc[first_window], ML1_FEATURES)
+    print(SEP)
+    print(
+        f"ML1 WF — walk-forward {TRAIN_DAYS}/{TEST_DAYS}/{STEP_DAYS} dni na świecach 1d "
+        f"{train['timestamp'].min().date()} → {train['timestamp'].max().date()}; V = {V_CANDLES}; "
+        f"pre-rejestracja {PREREG_COMMIT[:7]}; HEAD {_git('rev-parse', '--short', 'HEAD')}"
+    )
+    print(SEP)
+    print("1. Braki cech w ramce uczenia (świece, na których cecha = NaN):")
+    for f in ML1_FEATURES:
+        x = train[f]
+        print(
+            f"  {f:>22}: NaN {int(x.isna().sum()):4d} / {len(x)}; pierwsza wartość {train.loc[x.first_valid_index(), 'timestamp'].date()}"
+        )
+    n_complete = int(train[ML1_FEATURES].notna().all(axis=1).sum())
+    print(f"  świece z kompletem 11 cech: {n_complete} / {len(train)}")
+    print(
+        f"\n2. Usuwanie duplikatów (|Spearman| > 0,9) na pierwszym oknie uczenia "
+        f"({train['timestamp'].min().date()} + {TRAIN_DAYS} dni):"
+    )
+    print(rho.round(2).to_string())
+    dropped = [f for f in ML1_FEATURES if f not in kept]
+    print(f"  cechy modelu ({len(kept)}): {kept}; odpadły: {dropped or 'żadna'}")
+
+    rule = load_config()["regime_rule"]
+    c = collect_signals(
+        train,
+        seed=PRIMARY_SEED,
+        regime_feature_sets=[(REGIME_ALL, kept)],
+        vertical_barrier_candles=V_CANDLES,
+        candles_per_day=CANDLES_PER_DAY,
+        train_days=TRAIN_DAYS,
+        test_days=TEST_DAYS,
+        step_days=STEP_DAYS,
+        trend_threshold=rule["trend_threshold"],
+        range_threshold=rule["range_threshold"],
+    )
+    df = c["df"]
+    folds = c["folds_summary"]
+    active = [f for f in folds if not f["skipped"]]
+    print(f"\n3. Foldy: {len(active)}/{len(folds)} aktywnych; trening {time.time() - t0:.0f} s")
+    print(
+        f"  {'fold':>4} | {'test od':>10} | {'test do':>10} | {'ocenione':>8} | {'bez kier.':>9} | "
+        f"{'bramka koszt.':>13} | {'sygnały':>7} | {'early stop':>10} | {'best_it':>7}"
+    )
+    for f in folds:
+        if f["skipped"]:
+            print(f"  {f['fold_idx']!s:>4} | POMINIĘTY: {f['skip_reason']}")
+            continue
+        print(
+            f"  {f['fold_idx']:4d} | {str(f['test_start'].date()):>10} | {str(f['test_end'].date()):>10} | "
+            f"{f['n_rows_evaluated']:8d} | {f['n_signals_no_direction']:9d} | {f['n_signals_cost_gated']:13d} | "
+            f"{f['n_signals']:7d} | {str(f['early_stopping_used']):>10} | {f['best_iteration']:7d}"
+        )
+    n_rows = sum(f["n_rows_evaluated"] for f in active)
+    n_abst = sum(f["n_signals_no_direction"] for f in active)
+    print(
+        f"  razem: świece ocenione {n_rows}, bez kierunku {n_abst} (abstynencja {100 * n_abst / max(n_rows, 1):.1f} %), "
+        f"sygnały {len(c['candidate_signals'])}"
+    )
+
+    sig = pd.DataFrame(c["candidate_signals"])
+    idx = sig["original_index"].to_numpy()
+    sig["close_timeout"] = df["close"].to_numpy()[idx + V_CANDLES]
+    sig["hit"] = signal_hits(
+        sig["signal_direction"], sig["label"], sig["entry_price"], sig["close_timeout"]
+    )
+    thr = confidence_threshold(sig["signal_confidence"], TOP_SHARE)
+    sig["ponad_progiem"] = sig["signal_confidence"] >= thr
+    n_all = len(sig)
+    n_top = int(sig["ponad_progiem"].sum())
+    print(
+        f"\n4. PRÓG (§14.1): kwantyl {1 - TOP_SHARE:.2f} pewności {n_all} sygnałów OOS = {thr:.6f}; "
+        f"ponad progiem {n_top} ({100 * n_top / n_all:.1f} %); long/short wszystkie "
+        f"{int((sig['signal_direction'] > 0).sum())}/{int((sig['signal_direction'] < 0).sum())}, ponad progiem "
+        f"{int((sig.loc[sig['ponad_progiem'], 'signal_direction'] > 0).sum())}/"
+        f"{int((sig.loc[sig['ponad_progiem'], 'signal_direction'] < 0).sum())}"
+    )
+    print(
+        f"  pewność: min {sig['signal_confidence'].min():.4f}, mediana {sig['signal_confidence'].median():.4f}, "
+        f"max {sig['signal_confidence'].max():.4f}; sygnały per rok OOS: "
+        + ", ".join(f"{y}: {n}" for y, n in sig.groupby(sig["timestamp"].dt.year).size().items())
+    )
+    tab = calibration_table(sig["signal_confidence"].to_numpy(), sig["hit"].to_numpy(), N_BUCKETS)
+    print(
+        "\n5. KALIBRACJA (§14.6): trafność sygnału = kierunek zgodny z ruchem do pierwszej bariery "
+        "±1,5·ATR albo do zamknięcia po 7 dniach; bez kosztów, bez zwrotu; ±Wald bez korekty na nakładanie"
+    )
+    print(tab.round(4).to_string(index=False))
+    p_all = float(sig["hit"].mean())
+    p_top = float(sig.loc[sig["ponad_progiem"], "hit"].mean())
+    rho_b = spearmanr(tab["kubelek"], tab["trafnosc"]).statistic
+    print(
+        f"  wszystkie sygnały: n {n_all}, trafność {100 * p_all:.2f} % ±{100 * 1.959964 * np.sqrt(p_all * (1 - p_all) / n_all):.2f} pp"
+    )
+    print(
+        f"  ponad progiem:     n {n_top}, trafność {100 * p_top:.2f} % ±{100 * 1.959964 * np.sqrt(p_top * (1 - p_top) / n_top):.2f} pp"
+    )
+    grows = bool(p_top > p_all and rho_b > 0)
+    print(
+        f"  korelacja rang kubełek–trafność {rho_b:+.2f}; warunek „rosnąca trafność” (§14.6: górny kubełek > wszystkie "
+        f"ORAZ korelacja > 0): {'SPEŁNIONY' if grows else 'NIESPEŁNIONY → ryzyko do karty, reguła bez zmian'}"
+    )
+    tab.to_csv(f"{RUN_DIR}/kalibracja_wf.csv", index=False)
+    sig[
+        [
+            "timestamp",
+            "fold_idx",
+            "signal_direction",
+            "signal_confidence",
+            "label",
+            "hit",
+            "ponad_progiem",
+        ]
+    ].to_csv(f"{RUN_DIR}/sygnaly_oos_wf.csv", index=False)
+    with open(f"{RUN_DIR}/wf_prog.json", "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "features": kept,
+                "dropped_by_dedup": dropped,
+                "top_share": TOP_SHARE,
+                "threshold": thr,
+                "n_signals_oos": n_all,
+                "n_above": n_top,
+                "abstention_oos": n_abst / max(n_rows, 1),
+                "folds_active": len(active),
+                "prereg_commit": PREREG_COMMIT,
+                "code_commit": _git("rev-parse", "HEAD"),
+            },
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+    print(f"\n  zapisano: {RUN_DIR}/wf_prog.json, kalibracja_wf.csv, sygnaly_oos_wf.csv")
+    print(SEP)
+
+
+# ------------------------------------------------------------------ zamroz (krok 3)
+def zamroz() -> None:
+    """Jeden model na 2021-01-01 → 2025-12-31 (karta §14.5) + manifest z hashami. Bez douczania."""
+    import json
+    import platform
+
+    import xgboost as xgb
+
+    from agents.labeling import ATR_MULTIPLIER, compute_triple_barrier_labels
+    from agents.ml_optimizer import (
+        DEFAULT_XGB_PARAMS,
+        EARLY_STOPPING_ROUNDS,
+        NUM_BOOST_ROUND,
+        best_iteration_or_last,
+        predict_signal,
+        train_regime_model,
+    )
+    from backtest.checkpoint_lib import PRIMARY_SEED
+    from backtest.engine import DEFAULT_CLASS_WEIGHT_MODE
+    from agents.ml_optimizer import DEFAULT_VALIDATION_FRACTION
+
+    with open(f"{RUN_DIR}/wf_prog.json", encoding="utf-8") as f:
+        wfp = json.load(f)
+    kept = wfp["features"]
+    frame = _frame()
+    train = frame.loc[frame["timestamp"] <= TRAIN_END].reset_index(drop=True)
+    lab = compute_triple_barrier_labels(train, vertical_barrier_candles=V_CANDLES)
+    train["label"] = lab["label"]
+    clean = train.dropna(subset=[*kept, "label"])
+    booster = train_regime_model(
+        train,
+        train,  # na ścieżce validation_fraction test_df nie jest używany (tylko kontrola niepustości)
+        kept,
+        seed=PRIMARY_SEED,
+        validation_fraction=DEFAULT_VALIDATION_FRACTION,
+        embargo_candles=V_CANDLES,
+        class_weight_mode=DEFAULT_CLASS_WEIGHT_MODE,
+    )
+    path = f"{RUN_DIR}/{MODEL_FILE}"
+    booster.save_model(path)
+    loaded = xgb.Booster()
+    loaded.load_model(path)
+    p_mem = predict_signal(booster, clean, kept)
+    p_file = predict_signal(loaded, clean, kept)
+    same = bool(p_mem.equals(p_file))
+    best = best_iteration_or_last(booster)
+    data_files = {
+        name: _sha256(f"{ML1_DIR}/{name}")
+        for name in (
+            "BTC-USDT-USDT_1d_20190910T000000Z_20260930T000000Z.parquet",
+            "BTC-USDT-USDT_funding_20190910T000000Z_20260930T000000Z.parquet",
+            "binance_metrics_BTCUSDT_5m.parquet",
+            "deribit_dvol_BTC_1d.parquet",
+            "coinmetrics_btc_1d.parquet",
+            "alternative_fng_1d.parquet",
+        )
+    }
+    manifest = {
+        "runda": "ML1 (zadanie 028)",
+        "model_file": MODEL_FILE,
+        "model_sha256": _sha256(path),
+        "features": kept,
+        "train_first_candle": str(train["timestamp"].min()),
+        "train_last_candle": str(TRAIN_END),
+        "train_rows_with_label_and_features": int(len(clean)),
+        "train_rows_used_after_embargo": int(len(clean) - V_CANDLES),
+        "label_counts": {
+            str(k): int(v) for k, v in clean["label"].value_counts().sort_index().items()
+        },
+        "xgb_params": {**DEFAULT_XGB_PARAMS, "seed": PRIMARY_SEED},
+        "num_boost_round": NUM_BOOST_ROUND,
+        "early_stopping_rounds": EARLY_STOPPING_ROUNDS,
+        "validation_fraction": DEFAULT_VALIDATION_FRACTION,
+        "embargo_candles": V_CANDLES,
+        "class_weight_mode": DEFAULT_CLASS_WEIGHT_MODE,
+        "direction_policy": "argmax3",
+        "confidence_mode": "class",
+        "best_iteration": best,
+        "early_stopping_used": getattr(booster, "best_iteration", None) is not None,
+        "vertical_barrier_candles": V_CANDLES,
+        "atr_multiplier": ATR_MULTIPLIER,
+        "timeframe": TIMEFRAME,
+        "top_share": TOP_SHARE,
+        "threshold": wfp["threshold"],
+        "threshold_source": "kwantyl 0,80 pewności sygnałów OOS walk-forward 2021–2025 (wf_prog.json)",
+        "prereg_commit": PREREG_COMMIT,
+        "code_commit": _git("rev-parse", "HEAD"),
+        "worktree_clean_code": _git("status", "--porcelain", "--", "backtest", "agents") == "",
+        "data_dir": ML1_DIR,
+        "data_sha256": data_files,
+        "versions": {
+            "python": platform.python_version(),
+            "xgboost": xgb.__version__,
+            "pandas": pd.__version__,
+            "numpy": np.__version__,
+        },
+        "frozen_at_utc": pd.Timestamp.now(tz="UTC").isoformat(timespec="seconds"),
+    }
+    with open(f"{RUN_DIR}/manifest.json", "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+    print(SEP)
+    print(f"ML1 ZAMROŻENIE — jeden model na {train['timestamp'].min().date()} → {TRAIN_END.date()}")
+    print(SEP)
+    for k in (
+        "model_sha256",
+        "features",
+        "train_rows_with_label_and_features",
+        "train_rows_used_after_embargo",
+        "label_counts",
+        "best_iteration",
+        "early_stopping_used",
+        "threshold",
+        "prereg_commit",
+        "code_commit",
+        "worktree_clean_code",
+        "versions",
+    ):
+        print(f"  {k}: {manifest[k]}")
+    print(f"  predykcje z pamięci == predykcje z pliku (dane uczenia, {len(clean)} świec): {same}")
+    print(f"  zapisano {path} i {RUN_DIR}/manifest.json")
+    print(SEP)
+
+
+# ------------------------------------------------------------------ rozbieg (krok 4)
+def rozbieg() -> None:
+    """2026-01-01 → ostatni pełny dzień: tylko mechanika (sygnały, udział ponad progiem, dziury). Bez zwrotów."""
+    import json
+
+    import xgboost as xgb
+
+    from agents.ml1_features import ML1_FEATURES
+    from agents.ml_optimizer import predict_signal
+
+    with open(f"{RUN_DIR}/manifest.json", encoding="utf-8") as f:
+        man = json.load(f)
+    path = f"{RUN_DIR}/{man['model_file']}"
+    sha_ok = _sha256(path) == man["model_sha256"]
+    booster = xgb.Booster()
+    booster.load_model(path)
+    kept = man["features"]
+    thr = man["threshold"]
+    frame = _frame()
+    run = frame.loc[frame["timestamp"] >= RUNIN_START].reset_index(drop=True)
+    print(SEP)
+    print(
+        f"ML1 ROZBIEG — {run['timestamp'].min().date()} → {run['timestamp'].max().date()} ({len(run)} świec); "
+        f"model {man['model_sha256'][:12]}… (sha256 zgodny z manifestem: {sha_ok}); próg {thr:.6f}"
+    )
+    print(
+        "  TYLKO MECHANIKA: bez etykiet, trafności, zwrotu i t (decyzja użytkownika 2026-09-30, opcja A)"
+    )
+    print(SEP)
+    print("1. Dziury w cechach (świece 2026 z NaN):")
+    for f in ML1_FEATURES:
+        nan_days = run.loc[run[f].isna(), "timestamp"].dt.date.astype(str).tolist()
+        mark = "" if f in kept else " (poza modelem)"
+        print(f"  {f:>22}{mark}: {len(nan_days)} {nan_days[:8]}")
+    pred = predict_signal(booster, run, kept)
+    run = run.join(pred)
+    has = run["signal_direction"].notna()
+    dirn = run.loc[has, "signal_direction"]
+    n_dir = int((dirn != 0).sum())
+    top = has & (run["signal_direction"] != 0) & (run["signal_confidence"] >= thr)
+    print(
+        f"\n2. Sygnały: świece z predykcją {int(has.sum())}/{len(run)}; long {int((dirn > 0).sum())}, short "
+        f"{int((dirn < 0).sum())}, bez kierunku {int((dirn == 0).sum())} (abstynencja {100 * (dirn == 0).mean():.1f} %)"
+    )
+    print(
+        f"   ponad progiem: {int(top.sum())} z {n_dir} sygnałów z kierunkiem ({100 * top.sum() / max(n_dir, 1):.1f} %; "
+        f"zapisany udział {100 * TOP_SHARE:.0f} %)"
+    )
+    print(
+        f"   pewność sygnałów z kierunkiem: min {run.loc[run['signal_direction'].fillna(0) != 0, 'signal_confidence'].min():.4f}, "
+        f"mediana {run.loc[run['signal_direction'].fillna(0) != 0, 'signal_confidence'].median():.4f}, "
+        f"max {run.loc[run['signal_direction'].fillna(0) != 0, 'signal_confidence'].max():.4f}"
+    )
+    run["miesiac"] = run["timestamp"].dt.strftime("%Y-%m")
+    run["ponad_progiem"] = top
+    month = run.groupby("miesiac").agg(
+        swiece=("timestamp", "size"),
+        z_predykcja=("signal_direction", lambda s: int(s.notna().sum())),
+        long=("signal_direction", lambda s: int((s > 0).sum())),
+        short=("signal_direction", lambda s: int((s < 0).sum())),
+        ponad_progiem=("ponad_progiem", "sum"),
+    )
+    print("\n3. Per miesiąc:")
+    print(month.to_string())
+    last = run.iloc[-1]
+    print(
+        f"\n4. Ostatnia świeca {last['timestamp'].date()}: kierunek {last['signal_direction']}, "
+        f"pewność {last['signal_confidence']:.4f}, ponad progiem {bool(last['ponad_progiem'])}"
+    )
+    run[["timestamp", "signal_direction", "signal_confidence", "ponad_progiem"]].to_csv(
+        f"{RUN_DIR}/sygnaly_rozbieg_2026.csv", index=False
+    )
+    print(f"  zapisano {RUN_DIR}/sygnaly_rozbieg_2026.csv")
+    print(SEP)
+
+
+MODES = {
+    "dane": dane,
+    "pokrycie": pokrycie,
+    "moc": moc,
+    "wf": wf,
+    "zamroz": zamroz,
+    "rozbieg": rozbieg,
+}
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "pokrycie"
