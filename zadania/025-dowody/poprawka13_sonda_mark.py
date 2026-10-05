@@ -23,7 +23,12 @@ import pandas as pd
 
 # (symbol, początek okna, koniec okna, opis z czestosc.txt)
 CASES = [
-    ("ALPACAUSDT", "2025-04-27", "2025-05-05", "zamrożenie od 2025-05-01 (ostatnia normalna 04-30)"),
+    (
+        "ALPACAUSDT",
+        "2025-04-27",
+        "2025-05-05",
+        "zamrożenie od 2025-05-01 (ostatnia normalna 04-30)",
+    ),
     ("FTTUSDT", "2022-11-12", "2022-11-19", "zamrożenie od 2022-11-15 (ostatnia normalna 11-14)"),
     ("BNXUSDT", "2025-03-15", "2025-03-21", "zamrożenie od 2025-03-18 (ostatnia normalna 03-17)"),
     ("TONUSDT", "2026-06-21", "2026-06-28", "zamrożenie od 2026-06-24 (ostatnia normalna 06-23)"),
@@ -71,7 +76,9 @@ def main() -> None:
     usdt = [s for s in info.get("symbols", []) if s.get("quoteAsset") == "USDT"]
     print("=" * 100)
     print("1. exchangeInfo — symbole z kwotowaniem USDT: liczba wg (contractType, status)")
-    for (ct, stt), n in sorted(Counter((s.get("contractType"), s.get("status")) for s in usdt).items()):
+    for (ct, stt), n in sorted(
+        Counter((s.get("contractType"), s.get("status")) for s in usdt).items()
+    ):
         print(f"   contractType={ct!r:<22} status={stt!r:<12} {n}")
     print("=" * 100)
     for sym, a, b, what in CASES:
@@ -86,7 +93,12 @@ def main() -> None:
             if dd:
                 desc += f" (deliveryDate = {pd.Timestamp(int(dd), unit='ms', tz='UTC')})"
             print(f"    exchangeInfo: {desc}")
-        params = {"symbol": sym, "interval": "1d", "startTime": ms(a), "endTime": ms(b) + 86_400_000 - 1}
+        params = {
+            "symbol": sym,
+            "interval": "1d",
+            "startTime": ms(a),
+            "endTime": ms(b) + 86_400_000 - 1,
+        }
         rows, err = call(ex.fapiPublicGetMarkPriceKlines, params)
         show_klines("markPriceKlines 1d (cena mark)", rows, err)
         rows, err = call(ex.fapiPublicGetKlines, params)
@@ -104,7 +116,9 @@ def main() -> None:
         if err is not None:
             print(f"    delivery-price (oficjalna cena rozliczenia): BŁĄD {err}")
         else:
-            print(f"    delivery-price (oficjalna cena rozliczenia): {len(res)} rekordów; pierwsze 3: {res[:3]}")
+            print(
+                f"    delivery-price (oficjalna cena rozliczenia): {len(res)} rekordów; pierwsze 3: {res[:3]}"
+            )
         print("-" * 100)
 
 

@@ -1,0 +1,116 @@
+Zadanie 025 / Poprawka 13 — próba na kopii klonu dziennika (2026-10-05). Bez treści wyników dziennika:
+tylko kody wyjścia, liczniki, sprawdzenie formatu programem i cmp plików.
+====================================================================================================
+PRZYGOTOWANIE
+  kopia: katalog z `mktemp -d` w katalogu roboczym sesji (poza repo); ~/alpha-dziennik skopiowany bez .git:
+    tar -C ~/alpha-dziennik --exclude=.git -cf - . | tar -C <tmp>/kopia -xf -
+    (rsync niedostępny na serwerze — to samo działanie). ~/alpha-dziennik tylko czytany.
+  kod klonu = master 5cba008 (sumy SHA-256 live_journal.py, fetch_live.py, fetch_ohlcv.py i importów dziennika
+    zgodne z bazą gałęzi); w kopii podmienione 3 pliki z gałęzi: backtest/live_journal.py, data/fetch_live.py,
+    data/fetch_ohlcv.py (commit 7a31583). Stan dziennik/* sprzed próby skopiowany do <tmp>/przed.
+  klon dziennika: ostatni przebieg 2026-10-05 02:42 UTC (as_of 2026-10-04), 22 linie w przebiegi.log.
+====================================================================================================
+WARIANT A (wymagany) — ten sam program co dziennik/uruchom.sh, BEZ kroków git (aktualizuj.sh, zapis do gita):
+  komenda (w kopii): PYTHONUTF8=1 GIT_TERMINAL_PROMPT=0 .venv/bin/python -m backtest.live_journal
+  z pobraniem danych (sieć: fapi.binance.com, api.binance.com, api.exchange.coinbase.com, api.alternative.me,
+  dapi.binance.com — hosty z config/audyt_hosty.yaml; nowe zapytanie markPriceKlines nie padło: zero monet
+  ze wstrzymaniem); start 2026-10-05 19:59:01 UTC; koniec 2026-10-05 20:11:33 UTC; wydruk programu do pliku w <tmp> (nie czytany, sprawdzany programem).
+wariant A: kod wyjścia programu = 0
+przebiegi.log: linii przed 22, po 23
+  dotychczasowe linie logu bez zmian (prefiks identyczny): True
+  nowa ostatnia linia pasuje do strona_dziennika.LOG_RE: True
+  „historia zmieniona” w nowej linii: 0
+  pole „stan rynku” odczytane: True; pole X1 odczytane: True
+  parse_log całego logu po próbie: nieczytelnych rekordów 0
+  pole „wstrzymane:” w nowej linii: False
+  pole „pliki świec” w nowej linii: False
+  pola z „BŁĄD” w nowej linii (kontrola h): 0
+wydruk: „HISTORIA ZMIENIONA” obecne: False; „Traceback” obecne: False; linia „Wstrzymania (poprawka 13” obecna: False
+pliki dziennik/* względem stanu sprzed próby (cmp):
+  README.md                    identyczny
+  STRATEGIE.md                 identyczny
+  aktualizuj.sh                identyczny
+  carry_wyniki.csv             identyczny
+  fazy.csv                     identyczny
+  fng.csv                      identyczny
+  koszyk.csv                   identyczny
+  ostatni_wydruk.txt           identyczny
+  przebiegi.log                INNY
+  przejete.sh                  identyczny
+  rozbicie.csv                 identyczny
+  stan_rynku.csv               identyczny
+  strategie.csv                identyczny
+  sygnaly.csv                  identyczny
+  transakcje.csv               identyczny
+  transakcje_otwarte.csv       identyczny
+  uruchom.bat                  identyczny
+  uruchom.sh                   identyczny
+  wyniki.csv                   identyczny
+  x1_sygnaly.csv               identyczny
+  x1_wyniki.csv                identyczny
+  zapisz_do_gita.sh            identyczny
+data/raw/live/binance_status.parquet: 871 kontraktów USDT; wg (typ, status): {('PERPETUAL', 'PENDING_TRADING'): 1, ('PERPETUAL', 'SETTLING'): 133, ('PERPETUAL', 'TRADING'): 525, ('TRADIFI_PERPETUAL', 'TRADING'): 212}
+data/raw/live/binance_mark_daily.parquet: brak (żadnej monety ze wstrzymaniem)
+  oczekiwane: kod 0, historia zmieniona 0, istniejące pliki identyczne, jedyna różnica = nowa linia
+  przebiegi.log → SPEŁNIONE. Ten sam as_of (2026-10-04) co przebieg 02:30, więc nowych wierszy brak.
+====================================================================================================
+FORMAT NOWEJ LINII LOGU (program, tests.test_journal_carry.PRE_P12_LOG = format ścieżki bez błędów):
+wariant A: nowa linia pasuje do PRE_P12_LOG (format bez zdarzenia, pola jak przed poprawką): True; poprzednia linia (przebieg 2026-10-05 02:30) też: True; liczba pól „ | ” nowa/poprzednia: 17/17
+wariant B: nowa linia pasuje do PRE_P12_LOG (format bez zdarzenia, pola jak przed poprawką): True; poprzednia linia (przebieg 2026-10-05 02:30) też: True; liczba pól „ | ” nowa/poprzednia: 17/17
+====================================================================================================
+WARIANT B (diagnostyczny, bez sieci) — KOŃCOWY kod gałęzi (z oczyszczaniem znaków sterujących w polach logu,
+  dodanym po wariancie A) w tej samej kopii, data wejścia cofnięta na 2026-09-24 (start wyniku dziennika):
+  komenda: .venv/bin/python proba_B.py <tmp> 2026-09-24  →  lj.POPRAWKA13_OD = 2026-09-24;
+  lj.run(fetch=False, data/raw/live kopii, kopia dziennika sprzed próby)
+  zdarzenia R1 na PRAWDZIWYCH danych (monety koszyka od 2025-09, as_of 2026-10-04):
+    od 2026-09-24: 0; od 2025-09-01 (cała historia danych na żywo): 0 — brak fałszywych alarmów
+wariant B: kod wyjścia programu = 0
+przebiegi.log: linii przed 22, po 23
+  dotychczasowe linie logu bez zmian (prefiks identyczny): True
+  nowa ostatnia linia pasuje do strona_dziennika.LOG_RE: True
+  „historia zmieniona” w nowej linii: 0
+  pole „stan rynku” odczytane: True; pole X1 odczytane: True
+  parse_log całego logu po próbie: nieczytelnych rekordów 0
+  pole „wstrzymane:” w nowej linii: False
+  pole „pliki świec” w nowej linii: False
+  pola z „BŁĄD” w nowej linii (kontrola h): 0
+wydruk: „HISTORIA ZMIENIONA” obecne: False; „Traceback” obecne: False; linia „Wstrzymania (poprawka 13” obecna: False
+pliki dziennik/* względem stanu sprzed próby (cmp):
+  README.md                    identyczny
+  STRATEGIE.md                 identyczny
+  aktualizuj.sh                identyczny
+  carry_wyniki.csv             identyczny
+  fazy.csv                     identyczny
+  fng.csv                      identyczny
+  koszyk.csv                   identyczny
+  ostatni_wydruk.txt           identyczny
+  przebiegi.log                INNY
+  przejete.sh                  identyczny
+  rozbicie.csv                 identyczny
+  stan_rynku.csv               identyczny
+  strategie.csv                identyczny
+  sygnaly.csv                  identyczny
+  transakcje.csv               identyczny
+  transakcje_otwarte.csv       identyczny
+  uruchom.bat                  identyczny
+  uruchom.sh                   identyczny
+  wyniki.csv                   identyczny
+  x1_sygnaly.csv               identyczny
+  x1_wyniki.csv                identyczny
+  zapisz_do_gita.sh            identyczny
+data/raw/live/binance_status.parquet: 871 kontraktów USDT; wg (typ, status): {('PERPETUAL', 'PENDING_TRADING'): 1, ('PERPETUAL', 'SETTLING'): 133, ('PERPETUAL', 'TRADING'): 525, ('TRADIFI_PERPETUAL', 'TRADING'): 212}
+data/raw/live/binance_mark_daily.parquet: brak (żadnej monety ze wstrzymaniem)
+  R5 (koszyk 2026-10 z filtrem obrotu 0) i R7 (kontrola plików członków koszyka) aktywne w tym wariancie:
+  koszyk.csv identyczny, pola „pliki świec” brak — każdy członek koszyka ma plik świec.
+====================================================================================================
+WARIANT C (bez sieci) — ten sam przebieg run(fetch=False) STARYM kodem (5cba008) i NOWYM (końcowy kod gałęzi)
+  na tych samych danych (data/raw/live po pobraniu w A, ze statusami kontraktów), dziennik sprzed próby:
+  kod stary: 0; kod nowy: 0
+  pliki dziennik_C_stary vs dziennik_C_nowy (cmp): wszystkie 22 pliki identyczne poza przebiegi.log;
+  przebiegi.log: po 23 linie w obu, nowa linia identyczna poza czasem przebiegu (pierwsze pole);
+  wydruk (bez pierwszej linii): identyczny.
+  czas obliczeń run(fetch=False) na tych danych (osobny pomiar, świeże kopie dziennika): stary 6,58 s, nowy 6,63 s.
+====================================================================================================
+WNIOSEK: przed datą wejścia (2026-10-06) nowy kod liczy dziennik bajt w bajt jak stary; linia logu bez zdarzenia
+ma format sprzed poprawki i czyta ją parser strony; na prawdziwych danych reguła R1 nie wykrywa żadnego
+wstrzymania w koszyku, a R5/R7 nie zmieniają koszyka ani logu.

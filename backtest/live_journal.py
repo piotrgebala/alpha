@@ -1551,7 +1551,8 @@ def halt_log(entries: list[dict], missing: list[str], error: str | None = None) 
         fields.append("pliki świec BŁĄD brak " + ", ".join(missing))
     elif error:
         fields.append(f"pliki świec {error}")
-    return "".join(" | " + f.replace("|", "/").replace("\n", " ") for f in fields)
+    clean = ("".join(c if c.isprintable() else " " for c in f).replace("|", "/") for f in fields)
+    return "".join(f" | {f}" for f in clean)
 
 
 def summarize_halts(entries: list[dict], missing: list[str], error: str | None = None) -> str:

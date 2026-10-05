@@ -1,0 +1,6 @@
+  /home/dantey1/alpha/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3024: RuntimeWarning: divide by zero encountered in divide
+    c /= stddev[None, :]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2172 passed, 3 skipped, 952 warnings in 329.56s (0:05:29)
+kod=0
