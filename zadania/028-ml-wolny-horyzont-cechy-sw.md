@@ -2,9 +2,9 @@
 id: 028
 tytul: ML na rzadszym handlu (dni zamiast 4h) z pełnym zestawem cech spoza wykresu — krok 0 na papierze, odczyt tylko prospektywny
 typ: badawcze
-status: czeka_na_decyzje
+status: zrobione
 zlecil: uzytkownik
-decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii”; 2026-09-30: wybór „a” — opcja A (uczenie do 2025-12-31, model zamrożony, 2026-01…09 rozbieg bez werdyktu, tor P prospektywny); 2026-09-30: „Wykonaj zadanie 28”"
+decyzja_uzytkownika: "2026-09-30: „Zaplanuj zadanie do wykonania z powrotem do ml z rzadszym handlem i większą liczbą cech”; 2026-09-30: „Zrób tak niech model uczynię na danych do 2026 a od 2026 niech leci backtest strategii”; 2026-09-30: wybór „a” — opcja A (uczenie do 2025-12-31, model zamrożony, 2026-01…09 rozbieg bez werdyktu, tor P prospektywny); 2026-09-30: „Wykonaj zadanie 28”; 2026-10-05: „Zamknąć” (pytanie orkiestratora: zamknąć / tor P / czekać)"
 utworzono: 2026-09-30
 zalezy_od: []
 budzet: "Opus, 1 wykonawca na krok 0 (metodologia); bez sieci poza danymi już w repo"
@@ -190,3 +190,4 @@ ruszy. Uwaga środowiskowa: sesja chmurowa nie ma dostępu do Binance / Deribit 
   z `sygnaly_oos_wf.csv` — zgodne; sha256 modelu zgodny.
   **Czeka na decyzję użytkownika:** tor P na tym modelu (wymaga 2 zadań: kolektory 5 cech + proces papierowy poza
   `live_journal.py`) albo zamknięcie (rekomendacja).
+- **2026-10-05, zamknięcie (orkiestrator):** decyzja użytkownika „Zamknąć”. Tor P nie startuje (bez kolektorów 5 cech i procesu papierowego). Model zamrożony (sha256 `d1a39ee4…195c`) i katalog `runs/2026-09-30_ml1-wolny-horyzont/` zostają jako droga odwrotu. Dopisek przy ML1 i wniosku 114 w `runs/INDEX.md`.

@@ -43,3 +43,4 @@ Zgoda na sondę historii i na kolektor stanu rynku co 60 s?
 ## Wynik
 
 **2026-09-29:** decyzja dopiero po wyniku pomiaru wag z zadania 004 (koniec ≈ 2026-09-30 10:33 UTC); wtedy orkiestrator przedstawi rekomendację (kolejność z mapy 007: E1 → sonda HL). Status bez zmian.
+- **2026-10-05:** 004 zamknięte STOP (wniosek 115) — HL bez kolektora likwidacji; ta brama (`metaAndAssetCtxs` co 60 s) nie zależy od kosztu wag z 004 i może startować (zgoda z 29.09).

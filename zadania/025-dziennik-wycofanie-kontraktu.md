@@ -2,9 +2,9 @@
 id: 025
 tytul: Dziennik przy wstrzymaniu lub wycofaniu kontraktu — zamarzła cena ostatnia, brak rozliczenia likwidacji i zamknięcia
 typ: dziennik
-status: czeka_na_decyzje
+status: nowe
 zlecil: orkiestrator
-decyzja_uzytkownika: "brak"
+decyzja_uzytkownika: "2026-10-05: „Poprawka 025 + black” — Poprawka N wg szkicu w przeglad.md oraz samo formatowanie black data/fetch_ohlcv.py bez zmiany logiki"
 utworzono: 2026-09-29
 zalezy_od: [017]
 ---
@@ -53,3 +53,4 @@ zmiana dziennika wymaga osobnej decyzji.
 - **Czeka na decyzję użytkownika:** Poprawka N wg szkicu w `przeglad.md` (cena mark/oficjalna przy wycofaniu,
   likwidacja na cenie mark, brak nowych pozycji na zamrożonej cenie, dni bez obrotu nie liczą się do koszyka,
   alarm przy zniknięciu pliku).
+- **2026-10-05:** decyzja użytkownika „Poprawka 025 + black”. Wykonanie: wykonawca, wpis „Poprawka N” w `dziennik/README.md`, sprawdzenie parsera strony; merge poza 02:00–03:00 UTC.

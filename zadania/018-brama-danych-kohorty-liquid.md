@@ -2,9 +2,9 @@
 id: 018
 tytul: Brama danych — rozkład pozycji Hyperliquid według wielkości z Liquid (kohorty, „blisko likwidacji”), 0 odczytów
 typ: konto
-status: czeka_na_decyzje
+status: nowe
 zlecil: uzytkownik
-decyzja_uzytkownika: "brak"
+decyzja_uzytkownika: "2026-10-05: „Zbierać” (codzienna migawka kohort, tylko zapis, bez odczytu)"
 utworzono: 2026-09-29
 zalezy_od: []
 budzet: "Opus, główna sesja (nie w roju)"
@@ -70,3 +70,4 @@ klasyfikuje każdą pracę z Liquid (`zadania/README.md`).
 ## Wynik
 
 - **2026-09-30, decyzja użytkownika: „18 czekamy na 004”.** Wraca po wyniku pomiaru 004 (koniec 2026-09-30 ~10:33 UTC).
+- **2026-10-05:** decyzja użytkownika „Zbierać”; 004 zamknięte STOP (wniosek 115) — Hyperliquid bez kolektora likwidacji, ta brama zbiera tylko migawki kohort. Wykonanie: wykonawca, `security-review` (nowe połączenie).
