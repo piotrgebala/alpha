@@ -227,8 +227,9 @@ def nastepny_termin(teraz_s: float, okres_s: float = OKRES_S) -> float:
 
 
 def opoznienie(proba: int, baza: float = BACKOFF_S, sufit: float = BACKOFF_MAX_S) -> float:
-    """Odczekanie przed ponowieniem nr `proba` (0, 1, …): 2, 4, 8, … s, sufit 20 s."""
-    return float(min(sufit, baza * 2.0 ** max(0, proba)))
+    """Odczekanie przed ponowieniem nr `proba` (0, 1, …): 2, 4, 8, … s, sufit 20 s (wykładnik ucięty
+    do 30 — duży numer próby nie przepełni liczby zmiennoprzecinkowej)."""
+    return float(min(sufit, baza * 2.0 ** min(max(0, proba), 30)))
 
 
 # ------------------------------------------------------------------ sieć (cienka warstwa)
@@ -332,10 +333,16 @@ class PisarzDzienny:
     przycięty do rozmiaru sprzed zapisu i wyjątek dalej.
     """
 
-    def __init__(self, root: Path, log: Callable[[str], None] = lambda s: None) -> None:
+    def __init__(
+        self,
+        root: Path,
+        log: Callable[[str], None] = lambda s: None,
+        zapis: Callable[[int, bytes], int] = os.write,
+    ) -> None:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self._log = log
+        self._zapis = zapis  # podmienialny w testach (symulacja pełnego dysku)
         self._naprawione: set[Path] = set()
         self.przyciete_bajty = 0
 
@@ -354,7 +361,7 @@ class PisarzDzienny:
         try:
             przed = os.fstat(fd).st_size
             try:
-                n = os.write(fd, czlon)
+                n = self._zapis(fd, czlon)
                 if n != len(czlon):
                     raise OSError(f"zapisano {n} z {len(czlon)} B")
                 os.fsync(fd)
@@ -477,6 +484,8 @@ def run(
                 break
             try:
                 odp, nbajt = klient(ZAPYTANIE, termin=clock() + okres_s - ZAPAS_S)
+            except ValueError as exc:  # odpowiedź przyszła, ale zła: NaN/Infinity, ucięta, za duża
+                blad("odrzucone", exc)
             except Exception as exc:  # noqa: BLE001 — błąd jednej migawki nie przerywa pętli
                 blad("bledy_sieci", exc)
             else:

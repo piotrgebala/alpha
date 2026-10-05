@@ -1,0 +1,58 @@
+== próba kolektora HS0: PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --dir "$(mktemp -d)" --max-cycles 3
+katalog: /tmp/claude-1000/-home-dantey1-alpha/1cef6a66-4706-4193-a479-9f7e0b075783/scratchpad/hs0_proba.0eVa
+start 2026-10-05 19:37:40 UTC, koniec 2026-10-05 19:40:00 UTC, kod wyjścia 0 (stdout procesu pusty)
+
+== ls -la
+drwx------ 4096 .
+drwx------ 4096 ..
+-rw-r--r-- 0 .lock
+-rw-r--r-- 39575 2026-10-05.jsonl.gz
+-rw-rw-r-- 259 kolektor.log
+-rw-rw-r-- 577 status.json
+
+== gzip -t (standardowy gzip, wszystkie człony)
+gzip -t: OK
+== zcat | wc -l ; zcat | wc -c ; wc -c pliku
+3
+217139
+39575
+== zcat | LC_ALL=C grep -c (bajty spoza ASCII)
+0
+
+== człony gzip i rekordy (Python, data.collect_hl_stan)
+pełnych członów: 3; koniec ostatniego pełnego: 39575 B z 39575 B
+człon 13145 B gzip / 72311 B surowo; czas_utc 2026-10-05T19:38:00.818+00:00; wyslano→odebrano 817 ms; monet 234 (wycofane 56), kontekstów 234; klucze rekordu ['czas_ms', 'czas_utc', 'odpowiedz', 'wyslano_ms']; klucze meta ['collateralToken', 'marginTables', 'universe']; pola kontekstu BTC ['dayBaseVlm', 'dayNtlVlm', 'funding', 'impactPxs', 'markPx', 'midPx', 'openInterest', 'oraclePx', 'premium', 'prevDayPx']
+człon 13186 B gzip / 72363 B surowo; czas_utc 2026-10-05T19:39:00.347+00:00; wyslano→odebrano 347 ms; monet 234 (wycofane 56), kontekstów 234; klucze rekordu ['czas_ms', 'czas_utc', 'odpowiedz', 'wyslano_ms']; klucze meta ['collateralToken', 'marginTables', 'universe']; pola kontekstu BTC ['dayBaseVlm', 'dayNtlVlm', 'funding', 'impactPxs', 'markPx', 'midPx', 'openInterest', 'oraclePx', 'premium', 'prevDayPx']
+człon 13244 B gzip / 72465 B surowo; czas_utc 2026-10-05T19:40:00.333+00:00; wyslano→odebrano 333 ms; monet 234 (wycofane 56), kontekstów 234; klucze rekordu ['czas_ms', 'czas_utc', 'odpowiedz', 'wyslano_ms']; klucze meta ['collateralToken', 'marginTables', 'universe']; pola kontekstu BTC ['dayBaseVlm', 'dayNtlVlm', 'funding', 'impactPxs', 'markPx', 'midPx', 'openInterest', 'oraclePx', 'premium', 'prevDayPx']
+średnio 13192 B gzip na migawkę → × 1 440 = 19.0 MB/dobę (próg pre-rejestracji ~20)
+
+== kolektor.log
+2026-10-05T19:37:40+00:00 start pid 3370323 → /tmp/claude-1000/-home-dantey1-alpha/1cef6a66-4706-4193-a479-9f7e0b075783/scratchpad/hs0_proba.0eVa (https://api.hyperliquid.xyz/info, co 60 s)
+2026-10-05T19:40:00+00:00 koniec: max_cycles=3; migawek 3, cykli 3
+
+== status.json
+{
+ "zapisano_utc": "2026-10-05T19:40:00+00:00",
+ "start_utc": "2026-10-05T19:37:40+00:00",
+ "pid": 3370323,
+ "zrodlo": "https://api.hyperliquid.xyz/info",
+ "zapytanie": "metaAndAssetCtxs",
+ "okres_s": 60.0,
+ "cykle": 3,
+ "migawki": 3,
+ "bledy_sieci": 0,
+ "odrzucone": 0,
+ "bledy_zapisu": 0,
+ "ponowienia": 0,
+ "przyciete_bajty": 0,
+ "ostatnia_ms": 1791229200333,
+ "ostatnia_utc": "2026-10-05T19:40:00.333+00:00",
+ "ostatni_plik": "2026-10-05.jsonl.gz",
+ "ostatni_czlon_b": 13244,
+ "ostatnia_odpowiedz_b": 72356,
+ "monet": 234,
+ "ostatni_blad": null,
+ "koniec": "max_cycles=3"
+}
+== --status
+kolektor HL pid 3370323 od 2026-10-05T19:37:40+00:00; status z 2026-10-05T19:40:00+00:00; migawek 3 w 3 cyklach (błędy sieci 0, odrzucone 0, zapisu 0, ponowień 0); ostatnia 2026-10-05T19:40:00.333+00:00 (25 s temu), 13244 B gzip, monet 234; ostatni błąd: None; koniec: max_cycles=3; dziś 2026-10-05.jsonl.gz: 0.04 MB, pełnych migawek 3.
