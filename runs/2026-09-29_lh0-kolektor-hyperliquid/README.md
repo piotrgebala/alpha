@@ -266,3 +266,236 @@ Razem: 2 wczytania, 2 różne skille: `anthropic-skills:clas5-quant`, `anthropic
   środowiskowych, zapisują tylko do ścieżek z argumentów (katalog tymczasowy); zamrożone w `runs/ZAMROZONE.txt`. Liczby
   kontroli pozytywnej sprawdzone w `raw_output.txt` (BTC 109 wypełnień = 78 zleceń, ETH 17 = 13, razem 91).
 
+
+---
+
+# Krok 1 — tryb ograniczony (zadanie 004)
+
+> **STATUS: KROK 1 ZAMKNIĘTY — werdykt A: STOP (nic się nie mieści). LH0 zamknięte decyzją użytkownika 2026-10-05
+> („tak zamknij 004”).** Kolektora (kroki B–D) NIE zbudowano. **0 wariantów — POZA licznikami**, bez odczytu E1
+> (nie zestawiamy likwidacji z cenami; licznik E1 wspólny z LK0/LB0, stan: 0 odczytów).
+
+## Metadane (krok 1)
+
+- Zadanie `zadania/004-lh0-tryb-ograniczony.md`; decyzja użytkownika 2026-09-29: „Tryb ograniczony, bez kosztów:
+  kolektor tylko na kilka głównych monet. Najpierw trzeba zmierzyć na dłuższym oknie, czy zmieści się w limicie.”
+- Gałąź `zadanie-004-lh0-tryb-ograniczony` od `master` `283749c`.
+- Sieć: wyłącznie `https://api.hyperliquid.xyz/info` i `wss://api.hyperliquid.xyz/ws`. Bez kluczy, portfeli, zleceń, MCP.
+
+## Poprzedzające wyniki (krok 1)
+
+Krok 0 tej rundy (wniosek 110): trójka BTC/ETH/SOL odpytywana w całości kosztowała 1 243 wagi/min przy limicie
+1 200 na IP; średnio 21,8 wagi na zapytanie `userFillsByTime`; 91 likwidacji w 44 min (78 BTC, 13 ETH, 0 SOL), każda
+z metodą `market`, zlikwidowany zawsze stroną aktywną. Wnioski 102 i 106 (LK0, LB0): źródło przyjmujemy po kontroli
+pozytywnej na żywo. **Co z tego wynika dla projektu kroku 1 (jedno zdanie):** skoro pełne odpytanie trójki już
+przekracza limit, koszt sposobów liczymy z darmowych zliczeń strumienia `trades` (bez wag), a prawdziwe zapytania
+robimy tylko na losowej próbce pod twardym sufitem wag, i na tej samej próbce sprawdzamy, czy filtr gubi likwidacje.
+
+## Pre-rejestracja kroku A (zapisana PRZED pomiarem; 0 wariantów, pomiar kosztu, nie strategii)
+
+- **[pre] Zestawy monet:** S1 = {BTC}, S2 = {BTC, ETH}, S3 = {BTC, ETH, SOL}. Tylko perpetuale głównej giełdy.
+- **[pre] Strona aktywna** (taker) = `users[0]` przy `side: "B"`, `users[1]` przy `"A"` (potwierdzone w kroku 0:
+  10 680 / 10 680). **Zlecenie aktywne** = grupa transakcji o tym samym (moneta, strona aktywna, `hash`).
+- **[pre] Sposoby odpytywania** (zapytanie = `userFillsByTime` dla adresu i okna; waga wg dokumentacji
+  „Rate limits”: 20 + 1 za każde rozpoczęte 20 zwróconych wypełnień, każda strona wyników osobno):
+  - **M1 — pełny, co minutę:** każdy unikalny adres strony aktywnej w zestawie w danej minucie → 1 zapytanie za tę minutę.
+  - **M2 — tylko strony aktywne z ruchem ceny**, co minutę. Dwie definicje ruchu ceny (obie liczone, obie raportowane):
+    **F1** = zlecenie aktywne zmiotło ≥ 2 poziomy ceny (≥ 2 różne `px` w zleceniu);
+    **F2** = pierwsza cena zlecenia jest „dalej” w kierunku agresora niż cena poprzedniej transakcji w tej monecie
+    (kupno powyżej, sprzedaż poniżej) albo F1. Adres wchodzi do M2, jeśli w oknie ma ≥ 1 zlecenie spełniające filtr.
+  - **M3 — obiegi co N min z `startTime`:** jedno zapytanie na unikalny adres strony aktywnej na okno N minut,
+    N ∈ {5, 15, 60}; zapytania rozłożone równomiernie w następnym oknie (koszt/min = koszt okna / N).
+  - **M4 — pomijanie adresów bez pozycji:** zapytanie jest zbędne, jeśli adres na początku okna nie miał pozycji
+    w żadnej monecie zestawu, w której handlował, i w oknie ma w tych monetach tylko jedno zlecenie (`oid`) — wtedy
+    likwidacja jest niemożliwa (likwidacja zamyka istniejącą pozycję i jest osobnym zleceniem). Mierzone jako
+    **górna granica oszczędności** (zakłada pełną wiedzę o pozycji na starcie okna, ustaloną tu z samych wypełnień);
+    realne źródło tej wiedzy nie jest dziś wskazane, więc M4 raportujemy jako oszczędność potencjalną i **nie
+    przyznajemy mu samodzielnie „mieści się”**.
+- **[pre] Jak liczony koszt:** darmowe zliczenia z WebSocket `trades` (unikalne adresy na minutę / na okno N, dla
+  każdego zestawu i filtra) × średnia zmierzona waga zapytania `w̄` z próbki (osobno dla każdej długości okna 1/5/15/60
+  min, z adresów, które handlowały w danym zestawie). Obok: dolna granica 20 wagi/zapytanie (bez `w̄`).
+  Statystyki na szeregu minut (M1, M2) i okien (M3, podzielone przez N): **średnia, mediana, p95, maks.**
+- **[pre] Próg (z zadania, bez zmian):** sposób × zestaw „mieści się”, jeśli **średnie zużycie ≤ 600 wagi/min**
+  (50 % limitu 1 200; reszta to zapas i ewentualne 0b) **ORAZ p95 ≤ 1 200 wagi/min** (drugi warunek: w godzinach
+  ruchu kolektor nie może stale zderzać się z limitem; dopisany teraz, przed wynikiem). Dla M2 dodatkowo filtr musi
+  nie gubić likwidacji (niżej). Jeśli żaden sposób × zestaw nie mieści się — **STOP, raport do użytkownika**.
+- **[pre] Czy filtr gubi likwidacje (M2):** prawda = losowa próbka stron aktywnych każdego okna, odpytana w całości;
+  likwidacja = wypełnienie z polem `liquidation`, w którym zlikwidowanym jest ten adres (jednostka: zlecenie
+  (adres, `oid`)), tylko w monetach zestawu. Likwidacja jest „zgubiona” przez filtr, jeśli jej adres w tym oknie nie
+  przeszedł filtra. Filtr **nie gubi**, jeśli górna granica 95 % (dokładna, Cloppera–Pearsona) udziału zgubionych
+  ≤ 5 % (np. 0 zgubionych przy ≥ 59 likwidacjach). W przeciwnym razie raportujemy udział z przedziałem, a filtr daje
+  tylko **próbkę** (decyzja użytkownika). Dodatkowo co 60 min jedno okno 1-min zestawu S3 odpytane w całości
+  (porównanie z pełnym odpytaniem na krótkim oknie).
+- **[pre] M3 a gubienie:** M3 czyta te same dane później, więc gubi tylko przez obcięcie wyników (2 000 wypełnień na
+  stronę) — liczymy adresy, które wymagały stronicowania albo zostały ucięte (limit 5 stron).
+- **[pre] Opóźnienie wykrycia:** czas odebrania odpowiedzi − czas `T` wypełnienia likwidacyjnego, per N (mediana, p95).
+- **[pre] Okno:** ≥ 24 h ciągłego pomiaru (plan 26 h), obejmuje porę azjatycką, europejską i amerykańską. Okresu
+  kaskady nie da się zaplanować — jeśli wystąpi, opiszemy; jeśli nie, zapiszemy jako ograniczenie.
+- **[pre] Budżet samego pomiaru:** próbkowanie celuje w ≤ 700 wagi/min (okno przesuwne 60 s), **twardy sufit 900**;
+  przy 429 rosnące odczekanie (10 s → 300 s), nigdy obchodzenie (bez dodatkowych IP/proxy). Liczba 429 w wyniku.
+- **[pre] Czego NIE robimy:** żadnych cen po likwidacjach, żadnego odczytu E1, żadnego stanu pozycji (0b),
+  żadnego `metaAndAssetCtxs`.
+- **Hash pre-rejestracji:** `6f7e10c` (commit samej pre-rejestracji, przed napisaniem skryptu i przed pomiarem).
+- **[implementacja] Skrypt:** `data/measure_hl_weights.py` (commit `c9cd2bd`), testy bez sieci
+  `tests/test_measure_hl_weights.py` (w tym `hypothesis`: ogranicznik nigdy nie przekracza sufitu 900 w żadnym oknie
+  60 s; F1 ⇔ ≥ 2 różne ceny; reguła M4 nie pomija adresu z likwidacją; przedział CP). Kwoty próbki na okno:
+  N=1: 10, N=5: 30, N=15: 45, N=60: 90 adresów; zapytania okien N > 1 rozłożone na 0,9·N min; minuta liczy się tylko,
+  gdy połączenie WebSocket trwało przez całą minutę; zadanie próbki starsze niż 2N + 5 min od planowanego startu jest
+  porzucane i liczone. Stronicowanie `startTime = max(time) + 1` (wyniki rosnąco — sprawdzone na żywo), najwyżej
+  5 stron.
+- **[implementacja] Próba dymna (nie jest dowodem, nie w `raw_output.txt`):** 6 min 08:27–08:33 UTC do katalogu
+  tymczasowego sesji — 86 zapytań, 0 × 429, waga samego pomiaru ≤ 700/min, 4 pełne minuty; mechanika działa.
+- **[implementacja] Uruchomienie:** kopia skryptu poza repo, żeby przeżyła usunięcie worktree:
+  `$HOME/likwidacje_hl/pomiar_krok1/measure_hl_weights.py` (sha256 `3bf50945f0c2…84bbe1`, identyczna z `c9cd2bd`),
+  start `bash $HOME/likwidacje_hl/pomiar_krok1/start.sh` (`setsid nohup`, 26 h, interpreter `~/alpha/.venv`).
+  Wyniki w tym samym katalogu: `minuty.jsonl`, `zapytania.jsonl`, `status.json`, `pomiar.log`, `stdout.txt`.
+  Postęp: `~/alpha/.venv/bin/python ~/likwidacje_hl/pomiar_krok1/measure_hl_weights.py --status`.
+  Po końcu: `… --podsumuj` dopisane do `raw_output.txt` pod nagłówkiem „KROK 1A — pomiar wag” (krok 0 zostaje
+  nad nim bez zmian).
+- **[implementacja] Stan uruchomienia:** PID `1387584`, start 2026-09-29 08:33:37 UTC, koniec planowany
+  2026-09-30 10:33 UTC (proces kończy się sam). Pierwsze odczyty z `pomiar.log`: waga samego pomiaru w ostatnich
+  60 s = 211 / 357 / 353 (08:38 / 08:43 / 08:48 UTC), 0 × 429, 188 zapytań do 08:48. Pełny `pytest`: 1 935 passed,
+  3 skipped, kod 0.
+- **Co zostaje po końcu pomiaru (następna sesja):** dopisać `--podsumuj` do `raw_output.txt`; wynik A z werdyktem
+  per zestaw i sposób (próg wyżej), druga droga kluczowej liczby, bramka 16a; potem — tylko jeśli coś się mieści —
+  kroki B–D. Jeśli nic się nie mieści: STOP i raport do użytkownika.
+
+## W skrócie — krok 1 prostym językiem (zasada 17)
+
+Przez 26 godzin mierzyliśmy, ile kosztuje wyłapywanie likwidacji z Hyperliquid na samym BTC, na BTC+ETH i na
+BTC+ETH+SOL. Koszt liczy się w jednostkach limitu zapytań (giełda daje 1 200 na minutę z jednego adresu IP; na
+kolektor przeznaczyliśmy z góry połowę). Wynik jest jednoznaczny:
+
+- **Sposoby, które niczego nie gubią, są za drogie** — nawet dla samego BTC średnio ~1 210 jednostek na minutę
+  (2× za dużo), a odpytywanie raz na godzinę wciąż ~630 przy szczytach ~1 730.
+- **Jedyny tani sposób (filtr „zlecenie zmiotło ≥ 2 poziomy ceny”) mieści się w budżecie, ale gubi ~93 % likwidacji**
+  (65 z 70 w próbce). Takie dane nie nadają się do badania kaskad.
+
+Co to znaczy dla decyzji: trzeciego kolektora likwidacji z darmowego API Hyperliquid nie da się zbudować w zapisanych
+granicach. Użytkownik zdecydował 2026-10-05: zamknąć LH0. Likwidacje dalej zbierają LK0 (Binance) i LB0 (Bybit).
+
+## Wynik kroku A (pełny zapis: `raw_output.txt`, sekcja „KROK 1A — pomiar wag”)
+
+- **Okno:** 2026-09-29 08:32 → 2026-09-30 10:32 UTC (1 561 minut, 1 546 pełnych — połączenie bez przerwy; 10 rozłączeń).
+  Pora azjatycka, europejska i amerykańska objęte; **kaskady w oknie nie było** (ograniczenie — zob. 16a).
+- **Pomiar sam:** 33 048 zapytań, **0 × 429**, waga własna średnio 451 / mediana 424 / p95 693 / maks. 796 wagi/min
+  (twardy sufit 900 dotrzymany). 237 zadań próbki porzuconych jako przeterminowane (zapisane w `status.json`).
+- **Średnia waga zapytania `w̄`:** 20,9 (N = 1 min) … 23,1 (N = 60 min) — prawie zawsze minimalne 20 + 1.
+- **Dane surowe poza repo** (`$HOME/likwidacje_hl/pomiar_krok1/`): `minuty.jsonl` 9 629 254 B
+  (sha256 `5406a4fa…ddee63`), `zapytania.jsonl` 11 405 788 B (`08dadba1…7f4c`), `status.json`, `pomiar.log`
+  (pełne hashe w nagłówku sekcji `raw_output.txt`). Skrypt sha256 `3bf50945…84bbe1` = commit `c9cd2bd`.
+  Podsumowanie powtórzone drugi raz — wydruk identyczny bajt w bajt.
+
+**Koszt [wagi/min] — próg: średnia ≤ 600 ORAZ p95 ≤ 1 200 (pre-rejestracja):**
+
+| zestaw | sposób | średnia | mediana | p95 | maks. | budżet |
+|---|---|---|---|---|---|---|
+| S1 {BTC} | M1 pełny co 1 min | 1 209 | 1 005 | 2 449 | 9 692 | NIE |
+| S1 | M2 F1 co 1 min | 231 | 209 | 480 | 1 107 | mieści się |
+| S1 | M2 F2 co 1 min | 690 | 587 | 1 362 | 4 821 | NIE |
+| S1 | M3 co 60 min | 628 | 565 | 1 727 | 1 727 | NIE |
+| S2 {BTC, ETH} | M2 F1 co 1 min | 403 | 372 | 765 | 1 901 | mieści się |
+| S3 {BTC, ETH, SOL} | M1 pełny co 1 min | 2 196 | 1 819 | 4 412 | 15 955 | NIE |
+| S3 | M2 F1 co 1 min | 459 | 414 | 869 | 2 171 | mieści się |
+| S3 | M3 co 60 min | 1 014 | 935 | 2 689 | 2 689 | NIE |
+
+(Pozostałe 10 wierszy — wszystkie „NIE” — w `raw_output.txt`. M4, czyli pomijanie adresów bez pozycji, daje górną
+granicę oszczędności 21–70 %; nawet z nią M3 N=60 S1 ma p95 ≈ 1 727 × 0,75 ≈ 1 290 > 1 200, a samodzielnego
+„mieści się” M4 nie dostaje z pre-rejestracji, bo wymaga wiedzy o pozycjach, której źródła nie ma.)
+
+**Czy filtr gubi likwidacje** (próg: górna granica 95 % Cloppera–Pearsona udziału zgubionych ≤ 5 %):
+
+| zestaw | filtr | likwidacji | zgubionych | udział | przedział 95 % (CP) | werdykt |
+|---|---|---|---|---|---|---|
+| S1 | F1 | 40 | 37 | 92,5 % | do 98,4 % | gubi |
+| S2 | F1 | 56 | 51 | 91,1 % | do 97,0 % | gubi |
+| S3 | F1 | 70 | 65 | 92,9 % | do 97,6 % | gubi |
+| S3 | F2 | 70 | 61 | 87,1 % | do 93,9 % | gubi |
+
+Na poziomie samego zlecenia likwidacyjnego F1 nie złapał żadnego (0 z 21 dopasowanych w S3). Powód jest prosty:
+likwidacja na Hyperliquid to zwykle małe zlecenie rynkowe, które bierze jeden poziom ceny. 25 pełnych okien 1-min
+(2 923 adresy, 61 364 wagi) nie miało ani jednej likwidacji — porównanie z pełnym odpytaniem nic nie dodaje.
+Opóźnienie wykrycia: mediana 75 s (N = 1) … 3 483 s (N = 60).
+
+**Werdykt A (według pre-rejestracji): żaden sposób × zestaw nie spełnia łącznie progu kosztu i progu „nie gubi”.**
+Jedyne „mieści się” (M2 F1) gubi ~9 z 10 likwidacji, więc dawałoby tylko próbkę. Pre-rejestracja oddaje ten wybór
+użytkownikowi; użytkownik 2026-10-05 wybrał STOP („tak zamknij 004”). Kroki B–D nie są wykonywane.
+
+## Bramka 16a (walidacja write-upu, skill `data:validate-data`)
+
+- **Druga droga liczby:** własny krótki kod (bez importu skryptu pomiaru) z `minuty.jsonl` i `zapytania.jsonl`:
+  M1 S1 — 1 546 pełnych minut, `w̄` 20,93 (n = 8 472) → **średnia 1 209, mediana 1 005, p95 2 449** — zgodne z
+  wydrukiem (1 209 / 1 005 / 2 449). S3 F1 — **65 z 70 zgubionych (92,9 %)** — zgodne. Dodatkowo po deduplikacji
+  (ta sama likwidacja bywa w próbce kilku okien N): **63 z 67 unikalnych zleceń (94,0 %, przedział 95 % CP
+  85,4–97,6 % dwustronnie; skrypt drukuje jednostronną górną granicę 97,9 %)** — wniosek bez zmian.
+  Komenda: `~/alpha/.venv/bin/python runs/2026-09-29_lh0-kolektor-hyperliquid/druga_droga_krok1.py` (wydruk
+  w `raw_output.txt`, sekcja „KROK 1A — druga droga”).
+- **Kogo NIE ma w zbiorze:** okresu kaskady (dzień spokojny; w kaskadzie stron aktywnych i likwidacji jest więcej,
+  więc koszt M1/M3 byłby WYŻSZY — STOP tylko się wzmacnia); monet spoza S3; likwidacji „backstop” przez HLP (z kroku 0);
+  237 porzuconych zadań próbki (porzucenie zależy od kolejki, nie od tego, czy adres miał likwidację).
+- **Czerwona flaga „wynik idealnie potwierdza hipotezę”:** nie dotyczy — hipotezą było „mieści się”, wynik ją obala.
+  Dlaczego F1 gubi, wyjaśnia mechanizm (małe zlecenie rynkowe, jeden poziom ceny), nie przypadek.
+- **Werdykt: Caveats** — jedno okno 26 h bez kaskady, 3 monety; zastrzeżenie działa przeciw kolektorowi, nie za nim.
+
+## Bramka 16b (statystyka, skill `data:statistical-analysis`)
+
+Efekt podany z przedziałem (udział zgubionych, CP 95 %), mediana obok średniej we wszystkich tabelach kosztu
+(rozkład prawoskośny: maks. do 8× średniej przy odpytywaniu co minutę). Licznik wariantów: **0 — POZA licznikami**, bez odczytu E1 (licznik E1
+wspólny z LK0/LB0: 0 odczytów). To pomiar kosztu źródła danych, nie test strategii — nie ma `t`, `N_eff` ani zwrotu.
+
+## Co na plus (+) / Co na minus (−) — krok 1
+
+- (+) Pre-rejestracja (`6f7e10c`) przed skryptem i pomiarem; próg nieruszony po wyniku.
+- (+) 26 h, 0 × 429, sufit wag dotrzymany; wydruk odtwarzalny bajt w bajt; druga droga zgodna.
+- (+) Jasny mechanizm porażki taniego filtra (likwidacja = małe zlecenie rynkowe).
+- (−) Brak kaskady w oknie; nie sprawdzono innych sposobów (węzeł własny, płatne S3) — to osobne decyzje.
+- (−) Jednostka „zlecenie” w próbce liczona per rekord, nie unikalnie (różnica 70 vs 67, bez wpływu na werdykt).
+
+## Wniosek — krok 1
+
+Z darmowego API Hyperliquid nie da się zbudować kolektora likwidacji w granicach połowy limitu zapytań: pełne
+odpytanie jest 2× za drogie już dla samego BTC, a tani filtr gubi ~93 % likwidacji (przedział 85–98 %). LH0 zamknięte
+(wniosek 115 w `runs/INDEX.md`).
+
+## Rekomendacja — krok 1
+
+- LH0 zamknięte; skrypt pomiaru zamrożony (`runs/ZAMROZONE.txt`). LK0 i LB0 działają dalej bez zmian; E1 korzysta z nich.
+- Zadanie 010 (`metaAndAssetCtxs` co 60 s — funding i premia HL vs Binance) **nie zależy od likwidacji** i jest tanie
+  (~1 zapytanie/min); start wymaga osobnej decyzji użytkownika.
+- Zadanie 018 (kohorty pozycji z Liquid) czekało na 004 — wraca do decyzji użytkownika.
+- Pełne źródło likwidacji HL (własny węzeł albo płatne S3) — tylko na wyraźną decyzję użytkownika (nowa infrastruktura
+  albo koszt); dziś bez rekomendacji.
+
+## Bramka 16c (przegląd diffu przed scaleniem, skill `engineering:code-review`)
+
+Diff gałęzi wobec `master`: `data/measure_hl_weights.py` (869 linii), `tests/test_measure_hl_weights.py` (359), README,
+`raw_output.txt`, skrypt drugiej drogi, `runs/INDEX.md`, `STATUS.md`, `runs/ZAMROZONE.txt`, karta zadania 004.
+Sieć wyłącznie `wss://api.hyperliquid.xyz/ws` i `https://api.hyperliquid.xyz/info` (stałe w kodzie), bez kluczy,
+zmiennych środowiskowych, `subprocess` i `eval`; zapis tylko do katalogu z `--dir` (dopisywanie `jsonl`/log). Uwagi
+drobne, bez wpływu na wynik: `open(path)` przy odczycie bez jawnego `encoding` (na Windows inne kodowanie domyślne —
+pliki są ASCII/JSON, więc bez skutku); jednostka „zlecenie” w teście gubienia liczona per rekord próbki, nie unikalnie
+(opisane w 16a). `black`/`ruff` czyste. **Werdykt: Approve — kod pomiaru jest zamrożony i łączy się tylko z publicznym
+API Hyperliquid, liczby wyniku odtwarzają się bajt w bajt i drugą drogą.**
+
+## Użyte skille — krok 1 (CLAUDE.md zasada 19)
+
+### Użyte skille — gałąź `zadanie-004-lh0-tryb-ograniczony` (rejestr automatyczny)
+
+| czas | kto | skill | argumenty (skrót) |
+|---|---|---|---|
+| 2026-09-29T08:18:35+00:00 | claude (agent: general-purpose) | `anthropic-skills:clas5-runda` | Zadanie 004 LH0 krok 1 A — pomiar wag Hyperliquid (tryb ograniczony), gałąź zadanie-004-lh0-tryb-ograniczony |
+| 2026-09-29T08:18:35+00:00 | claude (agent: general-purpose) | `anthropic-skills:clas5-quant` | Zadanie 004 LH0 krok 1 A: nowe źródło danych (likwidacje Hyperliquid) — pomiar kosztu wag odpytywania, 0 wariantów, bez odczytu E1 |
+
+Razem: 2 wczytania, 2 różne skille: `anthropic-skills:clas5-quant`, `anthropic-skills:clas5-runda`.
+
+- **`anthropic-skills:clas5-runda`** — pre-rejestracja kroku A przed pomiarem, struktura sekcji, 0 wariantów.
+- **`anthropic-skills:clas5-quant`** — próg „nie gubi” z przedziałem CP zamiast samej średniej; żadnego odczytu E1.
+- **`data:validate-data`**, **`data:statistical-analysis`**, **`engineering:code-review`** — wczytane 2026-10-05
+  (17:24:13, 17:25:11, 17:27:33 UTC) PRZED bramkami 16a, 16b, 16c w sesji orkiestratora (wykonawca-fork). Hook zapisał
+  je do `runs/skille/master.jsonl`, bo katalog roboczy sesji to główny klon na `master`, a nie worktree tej gałęzi;
+  `skill_audit.py zarejestruj` odmówił (wczytanie nie w głównej rozmowie). Plików rejestru nie edytowano ręcznie.
+  Wniosły: druga droga z dedup (70 → 67) i pytanie „kogo nie ma” (brak kaskady); mediana obok średniej i przedział CP;
+  przegląd sieci i zapisu w diffie.
+- Pominięte z tabeli: `security-review` — kolektora z nowym połączeniem nie zbudowano (skrypt pomiaru był
+  jednorazowy, adresy stałe, bez kluczy); `data:explore-data` — nie dotyczy (zbiór kolektora nie powstał); `dataviz` —
+  bez wykresu.
