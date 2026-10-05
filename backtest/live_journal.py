@@ -46,6 +46,13 @@ Zasady zapisu (`dziennik/`):
   i bez zmian linia `przebiegi.log` jest taka jak przed poprawką; pola „carry …” dochodzą tylko
   przy błędzie, braku pliku, spóźnionych danych albo zmianach w zapisie. Błąd carry nie zatrzymuje
   dziennika.
+- poprawka 13 (zadanie 025) — moneta wstrzymana lub wycofana, od `POPRAWKA13_OD`: wykrycie (R1: brak
+  świecy przy świecy BTC, obrót 0 albo open = high = low = close, status ≠ TRADING), rozliczenie w dniu
+  wykrycia po cenie mark (R2; bez niej po ostatnim normalnym zamknięciu, „przybliżona”), likwidacja trendu
+  na ekstremach mark tego dnia (R3), brak nowych pozycji przez wstrzymanie i co najmniej 7 dni (R4), dni
+  z obrotem 0 poza historią koszyka (R5), `powod_wyjscia = "wycofanie"` (R6), alarm przy zniknięciu pliku
+  członka koszyka (R7). Silnik rund bez zmian — reguły zmieniają tylko panele wejściowe dziennika
+  (`journal_view`). Pola logu „wstrzymane: …” i „pliki świec BŁĄD …” tylko przy zdarzeniu.
 
     PYTHONUTF8=1 py -m backtest.live_journal              # pobranie danych + zapis
     PYTHONUTF8=1 py -m backtest.live_journal --bez-pobierania
@@ -179,30 +186,23 @@ BASKET_COLS = [*BASKET_KEY, "pozycja", "sredni_obrot_30d", "czlonek_top20", "fun
 BASKET_VALUES = ["pozycja", "sredni_obrot_30d", "czlonek_top20"]
 BASKET_DEPTH = 50
 X1_PHASE_COLS = ["r_long", "r_short", "r_ls_gross", "funding_net", "cost", "turnover", "r_net"]
+# Poprawka 13 (2026-10-05, decyzja użytkownika „Poprawka 025 + black”): rozliczenie monety wstrzymanej
+# lub wycofanej. Reguły R1–R7 działają od POPRAWKA13_OD — pierwszego pełnego dnia UTC po zapisaniu
+# poprawki (ta sama zasada co start X1 i carry); dni wcześniejsze liczą się jak dotąd, więc przeliczenie
+# historii nie zmienia żadnego zapisanego wiersza. None = reguły wyłączone (ścieżka odwrotu).
+POPRAWKA13_OD: pd.Timestamp | None = pd.Timestamp("2026-10-06", tz="UTC")
+HALT_MIN_DAYS = HOLD_DAYS  # moneta poza dziennikiem co najmniej 7 dni od dnia wykrycia (R4)
+SETTLED = "wycofanie"  # `powod_wyjscia` pozycji rozliczonej przy wstrzymaniu (R6)
 
 
 # ------------------------------------------------------------------ dane
 def load_live(live_dir: Path = LIVE_DIR) -> dict:
-    """Panele dzienne (close, high, low, obrót), funding dzienny i premia Coinbase z `live_dir`."""
-    from data.fetch_live import symbol_files
-
-    frames = []
-    for sym, p in symbol_files(live_dir).items():
-        df = pd.read_parquet(p)
-        if df.empty:
-            continue
-        frames.append(df.assign(symbol=sym))
-    panel = pd.concat(frames, ignore_index=True)
-    panel["open_time"] = pd.to_datetime(panel["open_time"], utc=True)
-    piv = {
-        k: panel.pivot(index="open_time", columns="symbol", values=v).sort_index()
-        for k, v in (
-            ("close", "close"),
-            ("high", "high"),
-            ("low", "low"),
-            ("volume", "quote_volume"),
-        )
-    }
+    """
+    Panele dzienne (close, high, low, obrót, open), funding dzienny i premia Coinbase z `live_dir`;
+    poprawka 13: tabela statusów kontraktów (`status`, indeks = symbol) i panele ceny mark
+    (`mark_close`, `mark_high`, `mark_low`) — brak albo nieczytelny plik = pusta tabela/panel.
+    """
+    piv = price_panels(live_dir)
     cb = pd.read_parquet(Path(live_dir) / "coinbase_BTC-USD_1d.parquet")
     cb_open = pd.to_datetime(cb["open_time"], utc=True)
     cb = cb[cb_open + pd.Timedelta(days=1) <= pd.Timestamp.now(tz="UTC")]  # tylko zamknięte dni
@@ -212,11 +212,71 @@ def load_live(live_dir: Path = LIVE_DIR) -> dict:
     return piv
 
 
+def price_panels(live_dir: Path = LIVE_DIR) -> dict:
+    """
+    Panele świec perpetuali z `live_dir` (close, high, low, volume, open) + poprawka 13: statusy
+    kontraktów (`status`) i panele ceny mark (`mark_close`, `mark_high`, `mark_low`).
+    """
+    from data.fetch_live import MARK_FILE, STATUS_FILE, symbol_files
+
+    frames = []
+    for sym, p in symbol_files(live_dir).items():
+        df = pd.read_parquet(p)
+        if df.empty:
+            continue
+        frames.append(df.assign(symbol=sym))
+    panel = pd.concat(frames, ignore_index=True)
+    panel["open_time"] = pd.to_datetime(panel["open_time"], utc=True)
+    fields = [("close", "close"), ("high", "high"), ("low", "low"), ("volume", "quote_volume")]
+    if "open" in panel.columns:
+        fields.append(("open", "open"))  # poprawka 13: open = high = low = close (R1)
+    piv = {
+        k: panel.pivot(index="open_time", columns="symbol", values=v).sort_index()
+        for k, v in fields
+    }
+    piv["status"] = _read_statuses(Path(live_dir) / STATUS_FILE)
+    piv.update(_read_mark(Path(live_dir) / MARK_FILE))
+    return piv
+
+
+def _read_statuses(path: Path) -> pd.DataFrame:
+    """Statusy kontraktów z `fetch_live.save_statuses_safe` (indeks = symbol); brak/błąd = pusta tabela."""
+    empty = pd.DataFrame(columns=["status", "contract_type", "delivery"])
+    if not path.exists():
+        return empty
+    try:
+        st = pd.read_parquet(path)
+        return st.drop_duplicates("symbol").set_index("symbol")[list(empty.columns)]
+    except Exception:  # noqa: BLE001 — bez statusów R1 działa na świecach (warunek (a) ≡ (c))
+        return empty
+
+
+def _read_mark(path: Path) -> dict[str, pd.DataFrame]:
+    """Panele ceny mark (dni × symbole) z `fetch_live.fetch_mark_safe`; brak/błąd = puste panele."""
+    keys = ("mark_close", "mark_high", "mark_low")
+    empty = pd.DataFrame(index=pd.DatetimeIndex([], tz="UTC", name="open_time"))
+    if not path.exists():
+        return {k: empty for k in keys}
+    try:
+        m = pd.read_parquet(path)
+        m["open_time"] = pd.to_datetime(m["open_time"], utc=True)
+        m = m.drop_duplicates(["symbol", "open_time"], keep="last")
+        return {
+            k: m.pivot(index="open_time", columns="symbol", values=k[len("mark_") :]).sort_index()
+            for k in keys
+        }
+    except Exception:  # noqa: BLE001 — bez ceny mark rozliczenie jest „przybliżone” (R2 iii)
+        return {k: empty for k in keys}
+
+
 def truncate(data: dict, as_of: pd.Timestamp) -> dict:
-    """Wszystko ≤ `as_of` (dzień ostatniej zamkniętej świecy) — jedyne dane, które wolno widzieć."""
+    """
+    Wszystko ≤ `as_of` (dzień ostatniej zamkniętej świecy) — jedyne dane, które wolno widzieć.
+    Tabela bez osi czasu (statusy kontraktów, poprawka 13) przechodzi bez zmian.
+    """
     out = {}
     for k, v in data.items():
-        out[k] = v[v.index <= as_of]
+        out[k] = v[v.index <= as_of] if isinstance(v.index, pd.DatetimeIndex) else v
     return out
 
 
@@ -225,19 +285,263 @@ def _months(as_of: pd.Timestamp) -> list[pd.Timestamp]:
     return list(pd.date_range(ENGINE_START, as_of, freq="MS"))
 
 
+# ------------------------------------------------------------------ poprawka 13: wstrzymanie / wycofanie
+def _p13_on(day: pd.Timestamp) -> bool:
+    """Czy reguły poprawki 13 obowiązują w dniu `day` (od `POPRAWKA13_OD`; None = wyłączone)."""
+    return POPRAWKA13_OD is not None and day >= POPRAWKA13_OD
+
+
+def basket_members(volume: pd.DataFrame, month_starts: list[pd.Timestamp]) -> dict:
+    """
+    Skład koszyka dziennika (R5): `monthly_members` bez zmian dla miesięcy przed `POPRAWKA13_OD`;
+    od niej dni z obrotem 0 nie liczą się do 30 notowań w oknie (zamrożona moneta nie wchodzi do
+    koszyka). Filtr żyje w dzienniku — funkcja wspólna z rundami zostaje bez zmian.
+    """
+    old = [m for m in month_starts if not _p13_on(m)]
+    new = [m for m in month_starts if _p13_on(m)]
+    out = monthly_members(volume, old)
+    if new:
+        out.update(monthly_members(volume.where(volume != 0), new))
+    return out
+
+
+def basket_ranking(volume: pd.DataFrame, month_starts: list[pd.Timestamp], depth: int) -> dict:
+    """Ranking obrotu do `koszyk.csv` z tym samym filtrem R5 co `basket_members` (top-20 = koszyk)."""
+    old = [m for m in month_starts if not _p13_on(m)]
+    new = [m for m in month_starts if _p13_on(m)]
+    out = monthly_ranking(volume, old, depth)
+    if new:
+        out.update(monthly_ranking(volume.where(volume != 0), new, depth))
+    return out
+
+
+def halt_conditions(d: dict) -> pd.DataFrame:
+    """
+    R1 bez daty wejścia: dni × symbole (bez BTC), True = dzień wstrzymania monety, gdy zachodzi:
+    (a) brak świecy, gdy BTC ma świecę (po pierwszej świecy monety); (b) obrót 0 albo
+    open = high = low = close; (c) status ≠ TRADING w `exchangeInfo` (albo symbolu nie ma w pełnej
+    tabeli statusów) — dni po ostatniej świecy monety. `fetch_live` pobiera świece tylko kontraktów
+    TRADING, więc (c) pokrywa się z (a); status daje pewność i przyczynę. BTC wyznacza kalendarz
+    dziennika (`as_of`) i nie podlega regule.
+    """
+    close = d["close"]
+    idx = close.index
+    cols = [c for c in close.columns if c != BTC]
+    c = close[cols]
+
+    def panel(name: str) -> np.ndarray:
+        p = d.get(name)
+        if p is None:
+            return np.full(c.shape, np.nan)
+        return p.reindex(index=idx, columns=cols).to_numpy(dtype=float)
+
+    cv = c.to_numpy(dtype=float)
+    o, hi, lo, vol = (panel(k) for k in ("open", "high", "low", "volume"))
+    btc = close[BTC].notna().to_numpy() if BTC in close.columns else np.ones(len(idx), dtype=bool)
+    listed = np.maximum.accumulate(~np.isnan(cv), axis=0) if len(idx) else ~np.isnan(cv)
+    missing = np.isnan(cv) & listed & btc[:, None]
+    flat = (o == hi) & (hi == lo) & (lo == cv)  # NaN porównuje się jako fałsz
+    halted = missing | flat | (vol == 0)
+    st = d.get("status")
+    if st is not None and len(st):
+        trading = set(st.index[st["status"].astype(str) == "TRADING"])
+        for j, sym in enumerate(cols):
+            last = c[sym].last_valid_index()
+            if sym not in trading and last is not None:
+                halted[:, j] |= np.asarray(idx > last)
+    return pd.DataFrame(halted, index=idx, columns=cols)
+
+
+def _settlement(d: dict, raw: pd.DataFrame, sym: str, i: int) -> dict:
+    """
+    R2: cena rozliczenia w dniu wykrycia `raw.index[i]`: (i) oficjalnej ceny rozliczenia Binance
+    publiczne API nie podaje (sonda 2026-10-05: `delivery-price` puste dla perpetuali) — pominięta;
+    (ii) zamknięcie ceny mark tego dnia (z ekstremami do R3); (iii) bez niej ostatnie normalne
+    zamknięcie (dzień bez warunku R1) z flagą „przybliżona”.
+    """
+    day = raw.index[i]
+
+    def mark(k: str) -> float:
+        p = d.get(f"mark_{k}")
+        if p is None or sym not in p.columns or day not in p.index:
+            return np.nan
+        v = float(p.at[day, sym])
+        return v if np.isfinite(v) and v > 0 else np.nan
+
+    price = mark("close")
+    if np.isfinite(price):
+        return {"cena": price, "zrodlo": "mark", "mark_high": mark("high"), "mark_low": mark("low")}
+    past = d["close"][sym].iloc[:i][~raw[sym].iloc[:i].to_numpy()].dropna()
+    price = float(past.iloc[-1]) if len(past) else np.nan
+    return {"cena": price, "zrodlo": "przybliżona", "mark_high": np.nan, "mark_low": np.nan}
+
+
+def _halt_reason(d: dict, sym: str, day: pd.Timestamp) -> str:
+    """Przyczyna wykrycia w dniu `day` (do wydruku): status / brak świecy / obrót 0 / cena stoi."""
+    st = d.get("status")
+    status = str(st.at[sym, "status"]) if st is not None and sym in st.index else None
+    if pd.isna(d["close"].at[day, sym]):
+        return f"status {status}" if status not in (None, "TRADING") else "brak świecy"
+    if d["volume"].at[day, sym] == 0:
+        return "obrót 0"
+    return "open = high = low = close"
+
+
+def halt_events(d: dict, members: dict) -> list[dict]:
+    """
+    R1–R2: wstrzymania monet koszyka (członek któregokolwiek miesiąca silnika, bez BTC). Seria dni
+    wstrzymania zaczęta w dniu ≥ `POPRAWKA13_OD` = zdarzenie: `d1` (dzień wykrycia = rozliczenia),
+    `d2` (ostatni dzień serii w danych), `e` = max(d2, d1 + 6 dni) — koniec wyłączenia monety (R4:
+    pełny cykl 7 faz, żeby żadna faza nie trzymała rozliczonej pozycji, gdy moneta wróci), cena
+    i źródło rozliczenia (`_settlement`), przyczyna. Seria zaczęta przed datą wejścia zostaje przy
+    dawnych zasadach (żaden zapisany wiersz się nie zmienia). Nowa seria w oknie wyłączenia
+    przedłuża okno, a nie rozlicza drugi raz (pozycji już nie ma).
+    """
+    if POPRAWKA13_OD is None or not len(d["close"].index):
+        return []
+    raw = halt_conditions(d)
+    idx = raw.index
+    span = pd.Timedelta(days=HALT_MIN_DAYS - 1)
+    coins = sorted({s for syms in members.values() for s in syms} & set(raw.columns))
+    events = []
+    for sym in coins:
+        flags = raw[sym].to_numpy()
+        prev, i, n = None, 0, len(idx)
+        while i < n:
+            if not flags[i]:
+                i += 1
+                continue
+            j = i
+            while j + 1 < n and flags[j + 1]:
+                j += 1
+            d1, d2 = idx[i], idx[j]
+            if d1 >= POPRAWKA13_OD:
+                if prev is not None and d1 <= prev["e"]:
+                    prev.update(d2=d2, e=max(prev["e"], d2))
+                else:
+                    prev = {"symbol": sym, "d1": d1, "d2": d2, "e": max(d2, d1 + span)}
+                    prev.update(_settlement(d, raw, sym, i), przyczyna=_halt_reason(d, sym, d1))
+                    events.append(prev)
+            i = j + 1
+    return events
+
+
+def apply_halts(d: dict, events: list[dict]) -> tuple[dict, pd.DataFrame, pd.DataFrame]:
+    """
+    R2–R4 jako panele wejściowe silnika (silnik rund bez zmian). Dla zdarzenia (d1, e) monety:
+    close = cena rozliczenia od d1 do e (zwrot dnia d1 = rozliczenie, potem 0 — pozycja zamknięta);
+    high/low w d1 = ekstrema ceny mark (R3: likwidacja trendu na cenie mark; bez mark — bez
+    sprawdzenia), po d1 brak; funding po d1 = 0 (giełda nalicza stawkę domyślną zamrożonej pozycji).
+    Zwraca (dane z podmienionymi close/high/low/funding, `excl` = dni wyłączenia monety, `settle` =
+    dzień rozliczenia). Bez zdarzeń panele są kopiami danych wejściowych.
+    """
+    close, high, low = d["close"].copy(), d["high"].copy(), d["low"].copy()
+    fund = d["funding"].copy()
+    idx = close.index
+    excl = pd.DataFrame(False, index=idx, columns=close.columns)
+    settle = excl.copy()
+    for ev in events:
+        sym, d1, e = ev["symbol"], ev["d1"], ev["e"]
+        win = (idx >= d1) & (idx <= e)
+        after = (idx > d1) & (idx <= e)
+        close.loc[win, sym] = ev["cena"]
+        high.loc[d1, sym] = ev["mark_high"]
+        low.loc[d1, sym] = ev["mark_low"]
+        high.loc[after, sym] = np.nan
+        low.loc[after, sym] = np.nan
+        if sym in fund.columns:
+            fund.loc[(fund.index > d1) & (fund.index <= e), sym] = 0.0
+        excl.loc[win, sym] = True
+        settle.loc[d1, sym] = True
+    return {**d, "close": close, "high": high, "low": low, "funding": fund}, excl, settle
+
+
+def journal_view(data: dict, as_of: pd.Timestamp) -> dict:
+    """
+    Dane do `as_of` w ujęciu dziennika (poprawka 13): `d` (obcięte dane), `members` (koszyk z R5),
+    `events` (wstrzymania, R1–R2), panele po rozliczeniu `close`/`high`/`low`/`funding` (R2–R3),
+    `excl` / `settle` (dni wyłączenia / dzień rozliczenia) i `signs` = znak trendu bez monet
+    wyłączonych (R4, jak brak znaku). Ten sam widok liczą `components`, `trade_ledger` i `run_x1`.
+    """
+    d = truncate(data, as_of)
+    members = basket_members(d["volume"], _months(as_of))
+    events = halt_events(d, members)
+    adj, excl, settle = apply_halts(d, events)
+    return {
+        "d": d,
+        "members": members,
+        "events": events,
+        "close": adj["close"],
+        "high": adj["high"],
+        "low": adj["low"],
+        "funding": adj["funding"],
+        "excl": excl,
+        "settle": settle,
+        "signs": signal_sign(adj["close"]).mask(excl),
+    }
+
+
+def masked_legs(excl: pd.DataFrame):
+    """`rank_legs` bez monet wyłączonych w dniu formowania (R4 dla X1, jak brak sygnału)."""
+
+    def legs(signal_row: pd.Series, members: list[str], rng=None, leg_size: int = LEG_SIZE):
+        if signal_row.name in excl.index:
+            out = excl.loc[signal_row.name].reindex(signal_row.index, fill_value=False)
+            signal_row = signal_row.mask(out.astype(bool))
+        return rank_legs(signal_row, members, rng, leg_size)
+
+    return legs
+
+
+def drop_excluded(pos: pd.DataFrame, excl: pd.DataFrame, as_of: pd.Timestamp) -> pd.DataFrame:
+    """Pozycje ogłaszane na jutro bez monet wyłączonych w `as_of` (rozliczonych — R2/R4)."""
+    if not len(pos) or as_of not in excl.index or not excl.loc[as_of].any():
+        return pos
+    out = excl.loc[as_of]
+    return pos[~pos["symbol"].map(lambda s: bool(out.get(s, False)))]
+
+
+def halted_symbols(live_dir: Path = LIVE_DIR) -> list[str]:
+    """
+    Monety koszyka ze zdarzeniem wstrzymania (R1) od `POPRAWKA13_OD` w danych `live_dir` — dla nich
+    `fetch_live.fetch_mark_safe` pobiera cenę mark (R2). Zwykle pusta lista.
+    """
+    if POPRAWKA13_OD is None:
+        return []
+    p = price_panels(live_dir)
+    as_of = p["close"][BTC].last_valid_index() if BTC in p["close"].columns else None
+    if as_of is None or as_of < POPRAWKA13_OD:
+        return []
+    d = truncate(p, as_of)
+    events = halt_events(d, basket_members(d["volume"], _months(as_of)))
+    return sorted({e["symbol"] for e in events})
+
+
 def components(
     data: dict, as_of: pd.Timestamp, fee: float, engines: dict | None = None
 ) -> tuple[pd.DataFrame, dict]:
     """
     Dzienne zwroty netto składowych (k = 1) do `as_of` + wejścia silnika (do pozycji).
     `engines` (poprawka 11, tylko zapis): gdy podany, dostaje pełne ramki silnika — średnią
-    i 7 faz każdej składowej oraz skład koszyka — te same obiekty, z których powstał wynik.
+    i 7 faz każdej składowej oraz skład koszyka — te same obiekty, z których powstał wynik;
+    poprawka 13: także wstrzymania (`halts`). Trend liczy się na panelach `journal_view`
+    (rozliczenie, likwidacja na mark, znak bez monet wyłączonych); bez zdarzeń = dane wejściowe.
     """
-    d = truncate(data, as_of)
+    v = journal_view(data, as_of)
+    d = v["d"]
     end = as_of + pd.Timedelta(days=1)
-    members = monthly_members(d["volume"], _months(as_of))
-    liq = {"high": d["high"], "low": d["low"], "lev": LEV_TREND, "mmr": MMR}
-    tr, tr_phases = portfolio(d["close"], d["funding"], members, ENGINE_START, end, fee, liq=liq)
+    members = v["members"]
+    liq = {"high": v["high"], "low": v["low"], "lev": LEV_TREND, "mmr": MMR}
+    tr, tr_phases = portfolio(
+        v["close"],
+        v["funding"],
+        members,
+        ENGINE_START,
+        end,
+        fee,
+        signs_override=v["signs"],
+        liq=liq,
+    )
     close_b = d["close"][[BTC]]
     signs_b = pd.DataFrame({BTC: premium_signal(d["premium"]).reindex(close_b.index)})
     mem_b = {m: [BTC] for m in members}
@@ -259,7 +563,14 @@ def components(
         ],
         axis=1,
     ).dropna()
-    ctx = {"members": members, "signs_b": signs_b, "close": d["close"], "end": end}
+    ctx = {
+        "members": members,
+        "signs_b": signs_b,
+        "close": v["close"],
+        "end": end,
+        "signs": v["signs"],
+        "excl": v["excl"],
+    }
     if engines is not None:
         engines.update(
             trend=tr,
@@ -267,6 +578,7 @@ def components(
             coinbase=cb,
             coinbase_phases=cb_phases,
             members=members,
+            halts=v["events"],
         )
     return rets, ctx
 
@@ -321,13 +633,15 @@ def phase_positions(
 
 
 def positions(data: dict, as_of: pd.Timestamp, fee: float, engines: dict | None = None) -> tuple:
-    """Pozycje na dzień po `as_of` (obie składowe, po mnożnikach R1), mnożniki, historia R1, zwroty."""
+    """
+    Pozycje na dzień po `as_of` (obie składowe, po mnożnikach R1), mnożniki, historia R1, zwroty.
+    Poprawka 13: bez monet wyłączonych w `as_of` (pozycja rozliczona przy wstrzymaniu nie istnieje).
+    """
     rets, ctx = components(data, as_of, fee, engines)
     hist, k = next_multipliers(rets)
     close = ctx["close"]
-    tr = phase_positions(
-        close, signal_sign(close), ctx["members"], as_of, ctx["end"], LEV_TREND
-    ).assign(component="trend")
+    tr = phase_positions(close, ctx["signs"], ctx["members"], as_of, ctx["end"], LEV_TREND)
+    tr = drop_excluded(tr, ctx["excl"], as_of).assign(component="trend")
     cb = phase_positions(
         close[[BTC]], ctx["signs_b"], {m: [BTC] for m in ctx["members"]}, as_of, ctx["end"], LEV_CB
     ).assign(component="coinbase")
@@ -347,19 +661,23 @@ def x1_component(
     end: pd.Timestamp,
     fee: float,
     phases_out: list | None = None,
+    excl: pd.DataFrame | None = None,
 ) -> tuple[pd.Series, pd.DataFrame]:
     """
     X1 (poprawka 3): dzienny zwrot netto jako średnia 7 faz `long_short_returns` (fazy startują
     w kolejne dni od `ENGINE_START`, wspólne okno) + nogi ostatniego formowania każdej fazy (≤ `as_of`)
     w jednostkach kapitału X1 (±0,5/5 na monetę, / 7 faz). `phases_out` (poprawka 11, tylko zapis):
-    gdy podana, dostaje pełną ramkę `long_short_returns` każdej fazy (po kolei 0–6).
+    gdy podana, dostaje pełną ramkę `long_short_returns` każdej fazy (po kolei 0–6). `excl`
+    (poprawka 13): dni wyłączenia monet — moneta wyłączona nie trafia do nogi (R4) ani do nóg
+    ogłaszanych na jutro; panele `close`/`funding` podaje wtedy `journal_view` (rozliczenie, R2).
     """
     signal = signal_panel(close)
+    legs_fn = rank_legs if excl is None else masked_legs(excl)
     month_starts = sorted(members)
     series, rows = [], []
     for ph in range(PHASES):
         dates = formation_dates(close.index, ENGINE_START, end, ph)
-        out = long_short_returns(close, funding, members, dates, fee)
+        out = long_short_returns(close, funding, members, dates, fee, legs_fn=legs_fn)
         if phases_out is not None:
             phases_out.append(out)
         if len(out):
@@ -369,7 +687,7 @@ def x1_component(
             continue
         t = past[-1]
         m = _month_of(t, month_starts)
-        legs = rank_legs(signal.loc[t], members[m]) if m is not None else None
+        legs = legs_fn(signal.loc[t], members[m]) if m is not None else None
         if legs is None:
             continue
         for sign, syms in ((1, legs[0]), (-1, legs[1])):
@@ -385,6 +703,8 @@ def x1_component(
                     }
                 )
     pos = pd.DataFrame(rows, columns=["phase", "formed", "today", "symbol", "sign", "weight"])
+    if excl is not None:
+        pos = drop_excluded(pos, excl, as_of)
     if len(series) < PHASES:
         return pd.Series(dtype=float, name="x1"), pos
     panel = pd.concat(series, axis=1)
@@ -541,6 +861,7 @@ def phase_lots(
     as_of: pd.Timestamp,
     lev: float | None,
     mmr: float = MMR,
+    settle: pd.DataFrame | None = None,
 ) -> list[dict]:
     """
     Pozycje jednej fazy (poprawka 9). Niezerowa waga formowania k żyje od zamknięcia dnia formowania
@@ -548,9 +869,13 @@ def phase_lots(
     `ts_momentum.phase_returns_liq`. Likwidacja izolowana jak w silniku: pierwszy dzień, w którym
     minimum (long) / maksimum (short) odsuwa cenę od ceny wejścia o ≥ 1/lev − mmr; cena wyjścia =
     cena likwidacji, zwrot pozycji = −1/lev (cały depozyt). `lev=None` — bez likwidacji (X1).
+    `settle` (poprawka 13, panel jak `close`): dzień rozliczenia monety wstrzymanej — pozycja bez
+    wcześniejszej likwidacji kończy się tego dnia ze statusem „wycofanie” po cenie z `close` (panel
+    `journal_view`: cena rozliczenia), jak w silniku.
     """
     pos_as_of = close.index.get_loc(as_of)
     thr = 1.0 / lev - mmr if lev else None
+    settle_np = None if settle is None else settle.to_numpy(dtype=bool)
     lots = []
     for j, (t_pos, w) in enumerate(forms):
         if t_pos > pos_as_of:
@@ -576,6 +901,17 @@ def phase_lots(
                         exit_pos=t_pos + 1 + int(hit[0]),
                         exit_price=entry * (1.0 - thr if wi > 0 else 1.0 + thr),
                         ret=-1.0 / lev,
+                    )
+            if lot["status"] == "otwarta" and settle_np is not None and end_pos > t_pos:
+                hit = np.flatnonzero(settle_np[t_pos + 1 : end_pos + 1, s])
+                if len(hit):
+                    pos = t_pos + 1 + int(hit[0])
+                    exit_price = float(close.iat[pos, s])
+                    lot.update(
+                        status=SETTLED,
+                        exit_pos=pos,
+                        exit_price=exit_price,
+                        ret=float(np.sign(wi)) * (exit_price / entry - 1.0),
                     )
             if lot["status"] == "otwarta" and rotated:
                 exit_price = float(close.iat[nxt, s])
@@ -605,15 +941,18 @@ def trade_ledger(
     Lista transakcji (poprawka 9): (zamknięte, otwarte na `as_of`) dla trendu, premii Coinbase i X1 —
     pozycje, które żyły w okresie wyniku dziennika (wyjście ≥ start składowej) albo są otwarte.
     Wielkość = |waga × k| w % kapitału portfela (trend/premia: portfel R1; X1: własny kapitał X1).
+    Poprawka 13: te same panele co silnik (`journal_view`) — pozycja w monecie wstrzymanej kończy się
+    w dniu wykrycia ze statusem „wycofanie” i ceną rozliczenia (R6).
     """
-    d = truncate(data, as_of)
-    close = d["close"]
+    v = journal_view(data, as_of)
+    d = v["d"]
+    close = v["close"]
     idx = close.index
     end = as_of + pd.Timedelta(days=1)
-    members = monthly_members(d["volume"], _months(as_of))
+    members = v["members"]
     signs_b = pd.DataFrame({BTC: premium_signal(d["premium"]).reindex(idx)})
     specs = [
-        ("trend", close, signal_sign(close), members, LEV_TREND, "trend", JOURNAL_START),
+        ("trend", close, v["signs"], members, LEV_TREND, "trend", JOURNAL_START),
         (
             "premia_coinbase",
             close[[BTC]],
@@ -678,7 +1017,13 @@ def trade_ledger(
                 signs, vols, mem, formation_dates(cl.index, ENGINE_START, end, ph)
             )
             for lot in phase_lots(
-                cl, d["low"][cl.columns], d["high"][cl.columns], forms, as_of, lev
+                cl,
+                v["low"][cl.columns],
+                v["high"][cl.columns],
+                forms,
+                as_of,
+                lev,
+                settle=v["settle"][cl.columns],
             ):
                 day = idx[lot["t_pos"]] + pd.Timedelta(days=1)
                 emit(
@@ -691,20 +1036,21 @@ def trade_ledger(
                     start,
                 )
     signal = signal_panel(close)
+    legs_fn = masked_legs(v["excl"])
     month_starts = sorted(members)
     col_pos = {c: i for i, c in enumerate(close.columns)}
     for ph in range(PHASES):
         forms = []
         for t in formation_dates(idx, ENGINE_START, end, ph):
             m = _month_of(t, month_starts)
-            legs = rank_legs(signal.loc[t], members[m]) if m is not None else None
+            legs = legs_fn(signal.loc[t], members[m]) if m is not None else None
             w = np.zeros(len(close.columns))
             if legs is not None:
                 for sgn, syms in ((1.0, legs[0]), (-1.0, legs[1])):
                     for sym in syms:
                         w[col_pos[sym]] = sgn * CAPITAL_PER_LEG / LEG_SIZE
             forms.append((idx.get_loc(t), w))
-        for lot in phase_lots(close, None, None, forms, as_of, None):
+        for lot in phase_lots(close, None, None, forms, as_of, None, settle=v["settle"]):
             emit("x1", ph, lot, 1.0, lot["w"] / PHASES, 1.0, X1_START)
     closed_df = pd.DataFrame(closed, columns=TRADE_CLOSED_COLS)
     open_df = pd.DataFrame(opened, columns=TRADE_OPEN_COLS)
@@ -990,7 +1336,7 @@ def basket_rows(
     błędu ostatniego bitu (float rzędu 1e8 nie — powtórka dałaby fałszywą „historię zmienioną”).
     Top-20 rankingu ≠ skład koszyka silnika = ValueError.
     """
-    ranking = monthly_ranking(volume, months, depth)
+    ranking = basket_ranking(volume, months, depth)  # poprawka 13: filtr R5 jak `basket_members`
     rows = []
     for m in months:
         ranked = ranking[m]
@@ -1154,6 +1500,85 @@ def summarize_carry(
     return "\n".join(lines + [f"    BŁĄD {d}" for d in details or []])
 
 
+# ------------------------------------------------------------------ poprawka 13: log i alarm
+def halt_entries(events: list[dict], members: dict, as_of: pd.Timestamp) -> list[dict]:
+    """
+    Wstrzymania do logu i wydruku (R6): seria trwa w `as_of`, a moneta jest w koszyku bieżącego
+    tygodnia — miesiąca `as_of` albo `as_of` − 7 dni (pozycje żyją do 7 dni od formowania).
+    """
+    month_starts = sorted(members)
+    relevant: set[str] = set()
+    for day in (as_of, as_of - pd.Timedelta(days=HOLD_DAYS)):
+        m = _month_of(day, month_starts)
+        if m is not None:
+            relevant |= set(members[m])
+    return [e for e in events if e["d2"] == as_of and e["symbol"] in relevant]
+
+
+def missing_basket_files(journal_dir: Path, live_dir: Path) -> list[str]:
+    """R7: członkowie koszyka z `koszyk.csv` (`czlonek_top20`) bez pliku świec w `live_dir`."""
+    from data.fetch_live import symbol_files
+
+    path = Path(journal_dir) / "koszyk.csv"
+    if not path.exists():
+        return []
+    ks = pd.read_csv(path, dtype=str)
+    members = set(ks.loc[ks["czlonek_top20"].str.strip() == "True", "symbol"])
+    return sorted(members - set(symbol_files(live_dir)))
+
+
+def _price_txt(price: float) -> str:
+    return f"{price:.8g}" if np.isfinite(price) else "brak"
+
+
+def halt_log(entries: list[dict], missing: list[str], error: str | None = None) -> str:
+    """
+    Pola `przebiegi.log` poprawki 13 — tylko przy zdarzeniu (bez niego linia jak przed poprawką):
+    „wstrzymane: SYM od RRRR-MM-DD, cena X (mark|przybliżona); …” (R6) i alarm „pliki świec BŁĄD
+    brak SYM, …” (R7 — słowo „BŁĄD” zapala kontrolę (h) strony bez zmiany parsera). Pola stoją po
+    „koszyk”, przed polami carry; bez „|” i nowej linii, nie zaczynają się od „carry ”.
+    """
+    fields = []
+    if entries:
+        fields.append(
+            "wstrzymane: "
+            + "; ".join(
+                f"{e['symbol']} od {e['d1'].date()}, cena {_price_txt(e['cena'])} ({e['zrodlo']})"
+                for e in entries
+            )
+        )
+    if missing:
+        fields.append("pliki świec BŁĄD brak " + ", ".join(missing))
+    elif error:
+        fields.append(f"pliki świec {error}")
+    return "".join(" | " + f.replace("|", "/").replace("\n", " ") for f in fields)
+
+
+def summarize_halts(entries: list[dict], missing: list[str], error: str | None = None) -> str:
+    """Linie wydruku poprawki 13 — tylko przy zdarzeniu (inaczej pusty tekst)."""
+    lines = []
+    if entries:
+        od = POPRAWKA13_OD.date() if POPRAWKA13_OD is not None else "—"
+        lines.append(
+            f"  Wstrzymania (poprawka 13, od {od}): "
+            + "; ".join(
+                f"{e['symbol']} od {e['d1'].date()} ({e['przyczyna']}), rozliczenie "
+                f"{_price_txt(e['cena'])} ({e['zrodlo']}), bez nowych pozycji co najmniej do "
+                f"{e['e'].date()}"
+                for e in entries
+            )
+        )
+    if missing:
+        lines.append(
+            "  UWAGA: BŁĄD — członkowie koszyka z koszyk.csv bez pliku świec w danych: "
+            + ", ".join(missing)
+            + " (przeliczenie historii bez nich zmienia zapisane wiersze)"
+        )
+    elif error:
+        lines.append(f"  UWAGA: kontrola plików świec (poprawka 13): {error}")
+    return "\n".join(lines)
+
+
 # ------------------------------------------------------------------ przebieg
 def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURNAL_DIR) -> str:
     started = pd.Timestamp.now(tz="UTC")
@@ -1284,6 +1709,14 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         journal_dir / "fazy.csv", rows_fz, PHASE_KEY, ["netto"], err_rf, p11_err
     )
     rb_txt, fz_txt = with_errors(rb_txt, comp_err), with_errors(fz_txt, comp_err)
+    # poprawka 13: wstrzymania (R6) i pliki członków koszyka (R7, z koszyk.csv sprzed tego przebiegu)
+    p13_entries = halt_entries(engines.get("halts", []), engines["members"], as_of)
+    p13_missing, p13_err = [], None
+    if _p13_on(as_of):
+        try:
+            p13_missing = missing_basket_files(journal_dir, live_dir)
+        except Exception as exc:  # noqa: BLE001 — kontrola plików nie zatrzymuje dziennika
+            p13_err = f"BŁĄD {type(exc).__name__}"
     try:
         d_now = truncate(data, as_of)
         rows_ks = basket_rows(
@@ -1324,7 +1757,11 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         + "\n"
         + summarize_carry(rows_ca, ca_txt, ca_flag, ca_err, ca_days)
     )
+    p13_text = summarize_halts(p13_entries, p13_missing, p13_err)
+    if p13_text:
+        summary += "\n" + p13_text
     ca_log = carry_log(ca_flag, ca_days)  # poprawka 12: tylko przy kłopocie albo zmianach
+    p13_log = halt_log(p13_entries, p13_missing, p13_err)  # poprawka 13: tylko przy zdarzeniu
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
         f"premia {last['coinbase_premia'].date()} | sygnały +{n_sig} | wyniki +{n_res} | "
@@ -1332,7 +1769,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         f"X1 sygnały +{n_sig_x1} wyniki +{n_res_x1} kapitał {eq_x1:.4f} "
         f"obsunięcie {100 * dd_x1:.1f}% {status_x1} | stan rynku {st_txt} | F&G {fg_txt} | "
         f"transakcje {tr_txt} | opisy strategii {str_txt} | rozbicie {rb_txt} | fazy {fz_txt} | "
-        f"koszyk {ks_txt}{ca_log} | historia zmieniona: {len(changed)}\n"
+        f"koszyk {ks_txt}{p13_log}{ca_log} | historia zmieniona: {len(changed)}\n"
     )
     journal_dir.mkdir(parents=True, exist_ok=True)
     with open(journal_dir / "przebiegi.log", "a", encoding="utf-8") as f:
@@ -1379,17 +1816,19 @@ def run_x1(
     """
     Pozycje i wynik X1 do `as_of` + zapis `x1_sygnaly.csv` / `x1_wyniki.csv` (append-only).
     `engines` (poprawka 11): po udanym zapisie dostaje ramki 7 faz i wiersze wyniku X1.
+    Poprawka 13: panele i dni wyłączenia z `journal_view` (rozliczenie przy wstrzymaniu, R2/R4).
     """
-    d = truncate(data, as_of)
+    v = journal_view(data, as_of)
     phases: list[pd.DataFrame] = []
     r_x1, pos_x1 = x1_component(
-        d["close"],
-        d["funding"],
-        monthly_members(d["volume"], _months(as_of)),
+        v["close"],
+        v["funding"],
+        v["members"],
         as_of,
         as_of + pd.Timedelta(days=1),
         fee,
         phases_out=phases,
+        excl=v["excl"],
     )
     pos_x1.insert(0, "as_of", as_of.date().isoformat())
     res_x1 = x1_rows(r_x1)
