@@ -1,6 +1,6 @@
 # Karta hipotezy E1 — kaskady likwidacji: powrót ceny po wymuszonej sprzedaży/kupnie (2026-10-05)
 
-> **STATUS: PRE-REJESTRACJA (zadanie 011).** Część A (§1–§12: definicja, target, koszty, kryterium, licznik, data
+> **STATUS: KARTA ZAPISANA; RACHUNEK MIERZALNOŚCI: NIEMIERZALNA (2026-10-05, §13) — odczyt nie startuje.** Pre-rejestracja (zadanie 011). Część A (§1–§12: definicja, target, koszty, kryterium, licznik, data
 > odczytu) zapisana i zacommitowana **PRZED policzeniem jakiegokolwiek zdarzenia** na danych LK0/LB0 i bez żadnej
 > ceny po likwidacji. Dowód kolejności: commit, w którym ten plik i `backtest/e1_kaskady.py` pojawiły się po raz
 > pierwszy (`git log --diff-filter=A --format=%H -- runs/DRAFT_E1.md`). Część B (§13: realna częstość i rachunek
@@ -144,4 +144,18 @@ koszt 0,5 % i odczyt dopiero po kontroli mocy.
 
 ## 13. Wynik rachunku mierzalności (część B — dopisana po commicie części A)
 
-_(uzupełniane w następnym commicie)_
+Część A (§1–§12) zacommitowana w `580092c` (gałąź `zadanie-011-e1-karta-z-czestosci`, wypchnięta przed zliczeniem).
+Wydruk: `runs/2026-10-05_e1k-karta-kaskad/raw_output.txt`; druga droga: `raw_output_druga_droga.txt` (zgodna).
+
+- **Częstość (Bybit, 7,133 dnia, 2026-09-27 20:48 → 10-05 00:00 UTC, bez cen):** **0 kaskad** (95 % Poisson 0–3,7),
+  czyli ≤ 189 dni z kaskadą rocznie (górna granica). Najbliżej progu: SUI long 0,53 progu. Binance (próbka, 9,4 dnia):
+  9 kaskad w 5 dniach (193 dni / rok [63; 451]). Próg od obrotu Binance czyni definicję na Bybit ~3× rzadszą
+  (ograniczenie projektu karty, bez zmiany — §11).
+- **Scenariusz rozstrzygający (μ 0,75 %, σ 5 %, C 0,5 %):** potrzeba 1 537 dni z kaskadą (moc 50 %) / 3 140 (80 %).
+  Po 3 latach: przy 189 / rok n 566, `wald_half_width` 4,12 pp, MDE netto 0,41 % wobec 0,25 % → **NIEMIERZALNA**;
+  przy 365 / rok (sufit) n 1 095, MDE netto 0,30 % → **NIEMIERZALNA**. Mierzalna dopiero po 4,2 roku (50 %) /
+  8,6 roku (80 %), i to przy kaskadzie każdego dnia. Przy 189 / rok: 8,1 / 16,6 roku.
+- **Granica dużego n:** próg uogólniony przepuszcza ⇔ μ > C; uproszczony wymagałby μ > 1,577 × C (karze cel).
+- **Werdykt: NIEMIERZALNA w horyzoncie ≤ 3 lat → odczyt nie startuje.** Licznik E1 0/1 (wariant niezużyty).
+  Kontrola mocy z liczników 2026-12-27 (§10).
+

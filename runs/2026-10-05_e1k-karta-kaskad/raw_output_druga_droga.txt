@@ -1,0 +1,14 @@
+bybit: kaskad 0, dni 0
+binance: kaskad 9, dni 5
+  2026-09-26 20:42 SUIUSDT long
+  2026-09-28 03:33 1000PEPEUSDT long
+  2026-09-28 03:33 SUIUSDT long
+  2026-09-29 01:19 ZECUSDT long
+  2026-10-02 18:39 LINKUSDT long
+  2026-10-02 18:40 DOGEUSDT long
+  2026-10-02 18:40 1000PEPEUSDT long
+  2026-10-02 19:16 ARBUSDT long
+  2026-10-04 16:37 PUMPUSDT short
+moc 50 %: n = 1,537 dni z kaskadą; przy 365/rok 4.2 l.
+moc 80 %: n = 3,140 dni z kaskadą; przy 365/rok 8.6 l.
+π/2 = 1.571

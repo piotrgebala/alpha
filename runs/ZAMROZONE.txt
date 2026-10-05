@@ -104,3 +104,6 @@ backtest/run_ml1_wolny_horyzont.py            # ML1 (zadanie 028)
 runs/2026-09-30_ml1-wolny-horyzont/druga_droga.py  # ML1 — bramka 16a
 data/measure_hl_weights.py   # LH0 krok 1A (zadanie 004)
 runs/2026-09-29_lh0-kolektor-hyperliquid/druga_droga_krok1.py   # LH0 krok 1A — bramka 16a
+backtest/e1_kaskady.py                       # E1K (zadanie 011) — wykonywalna definicja kaskady z karty E1
+backtest/run_e1k_czestosc.py                 # E1K (zadanie 011)
+runs/2026-10-05_e1k-karta-kaskad/druga_droga.py   # E1K — bramka 16a
