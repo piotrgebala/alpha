@@ -53,7 +53,6 @@ def _clean_ohlcv(df: pd.DataFrame, end: str) -> pd.DataFrame:
     return df
 
 
-
 # Interwały docelowe wspierane przez `resample_ohlcv` (Commit 2.6) — mapowanie na alias
 # `pandas.DataFrame.resample`. Celowo mały, zamknięty zbiór (nie ogólny parser interwałów) —
 # to narzędzie dla JEDNEGO, z góry określonego eksperymentu (walidacja hipotezy na 1h/4h),
@@ -172,7 +171,9 @@ def _fetch_page_with_retry(
         except ccxt.NetworkError as e:
             last_error = e
             wait = backoff_s * (2**attempt)
-            print(f"[fetch] błąd sieci (próba {attempt + 1}/{max_retries}): {e!r} — czekam {wait:.0f}s")
+            print(
+                f"[fetch] błąd sieci (próba {attempt + 1}/{max_retries}): {e!r} — czekam {wait:.0f}s"
+            )
             time.sleep(wait)
     assert last_error is not None
     raise last_error
