@@ -2,7 +2,7 @@
 id: 026
 tytul: Przegląd badań po publikacji — premia Coinbase (szczebel 1a drabiny) i wielkość efektu kaskad likwidacji (E1), 0 odczytów
 typ: przeglad
-status: nowe
+status: do_przegladu
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „sprawdź co się kryje w nierozstrzygniętych hipotezach i czy możemy którąś z nich sprawdzić; jak tak, to dodaj nowe zadanie”"
 utworzono: 2026-09-29
@@ -58,3 +58,21 @@ To praca biurkowa: 0 odczytów historii, licznik DSR bez zmian.
 ## Wynik
 
 (dopisuje orkiestrator)
+
+**Wykonawca, 2026-10-05 (gałąź `zadanie-026-przeglad-literatury-cp1-e1`):** raport
+[`docs/przeglad_literatury_cp1_e1.md`](../docs/przeglad_literatury_cp1_e1.md); 0 odczytów, licznik E1 = 0.
+- **CP1, szczebel 1(a): SŁABE (bez zmian).** Dla samego sygnału (premia Coinbase → BTC na tydzień) BRAK ŹRÓDŁA.
+  Mechanizm pokrewny jest umiarkowany: napływy do ETF-ów → BTC (FalconX 2024: Granger p 0,004, szczyt +1,2 % po
+  3–4 dniach; Mazur–Polyzos, JAI 2025) i premia GBTC → dzienny zwrot BTC (Huang i in., SSRN 2021: 40 pb dziennie;
+  replikacja po publikacji SR −0,02). Przeciw: odkrywanie ceny na Binance (Cosenza–Stalder 2024), premie poruszają
+  się razem ze wzrostami BTC (Makarov–Schoar, JFE 2020), BTC przewiduje premię USDT (Vo 2026).
+- **1(b), tylko na papierze:** fundusze krajowe zamknięte w USA (36 lat, koszyk 20 funduszy → wykrywalny SR
+  0,19–0,24 przy mocy 50 %). Dane płatne. Literatura raczej przeczy kierunkowi CP1.
+- **E1 do karty 011:** 0,75 % brutto na epizod w 24 h (zakres 0–1,3 %; interpretacja, nie pomiar).
+  Górna granica pochodzi z Miralles-Quirós (JAE 2022): +3,1 % po 24 h po spadku ≥ 5 % w godzinę (Kraken
+  2016–2021), skorygowana × 0,42 (McLean–Pontiff, JF 2016). Dolna granica: momentum dzienne (Caporale–Plastun, FMPM
+  2020). Środek leży poniżej progu wykrywalności po roku (0,9–1,3 %).
+- **Dowody:** każdy link otwarty; przy kodzie 403 tytuł i autorzy potwierdzeni drugą stroną (kolumna
+  „sprawdzenie”). Liczby z PDF-ów NBER/EIEF to cytaty z tekstu. Przeliczenia drugą drogą: 7,74/10,1 = 0,77;
+  3,132 × 0,42 = 1,32. Bramka 16a: Caveats (liczby Miralles-Quirós tylko z indeksu wyszukiwarki; Lim
+  niezweryfikowany).

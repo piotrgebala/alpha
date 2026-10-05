@@ -17,6 +17,7 @@
 | [`mapa_projektu.html`](mapa_projektu.html) | Źródło zakładki „Mapa” strony „Pulpit CLAS-5” (https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#mapa; składa `tools/pulpit_clas5.py`): przepływ od pomysłu do kapitału, automaty dnia, mapa myśli i stan wiedzy — widok; przy sprzeczności wygrywają pliki źródłowe |
 | [`strona_dziennik.html`](strona_dziennik.html) | Źródło zakładki „Dziennik” strony „Pulpit CLAS-5” (https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#dziennik): stan dziennika papierowego z dokumentu bazy `dziennik/stan` (rutyna Cowork, 06:30 UTC); odtworzone 2026-09-28 z opublikowanej strony |
 | [`mapa_hipotez_2026-10.md`](mapa_hipotez_2026-10.md) | Mapa hipotez (zadanie 007, 2026-09-29, 0 odczytów): 10 rodzin (B3, B4, C1, D3, G1, Y2, PT1, E1, Hyperliquid ×2) z pięcioma polami, filtrem (a)–(f), rachunkiem mocy liczonym dwiema drogami (skrypt `mapa_hipotez_2026-10_moc.py`, wydruk `.txt`) i werdyktem: 6 NIEMIERZALNYCH, 4 BRAK DANYCH; kolejność E1 → HL → PT1 |
+| [`przeglad_literatury_cp1_e1.md`](przeglad_literatury_cp1_e1.md) | Przegląd badań (zadanie 026, 2026-10-05, 0 odczytów): premia Coinbase — dla samego sygnału BRAK ŹRÓDŁA, mechanizm pokrewny umiarkowany, szczebel 1(a) słaby; E1 — zakładany efekt 0,75 % brutto na epizod w 24 h (zakres 0–1,3 %) do karty 011; propozycja 1(b) na funduszach krajowych zamkniętych |
 
 ## `docs/rag/` — pełne uzasadnienia decyzji
 
