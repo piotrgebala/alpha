@@ -1,5 +1,7 @@
 # Karta hipotezy E1 — kaskady likwidacji: powrót ceny po wymuszonej sprzedaży/kupnie (2026-10-05)
 
+> **ZAMKNIĘTA decyzją użytkownika 2026-10-05** („Zamknąć E1 teraz”): 0 odczytów, kontrola mocy 2026-12-27 odwołana.
+>
 > **STATUS: KARTA ZAPISANA; RACHUNEK MIERZALNOŚCI: NIEMIERZALNA (2026-10-05, §13) — odczyt nie startuje.** Pre-rejestracja (zadanie 011). Część A (§1–§12: definicja, target, koszty, kryterium, licznik, data
 > odczytu) zapisana i zacommitowana **PRZED policzeniem jakiegokolwiek zdarzenia** na danych LK0/LB0 i bez żadnej
 > ceny po likwidacji. Dowód kolejności: commit, w którym ten plik i `backtest/e1_kaskady.py` pojawiły się po raz

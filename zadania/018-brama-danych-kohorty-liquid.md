@@ -2,9 +2,9 @@
 id: 018
 tytul: Brama danych — rozkład pozycji Hyperliquid według wielkości z Liquid (kohorty, „blisko likwidacji”), 0 odczytów
 typ: konto
-status: nowe
+status: odrzucone
 zlecil: uzytkownik
-decyzja_uzytkownika: "2026-10-05: „Zbierać” (codzienna migawka kohort, tylko zapis, bez odczytu)"
+decyzja_uzytkownika: "2026-10-05: „Zbierać” (codzienna migawka kohort, tylko zapis, bez odczytu); 2026-10-05 (wieczór): „Zamknąć 018” (razem z „Zamknąć E1 teraz”)"
 utworzono: 2026-09-29
 zalezy_od: []
 budzet: "Opus, główna sesja (nie w roju)"
@@ -71,3 +71,7 @@ klasyfikuje każdą pracę z Liquid (`zadania/README.md`).
 
 - **2026-09-30, decyzja użytkownika: „18 czekamy na 004”.** Wraca po wyniku pomiaru 004 (koniec 2026-09-30 ~10:33 UTC).
 - **2026-10-05:** decyzja użytkownika „Zbierać”; 004 zamknięte STOP (wniosek 115) — Hyperliquid bez kolektora likwidacji, ta brama zbiera tylko migawki kohort. Wykonanie: wykonawca, `security-review` (nowe połączenie).
+- **2026-10-05 (wieczór), decyzja użytkownika: „Zamknąć 018”** (razem z „Zamknąć E1 teraz”; pytanie orkiestratora:
+  sprawdzić API / rutyna w chmurze / zamknąć). Powód: brama zbierała dane pod E1, które zamknięto; repo nie zna API
+  Liquid poza MCP, a łączniki claude.ai są w projekcie wyłączone (`.claude/settings.json`: `disableClaudeAiConnectors`),
+  więc reguła karty „Brak API = STOP” i tak zatrzymałaby pracę. 0 wywołań Liquid, 0 odczytów. Status → `odrzucone`.

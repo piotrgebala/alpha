@@ -55,3 +55,6 @@ Zgoda na zapisanie karty teraz (odczyt dopiero za rok)?
   `tests/test_e1_kaskady.py`, `tests/test_run_e1k_czestosc.py`; wiersz INDEX, wniosek 116, `runs/odczyty_historii.csv` nr 62.
 - Co zostało: decyzja użytkownika — zbierać i kontrola mocy z liczników 2026-12-27 (rekomendacja) albo zamknąć E1 teraz.
 - **2026-10-05, scalenie (orkiestrator):** przegląd 16c „Approve z uwagami” (README rundy), druga droga n50 ≈ 1 537 / n80 ≈ 3 140 zgodna, konflikt STATUS.md rozwiązany (obie linie). Status → `zrobione`. Do decyzji użytkownika: zbierać i powtórzyć rachunek 2026-12-27 albo zamknąć E1.
+- **2026-10-05, decyzja użytkownika: „Zamknąć E1 teraz”.** E1 zamknięte bez odczytu (licznik E1 0/1 zamknięty), kontrola mocy
+  2026-12-27 odwołana; dopiski w `runs/INDEX.md` (wiersz E1K, wniosek 116) i `runs/DRAFT_E1.md`. Kolektory LK0/LB0
+  działają dalej (zatrzymanie = osobna decyzja). Zadanie 018 zamknięte tą samą decyzją.
