@@ -2,7 +2,7 @@
 id: 026
 tytul: Przegląd badań po publikacji — premia Coinbase (szczebel 1a drabiny) i wielkość efektu kaskad likwidacji (E1), 0 odczytów
 typ: przeglad
-status: do_przegladu
+status: zrobione
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „sprawdź co się kryje w nierozstrzygniętych hipotezach i czy możemy którąś z nich sprawdzić; jak tak, to dodaj nowe zadanie”"
 utworzono: 2026-09-29
@@ -76,3 +76,4 @@ To praca biurkowa: 0 odczytów historii, licznik DSR bez zmian.
   „sprawdzenie”). Liczby z PDF-ów NBER/EIEF to cytaty z tekstu. Przeliczenia drugą drogą: 7,74/10,1 = 0,77;
   3,132 × 0,42 = 1,32. Bramka 16a: Caveats (liczby Miralles-Quirós tylko z indeksu wyszukiwarki; Lim
   niezweryfikowany).
+- **2026-10-05, scalenie (orkiestrator):** merge do master po przeglądzie diffu (same dokumenty, bez konfliktów); druga droga: McLean i Pontiff 2016 −58 % po publikacji — zgodne. Status → `zrobione`. Do karty 011: liczby Miralles-Quirós sprawdzić w pełnym tekście przed użyciem.
