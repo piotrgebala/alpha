@@ -1,0 +1,270 @@
+# runs/DRAFT_028_moc.txt — zadanie 028 (ML1), krok 0: rachunek mierzalności. Papier: 0 odczytów zwrotu, 0 danych rynkowych.
+# Data: 2026-09-30T17:51:12Z   git rev-parse HEAD: fff7ce2cc96e3087073b974d825093860f26612f   gałąź: claude/happy-dijkstra-hd1dv6
+# Python: Python 3.11.15
+
+## Komenda 1: python3 -m backtest.dsr --k 1
+Rejestr odczytów historii: 60 wierszy (rund); odczyty programu (wiersze liczone do N): 34
+  N metodą AU4 (Σ wariantów):                               40
+  N z 12 odczytami 0-wariantowymi (Σ max(wariantów, 1)):     52
+  Która liczba obowiązuje, zapisuje się w STATUS.md (skrypt jej nie wybiera).
+Planowana runda: k = 1 (liczba wariantów), zużyte próby max(k, 1) = 1; progi dla N + 1 = 41 (metodą AU4) i 53 (z odczytami 0-wariantowymi).
+     N | E[max t] | t dla DSR 0,80 | t dla DSR 0,95 | min. SR roczny na 5.5 roku (0,80 / 0,95)
+    41 |     2.20 |           3.04 |           3.84 | 1.30 / 1.64
+    53 |     2.30 |           3.14 |           3.94 | 1.34 / 1.68
+
+## Komenda 2: PYTHONPATH=. python3 moc_028.py   (skrypt pomocniczy — pełny kod na końcu tego pliku; woła tylko backtest/metrics.py)
+====================================================================================================
+ML1 / zadanie 028 — krok 0: rachunek mierzalności (zasada 18). 0 odczytów zwrotu, 0 danych rynkowych.
+====================================================================================================
+
+1. Próg opłacalności p* = break_even_hit_rate(C, B), B = ATR_MULTIPLIER × ATR 1d
+   labeling.ATR_MULTIPLIER = 1.5; C = 0.08 %
+   ATR 1d 2,5 %           → B = 3.75 % → p* = 51.067 %
+   ATR 1d 3,0 % (środek)  → B = 4.50 % → p* = 50.889 %
+   ATR 1d 3,5 %           → B = 5.25 % → p* = 50.762 %
+
+2. Założenie: przeskalowanie śladu SW (4h, V = 3 świece = 12 h) na V = 7 dni (JAWNE ZAŁOŻENIE)
+   Ślad SW przed kosztami: +0,02 … +0,05 %/tr. Trafność równoważna: p = 0,5 + brutto / (2B).
+   pierwiastek czasu (IC stałe; realistyczne)   × 3.74: brutto +0.075 … +0.187 %/tr → p ≈ 50.83 … 52.08 %
+   liniowo (górna granica)                      ×14.00: brutto +0.280 … +0.700 %/tr → p ≈ 53.11 … 57.78 %
+   Zakładane trafności rachunku: 52 / 53 / 55 % (hojne wobec realistycznych ~50,8–52,1 %).
+   p = 52 % → margines (2p−1)·B − C = +0.100 %/tr (jednostki zwrotu)
+   p = 53 % → margines (2p−1)·B − C = +0.190 %/tr (jednostki zwrotu)
+   p = 55 % → margines (2p−1)·B − C = +0.370 %/tr (jednostki zwrotu)
+
+3. TOR H (historia; próg t 3,84) — dwie wersje
+   H-A: opcja A, test 2026-01-01 → 2026-09-29 = 272 dni (decyzją użytkownika = ROZBIEG bez werdyktu)
+   H-WF: walk-forward 365 dni po całej historii, OOS 2022-01-01 → 2026-09-29 = 1733 dni (zakres pierwotny, zastąpiony opcją A)
+   okres formuła                                   abst nakł       n  ±z=1,96  ±z=3,84 p_min(3,84)   p 52/53/55 przy 3,84  mr(1,96) p53
+   H-A   (a) BTC                                  0.000   1×     272    5.94pp   11.64pp      62.53%                  N/N/N  NIEMIERZALNA
+   H-A   (a) BTC                                  0.000   2×     136    8.40pp   16.46pp      67.35%                  N/N/N  NIEMIERZALNA
+   H-A   (a) BTC                                  0.000   4×      68   11.88pp   23.28pp      74.17%                  N/N/N  NIEMIERZALNA
+   H-A   (a) BTC                                  0.378   1×     169    7.53pp   14.76pp      65.65%                  N/N/N  NIEMIERZALNA
+   H-A   (a) BTC                                  0.378   2×      85   10.65pp   20.88pp      71.76%                  N/N/N  NIEMIERZALNA
+   H-A   (a) BTC                                  0.378   4×      42   15.07pp   29.52pp      80.41%                  N/N/N  NIEMIERZALNA
+   H-A   (a) BTC                                  0.500   1×     136    8.40pp   16.46pp      67.35%                  N/N/N  NIEMIERZALNA
+   H-A   (a) BTC                                  0.500   2×      68   11.88pp   23.28pp      74.17%                  N/N/N  NIEMIERZALNA
+   H-A   (a) BTC                                  0.500   4×      34   16.81pp   32.93pp      83.82%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.000   1×     816    3.43pp    6.72pp      57.61%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.000   2×     408    4.85pp    9.51pp      60.39%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.000   4×     204    6.86pp   13.44pp      64.33%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.378   1×     508    4.35pp    8.52pp      59.41%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.378   2×     254    6.15pp   12.05pp      62.94%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.378   4×     127    8.70pp   17.04pp      67.93%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.500   1×     408    4.85pp    9.51pp      60.39%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.500   2×     204    6.86pp   13.44pp      64.33%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel ~3 niezależne (wniosek 40)     0.500   4×     102    9.70pp   19.01pp      69.90%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.000   1×    5440    1.33pp    2.60pp      53.49%                  N/N/M     MIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.000   2×    2720    1.88pp    3.68pp      54.57%                  N/N/M     MIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.000   4×    1360    2.66pp    5.21pp      56.10%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.378   1×    3384    1.68pp    3.30pp      54.19%                  N/N/M     MIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.378   2×    1692    2.38pp    4.67pp      55.56%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.378   4×     846    3.37pp    6.60pp      57.49%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.500   1×    2720    1.88pp    3.68pp      54.57%                  N/N/M     MIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.500   2×    1360    2.66pp    5.21pp      56.10%                  N/N/N  NIEMIERZALNA
+   H-A   (b) panel 20 niezależnych — ZAWYŻONE     0.500   4×     680    3.76pp    7.36pp      58.25%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.000   1×    1733    2.35pp    4.61pp      55.50%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.000   2×     866    3.33pp    6.52pp      57.41%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.000   4×     433    4.71pp    9.23pp      60.12%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.378   1×    1078    2.98pp    5.85pp      56.74%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.378   2×     539    4.22pp    8.27pp      59.16%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.378   4×     269    5.97pp   11.70pp      62.59%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.500   1×     866    3.33pp    6.52pp      57.41%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.500   2×     433    4.71pp    9.23pp      60.12%                  N/N/N  NIEMIERZALNA
+   H-WF  (a) BTC                                  0.500   4×     216    6.66pp   13.05pp      63.94%                  N/N/N  NIEMIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.000   1×    5199    1.36pp    2.66pp      53.55%                  N/N/M     MIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.000   2×    2599    1.92pp    3.77pp      54.66%                  N/N/M     MIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.000   4×    1299    2.72pp    5.33pp      56.22%                  N/N/N  NIEMIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.378   1×    3234    1.72pp    3.38pp      54.27%                  N/N/M     MIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.378   2×    1617    2.44pp    4.78pp      55.66%                  N/N/N  NIEMIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.378   4×     808    3.45pp    6.75pp      57.64%                  N/N/N  NIEMIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.500   1×    2600    1.92pp    3.77pp      54.65%                  N/N/M     MIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.500   2×    1300    2.72pp    5.33pp      56.22%                  N/N/N  NIEMIERZALNA
+   H-WF  (b) panel ~3 niezależne (wniosek 40)     0.500   4×     650    3.85pp    7.53pp      58.42%                  N/N/N  NIEMIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.000   1×   34660    0.53pp    1.03pp      51.92%                  M/M/M     MIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.000   2×   17330    0.74pp    1.46pp      52.35%                  N/M/M     MIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.000   4×    8665    1.05pp    2.06pp      52.95%                  N/M/M     MIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.378   1×   21559    0.67pp    1.31pp      52.20%                  N/M/M     MIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.378   2×   10779    0.94pp    1.85pp      52.74%                  N/M/M     MIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.378   4×    5390    1.33pp    2.62pp      53.50%                  N/N/M     MIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.500   1×   17330    0.74pp    1.46pp      52.35%                  N/M/M     MIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.500   2×    8665    1.05pp    2.06pp      52.95%                  N/M/M     MIERZALNA
+   H-WF  (b) panel 20 niezależnych — ZAWYŻONE     0.500   4×    4332    1.49pp    2.92pp      53.81%                  N/N/M     MIERZALNA
+   (M = MIERZALNA przy progu t 3,84, N = NIEMIERZALNA; mr = measurability_report przy z 1,96, tylko porównawczo)
+
+4. TOR P (prospektywny od dnia zamrożenia; próg t 1,96): po ilu miesiącach MIERZALNA
+   Kryterium: measurability_report(p, p*, n)['verdict'] == 'MIERZALNA', n = expected_trades(dni × monety / nakładanie, abst)
+   p* = 50.889 %; horyzont przeszukania 600 miesięcy (50 lat)
+   formuła                                   abst nakł | p 52 %: mies. (n) | p 53 %: mies. (n) | p 55 %: mies. (n)
+   (a) BTC                                  0.000   1× |        256 ( 7792) |         71 ( 2161) |         19 (  578)
+   (a) BTC                                  0.000   2× |        512 ( 7792) |        142 ( 2161) |         38 (  578)
+   (a) BTC                                  0.000   4× |        > 600 mies. |        284 ( 2161) |         75 (  570)
+   (a) BTC                                  0.378   1× |        411 ( 7781) |        114 ( 2158) |         31 (  587)
+   (a) BTC                                  0.378   2× |        > 600 mies. |        228 ( 2158) |         61 (  577)
+   (a) BTC                                  0.378   4× |        > 600 mies. |        456 ( 2158) |        121 (  572)
+   (a) BTC                                  0.500   1× |        512 ( 7792) |        142 ( 2161) |         38 (  578)
+   (a) BTC                                  0.500   2× |        > 600 mies. |        284 ( 2161) |         75 (  570)
+   (a) BTC                                  0.500   4× |        > 600 mies. |        567 ( 2157) |        150 (  570)
+   (b) panel ~3 niezależne (wniosek 40)     0.000   1× |         86 ( 7852) |         24 ( 2191) |          7 (  639)
+   (b) panel ~3 niezależne (wniosek 40)     0.000   2× |        171 ( 7807) |         48 ( 2191) |         13 (  593)
+   (b) panel ~3 niezależne (wniosek 40)     0.000   4× |        341 ( 7784) |         95 ( 2168) |         25 (  570)
+   (b) panel ~3 niezależne (wniosek 40)     0.378   1× |        137 ( 7781) |         38 ( 2158) |         11 (  624)
+   (b) panel ~3 niezależne (wniosek 40)     0.378   2× |        274 ( 7781) |         76 ( 2158) |         21 (  596)
+   (b) panel ~3 niezależne (wniosek 40)     0.378   4× |        548 ( 7781) |        152 ( 2158) |         41 (  582)
+   (b) panel ~3 niezależne (wniosek 40)     0.500   1× |        171 ( 7807) |         48 ( 2192) |         13 (  594)
+   (b) panel ~3 niezależne (wniosek 40)     0.500   2× |        341 ( 7784) |         95 ( 2168) |         25 (  570)
+   (b) panel ~3 niezależne (wniosek 40)     0.500   4× |        > 600 mies. |        189 ( 2157) |         50 (  570)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.000   1× |         13 ( 7913) |          4 ( 2435) |          1 (  608)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.000   2× |         26 ( 7913) |          8 ( 2435) |          2 (  608)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.000   4× |         52 ( 7913) |         15 ( 2282) |          4 (  608)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.378   1× |         21 ( 7951) |          6 ( 2272) |          2 (  757)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.378   2× |         42 ( 7951) |         12 ( 2272) |          4 (  757)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.378   4× |         83 ( 7856) |         23 ( 2177) |          7 (  662)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.500   1× |         26 ( 7914) |          8 ( 2435) |          2 (  608)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.500   2× |         52 ( 7914) |         15 ( 2282) |          4 (  608)
+   (b) panel 20 niezależnych — ZAWYŻONE     0.500   4× |        103 ( 7838) |         29 ( 2206) |          8 (  608)
+
+5. Druga droga kluczowej liczby: wald_half_width(n) vs ręcznie 1,96·sqrt(p(1−p)/n) przy p = 0,5
+   n =   136: wald_half_width = 8.4033 pp; ręcznie = 8.4034 pp; różnica -1.54e-04 pp
+   n =   272: wald_half_width = 5.9420 pp; ręcznie = 5.9421 pp; różnica -1.09e-04 pp
+   n =   408: wald_half_width = 4.8516 pp; ręcznie = 4.8517 pp; różnica -8.91e-05 pp
+   n =  2720: wald_half_width = 1.8790 pp; ręcznie = 1.8791 pp; różnica -3.45e-05 pp
+   n =  1733: wald_half_width = 2.3541 pp; ręcznie = 2.3541 pp; różnica -4.32e-05 pp
+   n =   443: wald_half_width = 4.6560 pp; ręcznie = 4.6561 pp; różnica -8.55e-05 pp
+   ręcznie n_min(p 52 %, z 1,96) = (0,98 / (p − p*))² = 7,779 tr → BTC bez abstynencji, bez nakładania: 255.6 mies.; przy nakładaniu 2×: 511.2; 4×: 1022.3
+   ręcznie n_min(p 53 %, z 1,96) = (0,98 / (p − p*))² = 2,155 tr → BTC bez abstynencji, bez nakładania: 70.8 mies.; przy nakładaniu 2×: 141.6; 4×: 283.2
+   ręcznie n_min(p 55 %, z 1,96) = (0,98 / (p − p*))² = 568 tr → BTC bez abstynencji, bez nakładania: 18.7 mies.; przy nakładaniu 2×: 37.3; 4×: 74.7
+
+6. Porównanie z tabelą zadania 028 (moc_028 z sesji 2026-09-30 — plik moc_028.txt nie istnieje w repo; liczby z treści zadania)
+   BTC, abstynencja 50 %    n   136: ±8.40 pp (zadanie ±8.4), p_min 59.29 % (zadanie 59.3 %), werdykt przy p 53 %: NIEMIERZALNA
+   BTC, bez abstynencji     n   272: ±5.94 pp (zadanie ±5.9), p_min 56.83 % (zadanie 56.8 %), werdykt przy p 53 %: NIEMIERZALNA
+   panel ~3 niezależne      n   408: ±4.85 pp (zadanie ±4.9), p_min 55.74 % (zadanie 55.7 %), werdykt przy p 53 %: NIEMIERZALNA
+   panel 20 niezależnych    n  2720: ±1.88 pp (zadanie ±1.9), p_min 52.77 % (zadanie 52.8 %), werdykt przy p 53 %: MIERZALNA
+
+## Kod skryptu moc_028.py (dosłownie; do odtworzenia: zapisać jako plik i uruchomić z katalogu repo)
+```python
+"""Rachunek mierzalności ML1 (zadanie 028, krok 0) — papier, 0 odczytów zwrotu, 0 danych rynkowych.
+
+Woła WYŁĄCZNIE funkcje projektu z backtest/metrics.py (zasada 18); niczego nie przepisuje.
+"""
+
+from __future__ import annotations
+
+import math
+
+import pandas as pd
+
+from agents.labeling import ATR_MULTIPLIER
+from backtest.metrics import (
+    break_even_hit_rate,
+    expected_trades,
+    measurability_report,
+    min_detectable_hit_rate,
+    wald_half_width,
+)
+
+COST = 0.0008  # koszt round-trip 0,08 % (SW: 0,080–0,085 %)
+ATR_1D = {"2,5 %": 0.025, "3,0 % (środek)": 0.030, "3,5 %": 0.035}
+Z_P = 1.96  # tor P: nowe dane, własny licznik (mapa 007 §1)
+Z_H = 3.84  # tor H: próg t dla 41. odczytu historii (python3 -m backtest.dsr --k 1, metoda AU4)
+P_ASSUMED = [0.52, 0.53, 0.55]
+ABSTENTION = [0.0, 0.378, 0.5]  # 0,378 = abstynencja modelu SW etap 2 (4h); 0 i 0,5 = widełki
+OVERLAP = [1, 2, 4]  # V = 7 dni: niezależnych transakcji 1× / 2× / 4× mniej niż decyzji
+FORMULAS = {"(a) BTC": 1, "(b) panel ~3 niezależne (wniosek 40)": 3, "(b) panel 20 niezależnych — ZAWYŻONE": 20}
+MONTH_DAYS = 365.25 / 12
+
+print("=" * 100)
+print("ML1 / zadanie 028 — krok 0: rachunek mierzalności (zasada 18). 0 odczytów zwrotu, 0 danych rynkowych.")
+print("=" * 100)
+
+print("\n1. Próg opłacalności p* = break_even_hit_rate(C, B), B = ATR_MULTIPLIER × ATR 1d")
+print(f"   labeling.ATR_MULTIPLIER = {ATR_MULTIPLIER}; C = {100 * COST:.2f} %")
+pstar = {}
+for k, atr in ATR_1D.items():
+    b = ATR_MULTIPLIER * atr
+    pstar[k] = break_even_hit_rate(COST, b)
+    print(f"   ATR 1d {k:<15} → B = {100 * b:.2f} % → p* = {100 * pstar[k]:.3f} %")
+PSTAR = pstar["3,0 % (środek)"]
+B = ATR_MULTIPLIER * ATR_1D["3,0 % (środek)"]
+
+print("\n2. Założenie: przeskalowanie śladu SW (4h, V = 3 świece = 12 h) na V = 7 dni (JAWNE ZAŁOŻENIE)")
+print("   Ślad SW przed kosztami: +0,02 … +0,05 %/tr. Trafność równoważna: p = 0,5 + brutto / (2B).")
+ratio = 7 * 24 / 12
+for label, scale in (("pierwiastek czasu (IC stałe; realistyczne)", math.sqrt(ratio)), ("liniowo (górna granica)", ratio)):
+    lo, hi = 0.0002 * scale, 0.0005 * scale
+    print(
+        f"   {label:<44} ×{scale:5.2f}: brutto +{100 * lo:.3f} … +{100 * hi:.3f} %/tr "
+        f"→ p ≈ {100 * (0.5 + lo / (2 * B)):.2f} … {100 * (0.5 + hi / (2 * B)):.2f} %"
+    )
+print("   Zakładane trafności rachunku: 52 / 53 / 55 % (hojne wobec realistycznych ~50,8–52,1 %).")
+for p in P_ASSUMED:
+    print(f"   p = {100 * p:.0f} % → margines (2p−1)·B − C = {100 * ((2 * p - 1) * B - COST):+.3f} %/tr (jednostki zwrotu)")
+
+print("\n3. TOR H (historia; próg t 3,84) — dwie wersje")
+d_a = (pd.Timestamp("2026-09-29") - pd.Timestamp("2026-01-01")).days + 1
+d_wf = (pd.Timestamp("2026-09-29") - pd.Timestamp("2022-01-01")).days + 1
+print(f"   H-A: opcja A, test 2026-01-01 → 2026-09-29 = {d_a} dni (decyzją użytkownika = ROZBIEG bez werdyktu)")
+print(f"   H-WF: walk-forward 365 dni po całej historii, OOS 2022-01-01 → 2026-09-29 = {d_wf} dni (zakres pierwotny, zastąpiony opcją A)")
+hdr = f"   {'okres':<5} {'formuła':<40} {'abst':>5} {'nakł':>4} {'n':>7} {'±z=1,96':>8} {'±z=3,84':>8} {'p_min(3,84)':>11} {'p 52/53/55 przy 3,84':>22} {'mr(1,96) p53':>13}"
+print(hdr)
+for per, days in (("H-A", d_a), ("H-WF", d_wf)):
+    for fl, coins in FORMULAS.items():
+        for ab in ABSTENTION:
+            for ov in OVERLAP:
+                n = expected_trades(int(days * coins / ov), ab, 1.0)
+                pmin = min_detectable_hit_rate(PSTAR, n, Z_H)
+                flags = "/".join("M" if p > pmin else "N" for p in P_ASSUMED)
+                mr = measurability_report(0.53, PSTAR, n)["verdict"]
+                print(
+                    f"   {per:<5} {fl:<40} {ab:5.3f} {ov:>3}× {n:7.0f} {100 * wald_half_width(n):7.2f}pp "
+                    f"{100 * wald_half_width(n, Z_H):7.2f}pp {100 * pmin:10.2f}% {flags:>22} {mr:>13}"
+                )
+print("   (M = MIERZALNA przy progu t 3,84, N = NIEMIERZALNA; mr = measurability_report przy z 1,96, tylko porównawczo)")
+
+print("\n4. TOR P (prospektywny od dnia zamrożenia; próg t 1,96): po ilu miesiącach MIERZALNA")
+print("   Kryterium: measurability_report(p, p*, n)['verdict'] == 'MIERZALNA', n = expected_trades(dni × monety / nakładanie, abst)")
+print(f"   p* = {100 * PSTAR:.3f} %; horyzont przeszukania 600 miesięcy (50 lat)")
+print(f"   {'formuła':<40} {'abst':>5} {'nakł':>4} | " + " | ".join(f"p {100 * p:.0f} %: mies. (n)" for p in P_ASSUMED))
+first_btc = {}
+for fl, coins in FORMULAS.items():
+    for ab in ABSTENTION:
+        for ov in OVERLAP:
+            cells = []
+            for p in P_ASSUMED:
+                hit = None
+                for m in range(1, 601):
+                    n = expected_trades(int(m * MONTH_DAYS * coins / ov), ab, 1.0)
+                    if measurability_report(p, PSTAR, n)["verdict"] == "MIERZALNA":
+                        hit = (m, n)
+                        break
+                cells.append(f"{hit[0]:>4} ({hit[1]:>5.0f})" if hit else "  > 600 mies.")
+                if coins == 1:
+                    first_btc[(ab, ov, p)] = hit
+            print(f"   {fl:<40} {ab:5.3f} {ov:>3}× | " + " | ".join(f"{c:>18}" for c in cells))
+
+print("\n5. Druga droga kluczowej liczby: wald_half_width(n) vs ręcznie 1,96·sqrt(p(1−p)/n) przy p = 0,5")
+for n in (136, 272, 408, 2720, 1733, 443):
+    auto = wald_half_width(n)
+    hand = 1.96 * math.sqrt(0.5 * 0.5 / n)
+    print(f"   n = {n:5d}: wald_half_width = {100 * auto:.4f} pp; ręcznie = {100 * hand:.4f} pp; różnica {100 * (auto - hand):+.2e} pp")
+# ręcznie: ile n potrzeba, by p = 53 % było MIERZALNE przy z 1,96: (1,96·0,5 / (p − p*))²
+for p in P_ASSUMED:
+    n_need = (1.96 * 0.5 / (p - PSTAR)) ** 2
+    print(
+        f"   ręcznie n_min(p {100 * p:.0f} %, z 1,96) = (0,98 / (p − p*))² = {n_need:,.0f} tr "
+        f"→ BTC bez abstynencji, bez nakładania: {n_need / MONTH_DAYS:.1f} mies.; przy nakładaniu 2×: {2 * n_need / MONTH_DAYS:.1f}; 4×: {4 * n_need / MONTH_DAYS:.1f}"
+    )
+
+print("\n6. Porównanie z tabelą zadania 028 (moc_028 z sesji 2026-09-30 — plik moc_028.txt nie istnieje w repo; liczby z treści zadania)")
+for label, n, zad_hw, zad_p in (
+    ("BTC, abstynencja 50 %", 136, 8.4, 59.3),
+    ("BTC, bez abstynencji", 272, 5.9, 56.8),
+    ("panel ~3 niezależne", 408, 4.9, 55.7),
+    ("panel 20 niezależnych", 2720, 1.9, 52.8),
+):
+    r = measurability_report(0.53, PSTAR, n)
+    print(
+        f"   {label:<24} n {n:5d}: ±{100 * wald_half_width(n):.2f} pp (zadanie ±{zad_hw}), "
+        f"p_min {100 * r['p_detectable']:.2f} % (zadanie {zad_p} %), werdykt przy p 53 %: {r['verdict']}"
+    )
+```

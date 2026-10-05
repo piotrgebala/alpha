@@ -1,0 +1,18 @@
+LP1 — pochodzenie i hashe danych (sha256)
+
+Migawka progów depozytu Binance (freqtrade, stan 2026-06-18):
+  źródło  https://raw.githubusercontent.com/piotrgebala/freqtrade/84b4628/freqtrade/exchange/binance_leverage_tiers.json
+  pobrano 2026-09-29, 2 694 759 B, 792 klucze (748 kontraktów USDT-M)
+  binance_leverage_tiers.json     5db817c14ee5fc077d7ae9f325a93c87cd032d3ba24c1ae5ea47c98417608353
+  binance_leverage_tiers.json.gz  4d4433296543aa0638dfaea6925c631f0683da15bb9c2baa85224cc30c42bbfb  (gzip -9 -n; ten katalog)
+  lokalnie (poza gitem): data/raw/binance_tiers/binance_leverage_tiers.json
+  odtworzenie: gzip -dc binance_leverage_tiers.json.gz > data/raw/binance_tiers/binance_leverage_tiers.json
+
+Cena mark 1d (archiwum data.binance.vision, markPriceKlines, 1 667 par symbol×miesiąc, 2 brakujące):
+  data/raw/mark_1d/mark_1d.parquet (poza gitem)  09047a88f8ebcc85de3bb0ece4789e4c0fdfd0acb62e9c93d3bcaf77a878dc26
+  treść (kanoniczny CSV, niezależny od wersji parquet)  40ec6acbe50ff4e6dff9b9262a5cda581fa55bb1941216b956a3f1abab2f8385
+  odtworzenie: PYTHONUTF8=1 py -m data.fetch_mark_1d data/raw/universe_full   (log: fetch_mark_output.txt)
+
+Cena ostatnia 1d (istniejący kolektor RU1, bez zmian):
+  data/raw/universe_ohlc_full/ohlc_1d.parquet  0ed37974c2f19a85df61ba32fbbe654726de07fafc13a30fed15e60877519e94
+  treść (kanoniczny CSV)  0e421807eba7aec1511138c9d8480fafcbaa78343bee701fe04a20f660ef6865

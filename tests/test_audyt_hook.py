@@ -611,12 +611,45 @@ def test_p_option_of_other_programs_is_kept(tmp_path, repo, polecenie):
 @settings(max_examples=150, deadline=None)
 @given(polecenie=st.text(st.characters(blacklist_characters="\x00"), max_size=200))
 def test_property_nested_shell_analysis_never_raises(polecenie):
-    """Bajt zerowy wyłączony: w ścieżce daje ValueError → wiersz z `blad_analizy` (niżej)."""
+    """Bajt zerowy wyłączony: w ścieżce daje ValueError → wiersz z `blad_analizy` (niżej).
+    `cat /… ~…` — słowo zawsze jest ścieżką (zadanie 026: surogat w `realpath`/`expanduser`)."""
     wynik = ah.Wynik()
-    for zewnetrzne in (f"bash -c {json.dumps(polecenie)}", f"cd {polecenie} && sed -i {polecenie}"):
+    for zewnetrzne in (
+        f"bash -c {json.dumps(polecenie)}",
+        f"cd {polecenie} && sed -i {polecenie}",
+        f"cat /{polecenie} ~{polecenie}",
+    ):
         ah.analizuj_bash(wynik, zewnetrzne, "/nieistniejace/repo", HOSTY, "/nieistniejacy/audyt")
     assert isinstance(wynik.flagi, set)
 
 
 def test_null_byte_in_nested_path_gives_analysis_error_row(tmp_path, repo):
     assert bash(tmp_path, repo, "bash -c 'cat /x\x00y'")["flagi"] == [ah.F_BLAD]
+
+
+# --- zadanie 026: samotny surogat w ścieżce (np. `\ud800` z JSON-a wejścia) -----------------------
+@pytest.mark.parametrize(
+    ("szablon", "flagi"),
+    [
+        ("cat /x{z}y", []),
+        ("bash -c 'cat /x{z}y'", []),
+        ("cat ~nieistniejacy{z}/plik", []),  # `~nazwa`: `expanduser` pyta `pwd` o użytkownika
+        ("echo x > plik{z}.txt", []),
+        ("cd /x{z} && echo x > plik", [ah.F_ZAPIS]),
+        ("echo x > ~/.ssh/klucz{z}", [ah.F_POSW, ah.F_ZAPIS]),
+    ],
+)
+def test_lone_surrogate_path_judged_like_any_other(tmp_path, repo, monkeypatch, szablon, flagi):
+    """Przed zadaniem 026 `realpath` i `expanduser` rzucały tu UnicodeEncodeError (Linux) → wiersz
+    z `blad_analizy`, czyli polecenie bez oceny. Surogat ma dać te same flagi co zwykła litera."""
+    monkeypatch.setenv("HOME", str(tmp_path / "dom"))  # `~/.ssh` fikcyjne, w `tmp_path`
+    for znak in ("a", "\ud800", "\udd00"):
+        assert bash(tmp_path, repo, szablon.format(z=znak))["flagi"] == flagi, repr(znak)
+
+
+def test_lone_surrogate_in_write_path_and_cwd(tmp_path, repo, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "dom"))
+    klucz = uruchom(tmp_path, repo, "Write", {"file_path": "~/.ssh/id_ed25519\ud800"})
+    assert klucz["flagi"] == [ah.F_POSW, ah.F_ZAPIS]
+    pod = uruchom(tmp_path, repo, "Write", {"file_path": "x.txt"}, cwd=str(repo / "pod\ud800"))
+    assert pod["flagi"] == []  # repo znalezione nad `cwd` z surogatem; zapis w nim dozwolony

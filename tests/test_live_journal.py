@@ -20,6 +20,7 @@ from backtest.ts_momentum import (
     signal_sign,
 )
 from data.fetch_live import active_usdt_perpetuals, parse_klines_1d
+from tools import strona_dziennika as sd
 
 FEE = 0.0007
 
@@ -464,7 +465,11 @@ def test_x1_error_does_not_stop_main_journal(tmp_path, monkeypatch):
     assert "X1: BŁĄD ValueError: test" in text and "mnożniki R1" in text
     assert len(pd.read_csv(jdir / "wyniki.csv")) > 0
     assert not (jdir / "x1_wyniki.csv").exists()
-    assert "BŁĄD ValueError" in (jdir / "przebiegi.log").read_text(encoding="utf-8")
+    log = (jdir / "przebiegi.log").read_text(encoding="utf-8")
+    assert "BŁĄD ValueError" in log
+    # strona dziennika, kontrola (h): błąd X1 z pola ostatniego przebiegu (format z run())
+    x1 = ("X1", "sygnały +0 wyniki +0 kapitał nan obsunięcie nan% BŁĄD ValueError: test")
+    assert x1 in sd.error_fields(sd.last_record(log))
     # poprawka 11: rozbicie i fazy zapisane dla trendu i premii, bez X1 (jego wynik nie powstał)
     assert set(pd.read_csv(jdir / "rozbicie.csv")["skladowa"]) == {"trend", "coinbase"}
     assert set(pd.read_csv(jdir / "fazy.csv")["skladowa"]) == {"trend", "coinbase"}
@@ -1012,6 +1017,12 @@ def test_p11_errors_do_not_stop_journal_nor_touch_other_files(tmp_path, monkeypa
         "| rozbicie BŁĄD RuntimeError | fazy BŁĄD RuntimeError | koszyk BŁĄD RuntimeError"
         " | historia zmieniona: 0"
     )
+    # strona dziennika, kontrola (h): trzy pola z błędem, każde osobno
+    assert sd.error_fields(sd.last_record(log)) == [
+        ("rozbicie", "BŁĄD RuntimeError"),
+        ("fazy", "BŁĄD RuntimeError"),
+        ("koszyk", "BŁĄD RuntimeError"),
+    ]
     p11 = {"rozbicie.csv", "fazy.csv", "koszyk.csv"}
     assert not any((bad / f).exists() for f in p11)
     others = sorted(p.name for p in ok.glob("*.csv") if p.name not in p11)
@@ -1041,6 +1052,10 @@ def test_x1_breakdown_error_keeps_trend_and_coinbase_then_backfills(tmp_path, mo
     n_rb, n_fz = len(rb), len(pd.read_csv(jdir / "fazy.csv"))
     assert f"| rozbicie +{n_rb} (x1 BŁĄD ValueError) | fazy +{n_fz} (x1 BŁĄD ValueError) |" in line
     assert line.endswith("historia zmieniona: 0")
+    assert sd.error_fields(line) == [  # strona dziennika, kontrola (h)
+        ("rozbicie", f"+{n_rb} (x1 BŁĄD ValueError)"),
+        ("fazy", f"+{n_fz} (x1 BŁĄD ValueError)"),
+    ]
     # x1_wyniki i pozostałe pliki bez wpływu
     assert (ok / "x1_wyniki.csv").read_bytes() == (jdir / "x1_wyniki.csv").read_bytes()
     # następny przebieg bez błędu: X1 dopisany, zbiór wierszy = przebieg bez błędu
@@ -1052,6 +1067,7 @@ def test_x1_breakdown_error_keeps_trend_and_coinbase_then_backfills(tmp_path, mo
         pd.testing.assert_frame_equal(a, b)
     last = (jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()[-1]
     assert "BŁĄD" not in last and last.endswith("historia zmieniona: 0")
+    assert sd.error_fields(last) == []  # następny przebieg bez błędu: (h) milczy
 
 
 def test_breakdown_and_phases_isolates_components_only_on_request(live, tmp_path, monkeypatch):

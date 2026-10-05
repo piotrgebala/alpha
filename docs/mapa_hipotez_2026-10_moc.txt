@@ -1,0 +1,98 @@
+=== DSR: próg t dla kolejnego odczytu historii 2021–2026 (wniosek 107) ===
+  N = 41: t(DSR 0,95) = 3.84, min. SR roczny na 5,5 roku = 1.64
+  N = 53: t(DSR 0,95) = 3.94, min. SR roczny na 5,5 roku = 1.68
+  nowe dane, własny licznik N = 1: t(DSR 0,95) = 1.64 -> wiąże kryterium 1,96
+  baza tradfi (TX1 = 1 odczyt), N = 2: t(DSR 0,95) = 2.16
+
+=== Y2 — kierunek BTC 1d ===
+  wejścia: p* 0,5170 i n 978 (Y2, wniosek 69); reguła bez modelu: 5,5 roku dni
+  expected_trades(2007, 0.0) = 2007
+  SR 0.3 -> p = Φ(SR/√365) = 0.5063
+  model n 978, SR 0.3: measurability_report(0.5063, 0.5170, 978) -> p_det 0.5483, pasmo ±3.13 pp, margines -4.21 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.5483, margines -4.21 pp; symulacja: moc (ci_low > p*) = 0.004
+  reguła n 2007, SR 0.3: measurability_report(0.5063, 0.5170, 2007) -> p_det 0.5389, pasmo ±2.19 pp, margines -3.26 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.5389, margines -3.26 pp; symulacja: moc (ci_low > p*) = 0.001
+  SR 0.5 -> p = Φ(SR/√365) = 0.5104
+  model n 978, SR 0.5: measurability_report(0.5104, 0.5170, 978) -> p_det 0.5483, pasmo ±3.13 pp, margines -3.79 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.5483, margines -3.79 pp; symulacja: moc (ci_low > p*) = 0.009
+  reguła n 2007, SR 0.5: measurability_report(0.5104, 0.5170, 2007) -> p_det 0.5389, pasmo ±2.19 pp, margines -2.84 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.5389, margines -2.84 pp; symulacja: moc (ci_low > p*) = 0.006
+  SR 0.9 -> p = Φ(SR/√365) = 0.5188
+  model n 978, SR 0.9: measurability_report(0.5188, 0.5170, 978) -> p_det 0.5483, pasmo ±3.13 pp, margines -2.95 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.5483, margines -2.95 pp; symulacja: moc (ci_low > p*) = 0.032
+  reguła n 2007, SR 0.9: measurability_report(0.5188, 0.5170, 2007) -> p_det 0.5389, pasmo ±2.19 pp, margines -2.01 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.5389, margines -2.01 pp; symulacja: moc (ci_low > p*) = 0.036
+  forma zwrotu (SR), 5,5 roku:
+    half-width SR = 1,96/√5,5 = ±0.836; MDE80 = 1.19; MDE80 przy t 3.84 = 2.00
+    SR 0.3: moc (t>1,96) wzór 0.104 / symulacja 0.104; (t>3.84) wzór 0.001 / symulacja 0.001
+    SR 0.5: moc (t>1,96) wzór 0.216 / symulacja 0.218; (t>3.84) wzór 0.004 / symulacja 0.003
+    SR 0.9: moc (t>1,96) wzór 0.560 / symulacja 0.566; (t>3.84) wzór 0.042 / symulacja 0.043
+
+=== G1 — reguła cyklu fundingu 8h (BTC, 1 h przez rozliczenie) ===
+  σ_1h 0.7 %, B = E|r| = 0.559 %, C = 0.08 % -> p* = 0.5716; expected_trades = 6022
+  C 0.08, p 0,509 (docs/rag/11): measurability_report(0.5090, 0.5716, 6022) -> p_det 0.5842, pasmo ±1.26 pp, margines -7.52 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.5842, margines -7.52 pp; symulacja: moc (ci_low > p*) = 0.000
+      granica dużego n: p 0,509 < p* 0.5716 -> nieopłacalna przy każdym n
+  σ_1h 0.7 %, B = E|r| = 0.559 %, C = 0.09 % -> p* = 0.5806; expected_trades = 6022
+  C 0.09, p 0,509 (docs/rag/11): measurability_report(0.5090, 0.5806, 6022) -> p_det 0.5932, pasmo ±1.26 pp, margines -8.42 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.5932, margines -8.42 pp; symulacja: moc (ci_low > p*) = 0.000
+      granica dużego n: p 0,509 < p* 0.5806 -> nieopłacalna przy każdym n
+  forma zwrotu: se na zdarzenie = 0.7/√6022 = 0.0090 %; brutto potrzeba C + 2,80·se = 0.105 % (t 1,96) / 0.122 % (t 3.84)
+      druga droga (symulacja se średniej, 2000 prób): 0.0089 %
+
+=== B3 — momentum resztowe top-50 (rank IC) ===
+  se średniego IC = 0.0078 (AU2); MDE80 = 0.0219 (t 1,96), 0.0365 (t 3.84); half-width = ±0.0153
+  druga droga se: sd IC dziennego 0,143/√1971 × 2.1 (nakładanie 7 d, AU2) = 0.0068
+  druga droga se: sd IC dziennego 0,143/√1971 × 2.4 (nakładanie 7 d, AU2) = 0.0077
+    IC 0.01: moc (t>1,96) wzór 0.249 / symulacja 0.250; (t>3.84) wzór 0.005 / symulacja 0.006
+    IC 0.015: moc (t>1,96) wzór 0.485 / symulacja 0.484; (t>3.84) wzór 0.027 / symulacja 0.029
+    IC 0.025: moc (t>1,96) wzór 0.893 / symulacja 0.896; (t>3.84) wzór 0.261 / symulacja 0.267
+
+=== B4 — powrót reszty po PCA (zwrot, SR) ===
+  SR 0.5: moc 5,5 roku (t>1,96) wzór 0.216 / symulacja 0.218; (t>3.84) wzór 0.004 / symulacja 0.004; lat do mocy 80 %: 31.4 (t 1,96) / 87.8 (t 3.84)
+  SR 0.9: moc 5,5 roku (t>1,96) wzór 0.560 / symulacja 0.559; (t>3.84) wzór 0.042 / symulacja 0.044; lat do mocy 80 %: 9.7 (t 1,96) / 27.1 (t 3.84)
+
+=== C1 — pary na kointegracji (trafność) ===
+  pary efektywne: 10/(1+9·0.86) = 1.14 (ρ 0,86 z TR1 vs TS1 — analogia)
+  pasmo 2×C, n 29, hojne p 0,70: measurability_report(0.7000, 0.7500, 29) -> p_det 0.9320, pasmo ±18.20 pp, margines -23.20 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.9320, margines -23.20 pp; symulacja: moc (ci_low > p*) = 0.013
+  pasmo 2×C, n 33, hojne p 0,70: measurability_report(0.7000, 0.7500, 33) -> p_det 0.9206, pasmo ±17.06 pp, margines -22.06 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.9201, margines -22.01 pp; symulacja: moc (ci_low > p*) = 0.016
+  pasmo 4×C, n 29, hojne p 0,70: measurability_report(0.7000, 0.6250, 29) -> p_det 0.8070, pasmo ±18.20 pp, margines -10.70 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.8070, margines -10.70 pp; symulacja: moc (ci_low > p*) = 0.189
+  pasmo 4×C, n 33, hojne p 0,70: measurability_report(0.7000, 0.6250, 33) -> p_det 0.7956, pasmo ±17.06 pp, margines -9.56 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.7951, margines -9.51 pp; symulacja: moc (ci_low > p*) = 0.182
+
+=== D3 — basis kwartalny vs funding (trafność 'basis > funding') ===
+  n 22 kontrakty (D1), hojne p 0,60: measurability_report(0.6000, 0.5000, 22) -> p_det 0.7089, pasmo ±20.89 pp, margines -10.89 pp, NIEMIERZALNA
+      droga 2 (Wald ręcznie): p_det 0.7089, margines -10.89 pp; symulacja: moc (ci_low > p*) = 0.156
+
+=== E1 — kaskady likwidacji (nowe dane, własny licznik) ===
+  σ 5.0 %/24 h, 150 epizodów/rok: 1 r.: n 113, MDE 1.32 % (symulacja 1.29 %); 2 r.: n 263, MDE 0.86 % (symulacja 0.86 %); 3 r.: n 413, MDE 0.69 % (symulacja 0.68 %)
+  σ 5.0 %/24 h, 300 epizodów/rok: 1 r.: n 226, MDE 0.93 % (symulacja 0.91 %); 2 r.: n 526, MDE 0.61 % (symulacja 0.61 %); 3 r.: n 826, MDE 0.49 % (symulacja 0.49 %)
+  σ 8.0 %/24 h, 150 epizodów/rok: 1 r.: n 113, MDE 2.11 % (symulacja 2.08 %); 2 r.: n 263, MDE 1.38 % (symulacja 1.37 %); 3 r.: n 413, MDE 1.10 % (symulacja 1.12 %)
+  σ 8.0 %/24 h, 300 epizodów/rok: 1 r.: n 226, MDE 1.49 % (symulacja 1.52 %); 2 r.: n 526, MDE 0.98 % (symulacja 0.96 %); 3 r.: n 826, MDE 0.78 % (symulacja 0.78 %)
+  C 0.3 %, B 3.99 %, p* 0.5376, n 200: wald_half_width = ±6.93 pp -> p_det 0.6069 (ręcznie 0.6069)
+  C 0.3 %, B 3.99 %, p* 0.5376, n 400: wald_half_width = ±4.90 pp -> p_det 0.5866 (ręcznie 0.5866)
+  C 0.3 %, B 3.99 %, p* 0.5376, n 600: wald_half_width = ±4.00 pp -> p_det 0.5776 (ręcznie 0.5776)
+  C 1.0 %, B 3.99 %, p* 0.6253, n 200: wald_half_width = ±6.93 pp -> p_det 0.6946 (ręcznie 0.6946)
+  C 1.0 %, B 3.99 %, p* 0.6253, n 400: wald_half_width = ±4.90 pp -> p_det 0.6743 (ręcznie 0.6743)
+  C 1.0 %, B 3.99 %, p* 0.6253, n 600: wald_half_width = ±4.00 pp -> p_det 0.6653 (ręcznie 0.6653)
+
+=== HL — premia / funding HL vs Binance (nowe dane) ===
+  forma jednoaktywowa BTC tydzień (jak CP1); CP1 SR = 2,09/√5,5 = 0.89 (w próbie, górna granica)
+    1 r.: MDE80 SR 2.80; moc przy SR 0,89 wzór 0.142 / symulacja 0.151
+    2 r.: MDE80 SR 1.98; moc przy SR 0,89 wzór 0.242 / symulacja 0.248
+    3 r.: MDE80 SR 1.62; moc przy SR 0,89 wzór 0.338 / symulacja 0.343
+  forma przekrojowa (gdyby HL pokrywał top-50): se(T) = 0,0078·√(5,4/T)
+    1 r.: se 0.0181, MDE80 IC 0.0508 (druga droga: symulowana moc przy tym IC = 0.800, oczekiwane ≈ 0,80)
+    2 r.: se 0.0128, MDE80 IC 0.0359 (druga droga: symulowana moc przy tym IC = 0.795, oczekiwane ≈ 0,80)
+    3 r.: se 0.0105, MDE80 IC 0.0293 (druga droga: symulowana moc przy tym IC = 0.800, oczekiwane ≈ 0,80)
+
+=== PT1 — surowce i obligacje na danych bazowych (baza tradfi) ===
+  1990–2026 (36.0 lat): half-width SR ±0.327; MDE80 0.467; przy t 2.16 (N=2) 0.501
+    SR 0.3: moc (t>1,96) wzór 0.436 / symulacja 0.433; (t>2.16) wzór 0.358 / symulacja 0.357
+    SR 0.5: moc (t>1,96) wzór 0.851 / symulacja 0.846; (t>2.16) wzór 0.798 / symulacja 0.796
+  po 2013 (13.7 lat): half-width SR ±0.530; MDE80 0.757; przy t 2.16 (N=2) 0.812
+    SR 0.3: moc (t>1,96) wzór 0.198 / symulacja 0.201; (t>2.16) wzór 0.146 / symulacja 0.149
+    SR 0.5: moc (t>1,96) wzór 0.456 / symulacja 0.459; (t>2.16) wzór 0.377 / symulacja 0.374

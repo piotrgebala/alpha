@@ -76,9 +76,7 @@ def regime_episodes(regime: pd.Series) -> pd.DataFrame:
     is_start = np.concatenate(([True], values[1:] != values[:-1]))
     starts = np.flatnonzero(is_start)
     lengths = np.diff(np.concatenate((starts, [len(values)])))
-    return pd.DataFrame(
-        {"regime": values[starts], "start_pos": starts, "length": lengths}
-    )
+    return pd.DataFrame({"regime": values[starts], "start_pos": starts, "length": lengths})
 
 
 def windows_fully_inside(lengths: np.ndarray | pd.Series, horizon: int) -> int:
@@ -143,7 +141,9 @@ def coherence_table(
                     "max_length": max_length,
                     "regime_candles": regime_candles,
                     "n_episodes_ge_horizon": n_ge,
-                    "share_episodes_ge_horizon": (n_ge / n_episodes) if n_episodes else float("nan"),
+                    "share_episodes_ge_horizon": (
+                        (n_ge / n_episodes) if n_episodes else float("nan")
+                    ),
                     "n_windows_inside": n_inside,
                     "share_windows_inside": (
                         n_inside / regime_candles if regime_candles else float("nan")

@@ -197,7 +197,7 @@
 > ZBIERANE-dane, rodziny C2 premie giełdowe / G3 halving / J sentyment, ranking po PR1/LK0, siedem błędów, karta z DSR i fazami);
 > paczka `quant-strategy-catalog.skill` przekazana użytkownikowi do wgrania na claude.ai (repo nie trzyma kopii skilli).
 > SERWER: ciężkie przebiegi z `OMP_NUM_THREADS=1` i ≤ 24 procesami (bez tego przeciążenie ~15× i ryzyko dla walidatora).
-> BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków.**
+> BACKLOG: `black --check .` czerwony na 15 starych plikach (9 zamrożonych poza `extend-exclude`) — do porządków ([zadanie 023](zadania/023-black-stare-pliki.md)).**
 > Dalsze kierunki — §17, ETAP 4 i `runs/INDEX.md`.**
 >
 > *(Poprzednia treść tego nagłówka — stan z 2026-08-01, „Commity 1–6, 86/86 testów, następny
@@ -212,16 +212,16 @@
 
 ---
 
-## Lista wykonania — czeka na użytkownika (stan 2026-09-28)
+## Lista wykonania — czeka na użytkownika (stan 2026-09-29)
 
 Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opisie commita).
 
-1. **Do 30.09, 06:30 UTC — rutyna dziennika w Cowork** (`trig_013XEDboNXSkb6CF17K1eSGf`): wkleić całą treść
-   [`tools/rutyna_dziennika.md`](tools/rutyna_dziennika.md) zamiast starej instrukcji. Bez tego strona nie pokaże
-   carry (pierwszy wiersz 30.09), a stara wersja zapisuje pliki w `/tmp` i zawiesza się na pytaniu o zgodę.
-   Szczegóły: §17, ETAP 6 — wykonanie (Poprawka 12).
-2. **Rutyna tokenów w Cowork (05:00 UTC)** — założyć wg [docs/rag/12](docs/rag/12_zuzycie_tokenow.md). Część na
-   serwerze działa; bez rutyny zakładka Tokeny na pulpicie się nie odświeża.
+1. **Rutyna tokenów w Cowork (05:00 UTC)** — założyć wg [docs/rag/12](docs/rag/12_zuzycie_tokenow.md). Część na
+   serwerze działa; bez rutyny zakładka Tokeny na pulpicie się nie odświeża. 29.09: na koncie nie ma takiej rutyny.
+2. **Radar założony dwa razy** — „Radar makro Puls Finansów” (`trig_01JHDJKyFH6Dp2gEeC7YckEi`, 04:52 UTC, Opus,
+   z łącznikami) i „Radar” (`trig_016Lw2BpotHxkYWnmMDXibXJ`, 04:44 UTC, założony 29.09 przez API, bez łączników —
+   krok zapisu do GitHuba może się w nim nie udać). Ta sama instrukcja, ta sama strona. Wyłączyć „Radar” na
+   https://claude.ai/code/routines/trig_016Lw2BpotHxkYWnmMDXibXJ (agent może zmieniać tylko rutyny założone przez agenta).
 3. **Dwie zawieszone sesje rutyn w Cowork** — zamknąć ręcznie (jedna to ręczny przebieg z 28.09, 05:35 UTC, który
    utknął na pytaniu o `/tmp`).
 4. **Serwer: usunąć `wersje_serwer.txt` i `wersje_windows.txt`** (listy bibliotek z 24.09; oba środowiska są zgodne
@@ -232,11 +232,15 @@ Krótkie wpisy, szczegóły pod linkiem. Wykonane usuwa się z listy (data w opi
    `! crontab -l | grep -v -F '/home/dantey1/ogranicznik.sh' | crontab -`.
    Powrót: `(crontab -l; echo '0 * * * * /home/dantey1/ogranicznik.sh') | crontab -`.
 6. **Do decyzji: `~/nohup.out`** (1 GB, nic do niego nie pisze od 8.10.2025) — zostawić czy usunąć.
-7. **Do wyjaśnienia: „decyzje o pulpicie” i „watch co 4 h”** — wymienione w notach przekazania bez szczegółów.
-   Przy pulpicie zostało ręczne sprawdzenie na tablecie (połączenie strony z Claude, motyw jasny/ciemny).
+7. **Do wyjaśnienia: „decyzje o pulpicie”** — wymienione w notach przekazania bez szczegółów. Zostało ręczne
+   sprawdzenie na tablecie (połączenie strony z Claude, motyw jasny/ciemny). „Watch co 4 h” wyjaśnione 29.09:
+   rutyna `trig_01CKDfXTbkEm4EfTu5teZcds` chodziła co godzinę z opisem z 21.09 — teraz co 4 h, z aktualnym opisem
+   i alarmem przy dzienniku starszym niż 2 dni (model bez zmian: Sonnet; zmiana na Opus tylko na słowo użytkownika).
 8. **Windows: linia statusu strażnika kontekstu** — sprawdzić, czy się pokazuje
    ([docs/rag/12](docs/rag/12_zuzycie_tokenow.md), „Wdrożenie”).
 9. **Do decyzji przy następnej wersji skilla:** odchudzenie SKILL.md skilla `clas5-quant`.
+10. **Restart kolektora likwidacji LK0 z nowym kodem** — procedura w [zadaniu 021](zadania/021-kolektor-binance-zakres-t.md)
+    (tryb auto blokuje agentowi ingerencję w działający proces); 29.09 12:00 UTC nadal stary proces z 25.09.
 
 ---
 
@@ -3092,9 +3096,10 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   Znane ograniczenie (g): `prev` = poprzedni przebieg, więc powtórka tej samej nocy albo przebieg z „brak pliku”/„BŁĄD”
   może ukryć lub powtórzyć ogłoszenie różnicy; karta i kryterium (c) i tak ją pokazują (backlog: `prev` z ostatniego
   przebiegu, który porównał zapis, sprzed poprzedniej rutyny).
-- **Backlog:** kontrola (h) na stronie (litery f–g ma już carry) — alarm przy „BŁĄD” w polach ostatniej linii `przebiegi.log`; nowa wersja skilla
-  katalogu (low-vol/BAB, D1 vs TL1); kolektor Binance nie sprawdza zakresu T przy zapisie (sprawdza go indeks/kopia); kryteria carry (a)–(c)
-  z Poprawki 12 do `backtest/odczyt_dziennika.py` przed odczytem 1 (2026-12-25).
+- **Backlog → tablica (2026-09-29, decyzja użytkownika „wykonaj wszystkie 3 punkty”):** kryteria carry (a)–(c) w odczycie —
+  [019](zadania/019-odczyt-kryteria-carry.md); kontrola (h) na stronie — [020](zadania/020-strona-kontrola-h-blad.md); zakres T
+  w kolektorze Binance — [021](zadania/021-kolektor-binance-zakres-t.md); nowa wersja skilla katalogu —
+  [022](zadania/022-skill-katalog-lowvol-d1-tl1.md); `black --check` na starych plikach — [023](zadania/023-black-stare-pliki.md).
 
 #### Zużycie tokenów (2026-09-28) — [docs/rag/12](docs/rag/12_zuzycie_tokenow.md)
 
@@ -3158,4 +3163,14 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **Decyzje użytkownika 2026-09-29 (tablica):** LH0 — tryb ograniczony bez kosztów, najpierw pomiar wag na dłuższym oknie
   (zadanie 004); przegląd tygodnia hooka audytowego od 2026-10-06 (005); kroki z `sudo` izolacji — użytkownik, sprawdzenie
   orkiestrator (006).
-
+- **Zadanie 007 (2026-09-29, backlog, 0 odczytów):** [mapa hipotez](docs/mapa_hipotez_2026-10.md) — z 10 rodzin żadna nie jest dziś mierzalna (B3, B4, C1, D3, G1, Y2 NIEMIERZALNE przy progu t 3,84; E1, PT1 i dwie z Hyperliquid BRAK DANYCH); proponowana kolejność: karta E1 (011) → sonda HL (010) → PT1 na życzenie (012), reszta zamknąć bez odczytu — decyzja użytkownika.
+- **Po mapie 007 (2026-09-29, decyzja użytkownika):** 008 (B3), 009 (G1), 013 (Y2) zamknięte bez odczytu; 010 i 011 — decyzja po pomiarze 004 (30.09); 012 (PT1) tylko na życzenie, pełna baza 1990–2026; 014 bez zmian.
+- **Zadanie 017 / LP1 (2026-09-29, przegląd, 0 odczytów zwrotu):** płaski próg likwidacji dziennika (MMR 1 %, cena ostatnia) daje prawie tę samą liczbę likwidacji co progi Binance + cena mark przy ~10 tys. USDT/monetę (2× +1,4 %, 3× −2,1 %; próg decyzji 10 %) — **Poprawki nie proponujemy**; warunek powrotu: pozycja > ~50–100 tys. USDT/monetę (post hoc +14…+17 %) albo małe alty. Luki danych do osobnych zadań: zamrożona cena ostatnia przy wstrzymaniu/wycofaniu kontraktu (FTT, ALPACA, LUNA); 4 nazwy plików `universe_full` na serwerze w cp866 — wniosek 111, [runda](runs/2026-09-29_lp1-likwidacja-progi-binance/README.md), [zadanie](zadania/017-likwidacja-progi-binance.md).
+- **Zadanie 016 / FD1 (2026-09-29, 0 wariantów):** funding liczony rozliczenie po rozliczeniu wobec skrótu silników (dzienna suma × waga) — TS1 −0,004 %/rok, X1 na wagach silnika −0,17 %/rok (≤ 5 % kosztów KO1) → wzoru nie poprawiać. **Do decyzji użytkownika:** model pozycji X1 — silnik przywraca nogi codziennie, dziennik handluje raz w tygodniu; przy stałej ilości short MYX 2025-09 zeruje kapitał 5 okresów faz (wniosek 112, [runda](runs/2026-09-29_fd1-funding-druga-droga/README.md)).
+- **Zadanie 020 (2026-09-29, infra):** kontrola (h) na stronie dziennika — powiadomienie „UWAGA: (h) <pole>: <treść>”, gdy pole ostatniego przebiegu w `przebiegi.log` ma „BŁĄD” (X1, stan rynku, F&G, transakcje, opisy, rozbicie, fazy, koszyk; carry dalej przez (f)). `stan.json` bez zmian (bajt w bajt), więc sama strona (h) nie pokazuje. Nowa suma skryptu 1a9934a2… w [`tools/rutyna_dziennika.md`](tools/rutyna_dziennika.md): **po scaleniu instrukcję trzeba wstawić do rutyny Cowork** (poza 06:30–06:50 UTC) — [zadanie](zadania/020-strona-kontrola-h-blad.md).
+- **Zadanie 019 (2026-09-29, infra):** kryterium 6 (carry COIN-M) w skrypcie odczytu dziennika; do decyzji: flaga
+  `--carry-sprawdz-gielde` w komendach odczytów wiążących — [zadanie](zadania/019-odczyt-kryteria-carry.md).
+- **Zadanie 024 (2026-09-29, naprawa danych):** 20 nazw plików w `data/raw` (cp866) poprawionych, treść bez zmian (druga
+  droga: sha256 3 202 plików). Klon dziennika był poprawny. Ryzyko: TP1/LP1 przeliczone od nowa mogą się lekko różnić
+  (1 moneta × 1 miesiąc) — [zadanie](zadania/024-nazwy-cp866-universe.md).
+- **Zadanie 028 / ML1 (2026-09-30, 0 wariantów, 0 zwrotów):** model XGBoost 1d BTC (10 cech, V = 7) uczony na 2021–2025 i zamrożony (sha256 `d1a39ee4…`, pre-rejestracja `e99dc82`); próg „górne 20 % pewności” = 0,424963, ale kalibracja nie rośnie (49,5 % vs 52,8 %) i na rozbiegu 2026 próg daje 9 % sygnałów (~13/rok) → tor P niemierzalny przez lata; tor P i kolektory 5 cech = decyzja użytkownika — wniosek 114, [runda](runs/2026-09-30_ml1-wolny-horyzont/README.md).

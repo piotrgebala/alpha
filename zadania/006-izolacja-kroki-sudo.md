@@ -6,7 +6,8 @@ status: czeka_na_decyzje
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: dodać zadanie „kroki z sudo z docs/rag/13, które możesz wykonać tylko Ty”"
 utworzono: 2026-09-29
-zalezy_od: [002]
+zalezy_od: [002, 005]
+nie_wczesniej_niz: 2026-10-06
 budzet: "Opus medium do sprawdzenia"
 ---
 
@@ -28,6 +29,9 @@ Kroki z `sudo` może wykonać tylko użytkownik. Orkiestrator ich nie robi.
 3. Po ostatnim etapie orkiestrator proponuje zmianę w `zadania/README.md` (wykonawcy jako `clas5wyk`). Zmiana wymaga
    decyzji użytkownika.
 
+Decyzja użytkownika 2026-09-29: „ok to oznacz to, że czekamy az sie raport z zadania 005” — kroki z `sudo`
+nie startują przed raportem z 005 (tydzień obserwacji hooka); wtedy decyzja o etapach 2 i 3 razem.
+
 Postęp: etap 1 — nie rozpoczęty; etap 2 — nie rozpoczęty; etap 3 — nie rozpoczęty.
 
 ## Czego NIE robić
@@ -42,4 +46,4 @@ Postęp: etap 1 — nie rozpoczęty; etap 2 — nie rozpoczęty; etap 3 — nie 
 
 ## Wynik
 
-(dopisuje orkiestrator)
+- **2026-09-30, decyzja użytkownika: „6 czekaj”.** Wraca po przeglądzie 005 (od 2026-10-06), razem z decyzją o blokowaniu.

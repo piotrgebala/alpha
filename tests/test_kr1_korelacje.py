@@ -24,4 +24,6 @@ def test_inverse_vol_mix_equalises_risk_contributions():
     w = 1 / df.std()
     w = w / w.sum()
     assert w["A"] * df["A"].std() == pytest.approx(w["B"] * df["B"].std())
-    assert kr.inverse_vol_mix(df).std() == pytest.approx(np.sqrt(2) * w["A"] * df["A"].std(), rel=0.03)
+    assert kr.inverse_vol_mix(df).std() == pytest.approx(
+        np.sqrt(2) * w["A"] * df["A"].std(), rel=0.03
+    )

@@ -1,0 +1,234 @@
+# raw_output.txt — runda ML1 (zadanie 028). Pełny stdout trybów w kolejności wykonania.
+# KROK 1 (przed uczeniem): tryby dane, pokrycie, moc. HEAD przed commitem karty: 94eaa89c66191d651f059565f2624c5965396633
+
+## $ PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont dane   (2026-09-30 18:20 UTC)
+==============================================================================================================
+ML1 — DANE do 2026-09-30T00:00:00Z w data/raw/ml1 (dziś 2026-09-30 18:20 UTC)
+==============================================================================================================
+  OHLCV 1d: 2577 świec 2019-09-10 00:00:00+00:00 → 2026-09-29 00:00:00+00:00
+  funding: 7730 rozliczeń 2019-09-10 08:00:00+00:00 → 2026-09-29 16:00:00+00:00
+  metrics: kopia do 2026-09-22; dni do pobrania ['2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29']
+  metrics: 638726 odczytów 2020-09-01 00:00:00+00:00 → 2026-09-29 23:55:00+00:00
+[external] dvol BTC: 2017 dni
+[external] coinmetrics btc: 2829 dni, 14 metryk
+[external] fng: 3160 dni
+==============================================================================================================
+
+## $ PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont pokrycie
+==============================================================================================================
+ML1 — POKRYCIE DANYCH DZIENNYCH 11 CECH (BTC), od 2021-01-01 (zasada 20), pliki data/raw/ml1
+==============================================================================================================
+  1–4 OHLCV 1d BTCUSDT perp (volume w BTC)                     od 2021-01-01 do 2026-09-29 | dni bez odczytu   0 | —
+  5 funding_rate (rozliczenia 8h)                              od 2021-01-01 do 2026-09-29 | dni bez odczytu   0 | —
+  6 oi_change_24h (sum_open_interest > 0)                      od 2021-01-01 do 2026-09-29 | dni bez odczytu   0 | —
+  7 global_ls_log (count_long_short_ratio > 0)                 od 2021-01-01 do 2026-09-29 | dni bez odczytu  19 | 2021-12-31→2022-01-18 (19 d)
+  8 taker_imbalance_24h (sum_taker_long_short_vol_ratio > 0)   od 2021-01-01 do 2026-09-29 | dni bez odczytu 128 | 2021-12-31→2022-01-29 (30 d); 2022-01-31→2022-05-08 (98 d)
+  9 vrp_30d (DVOL BTC 1d)                                      od 2021-03-24 do 2026-09-30 | dni bez odczytu   0 | —
+  10 ex_supply_change_7d (SplyExNtv)                           od 2021-01-01 do 2026-09-29 | dni bez odczytu   0 | —
+  11 fng_level (alternative.me)                                od 2021-01-01 do 2026-09-30 | dni bez odczytu   1 | 2024-10-26
+  metrics: dni z < 276 z 288 odczytów 5-min: 7 ['2021-01-20', '2021-02-19', '2021-02-20', '2021-04-27', '2021-06-22', '2021-06-23', '2024-02-16']
+  fetch_window (min_start 2021-01-01T00:00:00Z): 2098 świec 2021-01-01 00:00:00+00:00 → 2026-09-29 00:00:00+00:00
+  zgodność OHLCV 1d z kopią repo głównego (do 2026-06-30): wspólnych 2486/2486, max |różnica| 0
+  zgodność funding z kopią repo głównego (do 2026-06-30): wspólnych 7457/7457, max |różnica| 0
+  zgodność DVOL.close z kopią z 2026-09-23 (od 2021-01-01): wspólnych 2010, dni z różnicą 1, max |różnica| 0.69
+  zgodność CoinMetrics.SplyExNtv z kopią z 2026-09-23 (od 2021-01-01): wspólnych 2091, dni z różnicą 0, max |różnica| 0
+  zgodność F&G.value z kopią z 2026-09-23 (od 2021-01-01): wspólnych 2091, dni z różnicą 0, max |różnica| 0
+==============================================================================================================
+
+## $ PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont moc
+==============================================================================================================
+ML1 — MIERZALNOŚĆ REGUŁY PROGU: górne 20% pewności; p* 0.5089; abstynencja 0.378; nakładanie 2×
+==============================================================================================================
+                  szereg | mies. | decyzje | n niezal. |   ±Wald | p potrzebne | p 52 % | p 53 % | p 55 % | p 60 %
+       wszystkie sygnały |     6 |     183 |      56.9 |  12.99pp |      63.87% |   NIEM |   NIEM |   NIEM |   NIEM
+       wszystkie sygnały |    12 |     365 |     113.5 |   9.20pp |      60.07% |   NIEM |   NIEM |   NIEM |   NIEM
+       wszystkie sygnały |    24 |     730 |     227.0 |   6.50pp |      57.39% |   NIEM |   NIEM |   NIEM |   MIER
+       wszystkie sygnały |    60 |    1826 |     567.9 |   4.11pp |      55.00% |   NIEM |   NIEM |   NIEM |   MIER
+     ponad progiem (20%) |     6 |     183 |      11.4 |  29.05pp |      80.44% |   NIEM |   NIEM |   NIEM |   NIEM
+     ponad progiem (20%) |    12 |     365 |      22.7 |  20.57pp |      71.32% |   NIEM |   NIEM |   NIEM |   NIEM
+     ponad progiem (20%) |    24 |     730 |      45.4 |  14.54pp |      65.50% |   NIEM |   NIEM |   NIEM |   NIEM
+     ponad progiem (20%) |    60 |    1826 |     113.6 |   9.20pp |      60.07% |   NIEM |   NIEM |   NIEM |   NIEM
+
+  n niezależnych rocznie ponad progiem: 22.7 (decyzji z kierunkiem rocznie 227)
+  p 52 %: potrzeba n ≈    7795 niezależnych → ponad progiem ≈  343.3 lat
+  p 53 %: potrzeba n ≈    2157 niezależnych → ponad progiem ≈   95.0 lat
+  p 55 %: potrzeba n ≈     569 niezależnych → ponad progiem ≈   25.0 lat
+  p 60 %: potrzeba n ≈     116 niezależnych → ponad progiem ≈    5.1 lat
+
+  Druga droga (ręcznie, bez metrics.py): ±Wald = 1,96·√(0,25/n)
+    n  18.0: 23.0988 pp (metrics.wald_half_width: 23.0984 pp)
+    n  36.3: 16.2657 pp (metrics.wald_half_width: 16.2654 pp)
+    n  72.5: 11.5095 pp (metrics.wald_half_width: 11.5093 pp)
+==============================================================================================================
+
+## KROK 2 — $ PYTHONUTF8=1 OMP_NUM_THREADS=4 py -m backtest.run_ml1_wolny_horyzont wf   (kod 35cd2c7)
+==============================================================================================================
+ML1 WF — walk-forward 365/91/91 dni na świecach 1d 2021-01-01 → 2025-12-31; V = 7; pre-rejestracja e99dc82; HEAD 35cd2c7
+==============================================================================================================
+1. Braki cech w ramce uczenia (świece, na których cecha = NaN):
+            return_lag_1: NaN    1 / 1826; pierwsza wartość 2021-01-02
+        volume_zscore_20: NaN   19 / 1826; pierwsza wartość 2021-01-20
+                  rsi_14: NaN   14 / 1826; pierwsza wartość 2021-01-15
+         price_zscore_20: NaN   19 / 1826; pierwsza wartość 2021-01-20
+            funding_rate: NaN    0 / 1826; pierwsza wartość 2021-01-01
+           oi_change_24h: NaN    1 / 1826; pierwsza wartość 2021-01-02
+           global_ls_log: NaN   19 / 1826; pierwsza wartość 2021-01-01
+     taker_imbalance_24h: NaN  128 / 1826; pierwsza wartość 2021-01-01
+                 vrp_30d: NaN   83 / 1826; pierwsza wartość 2021-03-25
+     ex_supply_change_7d: NaN    0 / 1826; pierwsza wartość 2021-01-01
+               fng_level: NaN    0 / 1826; pierwsza wartość 2021-01-01
+  świece z kompletem 11 cech: 1615 / 1826
+
+2. Usuwanie duplikatów (|Spearman| > 0,9) na pierwszym oknie uczenia (2021-01-01 + 365 dni):
+                     return_lag_1  volume_zscore_20  rsi_14  price_zscore_20  funding_rate  oi_change_24h  global_ls_log  taker_imbalance_24h  vrp_30d  ex_supply_change_7d  fng_level
+return_lag_1                 1.00             -0.18    0.32             0.39         -0.02           0.05          -0.27                 0.30     0.07                -0.11       0.01
+volume_zscore_20            -0.18              1.00   -0.28            -0.28         -0.10          -0.05           0.07                 0.05    -0.02                 0.16      -0.09
+rsi_14                       0.32             -0.28    1.00             0.91          0.50          -0.09          -0.15                -0.29     0.37                -0.10       0.71
+price_zscore_20              0.39             -0.28    0.91             1.00          0.39          -0.04          -0.26                -0.17     0.18                -0.10       0.50
+funding_rate                -0.02             -0.10    0.50             0.39          1.00          -0.01           0.48                -0.52     0.33                 0.00       0.74
+oi_change_24h                0.05             -0.05   -0.09            -0.04         -0.01           1.00          -0.04                 0.17    -0.08                 0.02      -0.15
+global_ls_log               -0.27              0.07   -0.15            -0.26          0.48          -0.04           1.00                -0.53     0.16                 0.07       0.31
+taker_imbalance_24h          0.30              0.05   -0.29            -0.17         -0.52           0.17          -0.53                 1.00    -0.31                 0.07      -0.50
+vrp_30d                      0.07             -0.02    0.37             0.18          0.33          -0.08           0.16                -0.31     1.00                -0.14       0.50
+ex_supply_change_7d         -0.11              0.16   -0.10            -0.10          0.00           0.02           0.07                 0.07    -0.14                 1.00      -0.07
+fng_level                    0.01             -0.09    0.71             0.50          0.74          -0.15           0.31                -0.50     0.50                -0.07       1.00
+  cechy modelu (10): ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'funding_rate', 'oi_change_24h', 'global_ls_log', 'taker_imbalance_24h', 'vrp_30d', 'ex_supply_change_7d', 'fng_level']; odpadły: ['price_zscore_20']
+
+3. Foldy: 15/16 aktywnych; trening 1 s
+  fold |    test od |    test do | ocenione | bez kier. | bramka koszt. | sygnały | early stop | best_it
+     0 | POMINIĘTY: n_train_valid=281, n_test_valid=1 < min_train_rows=30
+     1 | 2022-04-02 | 2022-07-02 |       54 |        34 |             0 |      20 |       True |      30
+     2 | 2022-07-02 | 2022-10-01 |       91 |        28 |             0 |      63 |       True |       0
+     3 | 2022-10-01 | 2022-12-31 |       91 |        29 |             0 |      62 |       True |       0
+     4 | 2022-12-31 | 2023-04-01 |       91 |        12 |             0 |      79 |       True |       0
+     5 | 2023-04-01 | 2023-07-01 |       91 |         7 |             0 |      84 |       True |      25
+     6 | 2023-07-01 | 2023-09-30 |       91 |        17 |             0 |      74 |       True |      36
+     7 | 2023-09-30 | 2023-12-30 |       91 |        12 |             0 |      79 |       True |       0
+     8 | 2023-12-30 | 2024-03-30 |       91 |        34 |             0 |      57 |       True |       2
+     9 | 2024-03-30 | 2024-06-29 |       91 |        43 |             0 |      48 |       True |      15
+    10 | 2024-06-29 | 2024-09-28 |       91 |        69 |             0 |      22 |       True |       8
+    11 | 2024-09-28 | 2024-12-28 |       91 |        29 |             0 |      62 |       True |       0
+    12 | 2024-12-28 | 2025-03-29 |       91 |        14 |             0 |      77 |       True |       0
+    13 | 2025-03-29 | 2025-06-28 |       91 |        32 |             0 |      59 |       True |       2
+    14 | 2025-06-28 | 2025-09-27 |       91 |        32 |             0 |      59 |       True |       0
+    15 | 2025-09-27 | 2025-12-27 |       91 |        25 |             0 |      65 |       True |       9
+  razem: świece ocenione 1328, bez kierunku 417 (abstynencja 31.4 %), sygnały 910
+
+4. PRÓG (§14.1): kwantyl 0.80 pewności 910 sygnałów OOS = 0.424963; ponad progiem 182 (20.0 %); long/short wszystkie 343/567, ponad progiem 29/153
+  pewność: min 0.3336, mediana 0.3487, max 0.6883; sygnały per rok OOS: 2022: 145, 2023: 318, 2024: 191, 2025: 256
+
+5. KALIBRACJA (§14.6): trafność sygnału = kierunek zgodny z ruchem do pierwszej bariery ±1,5·ATR albo do zamknięcia po 7 dniach; bez kosztów, bez zwrotu; ±Wald bez korekty na nakładanie
+ kubelek   n  pewnosc_od  pewnosc_do  trafnosc  wald_95
+       1 182      0.3336      0.3409    0.4451   0.0722
+       2 182      0.3409      0.3452    0.4725   0.0725
+       3 182      0.3453      0.3540    0.5989   0.0712
+       4 182      0.3540      0.4249    0.6264   0.0703
+       5 182      0.4253      0.6883    0.4945   0.0726
+  wszystkie sygnały: n 910, trafność 52.75 % ±3.24 pp
+  ponad progiem:     n 182, trafność 49.45 % ±7.26 pp
+  korelacja rang kubełek–trafność +0.70; warunek „rosnąca trafność” (§14.6: górny kubełek > wszystkie ORAZ korelacja > 0): NIESPEŁNIONY → ryzyko do karty, reguła bez zmian
+
+  zapisano: runs/2026-09-30_ml1-wolny-horyzont/wf_prog.json, kalibracja_wf.csv, sygnaly_oos_wf.csv
+==============================================================================================================
+
+## KROK 3 — $ PYTHONUTF8=1 OMP_NUM_THREADS=4 py -m backtest.run_ml1_wolny_horyzont zamroz   (kod 35cd2c7)
+==============================================================================================================
+ML1 ZAMROŻENIE — jeden model na 2021-01-01 → 2025-12-31
+==============================================================================================================
+  model_sha256: d1a39ee440dcea6a490d3b86181d8f8d7a9dd6172fec46c0b808cbb5b165195c
+  features: ['return_lag_1', 'volume_zscore_20', 'rsi_14', 'funding_rate', 'oi_change_24h', 'global_ls_log', 'taker_imbalance_24h', 'vrp_30d', 'ex_supply_change_7d', 'fng_level']
+  train_rows_with_label_and_features: 1608
+  train_rows_used_after_embargo: 1601
+  label_counts: {'-1.0': 484, '0.0': 595, '1.0': 529}
+  best_iteration: 23
+  early_stopping_used: True
+  threshold: 0.42496348023414615
+  prereg_commit: e99dc82530229f5acff22eb527bc86f2535e7109
+  code_commit: 35cd2c73aa00d776f60cb08bedf49e0bc20ac6c3
+  worktree_clean_code: True
+  versions: {'python': '3.12.3', 'xgboost': '3.2.0', 'pandas': '3.0.2', 'numpy': '2.4.4'}
+  predykcje z pamięci == predykcje z pliku (dane uczenia, 1608 świec): True
+  zapisano runs/2026-09-30_ml1-wolny-horyzont/model_ml1.json i runs/2026-09-30_ml1-wolny-horyzont/manifest.json
+==============================================================================================================
+
+## KROK 4 — $ PYTHONUTF8=1 OMP_NUM_THREADS=4 py -m backtest.run_ml1_wolny_horyzont rozbieg   (kod 35cd2c7, model 6ff7960)
+==============================================================================================================
+ML1 ROZBIEG — 2026-01-01 → 2026-09-29 (272 świec); model d1a39ee440dc… (sha256 zgodny z manifestem: True); próg 0.424963
+  TYLKO MECHANIKA: bez etykiet, trafności, zwrotu i t (decyzja użytkownika 2026-09-30, opcja A)
+==============================================================================================================
+1. Dziury w cechach (świece 2026 z NaN):
+            return_lag_1: 0 []
+        volume_zscore_20: 0 []
+                  rsi_14: 0 []
+         price_zscore_20 (poza modelem): 0 []
+            funding_rate: 0 []
+           oi_change_24h: 0 []
+           global_ls_log: 0 []
+     taker_imbalance_24h: 0 []
+                 vrp_30d: 0 []
+     ex_supply_change_7d: 0 []
+               fng_level: 0 []
+
+2. Sygnały: świece z predykcją 272/272; long 58, short 53, bez kierunku 161 (abstynencja 59.2 %)
+   ponad progiem: 10 z 111 sygnałów z kierunkiem (9.0 %; zapisany udział 20 %)
+   pewność sygnałów z kierunkiem: min 0.3370, mediana 0.3698, max 0.5220
+
+3. Per miesiąc:
+         swiece  z_predykcja  long  short  ponad_progiem
+miesiac                                                 
+2026-01      31           31    10     17              3
+2026-02      28           28     1      0              0
+2026-03      31           31     5      4              0
+2026-04      30           30    13      1              0
+2026-05      31           31     9      7              0
+2026-06      30           30     0      4              1
+2026-07      31           31     5     12              0
+2026-08      31           31     7      7              4
+2026-09      29           29     8      1              2
+
+4. Ostatnia świeca 2026-09-29: kierunek 1.0, pewność 0.4442, ponad progiem True
+  zapisano runs/2026-09-30_ml1-wolny-horyzont/sygnaly_rozbieg_2026.csv
+==============================================================================================================
+
+## DIAGNOSTYKA PO FAKCIE (niepre-rejestrowana; tylko pewność, bez etykiet) — $ PYTHONUTF8=1 py -m backtest.run_ml1_wolny_horyzont foldy
+==============================================================================================================
+ML1 FOLDY — sygnały ponad progiem 0.424963 per fold walk-forward (best_iteration: tabela trybu wf)
+==============================================================================================================
+          sygnaly  ponad_progiem  pewnosc_mediana  pewnosc_max
+fold_idx                                                      
+1              20             14           0.4605       0.6130
+2              63              0           0.3491       0.3533
+3              62              0           0.3434       0.3503
+4              79              0           0.3414       0.3517
+5              84             77           0.4999       0.6351
+6              74             53           0.4828       0.6883
+7              79              0           0.3409       0.3513
+8              57              0           0.3593       0.3931
+9              48             20           0.4169       0.5355
+10             22              0           0.3681       0.4075
+11             62              0           0.3442       0.3506
+12             77              0           0.3444       0.3497
+13             59              0           0.3528       0.3797
+14             59              0           0.3394       0.3486
+15             65             18           0.4002       0.4646
+  foldy, w których ŻADEN sygnał nie sięga progu: 10/15; 4 foldy z największą liczbą dają 92.3 % sygnałów ponad progiem (foldy [5, 6, 9, 15])
+==============================================================================================================
+
+## BRAMKA 16a — druga droga (niezależnie od agents/ml1_features i agents/labeling) — $ PYTHONUTF8=1 py runs/2026-09-30_ml1-wolny-horyzont/druga_droga.py
+1. próg: skrypt 0.424963480, ręcznie 0.424963480, różnica 5.55e-17
+2. zgodność trafienia sygnału (niezależna pętla vs skrypt): 910/910
+   trafność wszystkie 52.75 % (n 910); ponad progiem 49.45 % (n 182)
+   kubełek 1: trafność 44.51 %
+   kubełek 2: trafność 47.25 %
+   kubełek 3: trafność 59.89 %
+   kubełek 4: trafność 62.64 %
+   kubełek 5: trafność 49.45 %
+3. ±Wald z n nienakładających się sygnałów (odstęp ≥ 7 dni) — przybliżenie N_eff
+   wszystkie: n 910, nienakładające się 166, trafność 52.75 % ±7.6 pp
+   ponad progiem: n 182, nienakładające się 46, trafność 49.45 % ±14.4 pp
+   kubełek 1: nienakładające się 59, ±12.7 pp
+   kubełek 2: nienakładające się 63, ±12.3 pp
+   kubełek 3: nienakładające się 59, ±12.5 pp
+   kubełek 4: nienakładające się 59, ±12.3 pp
+   kubełek 5: nienakładające się 46, ±14.4 pp
+4. rozbieg z CSV: świec 272, long 58, short 53, zero 161, ponad progiem 10

@@ -1,0 +1,47 @@
+----------------------------------------------------------------------------------------------------
+1. PRZEBIEG DZIENNIKA (`lj.run(fetch=False)`) — czy się wywraca
+  baza        przebieg OK=True; log: as_of 2026-09-23 | transakcje +1673 | historia zmieniona: 0
+  wycofanie   przebieg OK=True; log: as_of 2026-09-23 | transakcje +1661 | historia zmieniona: 0
+  krach       przebieg OK=True; log: as_of 2026-09-23 | transakcje +1673 | historia zmieniona: 0
+  zamrozenie  przebieg OK=True; log: as_of 2026-09-23 | transakcje +1672 | historia zmieniona: 0
+  as_of = 2026-09-23, dzień zdarzenia D = 2026-08-20
+----------------------------------------------------------------------------------------------------
+2. WYCOFANIE C01USDT: świece kończą się 2026-08-19
+  panel close: ostatnia wartość 2026-08-19, potem NaN (dni NaN: 35)
+  składowa trend (k = 1), dzień D i D+1: zwrot netto i liczba likwidacji (suma 7 faz)
+    2026-08-20: wycofanie net -0.00457, likw. 0  |  krach (prawda) net -0.02688, likw. 7  |  różnica +0.02231
+    2026-08-21: wycofanie net +0.00222, likw. 0  |  krach (prawda) net +0.00225, likw. 0  |  różnica -0.00004
+  pozycje ogłaszane w `sygnaly.csv` (lj.positions) — fazy trendu z monetą bez ceny:
+    as_of 2026-08-20: faz z C01USDT = 6, ekspozycja +0.0252, daty formowania ['2026-08-14', '2026-08-15', '2026-08-16', '2026-08-17', '2026-08-18', '2026-08-19']
+    as_of 2026-08-23: faz z C01USDT = 3, ekspozycja +0.0142, daty formowania ['2026-08-17', '2026-08-18', '2026-08-19']
+    as_of 2026-08-26: faz z C01USDT = 0, ekspozycja +0.0000, daty formowania []
+    as_of 2026-08-27: faz z C01USDT = 0, ekspozycja +0.0000, daty formowania []
+  `transakcje.csv` — zamknięte pozycje C01USDT z wyjściem ≥ D: 8
+skladowa  faza data_wejscia data_wyjscia  cena_wyjscia powod_wyjscia  zwrot_pozycji_proc
+   trend     3   2026-08-13   2026-08-20           NaN       rotacja                 NaN
+   trend     4   2026-08-14   2026-08-21           NaN       rotacja                 NaN
+   trend     5   2026-08-15   2026-08-22           NaN       rotacja                 NaN
+   trend     6   2026-08-16   2026-08-23           NaN       rotacja                 NaN
+   trend     0   2026-08-17   2026-08-24           NaN       rotacja                 NaN
+   trend     1   2026-08-18   2026-08-25           NaN       rotacja                 NaN
+      x1     1   2026-08-18   2026-08-25           NaN       rotacja                 NaN
+   trend     2   2026-08-19   2026-08-26           NaN       rotacja                 NaN
+  `transakcje_otwarte.csv` przy as_of 2026-08-22: 5 pozycji C01USDT, cena_biezaca NaN: 5, zwrot_biezacy NaN: 5
+  skład koszyka (monthly_members): 2026-08: True, 2026-09: False
+----------------------------------------------------------------------------------------------------
+3. ZAMROŻENIE C02USDT: od D open = high = low = close = ostatnie zamknięcie, obrót 0
+  skład koszyka: 2026-08: True, 2026-09: True
+  TS1: wagi zamrożonej monety przy kolejnych formowaniach (co 7. wiersz):
+formowanie  faza  znak    sigma      waga
+2026-08-13     3   1.0 0.562972  0.035526
+2026-08-20     3   1.0 0.546311  0.036609
+2026-08-27     3   1.0 0.515585  0.038791
+2026-09-03     3  -1.0 0.486588 -0.041103
+2026-09-10     3  -1.0 0.459224 -0.043552
+2026-09-17     3   0.0 0.433400  0.000000
+  formowań po D z wagą ≠ 0: 27 z 35; ostatnie ≠ 0: 2026-09-15
+  pozycje C02USDT od D−7: statusy {'rotacja': 34} (likwidacja niemożliwa: high = low)
+  X1: formowania po D z C02USDT w nodze (data, noga, sygnał 28 d): 15; pierwsze [(datetime.date(2026, 8, 31), 'short', 0.0044), (datetime.date(2026, 9, 7), 'short', -0.057), (datetime.date(2026, 9, 1), 'short', 0.0099), (datetime.date(2026, 9, 8), 'short', -0.0565)]; ostatnie [(datetime.date(2026, 9, 12), 'short', -0.0251), (datetime.date(2026, 8, 30), 'short', 0.0295), (datetime.date(2026, 9, 6), 'short', -0.0622)]
+----------------------------------------------------------------------------------------------------
+4. ŚWIEŻY KATALOG DANYCH: plik wycofanej monety znika (np. nowa maszyna, `fetch_live` pobiera tylko TRADING)
+  drugi przebieg bez pliku C01USDT: as_of 2026-09-23 | transakcje +61 | historia zmieniona: 2193

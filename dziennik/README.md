@@ -601,6 +601,9 @@ git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika --as-of 2027-09-23    
 git fetch && PYTHONUTF8=1 py -m backtest.odczyt_dziennika [--repo .] [--json]         # podgląd
 ```
 
+Krok (c) kryterium 6 (zgodność carry z giełdą, jedyny krok z siecią) idzie osobną komendą w dniu odczytu, na tym samym
+commicie co wydruk wiążący: ta sama komenda z dopisanym `--carry-sprawdz-gielde`; jego wynik jest opisowy i nie zmienia wydruku wiążącego (decyzja użytkownika 2026-09-30).
+
 Skrypt jest reporterem („próg przekroczony / nieprzekroczony”); werdykt o każdej nodze podpisuje Claude
 w dokumentacji odczytu, a decyzja o szczeblu 4 należy do użytkownika. Kryteria 1–4 skrypt liczy tymi samymi
 definicjami co strona dziennika (`tools/strona_dziennika.build_state`). Testy: `tests/test_odczyt_dziennika.py`.

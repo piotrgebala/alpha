@@ -6,3 +6,5 @@ runs/skille/*.jsonl merge=union text eol=lf
 *.bat text eol=crlf
 # Log przebiegów dziennika: dopisywany na końcu przez różne maszyny — przy scalaniu zachowaj oba wpisy
 dziennik/przebiegi.log merge=union
+# Zamrożone modele rund (ML1, zadanie 028): hash pliku w manifeście — bez konwersji końców linii
+runs/*/model_*.json binary

@@ -1,0 +1,108 @@
+# Zadanie 024 — druga droga (tylko odczyt /home/dantey1/alpha/data/raw), 2026-09-29,
+# gałąź zadanie-024-nazwy-cp866-universe. Ścieżki {RAW}=/home/dantey1/alpha/data/raw,
+# {KOPIA}=kopia trzech katalogów po --wykonaj (proba_na_kopii.txt).
+
+## A. sha256 z narzędzia (sprawdz_serwer.txt) vs coreutils sha256sum
+komenda: LC_ALL=C find {RAW}/universe_full {RAW}/universe_2026q3 {RAW}/live -maxdepth 1 -type f -name '*[! -~]*' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > SUMY; PYTHONUTF8=1 py zadania/024-dowody/porownaj_sha.py zadania/024-dowody/sprawdz_serwer.txt SUMY
+kod wyjścia: 0
+
+SUMY (sha256sum):
+41cdbdb98e402e9167282435a59653dc34719f8e8a5ae875131f0fffcccf7289  /home/dantey1/alpha/data/raw/live/хУИхЯ║ч▒│USDT_1d.parquet
+e0cdc2421007a26e618d08c863a7420c5360a2ba88efb569d4e161db0b794cb5  /home/dantey1/alpha/data/raw/live/х╕БхоЙф║║чФЯUSDT_1d.parquet
+b5cbde45509e0df69c3e3629156083e1739783a15b7a3171439b0f561af37eef  /home/dantey1/alpha/data/raw/live/х╕БхоЙф║║чФЯUSDT_funding.parquet
+66e290c65625bdb844fad1b631aef6848d8a7c5b85d9a46c86ace99fe684b1e7  /home/dantey1/alpha/data/raw/live/цИСш╕ПщймцЭеф║ЖUSDT_1d.parquet
+cb04b5fc05180c5c89ce856ce3609a9cc60be485c463c2e9f43da7879114636f  /home/dantey1/alpha/data/raw/live/чЙЫцЭеUSDT_1d.parquet
+35790edeaf61e17e8d3b9987af987fd5f537b20afa92559dd030316c33535c67  /home/dantey1/alpha/data/raw/live/щ╛ЩшЩ╛USDT_1d.parquet
+f324a4c1242b3fa7c5c9ce8cbb92bb08a86debdd1f174dbaf30918dbb498418d  /home/dantey1/alpha/data/raw/universe_2026q3/х╕БхоЙф║║чФЯUSDT_1d.parquet
+5aefcbc3ca27d63b594338a0d44404788e21b59cb7564abe2ca6c3ffee2f70dc  /home/dantey1/alpha/data/raw/universe_2026q3/х╕БхоЙф║║чФЯUSDT_funding.parquet
+a4f8addc219bc9a9faba1ced924e97801f016708dee7ee292740c87e73844a4d  /home/dantey1/alpha/data/raw/universe_2026q3/цИСш╕ПщймцЭеф║ЖUSDT_1d.parquet
+5bdbf81c4cde1df64ec91a1abf56fcfecf53f23c17e9042c3c987231a4b8b077  /home/dantey1/alpha/data/raw/universe_2026q3/цИСш╕ПщймцЭеф║ЖUSDT_funding.parquet
+79b20d20e59c8e3e6b1c679b9ed9652719e1af19e3ae68aa41be0256456ea12a  /home/dantey1/alpha/data/raw/universe_2026q3/чЙЫцЭеUSDT_1d.parquet
+bf310f06fe949ea96127341c07025779d455ebbbc9abd49c1c7311c6a091801a  /home/dantey1/alpha/data/raw/universe_2026q3/чЙЫцЭеUSDT_funding.parquet
+70effbba67e5da9c6a7a14f6a4cfdcf17df11c654df0ec870383e4ec5b746ed5  /home/dantey1/alpha/data/raw/universe_2026q3/щ╛ЩшЩ╛USDT_1d.parquet
+3104883f2e396010d9a6902044252b22ea3e7fe60245f723b4cec71896174220  /home/dantey1/alpha/data/raw/universe_2026q3/щ╛ЩшЩ╛USDT_funding.parquet
+ba067145077a5dcec8defb634555c1473f43b4952a64be57dd7ef4dbf2f5f081  /home/dantey1/alpha/data/raw/universe_full/х╕БхоЙф║║чФЯUSDT_1d.parquet
+7de2c3b97ff031229a9ffdba36946f569bfae4cf8880a07c66dd481383ea6bbc  /home/dantey1/alpha/data/raw/universe_full/х╕БхоЙф║║чФЯUSDT_funding.parquet
+be520f156606c2c026c2ee5111910fee32943764ef277b4e271545f174dae485  /home/dantey1/alpha/data/raw/universe_full/цИСш╕ПщймцЭеф║ЖUSDT_1d.parquet
+331918f3acd22bfa2ef1ff6ac393e2ef7e48aa28fc17722977cf77119dd6a516  /home/dantey1/alpha/data/raw/universe_full/цИСш╕ПщймцЭеф║ЖUSDT_funding.parquet
+df714d505db81e08b16d97bc6cb03c5a2f5e3a1f27c50d24e5dc0c50ecb17341  /home/dantey1/alpha/data/raw/universe_full/чЙЫцЭеUSDT_1d.parquet
+e0eeae64a74553469b9759644f3b00e66accbebdbbc309120500356145c4e417  /home/dantey1/alpha/data/raw/universe_full/щ╛ЩшЩ╛USDT_1d.parquet
+
+narzędzie: 20 plików; sha256sum: 20; wspólne ścieżki: 20
+sumy równe: 20/20
+tylko w narzędziu: 0; tylko w sha256sum: 0
+
+## B. Treść plików o zniekształconej nazwie vs niezależne dane o poprawnej nazwie (close z listings/klines i universe_ohlc_full, funding z listings/funding; równość dokładna)
+komenda: PYTHONUTF8=1 py zadania/024-dowody/porownaj.py {RAW}
+kod wyjścia: 0
+
+universe_full    币安人生USDT       1d       wiersze= 254 kol=['open_time', 'close', 'quote_volume'] 2025-10-20 00:00:00+00:00..2026-06-30 00:00:00+00:00 | listings/klines: wspolne=42 rowne=42 | ohlc_full: wspolne=61 rowne=61
+universe_full    币安人生USDT       funding  wiersze=1520 kol=['timestamp', 'funding_rate'] 2025-10-20 12:00:00+00:00..2026-06-30 20:00:00.003000+00:00 | listings/funding: wspolne=249 rowne=249
+universe_full    我踏马来了USDT      1d       wiersze= 161 kol=['open_time', 'close', 'quote_volume'] 2026-01-21 00:00:00+00:00..2026-06-30 00:00:00+00:00 | listings/klines: wspolne=39 rowne=39 | ohlc_full: brak
+universe_full    我踏马来了USDT      funding  wiersze= 995 kol=['timestamp', 'funding_rate'] 2026-01-21 16:00:00.011000+00:00..2026-06-30 20:00:00.003000+00:00 | listings/funding: wspolne=264 rowne=264
+universe_full    牛来USDT         1d       wiersze=   0 kol=['open_time', 'close', 'quote_volume'] pusty | listings/klines: brak | ohlc_full: brak
+universe_full    龙虾USDT         1d       wiersze= 112 kol=['open_time', 'close', 'quote_volume'] 2026-03-11 00:00:00+00:00..2026-06-30 00:00:00+00:00 | listings/klines: wspolne=21 rowne=21 | ohlc_full: brak
+universe_2026q3  币安人生USDT       1d       wiersze= 339 kol=['open_time', 'close', 'quote_volume'] 2025-10-20 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: wspolne=42 rowne=42 | ohlc_full: wspolne=61 rowne=61
+universe_2026q3  币安人生USDT       funding  wiersze=2030 kol=['timestamp', 'funding_rate'] 2025-10-20 12:00:00+00:00..2026-09-23 20:00:00+00:00 | listings/funding: wspolne=249 rowne=249
+universe_2026q3  我踏马来了USDT      1d       wiersze= 246 kol=['open_time', 'close', 'quote_volume'] 2026-01-21 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: wspolne=39 rowne=39 | ohlc_full: brak
+universe_2026q3  我踏马来了USDT      funding  wiersze=1505 kol=['timestamp', 'funding_rate'] 2026-01-21 16:00:00.011000+00:00..2026-09-23 20:00:00+00:00 | listings/funding: wspolne=264 rowne=264
+universe_2026q3  牛来USDT         1d       wiersze=  25 kol=['open_time', 'close', 'quote_volume'] 2026-08-30 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: brak | ohlc_full: brak
+universe_2026q3  牛来USDT         funding  wiersze= 147 kol=['timestamp', 'funding_rate'] 2026-08-30 12:00:00+00:00..2026-09-23 20:00:00+00:00 | listings/funding: brak
+universe_2026q3  龙虾USDT         1d       wiersze= 197 kol=['open_time', 'close', 'quote_volume'] 2026-03-11 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: wspolne=21 rowne=21 | ohlc_full: brak
+universe_2026q3  龙虾USDT         funding  wiersze=1178 kol=['timestamp', 'funding_rate'] 2026-03-11 12:00:00.003000+00:00..2026-09-23 20:00:00+00:00 | listings/funding: wspolne=123 rowne=123
+live             哈基米USDT        1d       wiersze=  18 kol=['open_time', 'open', 'high', 'low', 'close', 'quote_volume'] 2026-09-06 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: brak | ohlc_full: brak
+live             币安人生USDT       1d       wiersze= 339 kol=['open_time', 'open', 'high', 'low', 'close', 'quote_volume'] 2025-10-20 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: wspolne=42 rowne=42 | ohlc_full: wspolne=61 rowne=61
+live             币安人生USDT       funding  wiersze=2035 kol=['timestamp', 'funding_rate'] 2025-10-20 12:00:00+00:00..2026-09-24 16:00:00.005000+00:00 | listings/funding: wspolne=249 rowne=249
+live             我踏马来了USDT      1d       wiersze= 246 kol=['open_time', 'open', 'high', 'low', 'close', 'quote_volume'] 2026-01-21 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: wspolne=39 rowne=39 | ohlc_full: brak
+live             牛来USDT         1d       wiersze=  25 kol=['open_time', 'open', 'high', 'low', 'close', 'quote_volume'] 2026-08-30 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: brak | ohlc_full: brak
+live             龙虾USDT         1d       wiersze= 197 kol=['open_time', 'open', 'high', 'low', 'close', 'quote_volume'] 2026-03-11 00:00:00+00:00..2026-09-23 00:00:00+00:00 | listings/klines: wspolne=21 rowne=21 | ohlc_full: brak
+
+## C. Które zbiory kluczowane symbolem mają te 5 monet (pod poprawną / zniekształconą nazwą)
+komenda: PYTHONUTF8=1 py zadania/024-dowody/klucze.py {RAW}
+kod wyjścia: 0
+
+listings/funding.parquet: kol=symbol wierszy=120113 poprawne={'币安人生': 249, '我踏马来了': 264, '龙虾': 123} znieksztalcone={}
+listings/klines.parquet: kol=symbol wierszy=21374 poprawne={'币安人生': 42, '我踏马来了': 39, '龙虾': 21} znieksztalcone={}
+mark_1d/mark_1d.parquet: kol=symbol wierszy=50506 poprawne={} znieksztalcone={}
+oi_panel/oi_daily.parquet: kol=symbol wierszy=35745 poprawne={} znieksztalcone={}
+oi_panel/oi_daily_full.parquet: kol=symbol wierszy=36357 poprawne={} znieksztalcone={}
+tradfi_perps/funding_binance.parquet: kol=symbol wierszy=70524 poprawne={} znieksztalcone={}
+tradfi_perps/funding_bybit.parquet: kol=symbol wierszy=60853 poprawne={} znieksztalcone={}
+tradfi_perps/premia_bybit_1m.parquet: kol=symbol wierszy=80644 poprawne={} znieksztalcone={}
+tradfi_perps/spis_binance.parquet: kol=symbol wierszy=207 poprawne={} znieksztalcone={}
+tradfi_perps/spis_bybit.parquet: kol=symbol wierszy=258 poprawne={} znieksztalcone={}
+tradfi_perps/swiece_binance_index_1h.parquet: kol=symbol wierszy=98502 poprawne={} znieksztalcone={}
+tradfi_perps/swiece_binance_last_1h.parquet: kol=symbol wierszy=99041 poprawne={} znieksztalcone={}
+tradfi_perps/swiece_binance_mark_1h.parquet: kol=symbol wierszy=99041 poprawne={} znieksztalcone={}
+tradfi_perps/swiece_bybit_index_1h.parquet: kol=symbol wierszy=67353 poprawne={} znieksztalcone={}
+tradfi_perps/swiece_bybit_last_1h.parquet: kol=symbol wierszy=67349 poprawne={} znieksztalcone={}
+tradfi_perps/swiece_bybit_mark_1h.parquet: kol=symbol wierszy=67353 poprawne={} znieksztalcone={}
+universe_ohlc/ohlc_1d.parquet: kol=symbol wierszy=48186 poprawne={} znieksztalcone={}
+universe_ohlc_full/ohlc_1d.parquet: kol=symbol wierszy=50636 poprawne={'币安人生': 61} znieksztalcone={}
+
+## D. listings/events.csv — wiersze 5 symboli (potwierdzenie symbolu i daty startu)
+symbol,d0,cls,base,reason,in_sample,onboard
+币安人生USDT,2025-10-20 00:00:00+00:00,CRYPTO,币安人生,,True,2025-10-20 11:00:00+00:00
+我踏马来了USDT,2026-01-21 00:00:00+00:00,CRYPTO,我踏马来了,,True,2026-01-21 14:30:00+00:00
+龙虾USDT,2026-03-11 00:00:00+00:00,CRYPTO,龙虾,,True,2026-03-11 11:30:00+00:00
+牛来USDT,2026-08-30 00:00:00+00:00,CRYPTO,牛来,okno poza końcem danych,False,2026-08-30 11:30:00+00:00
+哈基米USDT,2026-09-06 00:00:00+00:00,CRYPTO,哈基米,okno poza końcem danych,False,2026-09-06 07:15:00+00:00
+
+## E. Prawdziwe loadery: oryginał serwera vs kopia po --wykonaj (skład top-20, filtr dziennika, łączenie z universe_ohlc_full)
+komenda: PYTHONUTF8=1 py zadania/024-dowody/sklad_po.py {RAW} {KOPIA} <worktree>
+kod wyjścia: 0
+
+== universe_full / universe_2026q3 (rebalance_premium.load_universe, bez filtra nazw)
+  universe_full: kolumny oryginał 675, kopia 675; spoza ASCII w kopii ['币安人生USDT', '我踏马来了USDT', '龙虾USDT']
+  universe_full 2026-05-01: ten sam skład; spoza ASCII w kopii ['币安人生USDT']
+  universe_full: miesięcy 65, z innym składem (po etykiecie) 0
+  universe_2026q3: kolumny oryginał 653, kopia 653; spoza ASCII w kopii ['币安人生USDT', '我踏马来了USDT', '牛来USDT', '龙虾USDT']
+  universe_2026q3 2026-05-01: ten sam skład; spoza ASCII w kopii ['币安人生USDT']
+  universe_2026q3: miesięcy 14, z innym składem (po etykiecie) 0
+== live (data.fetch_live.symbol_files — filtr SYMBOL_RE jak w dzienniku)
+  symboli: oryginał 522 (spoza ASCII ['чЙЫцЭеUSDT']), kopia 526 (spoza ASCII ['哈基米USDT', '币安人生USDT', '我踏马来了USDT', '牛来USDT', '龙虾USDT'])
+  live 2026-05-01: tylko oryginał ['RIVERUSDT'], tylko kopia ['币安人生USDT']
+  live: miesięcy 13, z innym składem (po etykiecie) 1
+== łączenie z universe_ohlc_full (jak TP1/RU1/RU2/LP1: high.reindex(columns=close.columns))
+  oryginał: kolumna 'х╕БхоЙф║║чФЯUSDT': dni 2026-05 z high = 0, z close = 31
+  kopia: kolumna '币安人生USDT': dni 2026-05 z high = 31, z close = 31

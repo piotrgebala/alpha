@@ -1,0 +1,15 @@
+币安人生USDT w universe_ohlc_full: 61 dni, 2026-04-01 … 2026-05-31
+wejść (zamknięcia 2026-05 z ≥ 1 dniem okna): 30
+  long_max_spadek: max 19.7 %, mediana 5.1 %
+  short_max_wzrost: max 63.7 %, mediana 22.2 %
+  long_max_zysk: max 63.7 %, mediana 22.2 %
+  short_max_zysk: max 19.7 %, mediana 5.1 %
+  próg likwidacji 2× (49.0 %): wejść long z przekroczeniem 0, short 6
+  próg likwidacji 3× (32.3 %): wejść long z przekroczeniem 0, short 8
+  cel TP1 +1 %: wejść long z trafieniem 30/30, short 28/30
+  cel TP1 +2 %: wejść long z trafieniem 30/30, short 25/30
+znak trendu (28 dni) w dniach 2026-05: {1.0: np.int64(27), -1.0: np.int64(4)}
+  2026-05-16: znak -1.0; short: max wzrost w 7 dniach 21.0 % (progi: 2× 49,0 %, 3× 32,3 %)
+  2026-05-17: znak -1.0; short: max wzrost w 7 dniach 15.6 % (progi: 2× 49,0 %, 3× 32,3 %)
+  2026-05-18: znak -1.0; short: max wzrost w 7 dniach 3.7 % (progi: 2× 49,0 %, 3× 32,3 %)
+  2026-05-19: znak -1.0; short: max wzrost w 7 dniach 11.9 % (progi: 2× 49,0 %, 3× 32,3 %)

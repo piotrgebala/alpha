@@ -648,3 +648,241 @@ def test_bad_carry_file_does_not_block_the_page(tmp_path, capsys, txt, err):
     state = json.loads(out.read_text(encoding="utf-8"))
     assert state["carry"]["error"].startswith(err) and state["r1"]["dates"]
     assert "(f) carry: nie da się odczytać carry_wyniki.csv" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------------ kontrola (h): „BŁĄD” w polu przebiegu
+
+# Pola z błędem w formacie live_journal.run: X1 z komunikatem, reszta „<pole> BŁĄD <typ>”.
+X1_ERR = " | X1 sygnały +0 wyniki +0 kapitał nan obsunięcie nan% BŁĄD ValueError: test"
+X1_ERR_BODY = "sygnały +0 wyniki +0 kapitał nan obsunięcie nan% BŁĄD ValueError: test"
+REST12 = (
+    " | stan rynku +1 | F&G +1 | transakcje +0 | opisy strategii 5 | rozbicie +3 | fazy +21"
+    " | koszyk +0"
+)
+FG_ERR = BASE12.replace("F&G +1", "F&G BŁĄD KeyError") + TAIL
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        (HEAD + TAIL, []),
+        (HEAD + X1 + " | stan rynku +1 | F&G brak pliku" + TAIL, []),  # brak pliku to nie błąd
+        (BASE12 + TAIL, []),
+        (BASE12 + " | carry spóźnione | carry zmiany 2" + TAIL, []),
+        (BASE12 + " | carry BŁĄD RuntimeError | carry zmiany 1" + TAIL, []),  # carry ma (f)
+        (HEAD + X1_ERR + REST12 + TAIL, [("X1", X1_ERR_BODY)]),
+        (FG_ERR, [("F&G", "BŁĄD KeyError")]),
+        (
+            HEAD
+            + X1
+            + " | stan rynku BŁĄD ValueError | F&G +0 | transakcje BŁĄD KeyError"
+            + " | opisy strategii BŁĄD TypeError | rozbicie +2 (x1 BŁĄD ValueError)"
+            + " | fazy +14 (x1 BŁĄD ValueError) | koszyk BŁĄD KeyError | carry BŁĄD OSError"
+            + TAIL,
+            [
+                ("stan rynku", "BŁĄD ValueError"),
+                ("transakcje", "BŁĄD KeyError"),
+                ("opisy strategii", "BŁĄD TypeError"),
+                ("rozbicie", "+2 (x1 BŁĄD ValueError)"),
+                ("fazy", "+14 (x1 BŁĄD ValueError)"),
+                ("koszyk", "BŁĄD KeyError"),
+            ],
+        ),
+        (BASE12 + " | nowe pole BŁĄD KeyError" + TAIL, [("nowe pole", "BŁĄD KeyError")]),
+        (BASE12 + " | BŁĄD KeyError" + TAIL, [("pole", "BŁĄD KeyError")]),  # pole bez nazwy
+        ("", []),
+    ],
+    ids=[
+        "bez-X1",
+        "F&G-brak-pliku",
+        "poprawka-12",
+        "carry-klopot-zmiany",
+        "carry-blad",
+        "X1",
+        "F&G",
+        "wiele-pol",
+        "pole-z-przyszlosci",
+        "pole-bez-nazwy",
+        "pusty",
+    ],
+)
+def test_error_fields_names_failed_fields_and_skips_carry(line, expected):
+    assert sd.error_fields(line) == expected
+
+
+def test_checks_h_reports_failed_field_of_last_run():
+    runs, _ = sd.parse_log(FG_ERR)
+    s = _state(last_run=runs[-1])
+    probs = sd.checks(s, FG_ERR)
+    assert probs == ["(h) F&G: BŁĄD KeyError"]
+    assert sd.verdict_line(s, probs) == "UWAGA: (h) F&G: BŁĄD KeyError."
+    assert sd.checks(s) == []  # bez rekordu (h) milczy — dotychczasowe wywołanie bez zmian
+
+
+def test_checks_h_x1_error_from_line():
+    line = HEAD + X1_ERR + REST12 + TAIL
+    runs, bad = sd.parse_log(line)
+    assert bad == 0 and runs[-1]["x1"] == X1_ERR_BODY
+    assert sd.checks(_state(last_run=runs[-1]), line) == [f"(h) X1: {X1_ERR_BODY}"]
+
+
+def test_checks_h_multiline_error_is_one_record():
+    """Komunikat X1 w dwóch liniach: `log_records` skleja je w jeden rekord i (h) cytuje całość."""
+    text = "\n".join(
+        [
+            HEAD.replace("2026-09-27T02:30", "2026-09-26T02:30") + X1 + TAIL,
+            HEAD + " | X1 sygnały +0 wyniki +0 kapitał nan obsunięcie nan% BŁĄD ValueError: a",
+            "druga linia komunikatu | stan rynku +0 | F&G +0" + TAIL,
+        ]
+    )
+    runs, bad = sd.parse_log(text)
+    rec = sd.last_record(text)
+    assert bad == 0 and len(runs) == 2
+    assert rec == (
+        HEAD + " | X1 sygnały +0 wyniki +0 kapitał nan obsunięcie nan% BŁĄD ValueError: a"
+        " druga linia komunikatu | stan rynku +0 | F&G +0" + TAIL
+    )
+    assert sd.checks(_state(last_run=runs[-1]), rec) == [
+        "(h) X1: sygnały +0 wyniki +0 kapitał nan obsunięcie nan% "
+        "BŁĄD ValueError: a druga linia komunikatu"
+    ]
+
+
+def test_checks_carry_error_gives_f_without_h():
+    line = BASE12 + " | carry BŁĄD RuntimeError" + TAIL
+    runs, _ = sd.parse_log(line)
+    assert sd.checks(_state(last_run=runs[-1]), line) == ["(f) carry: BŁĄD RuntimeError"]
+
+
+def test_checks_h_comes_last_after_a_to_g():
+    line = BASE12.replace("F&G +1", "F&G BŁĄD KeyError") + " | carry spóźnione" + TAIL
+    runs, _ = sd.parse_log(line)
+    s = _state(health__latest_as_of="2026-09-25", last_run=runs[-1])
+    assert sd.checks(s, line) == [
+        "(a) dane za 2026-09-25, oczekiwane za 2026-09-26",
+        "(f) carry: spóźnione",
+        "(h) F&G: BŁĄD KeyError",
+    ]
+
+
+def test_last_record_is_latest_readable_run_not_last_line():
+    newest = HEAD + X1 + TAIL  # 27.09, bez błędu
+    older = HEAD.replace("2026-09-27T02:30", "2026-09-26T02:30") + X1_ERR + REST12 + TAIL
+    garbage = "2026-09-28T02:30:00+00:00 | śmieci bez formatu"  # późniejszy czas, nieczytelny
+    text = "\n".join([newest, older, garbage])
+    runs, bad = sd.parse_log(text)
+    assert bad == 1 and sd.last_record(text) == newest
+    assert sd.parse_log(sd.last_record(text))[0] == [runs[-1]]
+    assert sd.checks(_state(last_run=runs[-1]), sd.last_record(text)) == []
+    assert sd.last_record("") == "" and sd.last_record(garbage) == ""
+
+
+@settings(max_examples=150, deadline=None)
+@given(
+    minutes=st.lists(st.integers(0, 3), min_size=1, max_size=6),
+    garbage=st.booleans(),
+    data=st.data(),
+)
+def test_last_record_is_the_record_of_state_last_run(minutes, garbage, data):
+    """Dowolna kolejność linii (także kilka przebiegów w tej samej minucie): rekord dla (h) to ten,
+    z którego parser strony zrobił `last_run` (sygnały +i odróżniają rekordy)."""
+    recs = [
+        HEAD.replace("02:30:05", f"02:3{m}:{i:02d}").replace("sygnały +147", f"sygnały +{i}") + TAIL
+        for i, m in enumerate(minutes)
+    ]
+    lines = data.draw(st.permutations(recs))
+    lines += ["2026-09-28T00:00:00+00:00 | śmieci"] if garbage else []
+    runs, _ = sd.parse_log("\n".join(lines))
+    assert sd.parse_log(sd.last_record("\n".join(lines)))[0] == [runs[-1]]
+
+
+_SIDE_OK = {
+    "stan rynku": "+1",
+    "F&G": "+1",
+    "transakcje": "+30",
+    "opisy strategii": "5",
+    "rozbicie": "+3",
+    "fazy": "+21",
+    "koszyk": "+0",
+}
+_ERR_TYPE = st.sampled_from(["ValueError", "KeyError", "RuntimeError", "OSError"])
+
+
+@settings(max_examples=200, deadline=None)
+@given(
+    x1_msg=st.one_of(
+        st.none(), st.text(st.sampled_from("abcdefgłąś0123456789:.,()+- "), max_size=30)
+    ),
+    side=st.lists(st.one_of(st.none(), _ERR_TYPE), min_size=7, max_size=7),
+    comp_x1=st.booleans(),
+    carry=st.one_of(
+        st.none(), st.sampled_from(["spóźnione", "brak pliku"]), _ERR_TYPE.map("BŁĄD {}".format)
+    ),
+    carry_n=st.integers(0, 3),
+    new=st.one_of(st.none(), _ERR_TYPE),
+)
+def test_error_fields_round_trip_of_journal_line(x1_msg, side, comp_x1, carry, carry_n, new):
+    """Linia jak z live_journal.run z losowymi błędami źródeł pobocznych: (h) zgłasza DOKŁADNIE
+    pola z błędem (nazwa, treść, kolejność linii), nigdy pól carry; linia nadal się czyta."""
+    fields, expected = [], []
+    if x1_msg is None:
+        fields.append(X1[3:])
+    else:
+        body = f"sygnały +0 wyniki +0 kapitał nan obsunięcie nan% BŁĄD ValueError: {x1_msg}"
+        fields.append(f"X1 {body}")
+        expected.append(("X1", body.strip()))
+    for (name, ok), err in zip(_SIDE_OK.items(), side, strict=True):
+        if err is not None:
+            val = f"BŁĄD {err}"
+        elif comp_x1 and name in ("rozbicie", "fazy"):
+            val = f"{ok} (x1 BŁĄD ValueError)"  # błąd jednej składowej (poprawka 11)
+        else:
+            val = ok
+        fields.append(f"{name} {val}")
+        if "BŁĄD" in val:
+            expected.append((name, val))
+    fields += [f"carry {carry}"] if carry else []
+    fields += [f"carry zmiany {carry_n}"] if carry_n else []
+    if new is not None:
+        fields.append(f"nowe pole BŁĄD {new}")
+        expected.append(("nowe pole", f"BŁĄD {new}"))
+    line = HEAD + "".join(f" | {f}" for f in fields) + TAIL
+    assert sd.error_fields(line) == expected
+    runs, bad = sd.parse_log(line)
+    assert bad == 0 and len(runs) == 1
+    h = [p for p in sd.checks(_state(last_run=runs[0]), line) if p.startswith("(h)")]
+    assert h == [f"(h) {n}: {b}" for n, b in expected]
+
+
+def test_h_quiet_on_every_healthy_record_of_repo_log():
+    """Prawdziwy dziennik/przebiegi.log: rekord bez „BŁĄD” = zero alarmów (h); alarm (gdyby rekord
+    miał błąd) zawsze cytuje treść z „BŁĄD”. Przy odbiorze zadania 020 (2026-09-29): 16 rekordów,
+    żaden z „BŁĄD”, więc zero alarmów."""
+    if not LOG.exists():
+        pytest.skip("brak dziennik/przebiegi.log w tym klonie")
+    recs = sd.log_records(LOG.read_text(encoding="utf-8"))
+    assert recs
+    for rec in recs:
+        errs = sd.error_fields(rec)
+        assert all(sd.ERROR_MARK in body for _, body in errs), rec
+        if sd.ERROR_MARK not in rec:
+            assert errs == [], rec
+
+
+@needs_git
+@pytest.mark.parametrize("fg_last", ["+1", "BŁĄD KeyError"], ids=["bez-bledu", "blad-F&G"])
+def test_main_h_reads_only_last_run_and_keeps_state_format(tmp_path, capsys, fg_last):
+    """(h) w powiadomieniu z ostatniego przebiegu (błąd starszego nie alarmuje); stan.json bez
+    nowych pól — `last_run` to dokładnie słownik parsera."""
+    older = HEAD.replace("2026-09-27T02:30", "2026-09-26T02:30") + X1 + " | F&G BŁĄD ValueError"
+    last = HEAD + X1 + f" | stan rynku +1 | F&G {fg_last}"
+    files = dict(FILES)
+    files["przebiegi.log"] = f"{older}{TAIL}\n{last}{TAIL}\n"
+    out = tmp_path / "stan.json"
+    assert sd.main([str(_repo(tmp_path, files)), str(out)]) == 0
+    verdict = capsys.readouterr().out.strip().splitlines()[-1]
+    assert ("(h)" in verdict) == (fg_last != "+1")
+    assert verdict.endswith("(h) F&G: BŁĄD KeyError.") == (fg_last != "+1")
+    assert "ValueError" not in verdict  # błąd F&G starszego przebiegu
+    state = json.loads(out.read_text(encoding="utf-8"))
+    assert state["last_run"] == sd.parse_log(files["przebiegi.log"])[0][-1]

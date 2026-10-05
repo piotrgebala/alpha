@@ -1,0 +1,25 @@
+{
+  "features": [
+    "return_lag_1",
+    "volume_zscore_20",
+    "rsi_14",
+    "funding_rate",
+    "oi_change_24h",
+    "global_ls_log",
+    "taker_imbalance_24h",
+    "vrp_30d",
+    "ex_supply_change_7d",
+    "fng_level"
+  ],
+  "dropped_by_dedup": [
+    "price_zscore_20"
+  ],
+  "top_share": 0.2,
+  "threshold": 0.42496348023414615,
+  "n_signals_oos": 910,
+  "n_above": 182,
+  "abstention_oos": 0.31400602409638556,
+  "folds_active": 15,
+  "prereg_commit": "e99dc82530229f5acff22eb527bc86f2535e7109",
+  "code_commit": "35cd2c73aa00d776f60cb08bedf49e0bc20ac6c3"
+}

@@ -276,3 +276,43 @@ sw_positioning:
     leakage_risk: "niskie: średnia z odczytów wewnątrz świecy, rolling trailing"
     added: "2026-09-24"
 
+
+# --- ML1 (2026-09-30, zadanie 028): siedem cech spoza wykresu na świecy DZIENNEJ BTC --------------
+# agents/ml1_features.py; karta runs/DRAFT_028.md §4.1 i §14. Wartość świecy d znana przed jej
+# zamknięciem (wejście po cenie zamknięcia). Cztery cechy REVERSION = sekcja `features:` bez zmian.
+ml1_1d:
+  funding_rate:
+    formula: "ostatnia stawka funding rozliczona ŚCIŚLE przed zamknięciem świecy 1d (BTC: 16:00 UTC dnia d); rozliczenie o 00:00 d+1 należy do świecy następnej"
+    dof: "brak (poziom)"
+    leakage_risk: "niskie: merge_asof wstecz z kluczem zamknięcie − 1 ns; test: rozliczenie o zamknięciu niewidoczne"
+    added: "2026-09-30"
+  oi_change_24h:
+    formula: "log(oi_close_d / oi_close_{d-1}); oi_close = sum_open_interest (BTC) z ostatniego odczytu 5-min w (open, open+23h55m]; <= 0 = NaN"
+    dof: "okno 1 świecy (24h) — wymuszone świecą"
+    leakage_risk: "niskie: odczyty wewnątrz świecy; test dopięcia + shift-forward"
+    added: "2026-09-30"
+  global_ls_log:
+    formula: "log(count_long_short_ratio) — ostatni odczyt 5-min w (open, open+23h55m]"
+    dof: "brak (poziom)"
+    leakage_risk: "niskie: odczyt wewnątrz świecy; dziura 2021-12-31 → 2022-01-18 = NaN"
+    added: "2026-09-30"
+  taker_imbalance_24h:
+    formula: "średnia log(sum_taker_long_short_vol_ratio) ze wszystkich odczytów 5-min w (open, open+23h55m]"
+    dof: "brak (jedna świeca = 24h)"
+    leakage_risk: "niskie: średnia z odczytów wewnątrz świecy; dziury 2021-12-31 → 2022-05-08 = NaN"
+    added: "2026-09-30"
+  vrp_30d:
+    formula: "DVOL_x/100 (Deribit 1D, dzień x widoczny od świecy x+1) − std 30 dziennych log-zwrotów × sqrt(365)"
+    dof: "okno realized 30 dni — jedno"
+    leakage_risk: "niskie: DVOL z opóźnieniem 1 dnia (klucz = otwarcie), realized trailing"
+    added: "2026-09-30"
+  ex_supply_change_7d:
+    formula: "log(SplyExNtv_x / SplyExNtv_{x-7}) CoinMetrics; dzień x widoczny od świecy x+2"
+    dof: "okno 7 dni — jedno"
+    leakage_risk: "niskie: opóźnienie 2 dni; rewizje CoinMetrics nieweryfikowalne (zapisane)"
+    added: "2026-09-30"
+  fng_level:
+    formula: "Fear & Greed / 100; dzień x (publikacja +4h) widoczny od świecy x+1 (klucz = otwarcie)"
+    dof: "brak (poziom)"
+    leakage_risk: "niskie: opóźnienie ≥ 4h względem otwarcia świecy"
+    added: "2026-09-30"
