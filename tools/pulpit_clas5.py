@@ -1,13 +1,14 @@
-"""Pulpit CLAS-5 — składa jedną stronę z zakładkami Dziennik | Tokeny | Mapa (artefakt claude.ai).
+"""Pulpit CLAS-5 — składa jedną stronę z zakładkami Radar | Dziennik | Tokeny | Mapa (artefakt claude.ai).
 
 Publikuje się `tools/pulpit_clas5.html`, pod adresem dawnej strony dziennika (adres w README.md,
-zakładki #dziennik, #tokeny, #mapa). Powłoka `tools/pulpit_clas5_szablon.html` ma nagłówek
+zakładki #radar, #dziennik, #tokeny, #mapa). Powłoka `tools/pulpit_clas5_szablon.html` ma nagłówek
 z zakładkami; każda zakładka to osobna strona w <iframe srcdoc>, tworzonym przy pierwszym otwarciu.
 Źródła zakładek zostają samodzielnymi stronami i działają bez zmian:
 
     dziennik  docs/strona_dziennik.html  baza dziennik/stan (rutyna Cowork, 06:30 UTC)
     tokeny    tools/strona_tokeny.html   baza tokeny/stan (docs/rag/12)
     mapa      docs/mapa_projektu.html    statyczna
+    radar     tools/strona_radar.html    baza radar/stan (zadanie zaplanowane „Radar” na koncie, codziennie)
 
 Dokument zakładki = szkielet, którym platforma owija każdą publikowaną stronę (ustalony 2026-09-28
 z opublikowanych Tokenów i Mapy), z PRELUDIUM jako pierwszym skryptem w <head>, + źródło strony.
@@ -44,6 +45,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SZABLON = Path("tools/pulpit_clas5_szablon.html")
 WYJSCIE = ROOT / "tools" / "pulpit_clas5.html"
 ZAKLADKI: tuple[tuple[str, Path], ...] = (
+    ("radar", Path("tools/strona_radar.html")),
     ("dziennik", Path("docs/strona_dziennik.html")),
     ("tokeny", Path("tools/strona_tokeny.html")),
     ("mapa", Path("docs/mapa_projektu.html")),
