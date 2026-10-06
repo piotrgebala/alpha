@@ -509,7 +509,11 @@ ucięte w dzienniku na 300 znakach. W takich wierszach (b) i (c) widzą tylko po
 | `poswiadczenia` | 8 | 0 | 0 | 0 / 0 | 1 | 1 (w Bash, bez blokady) |
 | `dziennik_audytu` | 2 | 0 | 0 | 0 / 0 | 0 | 0 |
 | `dziennik_audytu_zapis` (nowa) | — | — | 0 | 0 / 0 | — | 0 |
+| `poswiadczenia_slabe` (nowa, przegląd 16c) | — | — | 0 | 0 / 0 | — | 0 |
 | wiersze z flagą | 364 | 316 | 97 | 50 / 47 | — | — |
+
+Tabela jest liczona kodem po poprawkach z przeglądu 16c (ADR-13, „Poprawki po przeglądzie 16c”). Na tym
+tygodniu poprawki nie zmieniły żadnej liczby, a nowa flaga słaba `poswiadczenia_slabe` ma 0 wierszy.
 
 **Odmowy przy nowym `blokuj:`: 0** (oczekiwane 0). Co z tego wynika: w tym tygodniu żadna z dwóch blokad nie
 zatrzymałaby pracy. Wiersze z flagą spadają z 364 do 97 na tekście z dziennika. Na żywo, bez skutków cięcia
@@ -560,23 +564,27 @@ powtórka liczy na tekście z dziennika. Różnice biorą się z cięcia na 300 
 
 ### Dzień 2026-10-06 (poza oknem; plik dalej się pisze)
 
-Pomiar 2026-10-06 o 08:50 UTC na kopii pierwszych **479 wierszy** pliku.
+Pomiar 2026-10-06 o 09:47 UTC (po poprawkach z przeglądu 16c) na kopii pierwszych **637 wierszy** pliku.
 
 | flaga | (a) zapis | (b) stare reguły | (c) nowe reguły | (c): pełne / obcięte |
 |---|---:|---:|---:|---|
-| `dziennik_audytu` | 41 | 36 | 36 | 7 / 29 |
-| `poswiadczenia` | 4 | 0 | 0 | 0 / 0 |
-| `siec_host_nieznany` | 9 | 6 | 0 | 0 / 0 |
-| `zapis_poza_repo` | 6 | 3 | 0 | 0 / 0 |
-| `zapis_tmp` | 69 | 67 | 1 | 0 / 1 |
+| `dziennik_audytu` | 48 | 40 | 40 | 8 / 32 |
+| `poswiadczenia` | 9 | 1 | 1 | 1 / 0 |
+| `siec_host_nieznany` | 10 | 6 | 0 | 0 / 0 |
+| `zapis_poza_repo` | 8 | 5 | 1 | 0 / 1 |
+| `zapis_tmp` | 98 | 94 | 2 | 0 / 2 |
 | `dziennik_audytu_zapis` (nowa) | — | — | 0 | 0 / 0 |
-| wiersze z flagą | 118 | 109 | 37 | 7 / 30 |
+| `poswiadczenia_slabe` (nowa) | — | — | 0 | 0 / 0 |
+| wiersze z flagą | 158 | 142 | 44 | 9 / 35 |
 
-**Odmowy: 0.** `dziennik_audytu` (36) to odczyty katalogu audytu: przegląd tygodnia (zadanie 005) i ta
-powtórka (`cat`, `wc`, `ls`, kopia pliku do scratchpadu). Odczyt nie jest blokowany. `zapis_tmp` 1 — to samo
-cięcie w ścieżce scratchpadu co w tygodniu. W 2 obciętych wierszach (c) daje flagę, której nie dają ani zapis,
-ani stare reguły. To polecenia tej powtórki w postaci `A=~/.clas5_audyt; cat $A/…`: R4 rozwija `$A`, więc odczyt
-dziennika schowany za zmienną jest teraz widoczny. To poprawne oznaczenie, nie fałszywy alarm.
+**Odmowy: 0.** `dziennik_audytu` (40) to odczyty katalogu audytu: przegląd tygodnia (zadanie 005) i powtórki
+z zadania 029 (`cat`, `wc`, `ls`, kopia pliku do scratchpadu). Odczyt nie jest blokowany. `poswiadczenia` 1 —
+polecenie `grep` tego zadania z wzorcem `~/\.ssh` (w Bash tylko flaga). `zapis_poza_repo` 1 — sesja główna
+zapisuje kartę zadania w głównym checkoucie, pracując w worktree (prawdziwy zapis poza repo sesji, bez
+blokady). `zapis_tmp` 2 — to samo cięcie w ścieżce scratchpadu co w tygodniu. W 2 obciętych wierszach (c) daje
+flagę, której nie dają ani zapis, ani stare reguły. To polecenia tej powtórki w postaci
+`A=~/.clas5_audyt; cat $A/…`: R4 rozwija `$A`, więc odczyt dziennika schowany za zmienną jest teraz widoczny.
+To poprawne oznaczenie, nie fałszywy alarm.
 
 ### Druga droga (bramka 16a)
 
@@ -584,7 +592,8 @@ Liczbę odmów policzono drugi raz, bez kodu hooka: dwoma filtrami `jq` (niżej)
 plikowych ze ścieżką, która wygląda na plik z poświadczeniami (reguły nazw zapisane od nowa jako wyrażenie
 regularne). Filtr 2 szuka zmiany katalogu audytu: Write/Edit/MultiEdit/NotebookEdit ze ścieżką w
 `.clas5_audyt` albo Bash z operatorem zapisu lub poleceniem zmieniającym plik przed `.clas5_audyt` w tej samej
-linii. Wynik: tydzień 0 i 0; dzień 2026-10-06 (479 wierszy) 0 i 0. Kontrola, że filtry nie są puste z
+linii. Wynik: tydzień 0 i 0; dzień 2026-10-06 (637 wierszy) 0 i 0. Filtr 1 trzyma dawną, szerszą regułę
+członu w nazwie, więc liczy też kandydatów na flagę słabą — tym bardziej 0. Kontrola, że filtry nie są puste z
 założenia: na sztucznych wierszach każdy łapie oba przypadki, które powinien (2 z 2). **Python z kodem hooka i
 `jq` bez niego dają to samo: 0 odmów.**
 
@@ -600,9 +609,9 @@ Z katalogu repo (`~/alpha`) po scaleniu zadania 029. Katalog audytu jest tylko c
 ```bash
 A=~/.clas5_audyt; T="$(mktemp -d)"
 TYDZ_PLIKI="$A/2026-09-29.jsonl $A/2026-09-30.jsonl $A/2026-10-01.jsonl $A/2026-10-05.jsonl"
-head -n 479 "$A/2026-10-06.jsonl" > "$T/2026-10-06-479.jsonl"   # dzień 10-06: stan z pomiaru
+head -n 637 "$A/2026-10-06.jsonl" > "$T/2026-10-06-637.jsonl"   # dzień 10-06: stan z pomiaru
 
-# (a), (b), (c), grupy, odmowy; drugi przebieg dla dnia: zamiast $TYDZ_PLIKI podaj "$T/2026-10-06-479.jsonl"
+# (a), (b), (c), grupy, odmowy; drugi przebieg dla dnia: zamiast $TYDZ_PLIKI podaj "$T/2026-10-06-637.jsonl"
 CLAS5_AUDYT_DIR="$T/audyt" .venv/bin/python - $TYDZ_PLIKI <<'EOF'
 import collections, importlib.util, json, os, re, subprocess, sys, tempfile
 from tools import audyt_hook as ah  # (c): reguły po zadaniu 029 (R1–R8) i lista `blokuj:`
@@ -693,7 +702,7 @@ for nazwa in sys.argv[1:]:
         if z := ah.zablokowane_flagi(wc.flagi, r["narzedzie"], B):
             odmowy.append((r["czas"], r["narzedzie"], z))
 print("wierszy:", wiersze["wszystkie"], " blokuj:", [(x.flaga, sorted(x.narzedzia or ["wszystkie"])) for x in B])
-for f in sorted(set(a) | set(b) | set(c) | {ah.F_AUDYT_ZAPIS}):
+for f in sorted(set(a) | set(b) | set(c) | {ah.F_AUDYT_ZAPIS, ah.F_POSW_SLABE}):
     print(f"{f:22} (a) {a[f]:4} (b) {b[f]:4} (c) {c[f]:4}  (c) pełne/obcięte {pelne[f]}/{obciete[f]}")
 print("wiersze z flagą:", dict(wiersze))
 for (g, f), (n, zp, zo) in sorted(grupy.items()):
@@ -703,10 +712,12 @@ print("flagi nowe w (c) względem (a):", dict(nowe))
 print("ODMOWY (c):", len(odmowy), odmowy)
 EOF
 # wynik 2026-10-06 (tydzień): zapis_tmp 248/222/33 (0/33), siec_poza_lista 46/46/46, siec_host_nieznany 39/28/9,
-# zapis_poza_repo 27/24/9, poswiadczenia 8/0/0, dziennik_audytu 2/0/0, dziennik_audytu_zapis 0;
-# wiersze z flagą 364/316/97; ucięte w ścieżce scratchpadu 33; nowe w (c): 7, wszystkie też w (b); ODMOWY 0
-# wynik dla "$T/2026-10-06-479.jsonl": dziennik_audytu 41/36/36, poswiadczenia 4/0/0, siec_host_nieznany 9/6/0,
-# zapis_poza_repo 6/3/0, zapis_tmp 69/67/1; wiersze z flagą 118/109/37; nowe w (c): 2 „tylko (c)”; ODMOWY 0
+# zapis_poza_repo 27/24/9, poswiadczenia 8/0/0, dziennik_audytu 2/0/0, dziennik_audytu_zapis 0,
+# poswiadczenia_slabe 0; wiersze z flagą 364/316/97; ucięte w ścieżce scratchpadu 33; nowe w (c): 7, wszystkie
+# też w (b); ODMOWY 0
+# wynik dla "$T/2026-10-06-637.jsonl": dziennik_audytu 48/40/40, poswiadczenia 9/1/1, siec_host_nieznany 10/6/0,
+# zapis_poza_repo 8/5/1, zapis_tmp 98/94/2, poswiadczenia_slabe 0; wiersze z flagą 158/142/44;
+# nowe w (c): 2 „tylko (c)”; ODMOWY 0
 
 # druga droga: odmowy bez kodu hooka (jq)
 cat > "$T/posw.jq" <<'JQ'
@@ -730,7 +741,7 @@ select(
 )
 | [.czas, .narzedzie] | @tsv
 JQ
-for P in "$TYDZ_PLIKI" "$T/2026-10-06-479.jsonl"; do
+for P in "$TYDZ_PLIKI" "$T/2026-10-06-637.jsonl"; do
   cat $P | jq -r -f "$T/posw.jq" | wc -l      # 0
   cat $P | jq -r -f "$T/audyt.jq" | wc -l     # 0
 done

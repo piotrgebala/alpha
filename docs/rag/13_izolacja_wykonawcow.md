@@ -101,8 +101,9 @@ z powodem). Do powtórki po etapie 2: czy hook ma być fail-closed w trybie blok
 | `siec_host_nieznany` | polecenie sieciowe, którego hosta nie widać w tekście (np. adres w zmiennej) |
 | `zapis_poza_repo` | zapis poza dozwolonymi katalogami (niżej); od 2026-10-06 bez flagi `~/.claude/plans/` i — w sesji głównej — `~/.claude/projects/<projekt>/memory/` (R6) |
 | `zapis_tmp` | zapis w `/tmp`, `/var/tmp`, `$TMPDIR`; od 2026-10-06 bez flagi własny scratchpad sesji (R5) |
-| `poswiadczenia` | odczyt lub zapis: `.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `~/.config/gh`, `.git-credentials`, `.netrc`, `.pgpass`, `.pypirc`, `.env`/`.env.*`/`*.env`, `*.pem`, `*.key`, `*.p12`, `id_rsa*`/`id_ed25519*`, nazwy z członem `key(s)`/`secret(s)`/`token(s)`/`credential(s)`/`password(s)` — **od 2026-10-06 blokowana w narzędziach plikowych** |
-| `dziennik_audytu` | narzędzie czyta katalog audytu (do 2026-10-06 także zapis — wtedy jedna flaga) |
+| `poswiadczenia` | odczyt lub zapis: `.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `~/.config/gh` (składniki ścieżki), `.git-credentials`, `.netrc`, `.pgpass`, `.pypirc`, `.env`/`.env.*`/`*.env`, `*.pem`, `*.key`, `*.p12`, `id_rsa*`/`id_ed25519*`, pliki DANYCH z członem `key(s)`/`secret(s)`/`token(s)`/`credential(s)`/`password(s)` w nazwie; w kodzie interpretera (`python - <<EOF`, `python -c`, `node -e`) podciąg ścieżki wrażliwej — **od 2026-10-06 blokowana w narzędziach plikowych** |
+| `poswiadczenia_slabe` | od przeglądu 16c (2026-10-06): ten sam człon w nazwie pliku kodu lub dokumentacji (`.py`, `.md`, `.js`…), pliku w bibliotece (`site-packages`, `dist-packages`, `node_modules`, biblioteka standardowa), w nazwie katalogu, oraz szablony `.env.example`/`.sample`/`.template`/`.dist` — **tylko oznacza** (nie ma jej w `blokuj:`) |
+| `dziennik_audytu` | narzędzie czyta katalog audytu (do 2026-10-06 także zapis — wtedy jedna flaga); także podciąg `.clas5_audyt` w kodzie interpretera |
 | `dziennik_audytu_zapis` | od 2026-10-06 (R8): narzędzie zmienia katalog audytu — **blokowana we wszystkich narzędziach** |
 | `wejscie_nieczytelne`, `blad_analizy` | hook nie zrozumiał wejścia albo analiza padła (nigdy nie blokuje) |
 
@@ -214,16 +215,20 @@ blokuj:
 - **Zły wpis niczego nie blokuje, reszta działa:** nieznana flaga (także `wejscie_nieczytelne` i
   `blad_analizy` — błąd hooka nigdy nie blokuje), nieznane narzędzie, pusta lista, nieznany klucz (literówka
   `narzedzie:` nie rozszerza blokady na wszystkie narzędzia), zła data, zły typ.
-- **Zepsuty plik nie blokuje niczego.** Hook czyta plik bez biblioteki YAML (szybkość), więc rozumie prosty
-  podzbiór: mapy i listy blokowe, `[a, b]` i `{klucz: wartość}` w jednej linii, skalary zwykłe i w cudzysłowie,
-  komentarze. Plik zepsuty albo spoza podzbioru (tabulator, wartość w kilku liniach, kotwice, powtórzony
-  klucz) → żadnej blokady. Test właściwości z PyYAML pilnuje dwóch rzeczy: hook nigdy nie blokuje więcej, niż
-  wynika z odczytu PyYAML (gdy PyYAML pada — nic), a tekst z podzbioru czyta dokładnie tak jak PyYAML.
+- **Zepsuta sekcja nie blokuje niczego; reszta pliku nie ma wpływu.** Hook czyta bez biblioteki YAML
+  (szybkość) tylko sekcję `blokuj:` — od linii `blokuj:` w kolumnie 0 do następnej linii z treścią w kolumnie 0.
+  Błąd albo zapis spoza podzbioru w liście hostów (np. `- api.example.com:8080`) nie wyłącza więc blokad
+  (przegląd 16c). Podzbiór: mapy i listy blokowe, `[a, b]` i `{klucz: wartość}` w jednej linii, skalary zwykłe
+  i w cudzysłowie, komentarze. Sekcja zepsuta albo spoza podzbioru (tabulator, wartość w kilku liniach,
+  kotwice, powtórzony klucz), brak sekcji albo dwie sekcje → żadnej blokady. Test właściwości z PyYAML pilnuje
+  dwóch rzeczy: hook nigdy nie blokuje więcej, niż wynika z odczytu sekcji przez PyYAML (gdy PyYAML pada —
+  nic), a sekcję z podzbioru czyta dokładnie tak jak PyYAML.
 - Zmienna `CLAS5_AUDYT_HOSTY` zmienia tylko listę hostów (testy), nigdy `blokuj:`.
 
 **Wyjście odmowy.** Format z punktu 4 sprawdzony 2026-10-06 w skillu `update-config` (opis hooków Claude Code):
 aktualny, bez zmian — `hookSpecificOutput.permissionDecision: "deny"` z `permissionDecisionReason`, kod
-wyjścia 0. JSON idzie w ASCII (np. „ś” jako `ś`), żeby stdout w cp1252 na Windows nie wywrócił decyzji.
+wyjścia 0. JSON idzie w samym ASCII (polskie litery jako sekwencje ucieczki JSON), żeby stdout w cp1252 na
+Windows nie wywrócił decyzji.
 Powód: `<flaga>: <opis> (<ścieżka zamaskowana jak w dzienniku>) w narzędziu <X> — blokada hooka audytowego
 (config/audyt_hosty.yaml, ADR-13); decyzja użytkownika 2026-10-06`. Bez treści pliku. Kilka blokad w jednym
 wywołaniu → jedna decyzja, powody rozdzielone ` | `. Wiersz dziennika dostaje pole `zablokowano` (lista
@@ -237,9 +242,11 @@ pytanie z „Konsekwencji” o fail-closed: hook zostaje fail-open; ginie tylko 
 policzyć.
 
 **Szybkość.** Pomiar 2026-10-06 na serwerze, cały proces Pythona, 33 wywołania (Bash z heredokiem, Read, Write),
-stara i nowa wersja w tych samych warunkach: mediana 29,7 ms (maks. 33,0 ms) wobec 22,5 ms (maks. 24,3 ms)
-przed zadaniem 029. Różnica to głównie kompilacja dwa razy dłuższego pliku przy każdym uruchomieniu. Plik
-konfiguracji z `blokuj:` hook czyta tylko wtedy, gdy wywołanie ma jakąś flagę. Limit czasu hooka w
+stara i nowa wersja w tych samych warunkach (po poprawkach 16c): mediana 31,6 ms (maks. 33,7 ms) wobec 22,7 ms
+(maks. 25,5 ms) przed zadaniem 029. Różnica to głównie kompilacja ponad dwa razy dłuższego pliku przy każdym
+uruchomieniu. Plik konfiguracji z `blokuj:` hook czyta tylko wtedy, gdy wywołanie ma jakąś flagę. Polecenie
+200 KB (np. `echo a+a+…`) zajmuje poniżej 0,2 s: maskowanie działa tylko na początku tekstu (przegląd 16c;
+wcześniej 40 KB trwało 6,4 s, a 80 KB — 25,7 s, ponad limit czasu hooka). Limit czasu hooka w
 `.claude/settings.json` to 10 s.
 
 **Poprawki reguł** (`tools/audyt_hook.py`; testy „przed/po” na zamaskowanych przykładach z tygodnia, część
@@ -248,22 +255,59 @@ konfiguracji z `blokuj:` hook czyta tylko wtedy, gdy wywołanie ma jakąś flag�
 | id | co zmieniono |
 |---|---|
 | R1 | cyfry przyklejone do `>`/`<` (`2>&1`, `2>/dev/null`) to numer deskryptora, nie słowo; `git push/pull/fetch` pomija przekierowania i ich cele przy szukaniu nazwy zdalnego repo |
-| R2 | treść heredoka (`<<EOF`, `<<'EOF'`, `<<-EOF`) to dane: nie trafia do segmentów ani ścieżek. Wyjątki: heredoc czytany przez powłokę (`bash <<EOF`, `cat <<EOF \| sh`) jest analizowany jak polecenia; dla `python - <<EOF` heurystyka bibliotek sieciowych dalej widzi cały tekst. `<<` w cudzysłowie, w komentarzu, w `$(( ))` i `<<<` nie zaczyna heredoka |
+| R2 | treść heredoka (`<<EOF`, `<<'EOF'`, `<<-EOF`) to dane: nie trafia do segmentów ani ścieżek. Wyjątek: heredoc, który w tym samym potoku trafia do powłoki (`bash <<EOF`, `cat <<EOF \| sh`, `ssh host <<EOF`), jest analizowany jak polecenia. Dla `python - <<EOF` heurystyki bibliotek sieciowych i podciągów ścieżek wrażliwych dalej widzą cały tekst. `<<` w cudzysłowie, w komentarzu, w `$(( ))` i `<<<` nie zaczyna heredoka; w `"$( … )"` zaczyna się zwykłe polecenie (heredoc opisu commita jest rozpoznany) |
 | R3 | słowo z nową linią (wieloliniowy `python -c "…"`, opis commita z `"$(cat <<'EOF' …)"`) to nie ścieżka. Wybrany drugi wariant z raportu: pomijanie całego argumentu `-c` ukryłoby też jednolinijkowe `python -c "open('~/.ssh/…')"`, a takiego fałszywego alarmu w tygodniu nie było |
-| R4 | `NAZWA=wartość` z tego samego polecenia (sam segment przypisań albo `export`) rozwija się w ścieżkach i w `cd` jak `$HOME`; wartość nieznana (`$(…)`, nieznana `$X`) zostaje nierozwinięta; zapis pod ścieżką z nierozwiniętym `$` nie daje `zapis_poza_repo` |
+| R4 | `NAZWA=wartość` z tego samego polecenia (sam segment przypisań albo `export`) rozwija się w ścieżkach i w `cd` jak `$HOME`; wartość nieznana (`$(…)`, nieznana `$X`) zostaje nierozwinięta. Ścieżka ZACZYNAJĄCA się od nierozwiniętej zmiennej (`$D/plik`) ma nieznane miejsce: bez flag zależnych od miejsca. Zmienna w środku (`/home/x/$D/plik`, `/etc/$X`) nie zmienia oceny — `zapis_poza_repo` zostaje (przegląd 16c) |
 | R5 | `<tmp>/claude-<uid>/<projekt>/<session_id>/scratchpad/` tej sesji (także jej subagentów) bez flagi; scratchpad innej sesji i reszta `/tmp` dalej `zapis_tmp` |
 | R6 | `~/.claude/plans/` bez flagi; `~/.claude/projects/<projekt>/memory/` bez flagi tylko w sesji głównej (bez `agent_id`) |
 | R8 | `dziennik_audytu_zapis` przy zapisie do katalogu audytu: Write/Edit/MultiEdit/NotebookEdit i zapisy w Bash rozpoznawane jak dotąd (`>`, `>>`, `tee`, cel `cp`/`mv`/`install`, `sed -i`, `curl -o`, `wget -O`). Rozszerzenie względem raportu, tylko dla tej flagi: także polecenia, które zmieniają plik bez zapisu treści — `rm`, `rmdir`, `unlink`, `shred`, `truncate`, `touch`, `chmod`, `chown`, `ln`, źródła `mv`, `dd of=`, `find … -delete` (usunięcie albo podmiana dziennika to też zmiana nadzoru). `zapis_poza_repo` i `zapis_tmp` bez zmian. Odczyt zostaje `dziennik_audytu` i nie jest blokowany |
+
+**Poprawki po przeglądzie 16c (2026-10-06, ten sam dzień).** Recenzent sprawdził pierwszą wersję
+(`c0ae883`) na prawdziwym procesie. Każdy jego przypadek ma test „odmowa przed / bez odmowy po” na tej
+wersji i test, że prawdziwe zdarzenie dalej jest blokowane albo oznaczane.
+
+1. Fałszywe odmowy `poswiadczenia`: `secrets.py` i `token.py` z biblioteki standardowej, `yaml/tokens.py`,
+   `ccxt/…/keys.py` w `.venv`, `tools/token_report.py`, `.env.example`, Grep w katalogu `runs/…-tokens`,
+   `~/.config/ghostty/config`. Teraz: `.config/gh` jako składniki ścieżki (ghostty bez flagi); człon
+   key/token/secret… blokuje tylko pliki danych; reszta dostaje flagę `poswiadczenia_slabe` (widoczną
+   w dzienniku, poza `blokuj:`). Twarde przypadki — katalogi kluczy, `.env`, `.env.local`, rozszerzenia
+   kluczy, `id_rsa*`, `bybit_api_key.json`, `token.txt` — blokują jak przedtem.
+2. Fałszywe odmowy zapisu do katalogu audytu w Bash: `(cd ~/.clas5_audyt && wc -l *.jsonl) > wynik.txt`,
+   `cd ~/.clas5_audyt; cd -; rm x.txt`, `ln -s ~/.clas5_audyt/a.jsonl` z jednym argumentem, heredoc notatki
+   z `rm ~/.clas5_audyt/x` i dalej `echo … | bash`, `commit -m "$(cat <<'EOF' …)"` z nieparzystą liczbą `"`.
+   Teraz: katalog wraca po `)` podpowłoki; `cd -` wraca do katalogu sprzed ostatniego `cd` w poleceniu (bez
+   niego katalog nieznany); `ln` z jednym argumentem pominięte; heredoc analizowany jak polecenia tylko, gdy
+   w tym samym potoku trafia do powłoki; w `"$( … )"` zaczyna się zwykłe polecenie.
+3. Grep nie sprawdzał pola `glob`: `Grep(path="~", glob=".ssh/*")` przechodził. Teraz `glob` w Grep
+   i `pattern` w Glob liczą się względem `path` → odmowa.
+4. Utrata widoczności: odczyt kluczy w `python3 - <<EOF`, wieloliniowym `python -c` i `node -` nie był
+   oznaczany; `echo x > /home/x/$D/plik` i `cp x /etc/$X` traciły `zapis_poza_repo`. Teraz podciągi ścieżek
+   wrażliwych w kodzie interpretera dają flagę (tylko flagę), a R4 pomija tylko ścieżkę zaczynającą się od `$`.
+5. Host `- api.example.com:8080` (poprawny YAML spoza podzbioru) po cichu wyłączał obie blokady. Teraz
+   sekcja `blokuj:` jest czytana niezależnie od reszty pliku.
+6. W kodzie stał dosłowny niewidoczny znak U+202A; teraz zakresy są zapisane jako `\U0000202a`.
+7. Maskowanie miało czas kwadratowy (40 KB → 6,4 s, 80 KB → 25,7 s, ponad limit hooka). Teraz maskuje się
+   tylko początek tekstu (300 + 512 znaków); długość schematu adresu w wykrywaniu URL jest ograniczona.
 
 Powtórka tygodnia nowymi regułami (0 odmów w tygodniu i 0 w dniu 2026-10-06; szczegóły i komendy):
 [`13_tydzien_obserwacji.md`](13_tydzien_obserwacji.md), sekcja 9.
 
 **Granica bez zmian:** to analiza tekstu, nie piaskownica. Na przykład zapis do katalogu audytu z wnętrza
 `python skrypt.py` albo kopia klucza pod niewinną nazwą (`cp ~/.ssh/klucz x; cat x` — w Bash tylko flaga)
-nie zostaną zablokowane. Po R2 hook nie czyta też skryptu zapisanego heredokiem i uruchomionego w tym samym
-poleceniu (`cat > x.sh <<EOF … EOF; bash x.sh`) — tak samo jak skryptu zapisanego narzędziem Write. W dziennikach
-2026-09-29…10-06 nie ma ani jednego takiego polecenia. Blokady chronią przed pomyłką i prostą próbą; twardą
-granicą jest etap 3.
+nie zostaną zablokowane. Ograniczenia wprowadzone świadomie:
+
+- po R2 hook nie czyta skryptu zapisanego heredokiem i uruchomionego w tym samym poleceniu
+  (`cat > x.sh <<EOF … EOF; bash x.sh`) — tak samo jak skryptu zapisanego narzędziem Write; w dziennikach
+  2026-09-29…10-06 nie ma ani jednego takiego polecenia;
+- kod interpretera (`python - <<EOF`, `python -c`, `node -e`) przeglądają tylko heurystyki podciągów
+  (biblioteki sieciowe, `.ssh/`, `.aws/`, `.clas5_audyt`…). Dają same flagi: zapis do katalogu audytu
+  z wnętrza takiego kodu dostaje flagę ODCZYTU `dziennik_audytu`, nigdy odmowę;
+- plik kodu z prawdziwymi sekretami (np. `config/secrets.py`) dostaje tylko `poswiadczenia_slabe`, bez
+  odmowy — tak zdecydował orkiestrator po przeglądzie 16c, żeby nie blokować modułów o takich nazwach;
+- ścieżka zaczynająca się od nieznanej zmiennej (`$D/plik`) i zapis względny po `cd -` bez znanego
+  poprzedniego katalogu nie dostają flag zależnych od miejsca.
+
+Blokady chronią przed pomyłką i prostą próbą; twardą granicą jest etap 3.
 
 ## Etap 3 — osobny użytkownik systemu (lista kroków dla użytkownika)
 

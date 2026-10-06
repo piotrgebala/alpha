@@ -19,13 +19,20 @@ to też odczyt). Każde wywołanie dopisuje JEDEN wiersz JSON do `~/.clas5_audyt
   repozytorium bieżącego katalogu (`cwd` z wejścia hooka; dla worktree — poza worktree i poza
   `runs/` oraz `data/` głównego checkoutu). Bez flagi (R6): `~/.claude/plans/`, a w sesji głównej
   także `~/.claude/projects/<projekt>/memory/` (subagent piszący do pamięci zostaje oznaczony, bo
-  pamięć wczytuje się do każdej przyszłej sesji). Ścieżka z nierozwiniętą zmienną `$…` tej flagi
-  nie dostaje (R4: nie wiadomo, dokąd prowadzi);
+  pamięć wczytuje się do każdej przyszłej sesji). Ścieżka ZACZYNAJĄCA się od nierozwiniętej
+  zmiennej (`$D/plik`) tej flagi nie dostaje (R4: nie wiadomo, dokąd prowadzi); zmienna w środku
+  (`/home/x/$D/plik`) — dostaje;
 - `zapis_tmp` — zapis w katalogu tymczasowym (`/tmp`, `$TMPDIR`): wspólny zasób wielu sesji,
   czyli możliwy boczny kanał. Bez flagi (R5) jest tylko WŁASNY scratchpad sesji
   (`/tmp/claude-<uid>/<projekt>/<session_id>/scratchpad/`); scratchpad innej sesji ma flagę;
 - `poswiadczenia` — dostęp (odczyt albo zapis) do `~/.ssh`, `.env`, `*.pem`, `*.key`, plików
-  z `key`/`secret`/`token`/`credentials` w nazwie, `~/.config/gh`, `~/.git-credentials`, `.netrc`…;
+  danych z `key`/`secret`/`token`/`credentials` w nazwie, `~/.config/gh`, `~/.git-credentials`,
+  `.netrc`… (`rodzaj_poswiadczen`); w kodzie interpretera (`python - <<EOF`, `python -c`,
+  `node -e`) — podciąg ścieżki wrażliwej (`.ssh/`, `.aws/`…);
+- `poswiadczenia_slabe` — taki sam człon w nazwie, ale w pliku kodu albo dokumentacji, w bibliotece
+  (`site-packages`, `node_modules`, biblioteka standardowa) albo katalogu, oraz szablon
+  `.env.example`/`.sample`/`.template`/`.dist`; widoczne w dzienniku, nie ma go w `blokuj:`
+  (przegląd 16c: `secrets.py` czy `yaml/tokens.py` to nie dane);
 - `dziennik_audytu` — narzędzie CZYTA katalog audytu (np. przegląd tygodnia);
 - `dziennik_audytu_zapis` — narzędzie ZMIENIA katalog audytu (R8): Write/Edit/MultiEdit/NotebookEdit,
   w Bash zapisy rozpoznawane jak przy `zapis_poza_repo`, a dla tej jednej flagi także `rm`,
@@ -38,7 +45,7 @@ TRYB DRUGI (od 2026-10-06, ADR-13 etap 2): OZNACZA KAŻDE WYWOŁANIE, A FLAGI Z 
 BLOKUJE. Lista leży w `config/audyt_hosty.yaml` w repo. Nie ma zmiennej środowiskowej, która by ją
 włączała albo wyłączała (decyzja użytkownika 2026-10-06 „Wszędzie”: serwer, Windows, Cowork).
 Wpis to nazwa flagi (wszystkie narzędzia) albo mapa `flaga` + `narzedzia` + `decyzja` (format:
-`parsuj_blokady`). Dla flagi z listy, po zawężeniu do narzędzia, hook wypisuje na stdout
+`parsuj_blokady`; sekcja `blokuj:` czytana niezależnie od reszty pliku). Dla flagi z listy, po zawężeniu do narzędzia, hook wypisuje na stdout
 `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
 "permissionDecisionReason": "<flaga>: <powód>; decyzja użytkownika <data>"}}` i kończy się kodem 0,
 a wiersz dziennika dostaje pole `zablokowano`. Decyzje 2026-10-06: `poswiadczenia` tylko
@@ -60,11 +67,14 @@ polecenie.
 Analiza jest tekstowa (własny, mały tokenizer powłoki): wykrywa typowe przypadki, nie jest
 piaskownicą. Poprawki po tygodniu obserwacji (zadanie 029, `docs/rag/13_tydzien_obserwacji.md`):
 R1 — cyfry przyklejone do `>`/`<` (`2>&1`) to numer deskryptora, nie słowo (także w `git push`);
-R2 — treść heredoka to dane, nie polecenia i nie ścieżki (wyjątek: heredoc czytany przez powłokę,
-np. `bash <<EOF`; dla `python - <<EOF` zostaje heurystyka bibliotek sieciowych na całym tekście);
+R2 — treść heredoka to dane, nie polecenia i nie ścieżki (wyjątek: heredoc, który w tym samym
+potoku trafia do powłoki: `bash <<EOF`, `cat <<EOF | sh`, `ssh host <<EOF`; dla `python - <<EOF`
+zostają heurystyki bibliotek sieciowych i podciągów ścieżek wrażliwych na całym tekście);
 R3 — słowo z nową linią (np. wieloliniowy kod `python -c "…"`, opis commita z `$(cat <<EOF …)`)
 to nie ścieżka; R4 — `$NAZWA` z prostego przypisania w tym samym poleceniu (`S=/tmp/…; … > $S/x`,
-`export S=…`) rozwija się jak `$HOME`, także w `cd $S`.
+`export S=…`) rozwija się jak `$HOME`, także w `cd $S`. Po przeglądzie 16c: katalog wraca po `)`
+podpowłoki, `cd -` wraca do katalogu sprzed ostatniego `cd` (bez niego — katalog nieznany), `glob`
+w Grep i `pattern` w Glob liczą się względem `path`.
 Zagnieżdżone `bash -c '…'`, `sh -c '…'` i `eval …` są analizowane tą samą funkcją (do
 `MAKS_ZAGNIEZDZENIA` poziomów). Obejście przez np. `bash -c "$(echo … | base64 -d)"` nie zostanie
 rozpoznane jako sieć — dlatego docelowa granica to osobny użytkownik systemu (docs/rag/13), a hook
@@ -97,6 +107,7 @@ F_SIEC_NIEZNANY = "siec_host_nieznany"
 F_ZAPIS = "zapis_poza_repo"
 F_TMP = "zapis_tmp"
 F_POSW = "poswiadczenia"
+F_POSW_SLABE = "poswiadczenia_slabe"
 F_AUDYT = "dziennik_audytu"
 F_AUDYT_ZAPIS = "dziennik_audytu_zapis"
 F_WEJSCIE = "wejscie_nieczytelne"
@@ -110,8 +121,9 @@ NARZEDZIA_HOOKA = frozenset(
 )
 # flagi, które może włączyć lista `blokuj:`; `wejscie_nieczytelne` i `blad_analizy` nigdy (fail-open)
 FLAGI_BLOKOWALNE = frozenset(
-    {F_SIEC, F_SIEC_NIEZNANY, F_ZAPIS, F_TMP, F_POSW, F_AUDYT, F_AUDYT_ZAPIS}
+    {F_SIEC, F_SIEC_NIEZNANY, F_ZAPIS, F_TMP, F_POSW, F_POSW_SLABE, F_AUDYT, F_AUDYT_ZAPIS}
 )
+ZAPAS_MASKI = 512  # maskowanie widzi tyle znaków za granicą skrótu (sekret na granicy cięcia)
 
 # --- maskowanie sekretów w skrócie polecenia ------------------------------------------------------
 _MASKI = (
@@ -166,10 +178,17 @@ _MASKI = (
 
 
 def maskuj(tekst: str, limit: int = MAKS_ZNAKOW) -> str:
-    """Maskuje wzorce sekretów, POTEM obcina (sekret na granicy cięcia nie wycieka połową)."""
+    """Maskuje wzorce sekretów, POTEM obcina (sekret na granicy cięcia nie wycieka połową). Wzorce
+    działają tylko na początku tekstu (`limit + ZAPAS_MASKI` znaków): dziennik i tak trzyma `limit`
+    znaków, a część wyrażeń ma koszt kwadratowy — długie polecenie (200 KB) nie może przekroczyć
+    limitu czasu hooka (przegląd 16c zadania 029)."""
+    ucieto = len(tekst) > limit + ZAPAS_MASKI
+    tekst = tekst[: limit + ZAPAS_MASKI]
     for wzorzec, zamiana in _MASKI:
         tekst = wzorzec.sub(zamiana, tekst)
-    return tekst if len(tekst) <= limit else tekst[:limit] + "…"
+    if len(tekst) > limit:
+        return tekst[:limit] + "…"
+    return tekst + "…" if ucieto else tekst
 
 
 # --- lista hostów ---------------------------------------------------------------------------------
@@ -227,8 +246,12 @@ _KLUCZ_FLOW = re.compile(r"([A-Za-z_][A-Za-z0-9_-]*): +")
 _ZWYKLY = re.compile(r"[A-Za-z0-9_./~][A-Za-z0-9_./~+@-]*")
 # zwykłe skalary, które YAML bierze za liczbę i nie umie jej zbudować (pada cały plik)
 _LICZBA_BEZ_CYFR = re.compile(r"0[bx]_+")
-# tylko drukowalne znaki YAML; bez tabulatora, znaków sterujących, NEL, U+2028/U+2029 i BOM
-_ZNAK_SPOZA = re.compile(r"[^\n\x20-\x7e\xa0-‧‪-퟿-﻾＀-�\U00010000-\U0010ffff]")
+# tylko drukowalne znaki YAML; bez tabulatora, znaków sterujących, NEL, U+2028/U+2029 i BOM (zakresy
+# zapisane jako `\U0000XXXX`, nigdy dosłownie — w kodzie nie ma niewidocznych znaków)
+_ZNAK_SPOZA = re.compile(
+    r"[^\n\x20-\x7e\xa0-\U00002027\U0000202a-\U0000d7ff\U0000e000-\U0000fefe"
+    r"\U0000ff00-\U0000fffd\U00010000-\U0010ffff]"
+)
 
 
 def _linie_yaml(tekst: str) -> list[tuple[int, str]]:
@@ -448,6 +471,30 @@ def _blokada(wpis: object) -> Blokada | None:
     return Blokada(flaga, zakres, wpis.get("decyzja"))
 
 
+_POCZATEK_BLOKUJ = re.compile(r"blokuj:(?: .*)?")
+
+
+def sekcja_blokuj(tekst: str) -> str | None:
+    """Sama sekcja `blokuj:`: linia `blokuj:` w kolumnie 0 i dalsze linie wcięte, puste, z komentarzem
+    albo z elementem `- ` w kolumnie 0 — do pierwszej innej linii w kolumnie 0. Reszta pliku nie ma
+    wpływu: błąd albo zapis spoza podzbioru w liście hostów (np. `- host:8080`) nie wyłącza blokad
+    (przegląd 16c zadania 029). Brak sekcji albo dwie sekcje (powtórzony klucz) → None."""
+    tekst = tekst.lstrip(chr(0xFEFF)).replace("\r\n", "\n").replace("\r", "\n")
+    linie = tekst.split("\n")
+    starty = [k for k, linia in enumerate(linie) if _POCZATEK_BLOKUJ.fullmatch(linia.rstrip(" "))]
+    if len(starty) != 1:
+        return None
+    koniec = starty[0] + 1
+    while koniec < len(linie):
+        linia = linie[koniec]
+        tresc = linia.strip(" ")
+        poza_sekcja = linia[:1] not in (" ", "\t") and not _element(linia.rstrip(" "))
+        if tresc and not tresc.startswith("#") and poza_sekcja:
+            break
+        koniec += 1
+    return "\n".join(linie[starty[0] : koniec])
+
+
 def parsuj_blokady(tekst: str) -> tuple[Blokada, ...]:
     """Lista `blokuj:` z tekstu `config/audyt_hosty.yaml` (R7). Wpis to:
 
@@ -456,11 +503,13 @@ def parsuj_blokady(tekst: str) -> tuple[Blokada, ...]:
       i `decyzja: "RRRR-MM-DD"` (data decyzji użytkownika, trafia do powodu odmowy); w stylu
       blokowym albo `{flaga: …, narzedzia: […]}`.
 
-    Fail-open: nieznana flaga (także `wejscie_nieczytelne` i `blad_analizy`), nieznane narzędzie,
-    pusta lista narzędzi, nieznany klucz, zła data albo zły typ → ten wpis niczego nie blokuje,
-    reszta działa. Zepsuty plik albo plik spoza podzbioru YAML (`yaml_podzbior`), brak listy,
+    Czytana jest tylko sekcja `blokuj:` (`sekcja_blokuj`), niezależnie od reszty pliku. Fail-open:
+    nieznana flaga (także `wejscie_nieczytelne` i `blad_analizy`), nieznane narzędzie, pusta lista
+    narzędzi, nieznany klucz, zła data albo zły typ → ten wpis niczego nie blokuje, reszta działa.
+    Sekcja zepsuta albo spoza podzbioru YAML (`yaml_podzbior`), brak sekcji, dwie sekcje,
     `blokuj: []` → żadnej blokady."""
-    dokument = yaml_podzbior(tekst)
+    sekcja = sekcja_blokuj(tekst)
+    dokument = yaml_podzbior(sekcja) if sekcja is not None else None
     lista = dokument.get("blokuj") if dokument is not None else None
     if not isinstance(lista, list):
         return ()
@@ -494,12 +543,12 @@ def zablokowane_flagi(flagi, narzedzie: str, blokady) -> list[str]:
 SEPARATORY = set(";&|()\n`")
 
 
-def segmenty(polecenie: str) -> list[list[str]]:
-    """Dzieli polecenie na proste polecenia (po niecytowanych ; & | ( ) ` i nowej linii) i słowa
-    (z usuniętymi cudzysłowami). Przekierowania jako osobne słowa `>`, `>>`, `<`, `<<`; `>&N`
-    (duplikacja deskryptora) pomijane. Cyfry przyklejone do `>`/`<` (`2>&1`, `2>/dev/null`) to
-    numer deskryptora, nie słowo (R1). Nigdy nie rzuca — niedomknięty cudzysłów kończy słowo."""
-    wynik: list[list[str]] = []
+def _tokeny(polecenie: str) -> list:
+    """Proste polecenia (listy słów, jak w `segmenty`) i zdarzenia między nimi, w kolejności:
+    separatory `;`, `&`, `&&`, `|`, `||`, nowa linia oraz nawiasy `(` `)` i odwrotny apostrof
+    (podpowłoka, `$( … )`). Na nich `analizuj_bash` przywraca katalog po podpowłoce i ustala potok
+    (przegląd 16c). Nigdy nie rzuca."""
+    wynik: list = []
     slowa: list[str] = []
     bufor: list[str] = []
     jest_slowo = False
@@ -541,6 +590,14 @@ def segmenty(polecenie: str) -> list[list[str]]:
             zamknij_slowo()
         elif c in SEPARATORY:
             zamknij_segment()
+            if c in "|&" and i + 1 < n and polecenie[i + 1] == c:  # `||`, `&&`
+                i += 1
+                wynik.append(c + c)
+            elif c == "|" and i + 1 < n and polecenie[i + 1] == "&":  # `|&`: potok ze stderr
+                i += 1
+                wynik.append("|")
+            else:
+                wynik.append(c)
         elif c in "<>":
             if jest_slowo and same_cyfry:  # `2>&1`, `2>/dev/null`: numer deskryptora (R1)
                 bufor, jest_slowo = [], False
@@ -564,6 +621,14 @@ def segmenty(polecenie: str) -> list[list[str]]:
         i += 1
     zamknij_segment()
     return wynik
+
+
+def segmenty(polecenie: str) -> list[list[str]]:
+    """Dzieli polecenie na proste polecenia (po niecytowanych ; & | ( ) ` i nowej linii) i słowa
+    (z usuniętymi cudzysłowami). Przekierowania jako osobne słowa `>`, `>>`, `<`, `<<`; `>&N`
+    (duplikacja deskryptora) pomijane. Cyfry przyklejone do `>`/`<` (`2>&1`, `2>/dev/null`) to
+    numer deskryptora, nie słowo (R1). Nigdy nie rzuca — niedomknięty cudzysłów kończy słowo."""
+    return [t for t in _tokeny(polecenie) if isinstance(t, list)]
 
 
 # --- heredoki (R2) --------------------------------------------------------------------------------
@@ -621,31 +686,55 @@ def _wytnij_ciala(s: str, i: int, oczekujace: list[tuple[str, bool]], ciala: lis
     return min(i, len(s))
 
 
-def bez_heredokow(polecenie: str) -> tuple[str, list[str]]:
-    """Polecenie bez TREŚCI heredoków (R2) i lista tych treści. Operator z ogranicznikiem
-    (`<<'EOF'`) zostaje, więc `cat > plik <<'EOF'` dalej daje cel zapisu. `<<` w cudzysłowie,
-    w komentarzu i w arytmetyce `$(( … ))` oraz `<<<` (here-string) heredoka nie zaczynają.
-    Nigdy nie rzuca."""
+def _znacznik_heredoka(polecenie: str) -> str:
+    """Przedrostek słowa, które w analizie zastępuje ogranicznik heredoka (`__HEREDOK_<nr>`); dłuższy,
+    jeśli taki tekst już stoi w poleceniu."""
+    znacznik = "__HEREDOK_"
+    while znacznik in polecenie:
+        znacznik += "_"
+    return znacznik
+
+
+def _bez_heredokow(polecenie: str, znacznik: str | None) -> tuple[str, list[str]]:
+    """`bez_heredokow`; z `znacznik` ogranicznik k-tego heredoka zamienia się na słowo
+    `<znacznik><k>`, żeby `analizuj_bash` wiedział, do którego polecenia trafia treść."""
     wynik: list[str] = []
     ciala: list[str] = []
     oczekujace: list[tuple[str, bool]] = []
-    cudzyslow = None
+    stos: list[tuple[str | None, int]] = []  # stan sprzed `$(` w cudzysłowie: (cudzysłów, nawiasy)
+    cudzyslow, nawiasy, numer = None, 0, 0
     i, n = 0, len(polecenie)
     while i < n:
         c = polecenie[i]
-        if cudzyslow:
-            if c == cudzyslow:
+        if cudzyslow == "'":
+            if c == "'":
                 cudzyslow = None
-            elif c == "\\" and cudzyslow == '"' and i + 1 < n:
+        elif cudzyslow == '"':
+            if c == '"':
+                cudzyslow = None
+            elif c == "\\" and i + 1 < n:
                 wynik.append(c)
                 i += 1
                 c = polecenie[i]
+            elif polecenie.startswith("$(", i) and not polecenie.startswith("$((", i):
+                stos.append((cudzyslow, nawiasy))  # `"$( … )"`: w środku zwykłe polecenie (bash)
+                cudzyslow, nawiasy = None, 0
+                wynik.append("$(")
+                i += 2
+                continue
         elif c in "'\"":
             cudzyslow = c
         elif c == "\\" and i + 1 < n:
             wynik.append(c)
             i += 1
             c = polecenie[i]
+        elif c == "(":
+            nawiasy += 1
+        elif c == ")":
+            if nawiasy == 0 and stos:
+                cudzyslow, nawiasy = stos.pop()  # koniec `$( … )` — z powrotem w cudzysłowie
+            else:
+                nawiasy = max(0, nawiasy - 1)
         elif c == "#" and (i == 0 or polecenie[i - 1] in " \t\n;&|()"):  # komentarz do końca linii
             koniec = polecenie.find("\n", i)
             koniec = n if koniec < 0 else koniec
@@ -671,7 +760,10 @@ def bez_heredokow(polecenie: str) -> tuple[str, list[str]]:
             ogranicznik, j = _ogranicznik(polecenie, j)
             if ogranicznik:
                 oczekujace.append((ogranicznik, bez_tabow))
-            wynik.append(polecenie[i:j])
+                wynik.append(polecenie[i:j] if znacznik is None else f"<< {znacznik}{numer} ")
+                numer += 1
+            else:
+                wynik.append(polecenie[i:j])
             i = j
             continue
         elif c == "\n" and oczekujace:
@@ -682,6 +774,16 @@ def bez_heredokow(polecenie: str) -> tuple[str, list[str]]:
         wynik.append(c)
         i += 1
     return "".join(wynik), ciala
+
+
+def bez_heredokow(polecenie: str) -> tuple[str, list[str]]:
+    """Polecenie bez TREŚCI heredoków (R2) i lista tych treści. Operator z ogranicznikiem
+    (`<<'EOF'`) zostaje, więc `cat > plik <<'EOF'` dalej daje cel zapisu. `<<` w cudzysłowie,
+    w komentarzu i w arytmetyce `$(( … ))` oraz `<<<` (here-string) heredoka nie zaczynają.
+    Wewnątrz `"$( … )"` zaczyna się zwykłe polecenie, jak w bash: heredoc w opisie commita
+    (`-m "$(cat <<'EOF' … EOF)"`) też jest rozpoznany, a cudzysłowy w jego treści nie psują
+    reszty polecenia (przegląd 16c). Nigdy nie rzuca."""
+    return _bez_heredokow(polecenie, None)
 
 
 OPAKOWANIA = {"sudo", "env", "time", "nohup", "nice", "exec", "command", "xargs", "stdbuf", "!"}
@@ -708,7 +810,7 @@ def program_i_argumenty(slowa: list[str]) -> tuple[str, list[str]]:
 
 
 # --- sieć ---------------------------------------------------------------------------------------
-_URL = re.compile(r"(?i)\b[a-z][a-z0-9+.-]*://(?:[^/\s@'\"]*@)?(\[[0-9a-f:.]+\]|[a-z0-9._-]+)")
+_URL = re.compile(r"(?i)\b[a-z][a-z0-9+.-]{0,31}://(?:[^/\s@'\"]*@)?(\[[0-9a-f:.]+\]|[a-z0-9._-]+)")
 _SCP = re.compile(r"^(?:[^@/\s]+@)?([A-Za-z0-9._-]+|\[[0-9a-fA-F:.]+\]):(?!//)")
 _DOMENA = re.compile(r"(?i)^(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?(?:/.*)?$")
 _BIBLIOTEKI_SIECI = re.compile(
@@ -922,18 +1024,57 @@ def rozwin(sciezka: str, cwd: str, zmienne: dict[str, str] | None = None) -> str
     return os.path.realpath(s)
 
 
-def czy_poswiadczenia(sciezka: str) -> bool:
+# Przegląd 16c zadania 029: człon key/token/secret/credential/password w nazwie blokuje tylko pliki
+# z DANYMI. W pliku kodu albo dokumentacji, w bibliotece i w nazwie katalogu to zwykle nazwa modułu
+# (`secrets.py`, `yaml/tokens.py`) — wtedy flaga słaba `poswiadczenia_slabe` (widać ją w dzienniku,
+# ale nie ma jej w `blokuj:`).
+_KOD_I_DOKUMENTY = (
+    ".py", ".pyi", ".pyc", ".js", ".mjs", ".cjs", ".ts", ".md", ".rst", ".html", ".ipynb", ".c",
+    ".h", ".rs", ".go", ".java",
+)  # fmt: skip
+_KATALOGI_BIBLIOTEK = {"site-packages", "dist-packages", "node_modules"}
+_BIBLIOTEKA_STANDARDOWA = re.compile(r"(^|/)lib(64)?/python\d+(\.\d+)*(/|$)")
+_SZABLONY_ENV = {".env.example", ".env.sample", ".env.template", ".env.dist"}
+
+
+def rodzaj_poswiadczen(sciezka: str, katalog: bool | None = None) -> str | None:
+    """Flaga poświadczeń dla ścieżki albo None.
+
+    `poswiadczenia` (twarda; blokowana w narzędziach plikowych): katalogi `.ssh`, `.gnupg`, `.aws`,
+    `.kube`, `.docker` i `.config/gh` (jako składniki ścieżki), nazwy z `_NAZWY_POSW`, `.env`,
+    `.env.*`, `*.env`, rozszerzenia kluczy, `id_rsa*`/`id_ed25519*`/`id_ecdsa*` oraz człon
+    key/token/secret/credential/password w nazwie pliku danych.
+    `poswiadczenia_slabe` (tylko flaga): szablony `.env.example`/`.sample`/`.template`/`.dist`
+    oraz ten człon w nazwie pliku kodu lub dokumentacji (`_KOD_I_DOKUMENTY`), pliku w bibliotece
+    (`site-packages`, `dist-packages`, `node_modules`, biblioteka standardowa Pythona) albo katalogu.
+    `katalog=None` — sprawdzić na dysku, ale tylko wtedy, gdy decyduje człon w nazwie."""
     czesci = sciezka.replace("\\", "/").lower().split("/")
-    nazwa = czesci[-1]
-    if _KATALOGI_POSW & set(czesci[:-1]) or nazwa in _KATALOGI_POSW:
-        return True
-    if "/.config/gh" in "/".join(czesci) or nazwa in _NAZWY_POSW:
-        return True
+    nazwa, katalogi = czesci[-1], czesci[:-1]
+    if _KATALOGI_POSW & set(katalogi) or nazwa in _KATALOGI_POSW or nazwa in _NAZWY_POSW:
+        return F_POSW
+    if any(czesci[k] == ".config" and czesci[k + 1] == "gh" for k in range(len(czesci) - 1)):
+        return F_POSW  # składniki `.config/gh`, nie podciąg: `~/.config/ghostty` to nie GitHub
+    if nazwa in _SZABLONY_ENV:
+        return F_POSW_SLABE
     if nazwa == ".env" or nazwa.startswith(".env.") or nazwa.endswith(".env"):
-        return True
+        return F_POSW
     if nazwa.endswith(_ROZSZERZENIA_POSW) or nazwa.startswith(("id_rsa", "id_ed25519", "id_ecdsa")):
-        return True
-    return bool(_SLOWA_POSW.search(nazwa))
+        return F_POSW
+    if not _SLOWA_POSW.search(nazwa):
+        return None
+    if (
+        nazwa.endswith(_KOD_I_DOKUMENTY)
+        or _KATALOGI_BIBLIOTEK & set(katalogi)
+        or _BIBLIOTEKA_STANDARDOWA.search("/".join(czesci))
+        or (os.path.isdir(sciezka) if katalog is None else katalog)
+    ):
+        return F_POSW_SLABE
+    return F_POSW
+
+
+def czy_poswiadczenia(sciezka: str) -> bool:
+    """Czy ścieżka daje którąkolwiek flagę poświadczeń (twardą albo słabą)."""
+    return rodzaj_poswiadczen(sciezka) is not None
 
 
 def _pod(sciezka: str, katalog: str) -> bool:
@@ -1040,6 +1181,17 @@ def zapis_claude_bez_flagi(pelna: str, agent: str | None) -> bool:
     return len(czesci) >= 2 and bool(czesci[0]) and czesci[1] == "memory"
 
 
+NIEZNANY_KATALOG = "$OLDPWD"  # bieżący katalog po `cd -` bez znanego poprzedniego albo po `cd $X`
+
+
+def _bezwzgledna(sciezka: str) -> bool:
+    """Ścieżka nie zależy od bieżącego katalogu (`/…`, `~…`, na Windows `C:…`)."""
+    try:
+        return os.path.isabs(os.path.expanduser(_kodowalna(sciezka)))
+    except ValueError:  # np. bajt zerowy
+        return False
+
+
 def sprawdz_sciezke(
     wynik: Wynik,
     surowa: str,
@@ -1054,12 +1206,22 @@ def sprawdz_sciezke(
     modyfikacja: bool = False,
 ) -> None:
     """`cwd` wyznacza repozytorium (katalogi dozwolone), `baza` — katalog, względem którego
-    rozwija się ścieżkę względną (po `cd` w poleceniu; domyślnie `cwd`). `zapis` — zapis treści
-    (flagi zapisu); `modyfikacja` — zmiana bez zapisu treści (rm, mv, touch…), która liczy się
-    tylko jako zapis do katalogu audytu (R8). `sesja` i `agent` — R5 i R6; `zmienne` — R4."""
-    pelna = rozwin(surowa, baza or cwd, zmienne)
-    if czy_poswiadczenia(pelna):
-        wynik.oznacz(F_POSW, sciezka=pelna)
+    rozwija się ścieżkę względną (po `cd` w poleceniu; domyślnie `cwd`; `NIEZNANY_KATALOG` = nie
+    wiadomo). `zapis` — zapis treści (flagi zapisu); `modyfikacja` — zmiana bez zapisu treści
+    (rm, mv, touch…), która liczy się tylko jako zapis do katalogu audytu (R8). `sesja` i `agent`
+    — R5 i R6; `zmienne` — R4. Ścieżka ZACZYNAJĄCA się od nierozwiniętej zmiennej (`$D/plik`) albo
+    względna przy nieznanym katalogu ma nieznane miejsce: tylko flagi z nazwy (poświadczenia), bez
+    flag zależnych od miejsca. Zmienna w środku (`/home/x/$D/plik`) tego nie zmienia (16c)."""
+    rozwinieta = rozwin_zmienne(surowa, zmienne)
+    nieznane = rozwinieta.startswith("$") or (
+        baza == NIEZNANY_KATALOG and not _bezwzgledna(rozwinieta)
+    )
+    pelna = rozwin(surowa, cwd if baza == NIEZNANY_KATALOG else (baza or cwd), zmienne)
+    rodzaj = rodzaj_poswiadczen(pelna)
+    if rodzaj:
+        wynik.oznacz(rodzaj, sciezka=pelna)
+    if nieznane:
+        return
     if _pod(pelna, katalog_audytu):  # R8: odczyt i zapis katalogu audytu to osobne flagi
         wynik.oznacz(F_AUDYT_ZAPIS if zapis or modyfikacja else F_AUDYT, sciezka=pelna)
     if not zapis or pelna.startswith("/dev/"):
@@ -1070,7 +1232,7 @@ def sprawdz_sciezke(
         return
     if any(_pod(pelna, k) for k in katalogi_tmp()):
         wynik.oznacz(F_TMP, sciezka=pelna)
-    elif "$" not in pelna:  # R4: nierozwinięta zmienna — nie wiadomo, dokąd prowadzi zapis
+    else:
         wynik.oznacz(F_ZAPIS, sciezka=pelna)
 
 
@@ -1175,8 +1337,8 @@ def _cele_modyfikacji(program: str, args: list[str]) -> list[str]:
         return pliki
     if program == "mv":
         return pliki[:-1]  # źródła znikają; cel `mv` sprawdza zapis jak dotąd
-    if program == "ln":
-        return pliki[-1:]
+    if program == "ln":  # z jednym argumentem dowiązanie powstaje w bieżącym katalogu
+        return pliki[-1:] if len(pliki) >= 2 else []
     if program == "dd":
         return [a[3:] for a in args if a.startswith("of=")]
     if program == "find":
@@ -1243,6 +1405,82 @@ def _powloka_ze_stdin(program: str, args: list[str]) -> bool:
     return True
 
 
+def _czyta_polecenia_ze_stdin(program: str, args: list[str]) -> bool:
+    """Powłoka czytająca stdin (`_powloka_ze_stdin`) albo `ssh host` bez polecenia zdalnego lub
+    z powłoką jako poleceniem zdalnym (`ssh host bash -s`) — wtedy stdin to polecenia."""
+    if program in POWLOKI:
+        return _powloka_ze_stdin(program, args)
+    if program != "ssh":
+        return False
+    reszta, pomin, host = [], False, False
+    for a in args:
+        if pomin:
+            pomin = False
+        elif a in _PRZEKIEROWANIA:
+            pomin = True
+        elif host:
+            reszta.append(a)
+        elif a in SSH_OPCJE_Z_ARG:
+            pomin = True
+        elif not a.startswith("-"):
+            host = True
+    if not reszta:
+        return True
+    zdalny, zdalne_args = program_i_argumenty(" ".join(reszta).split())
+    return zdalny in POWLOKI and _powloka_ze_stdin(zdalny, zdalne_args)
+
+
+_WRAZLIWE_W_KODZIE = re.compile(
+    r"(?i)\.(?:ssh|gnupg|aws|kube|docker)(?=[/\\'\"\s),\]]|$)|\.config[/\\]gh(?=[/\\'\"\s),\]]|$)"
+    r"|\.(?:git-credentials|netrc|pgpass|pypirc)\b|\bid_(?:rsa|ed25519|ecdsa)"
+)
+
+
+def _kod_interpretera(program: str, args: list[str], cale: str) -> str | None:
+    """Kod podany interpreterowi w poleceniu: Python (`-c`, a przy `-`, heredoku i `<` — cały tekst
+    polecenia), Node/Deno/Bun (`-e`, `-p`, …), Perl i Ruby (`-e`). Inaczej None."""
+    if PYTHON.match(program):
+        opcje: tuple[str, ...] = ("-c",)
+    elif program in ("node", "nodejs", "deno", "bun"):
+        opcje = ("-e", "--eval", "-p", "--print")
+    elif program in ("perl", "ruby"):
+        opcje = ("-e", "-E")
+    else:
+        return None
+    for k, a in enumerate(args):
+        if a in opcje and k + 1 < len(args):
+            return args[k + 1]
+    return cale if ("-" in args or "<<" in args or "<" in args) else None
+
+
+def _wrazliwe_w_kodzie(wynik: Wynik, kod: str, katalog_audytu: str) -> None:
+    """Kod interpretera to dla analizy ścieżek dane (R2, R3), ale podciągi ścieżek wrażliwych dają
+    flagę — tak jak `_BIBLIOTEKI_SIECI` dla sieci (przegląd 16c). Tylko flagi, nigdy odmowa:
+    `poswiadczenia` w Bash nie blokuje, a katalog audytu daje flagę ODCZYTU `dziennik_audytu`."""
+    if _WRAZLIWE_W_KODZIE.search(kod):
+        wynik.oznacz(F_POSW)
+    if ".clas5_audyt" in kod or (len(katalog_audytu) > 1 and katalog_audytu in kod):
+        wynik.oznacz(F_AUDYT)
+
+
+def _cd(
+    args: list[str], baza: str, poprzednia: str | None, zmienne: dict[str, str]
+) -> tuple[str, str | None]:
+    """(nowy katalog bieżący, katalog poprzedni dla `cd -`). `cd -` wraca do katalogu sprzed
+    ostatniego `cd` w tym poleceniu; bez niego katalog jest nieznany (`NIEZNANY_KATALOG`). Cel
+    zaczynający się od nierozwiniętej zmiennej (`cd $X`) — też nieznany."""
+    if "-" in args:
+        return (poprzednia, baza) if poprzednia is not None else (NIEZNANY_KATALOG, baza)
+    cel = next((a for a in args if not a.startswith("-")), "~")
+    rozwiniety = rozwin_zmienne(cel, zmienne)
+    if rozwiniety.startswith("$") or (baza == NIEZNANY_KATALOG and not _bezwzgledna(rozwiniety)):
+        return NIEZNANY_KATALOG, baza
+    try:
+        return rozwin(cel, baza, zmienne), baza
+    except ValueError:  # np. bajt zerowy w ścieżce — katalog bez zmian
+        return baza, poprzednia
+
+
 def analizuj_bash(
     wynik: Wynik,
     polecenie: str,
@@ -1257,34 +1495,49 @@ def analizuj_bash(
     zmienne: dict[str, str] | None = None,
 ) -> None:
     """`cwd` = katalog sesji (wyznacza repozytorium); `baza` = bieżący katalog polecenia, zmieniany
-    przez `cd` w kolejnych segmentach (przybliżenie: bez rozróżniania podpowłok i `||`).
+    przez `cd` w kolejnych segmentach, przywracany po `)` podpowłoki (`( cd x && … ) > plik`).
     `sesja`/`agent` — R5/R6; `zmienne` — przypisania znane z polecenia zewnętrznego (R4).
-    Treść heredoków nie trafia do segmentów ani ścieżek (R2); widzi ją tylko heurystyka sieci
-    Pythona (`siec_w_segmencie(…, polecenie, …)`) i powłoka czytająca stdin (`bash <<EOF`)."""
+    Treść heredoków nie trafia do segmentów ani ścieżek (R2). Jako polecenia analizuje się ją tylko
+    wtedy, gdy heredoc trafia w tym samym potoku do powłoki czytającej stdin (`bash <<EOF`,
+    `cat <<EOF | sh`, `ssh host <<EOF`). Kod interpreterów (`python - <<EOF`, `python -c`, `node -e`)
+    przeglądają tylko heurystyki: biblioteki sieciowe i podciągi ścieżek wrażliwych (same flagi)."""
     baza = baza or cwd
     zmienne = dict(zmienne or {})
     kontekst = {"sesja": sesja, "agent": agent}
-    tekst, ciala = bez_heredokow(polecenie)
-    for slowa in segmenty(tekst):
+    poprzednia: str | None = None  # katalog dla `cd -`; na początku polecenia nieznany
+    stos: list[tuple] = []  # przy `(` i `` ` ``: (znak, baza, poprzednia, zmienne)
+    znacznik = _znacznik_heredoka(polecenie)
+    tekst, ciala = _bez_heredokow(polecenie, znacznik)
+    ciala_potoku: list[int] = []  # heredoki bieżącego potoku, jeszcze nie przeanalizowane
+    for token in _tokeny(tekst):
+        if isinstance(token, str):
+            otwarty = stos[-1][0] if stos else None
+            if token == "(" or (token == "`" and otwarty != "`"):
+                stos.append((token, baza, poprzednia, dict(zmienne)))
+            elif (token == ")" and otwarty == "(") or (token == "`" and otwarty == "`"):
+                _, baza, poprzednia, zmienne = stos.pop()  # koniec podpowłoki: stan sprzed niej
+            elif token not in ("|", ")", "`"):
+                ciala_potoku = []  # `;`, `&`, `&&`, `||`, nowa linia: koniec potoku
+            continue
+        slowa = token
+        for s in slowa:
+            if s.startswith(znacznik) and s[len(znacznik) :].isdigit():
+                ciala_potoku.append(int(s[len(znacznik) :]))
         program, args = program_i_argumenty(slowa)
         _zapamietaj(zmienne, _przypisania(program, args, slowa))
         if program == "cd":
-            if "-" not in args:  # `cd -` (poprzedni katalog) — nieznany, baza bez zmian
-                try:
-                    cel = next((a for a in args if not a.startswith("-")), "~")
-                    baza = rozwin(cel, baza, zmienne)
-                except ValueError:  # np. bajt zerowy w ścieżce — baza bez zmian
-                    pass
+            baza, poprzednia = _cd(args, baza, poprzednia, zmienne)
             continue
         if glebokosc < MAKS_ZAGNIEZDZENIA:
             wewnetrzne = polecenie_powloki(program, args)
             if wewnetrzne is not None:
-                wewnetrzne_ciala = [wewnetrzne]
-            elif ciala and _powloka_ze_stdin(program, args):
-                wewnetrzne_ciala, ciala = ciala, []
+                teksty = [wewnetrzne]
+            elif ciala_potoku and _czyta_polecenia_ze_stdin(program, args):
+                teksty = [ciala[k] for k in ciala_potoku if k < len(ciala)]
+                ciala_potoku = []
             else:
-                wewnetrzne_ciala = []
-            for tekst_wewnetrzny in wewnetrzne_ciala:
+                teksty = []
+            for tekst_wewnetrzny in teksty:
                 analizuj_bash(
                     wynik,
                     tekst_wewnetrzny,
@@ -1299,6 +1552,9 @@ def analizuj_bash(
         siec = siec_w_segmencie(program, args, polecenie, baza)
         if siec is not None:
             sprawdz_siec(wynik, siec[0], siec[1], hosty)
+        kod = _kod_interpretera(program, args, polecenie)
+        if kod is not None:
+            _wrazliwe_w_kodzie(wynik, kod, katalog_audytu)
         cele: list[str] = []
         for j, s in enumerate(slowa[:-1]):
             if s in (">", ">>"):
@@ -1355,11 +1611,14 @@ def analizuj(
             sprawdz_sciezke(wynik, sciezka, cwd, katalog_audytu, zapis=zapis, **kontekst)
     elif narzedzie in ("Grep", "Glob"):  # przeszukanie katalogu to też odczyt (np. ~/.ssh)
         sciezka = str(wejscie.get("path") or "")
-        wzorzec = str(wejscie.get("pattern") or "") if narzedzie == "Glob" else ""
+        wzorzec = str(wejscie.get("pattern" if narzedzie == "Glob" else "glob") or "")
         pola["sciezka"] = maskuj(" ".join(x for x in (sciezka, wzorzec) if x))
-        for kandydat in (sciezka, wzorzec):
-            if _wyglada_na_sciezke(kandydat):
-                sprawdz_sciezke(wynik, kandydat, cwd, katalog_audytu, zapis=False, **kontekst)
+        if sciezka:
+            sprawdz_sciezke(wynik, sciezka, cwd, katalog_audytu, zapis=False, **kontekst)
+        if wzorzec:  # wzorzec (`glob` w Grep) liczy się względem `path`: `path="~", glob=".ssh/*"`
+            if not _bezwzgledna(rozwin_zmienne(wzorzec)):
+                wzorzec = os.path.join(sciezka or ".", wzorzec)
+            sprawdz_sciezke(wynik, wzorzec, cwd, katalog_audytu, zapis=False, **kontekst)
     return wynik, pola
 
 
@@ -1396,6 +1655,7 @@ def _krotki(wartosc: object, limit: int = 200) -> str | None:
 
 OPIS_FLAGI = {
     F_POSW: "plik z poświadczeniami",
+    F_POSW_SLABE: "plik o nazwie jak poświadczenia (kod, biblioteka, szablon)",
     F_AUDYT_ZAPIS: "zapis do katalogu dziennika audytu",
     F_AUDYT: "odczyt katalogu dziennika audytu",
     F_SIEC: "połączenie z hostem spoza listy config/audyt_hosty.yaml",

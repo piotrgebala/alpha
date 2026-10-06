@@ -18,6 +18,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 from unittest import mock
@@ -666,20 +667,20 @@ def test_lone_surrogate_in_write_path_and_cwd(tmp_path, repo, monkeypatch):
 
 # --- zadanie 029: poprawki R1–R8 i dwie blokady (decyzje użytkownika 2026-10-06) ----------------
 STARY_COMMIT = "44d2257"  # tools/audyt_hook.py sprzed zadania 029 (master 2026-09-29 … 2026-10-06)
+PIERWSZY_COMMIT = "c0ae883"  # pierwsza wersja zadania 029 — przed poprawkami z przeglądu 16c
 BLOKADY = ah.wczytaj_blokady(ROOT / "config" / "audyt_hosty.yaml")
 PLIKOWE = ["Read", "Write", "Edit", "MultiEdit", "NotebookEdit", "Grep", "Glob"]
 SCRATCHPAD = f"{TMP_TESTOWY}/claude-1000/-home-x-alpha/s1/scratchpad"  # sesja „s1” jak w `uruchom`
 NAGLOWEK = 'hosty:\n  - github.com  # komentarz\n  - "::1"\n'
-P, Z = ah.F_POSW, ah.F_AUDYT_ZAPIS
+P, Z, PS = ah.F_POSW, ah.F_AUDYT_ZAPIS, ah.F_POSW_SLABE
 
 
-@pytest.fixture(scope="module")
-def stary(tmp_path_factory):
-    """Hook sprzed zadania 029 z historii gita — część „przed” testów przed/po. Bez historii
-    (płytki klon, brak gita) → None: część „przed” jest pomijana, część „po” działa zawsze."""
+def _hook_z_historii(commit: str, katalog: Path):
+    """`tools/audyt_hook.py` z danego commita (historia gita) jako moduł. Bez historii (płytki klon,
+    brak gita) → None: część „przed” testów przed/po jest wtedy pomijana."""
     try:
         wynik = subprocess.run(
-            ["git", "-C", str(ROOT), "show", f"{STARY_COMMIT}:tools/audyt_hook.py"],
+            ["git", "-C", str(ROOT), "show", f"{commit}:tools/audyt_hook.py"],
             capture_output=True,
             text=True,
             timeout=30,
@@ -688,12 +689,24 @@ def stary(tmp_path_factory):
         return None
     if wynik.returncode != 0:
         return None
-    plik = tmp_path_factory.mktemp("przed_029") / "audyt_hook_przed_029.py"
+    plik = katalog / f"audyt_hook_{commit}.py"
     plik.write_text(wynik.stdout, encoding="utf-8")
-    spec = importlib.util.spec_from_file_location("audyt_hook_przed_029", plik)
+    spec = importlib.util.spec_from_file_location(f"audyt_hook_{commit}", plik)
     modul = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(modul)
     return modul
+
+
+@pytest.fixture(scope="module")
+def stary(tmp_path_factory):
+    """Hook sprzed zadania 029 — część „przed” testów R1–R8."""
+    return _hook_z_historii(STARY_COMMIT, tmp_path_factory.mktemp("przed_029"))
+
+
+@pytest.fixture(scope="module")
+def pierwsza(tmp_path_factory):
+    """Pierwsza wersja zadania 029 — część „przed” testów poprawek z przeglądu 16c."""
+    return _hook_z_historii(PIERWSZY_COMMIT, tmp_path_factory.mktemp("przed_16c"))
 
 
 @pytest.fixture()
@@ -861,7 +874,6 @@ def test_r2_task_card_heredoc_is_data(tmp_path, repo, dom, stary, monkeypatch):
             [ah.F_ZAPIS],
         ),
         ("python3 - <<'EOF'\nfor k in sc.keys():\n    print(k)\nEOF", [P]),  # P3: `sc.keys`
-        ("python3 - <<'EOF'\nprzyklady = ['echo x > ~/.ssh/klucz']\nEOF", [P]),  # P2: test hooka
     ],
 )
 def test_r2_heredoc_body_is_not_commands_nor_paths(
@@ -900,7 +912,12 @@ def test_bez_heredokow_cuts_bodies_and_keeps_operator():
         ["a", "\tb"],
     )
     assert ah.bez_heredokow("echo '<<EOF'\nx") == ("echo '<<EOF'\nx", [])
-    assert ah.bez_heredokow("git commit -m \"$(cat <<'EOF'\nx\nEOF\n)\"")[1] == []
+    assert ah.bez_heredokow('echo "a << b"\nx') == ('echo "a << b"\nx', [])
+    # w `"$( … )"` zaczyna się zwykłe polecenie (bash): heredoc opisu commita jest rozpoznany
+    assert ah.bez_heredokow('git commit -m "$(cat <<\'EOF\'\nx "y\nEOF\n)"') == (
+        "git commit -m \"$(cat <<'EOF'\n)\"",
+        ['x "y'],
+    )
     assert ah.bez_heredokow("cat <<< x\ny") == ("cat <<< x\ny", [])
     assert ah.bez_heredokow("python3 - <<EOF\nbez końca") == ("python3 - <<EOF\n", ["bez końca"])
     assert ah.bez_heredokow("cat <<'E\nx") == ("cat <<'E\nx", [])  # niedomknięty: nie heredoc
@@ -909,8 +926,8 @@ def test_bez_heredokow_cuts_bodies_and_keeps_operator():
 # R3 — słowo z nową linią to nie ścieżka --------------------------------------------------------
 @pytest.mark.parametrize(
     "polecenie",
-    [  # P2: wieloliniowy kod `python -c`; opis commita z `"$(cat <<'EOF' … EOF)"`
-        "python3 -c \"import os\nprint(os.path.exists('~/.ssh/id_ed25519'))\"",
+    [  # wieloliniowy tekst w słowie; opis commita z `"$(cat <<'EOF' … EOF)"`
+        "printf '%s' \"Opis zmian\nbez ~/.ssh/klucz w środku\"",
         "git commit -q -m \"$(cat <<'EOF'\nOpis: ~/.ssh/klucz bez zmian\nEOF\n)\"",
     ],
 )
@@ -1126,7 +1143,6 @@ def test_block_entries_match_pyyaml(tekst, oczekiwane):
         "blokuj:\n  - 'poswiadczenia\n",  # niedomknięty apostrof
         "blokuj:\n  - &a poswiadczenia\n  - *a\n",  # kotwice: poza podzbiorem
         "blokuj:\n  - |\n    poswiadczenia\n",  # skalar blokowy: poza podzbiorem
-        "---\nblokuj:\n  - poswiadczenia\n",  # znacznik dokumentu: poza podzbiorem
         "\ufeffblokuj:\n  - poswiadczenia\n",  # BOM w środku tekstu
         "blokuj:\n  - poswiadczenia\x0b\n",  # znak sterujący
         "blokuj:\n  - 0x_\n  - poswiadczenia\n",  # YAML pada: liczba bez cyfr
@@ -1527,18 +1543,369 @@ _ZNAKI_ZMIAN = list(" -:#[]{},'\"\t\nab_0~.") + ["poswiadczenia", "Read", "  ", 
     ),
 )
 def test_property_parser_never_blocks_more_than_pyyaml(wpisy, zmiany):
-    """Zepsuty tekst: hook nigdy nie blokuje więcej niż PyYAML (gdy PyYAML pada — nic), a tekst,
-    który hook przyjmuje, czyta dokładnie tak jak PyYAML."""
-    tekst = NAGLOWEK + "blokuj:\n" + "".join(map(_yaml_wpisu, wpisy))
+    """Zepsuta sekcja `blokuj:`: hook nigdy nie blokuje więcej niż PyYAML czytający tę sekcję (gdy
+    PyYAML pada — nic), a sekcję, którą hook przyjmuje, czyta dokładnie tak jak PyYAML. Sekcję
+    wyznacza tu osobno napisana reguła (`_sekcja_wg_testu`); zmiany tylko w treści sekcji."""
+    poczatek = NAGLOWEK + "blokuj:\n"
+    tresc = "".join(map(_yaml_wpisu, wpisy))
     for pozycja, rodzaj, znak in zmiany:
-        i = pozycja % (len(tekst) + 1)
+        i = pozycja % (len(tresc) + 1)
         if rodzaj == 0:
-            tekst = tekst[:i] + tekst[i + 1 :]
+            tresc = tresc[:i] + tresc[i + 1 :]
         elif rodzaj == 1:
-            tekst = tekst[:i] + znak + tekst[i:]
+            tresc = tresc[:i] + znak + tresc[i:]
         else:
-            tekst = tekst[:i] + znak + tekst[i + len(znak) :]
-    nasze, wzor = ah.parsuj_blokady(tekst), blokady_wg_pyyaml(tekst)
+            tresc = tresc[:i] + znak + tresc[i + len(znak) :]
+    tekst = poczatek + tresc
+    sekcja = _sekcja_wg_testu(tekst)
+    nasze = ah.parsuj_blokady(tekst)
+    wzor = blokady_wg_pyyaml(sekcja) if sekcja is not None else ()
     assert set(nasze) <= set(wzor), tekst
-    if ah.yaml_podzbior(tekst) is not None:
+    if sekcja is not None and ah.yaml_podzbior(sekcja) is not None:
         assert nasze == wzor, tekst
+
+
+def _sekcja_wg_testu(tekst: str) -> str | None:
+    """Sekcja `blokuj:` napisana od nowa: od linii `blokuj:` w kolumnie 0 do pierwszej linii
+    z treścią w kolumnie 0, która nie jest komentarzem ani elementem `- `."""
+    linie = tekst.split("\n")
+    starty = [
+        k for k, x in enumerate(linie) if x.rstrip(" ") == "blokuj:" or x.startswith("blokuj: ")
+    ]
+    if len(starty) != 1:
+        return None
+    k = starty[0] + 1
+    while k < len(linie):
+        x = linie[k]
+        w_sekcji = not x.strip(" ") or x.strip(" ").startswith("#") or x[:1] in (" ", "\t")
+        if not (w_sekcji or x.rstrip(" ") == "-" or x.startswith("- ")):
+            break
+        k += 1
+    return "\n".join(linie[starty[0] : k])
+
+
+# --- przegląd 16c zadania 029: poprawki 1–7 ----------------------------------------------------
+def wywolaj_wersja(modul, tmp_path, repo, narzedzie, wejscie, **pola):
+    """Jak `wywolaj`, ale wskazaną wersją hooka (np. pierwszą wersją zadania 029)."""
+    dane = {"session_id": "s1", "cwd": str(repo), "tool_name": narzedzie, "tool_input": wejscie}
+    plik, odmowa = modul.przetworz(
+        json.dumps({**dane, **pola}), tmp_path / "audyt", HOSTY, TERAZ, BLOKADY
+    )
+    return json.loads(plik.read_text(encoding="ascii").splitlines()[-1]), odmowa
+
+
+def test_16c_first_029_version_is_loaded_when_commit_exists(pierwsza):
+    """Bez tego część „przed” testów 16c mogłaby się po cichu nie wykonać."""
+    jest = subprocess.run(
+        ["git", "-C", str(ROOT), "cat-file", "-e", f"{PIERWSZY_COMMIT}^{{commit}}"],
+        capture_output=True,
+    )
+    if jest.returncode != 0:
+        pytest.skip("brak pierwszej wersji zadania 029 (płytki klon)")
+    assert pierwsza is not None and hasattr(pierwsza, "przetworz")
+    assert not hasattr(pierwsza, "rodzaj_poswiadczen")
+
+
+# pkt 1: człon key/token/secret… w nazwie kodu, biblioteki, szablonu albo katalogu → flaga słaba
+@pytest.mark.parametrize("narzedzie", PLIKOWE)
+@pytest.mark.parametrize(
+    "sciezka",
+    [
+        "/usr/lib/python3.12/secrets.py",
+        "/usr/lib/python3.12/token.py",
+        ".venv/lib/python3.12/site-packages/yaml/tokens.py",
+        ".venv/lib/python3.12/site-packages/ccxt/static_dependencies/keys.py",
+        "node_modules/pakiet/dist/token.json",
+        "tools/token_report.py",
+        "docs/api_keys.md",
+        ".env.example",
+        "config/.env.sample",
+        ".env.template",
+        ".env.dist",
+    ],
+)
+def test_16c_weak_credential_names_are_flagged_not_denied(
+    tmp_path, repo, dom, pierwsza, narzedzie, sciezka
+):
+    wejscie = wejscie_dla(narzedzie, sciezka)
+    if pierwsza is not None:  # przed poprawką: fałszywa odmowa
+        assert wywolaj_wersja(pierwsza, tmp_path, repo, narzedzie, wejscie)[1] is not None
+    rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wejscie)
+    assert PS in rekord["flagi"] and P not in rekord["flagi"]  # zapis do /usr/… ma też flagę zapisu
+    assert odmowa is None and "zablokowano" not in rekord
+
+
+def test_16c_grep_over_directory_with_keyword_is_flagged_not_denied(tmp_path, repo, pierwsza):
+    katalog = repo / "runs" / "2026-09-28_t1-tokens"
+    katalog.mkdir(parents=True)
+    wejscie = {"pattern": "x", "path": str(katalog)}
+    if pierwsza is not None:
+        assert wywolaj_wersja(pierwsza, tmp_path, repo, "Grep", wejscie)[1] is not None
+    rekord, odmowa = wywolaj(tmp_path, repo, "Grep", wejscie)
+    assert rekord["flagi"] == [PS] and odmowa is None
+    rekord, odmowa = wywolaj(tmp_path, repo, "Read", {"file_path": str(katalog / "token.txt")})
+    assert rekord["zablokowano"] == [P] and odmowa is not None  # plik danych w środku: dalej odmowa
+
+
+def test_16c_config_gh_is_matched_as_path_components(tmp_path, repo, dom, pierwsza):
+    ghostty = {"file_path": "~/.config/ghostty/config"}
+    if pierwsza is not None:
+        assert wywolaj_wersja(pierwsza, tmp_path, repo, "Read", ghostty)[1] is not None
+    rekord, odmowa = wywolaj(tmp_path, repo, "Read", ghostty)
+    assert rekord["flagi"] == [] and odmowa is None
+    for sciezka in ("~/.config/gh/hosts.yml", "~/.config/gh", "C:\\Users\\x\\.config\\gh\\a.yml"):
+        assert wywolaj(tmp_path, repo, "Read", {"file_path": sciezka})[0]["zablokowano"] == [P]
+
+
+@pytest.mark.parametrize("narzedzie", PLIKOWE)
+@pytest.mark.parametrize(
+    "sciezka",
+    [
+        "bybit_api_key.json",
+        "token.txt",
+        "secrets.yaml",
+        "config/credentials.json",
+        ".env",
+        ".env.local",
+        "deploy.env",
+        "/srv/klucze/serwer.key",
+        "~/.ssh/config",
+        "~/.aws/config",
+        "id_ed25519.pub",
+        ".venv/lib/python3.12/site-packages/pakiet/.env",  # twarde także w bibliotece
+    ],
+)
+def test_16c_hard_credential_files_are_still_denied(tmp_path, repo, dom, narzedzie, sciezka):
+    rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wejscie_dla(narzedzie, sciezka))
+    assert P in rekord["flagi"] and rekord["zablokowano"] == [P] and odmowa is not None
+
+
+def test_16c_rodzaj_poswiadczen():
+    r = ah.rodzaj_poswiadczen
+    assert r("/r/secrets.py") == PS and r("/r/secrets.json") == P
+    assert r("/r/tokens", katalog=True) == PS and r("/r/tokens", katalog=False) == P
+    assert r("/usr/lib/python3.12/lib-dynload/x_token.so") == PS  # biblioteka standardowa
+    assert r("/r/.config/ghostty/config") is None and r("/r/.config/gh") == P
+    assert r("/r/README.md") is None and r("/r/.env.example") == PS and r("/r/.env.prod") == P
+
+
+def test_16c_weak_flag_is_never_in_shipped_block_list():
+    assert all(b.flaga != PS for b in BLOKADY)
+    assert ah.zablokowane_flagi({PS}, "Read", BLOKADY) == []
+
+
+# pkt 2: zapis do katalogu audytu w Bash — fałszywe odmowy z przybliżeń
+@pytest.mark.parametrize(
+    "szablon",
+    [
+        "(cd {k} && wc -l *.jsonl) > wynik.txt",  # katalog wraca po `)` podpowłoki
+        "cd {k}; cd -; rm x.txt",  # `cd -` wraca do katalogu sprzed `cd`
+        "ln -s {k}/a.jsonl",  # jeden argument: dowiązanie powstaje w bieżącym katalogu
+        "cat > notatka.md <<'EOF'\nrm {k}/x\nEOF\necho ok | bash",  # heredoc nie idzie do powłoki
+        'git commit -q -m "$(cat <<\'EOF\'\nOpis "cytat\nrm {k}/x\nEOF\n)"',  # nieparzyste `"`
+    ],
+)
+def test_16c_false_audit_write_denials_are_gone(tmp_path, repo, pierwsza, szablon):
+    wejscie = {"command": szablon.format(k=tmp_path / "audyt")}
+    if pierwsza is not None:  # przed poprawką: fałszywa odmowa
+        assert wywolaj_wersja(pierwsza, tmp_path, repo, "Bash", wejscie)[1] is not None
+    rekord, odmowa = wywolaj(tmp_path, repo, "Bash", wejscie)
+    assert Z not in rekord["flagi"] and odmowa is None, wejscie
+
+
+@pytest.mark.parametrize(
+    "szablon",
+    [
+        "(cd {k} && rm a.jsonl)",
+        "(cd /tmp) && cd {k} && echo x > b.jsonl",
+        "cd {k}; cd /tmp; cd -; rm a.jsonl",  # `cd -` wraca DO katalogu audytu
+        "ln -sf /dev/null {k}/a.jsonl",
+        "cat <<'EOF' | bash\nrm {k}/x\nEOF",
+        "bash <<'EOF'\nrm {k}/x\nEOF",
+        'git commit -q -m "$(cat <<\'EOF\'\nOpis "cytat\nEOF\n)" && rm {k}/a.jsonl',
+    ],
+)
+def test_16c_real_audit_writes_are_still_denied(tmp_path, repo, szablon):
+    rekord, odmowa = wywolaj(
+        tmp_path, repo, "Bash", {"command": szablon.format(k=tmp_path / "audyt")}
+    )
+    assert rekord["zablokowano"] == [Z] and odmowa is not None, szablon
+
+
+def test_16c_heredoc_to_ssh_is_analysed_only_without_remote_command(tmp_path, repo, dom):
+    zdalna_powloka = bash(tmp_path, repo, "ssh serwer.obcy.pl <<'EOF'\ncat ~/.ssh/id_rsa\nEOF")
+    zdalny_cat = bash(
+        tmp_path, repo, "ssh serwer.obcy.pl 'cat > x' <<'EOF'\ncat ~/.ssh/id_rsa\nEOF"
+    )
+    assert P in zdalna_powloka["flagi"] and P not in zdalny_cat["flagi"]
+
+
+def test_16c_tokens_carry_subshell_and_pipeline_events():
+    assert ah._tokeny("(cd /x && ls) > y | wc; z || q |& r") == [
+        "(",
+        ["cd", "/x"],
+        "&&",
+        ["ls"],
+        ")",
+        [">", "y"],
+        "|",
+        ["wc"],
+        ";",
+        ["z"],
+        "||",
+        ["q"],
+        "|",
+        ["r"],
+    ]
+
+
+# pkt 3: `glob` w Grep i `pattern` w Glob liczą się względem `path`
+@pytest.mark.parametrize(
+    ("narzedzie", "wejscie"),
+    [
+        (
+            "Grep",
+            {"path": "~", "glob": ".ssh/*", "pattern": "PRIVATE KEY", "output_mode": "content"},
+        ),
+        ("Grep", {"path": "~/projekt", "glob": "**/id_rsa*", "pattern": "x"}),
+        ("Grep", {"glob": "~/.aws/*", "pattern": "x"}),
+        ("Glob", {"path": "~", "pattern": ".aws/*"}),
+        ("Glob", {"path": "~", "pattern": ".config/gh/*"}),
+    ],
+)
+def test_16c_grep_glob_pattern_relative_to_path_is_denied(tmp_path, repo, dom, narzedzie, wejscie):
+    rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wejscie)
+    assert rekord["zablokowano"] == [P] and odmowa is not None
+
+
+def test_16c_grep_glob_field_before_and_after(tmp_path, repo, dom, pierwsza):
+    wejscie = {"path": "~", "glob": ".ssh/*", "pattern": "PRIVATE KEY", "output_mode": "content"}
+    if pierwsza is not None:  # przed poprawką: przechodziło bez flagi
+        assert wywolaj_wersja(pierwsza, tmp_path, repo, "Grep", wejscie)[1] is None
+    zwykle = [("Grep", {"path": ".", "glob": "*.py", "pattern": "x"})]
+    zwykle.append(("Glob", {"path": "tools", "pattern": "**/*.py"}))
+    for narzedzie, wej in zwykle:
+        rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wej)
+        assert rekord["flagi"] == [] and odmowa is None
+
+
+# pkt 4: widoczność — kod interpreterów i ścieżka ze zmienną w środku
+@pytest.mark.parametrize(
+    ("polecenie", "flagi"),
+    [
+        ("python3 - <<'EOF'\nprint(open(os.path.expanduser('~/.ssh/id_rsa')).read())\nEOF", [P]),
+        ("python3 -c \"import os\nprint(open('/home/x/.aws/credentials').read())\"", [P]),
+        (
+            "node - <<'EOF'\nrequire('fs').readFileSync(require('os').homedir() + '/.ssh/x')\nEOF",
+            [P],
+        ),
+        ("node -e \"require('fs').readFileSync(process.env.HOME + '/.gnupg/pubring.kbx')\"", [P]),
+        ("perl -e 'open(F, \"$ENV{HOME}/.netrc\")'", [P]),
+        ("python3 - <<'EOF'\nprzyklady = ['echo x > ~/.ssh/klucz']\nEOF", [P]),  # P2: flaga wraca
+        ("python3 - <<'EOF'\nfor k in sc.keys():\n    print(k)\nEOF", []),  # P3: dalej bez flagi
+        ("python3 - <<'EOF'\nprint('hub.docker.com', 'pkg.ssh_config')\nEOF", []),
+    ],
+)
+def test_16c_interpreter_code_keeps_credential_visibility(tmp_path, repo, dom, polecenie, flagi):
+    rekord, odmowa = wywolaj(tmp_path, repo, "Bash", {"command": polecenie})
+    assert rekord["flagi"] == flagi and odmowa is None  # w Bash tylko flaga
+
+
+def test_16c_audit_dir_in_interpreter_code_is_read_flag_never_denied(tmp_path, repo):
+    pisze = f"python3 - <<'EOF'\nopen('{tmp_path / 'audyt'}/x.jsonl', 'a').write('x')\nEOF"
+    rekord, odmowa = wywolaj(tmp_path, repo, "Bash", {"command": pisze})
+    assert rekord["flagi"] == [ah.F_AUDYT] and odmowa is None
+    czyta = "python3 -c \"print(open('/home/x/.clas5_audyt/a.jsonl').read())\""
+    assert ah.F_AUDYT in wywolaj(tmp_path, repo, "Bash", {"command": czyta})[0]["flagi"]
+
+
+@pytest.mark.parametrize(
+    ("polecenie", "przed", "po"),
+    [
+        ("echo x > /home/x/$D/plik", [], [ah.F_ZAPIS]),  # zmienna w środku: miejsce znane
+        ("cp plik /etc/$X", [], [ah.F_ZAPIS]),
+        ("cd /srv && cat > $NIEZNANA/x.txt <<'EOF'\nx\nEOF", [], []),  # zaczyna się od `$`
+        ("echo x > ${D}/plik", [], []),
+    ],
+)
+def test_16c_r4_skips_only_paths_starting_with_unknown_variable(
+    tmp_path, repo, pierwsza, monkeypatch, polecenie, przed, po
+):
+    przed_po(
+        pierwsza, monkeypatch, repo, tmp_path / "audyt", "Bash", {"command": polecenie}, przed, po
+    )
+
+
+# pkt 5: sekcja `blokuj:` czytana niezależnie od reszty pliku
+@pytest.mark.parametrize(
+    "zepsute_hosty",
+    [
+        "hosty:\n  - api.example.com:8080\n",  # poprawny YAML spoza podzbioru
+        "hosty:\n\t- github.com\n",  # tabulator
+        "hosty: [github.com, pypi.org\n",  # niedomknięty nawias
+        "---\nhosty:\n  - github.com\n",  # znacznik dokumentu
+        "hosty:\n  - 'niedomkniety\n",
+    ],
+)
+def test_16c_broken_host_list_does_not_disable_blocks(zepsute_hosty):
+    tekst = (ROOT / "config" / "audyt_hosty.yaml").read_text(encoding="utf-8")
+    assert (
+        ah.parsuj_blokady(zepsute_hosty + "\nblokuj:" + tekst.partition("\nblokuj:")[2]) == BLOKADY
+    )
+
+
+def test_16c_shipped_config_with_port_host_keeps_blocks(tmp_path):
+    tekst = (ROOT / "config" / "audyt_hosty.yaml").read_text(encoding="utf-8")
+    assert tekst.count("\nhosty:\n") == 1
+    plik = tmp_path / "audyt_hosty.yaml"
+    plik.write_text(
+        tekst.replace("\nhosty:\n", "\nhosty:\n  - api.example.com:8080\n"), encoding="utf-8"
+    )
+    assert ah.wczytaj_blokady(plik) == BLOKADY
+
+
+def test_16c_block_section_boundaries():
+    assert ah.sekcja_blokuj("a: 1\nblokuj:\n  - x\n# k\n- y\nb: 2\n") == "blokuj:\n  - x\n# k\n- y"
+    assert ah.sekcja_blokuj("blokuj: []\nblokuj: []\n") is None  # dwie sekcje: nic
+    assert ah.sekcja_blokuj("hosty: []\n") is None
+    assert ah.parsuj_blokady("blokuj:\n  - poswiadczenia\n\t- dziennik_audytu_zapis\n") == ()
+
+
+@settings(max_examples=200, deadline=None)
+@given(smieci=st.text(alphabet=list(" -:#[]{},'\"\t\nab_0~."), max_size=200))
+def test_property_garbage_before_block_section_never_changes_blocks(smieci):
+    sekcja = "blokuj:\n  - flaga: poswiadczenia\n    narzedzia: [Read]\n  - dziennik_audytu_zapis\n"
+    assert ah.parsuj_blokady(smieci + "\n" + sekcja) == ah.parsuj_blokady(sekcja) != ()
+
+
+# pkt 6: żadnych niewidocznych znaków w kodzie i konfiguracji
+def test_16c_no_invisible_characters_in_sources():
+    import unicodedata
+
+    for plik in (SKRYPT, ROOT / "config" / "audyt_hosty.yaml", Path(__file__)):
+        tekst = plik.read_text(encoding="utf-8")
+        zle = [hex(ord(z)) for z in tekst if unicodedata.category(z) in ("Cf", "Co", "Cn", "Cs")]
+        assert zle == [], plik
+
+
+# pkt 7: długie polecenie nie może przekroczyć limitu czasu hooka (10 s)
+def test_16c_long_command_is_handled_quickly(tmp_path, repo):
+    dlugie = "a+" * 100_000  # 200 KB
+    poczatek = time.perf_counter()
+    assert len(ah.maskuj("echo " + dlugie)) == ah.MAKS_ZNAKOW + 1
+    assert time.perf_counter() - poczatek < 1.0
+    for polecenie in (
+        "echo " + dlugie,
+        "curl " + dlugie,
+        f"python3 -c 'import requests; x=\"{dlugie}\"'",
+    ):
+        poczatek = time.perf_counter()
+        rekord, _ = wywolaj(tmp_path, repo, "Bash", {"command": polecenie})
+        assert time.perf_counter() - poczatek < 2.0 and rekord["polecenie"].endswith("…")
+
+
+def test_16c_maskuj_on_prefix_keeps_masks_and_truncation_mark():
+    assert ah.maskuj("x ghp_" + "a1" * 20 + " " + "y" * 2000).startswith("x ***")
+    assert ah.maskuj("api_key=" + "z9" * 300) == "api_key=***"
+    assert ah.maskuj("k=" + "a1" * 500 + " " + "b" * 1000) == "k=***…"  # ucięte, choć krótkie
+    assert len(ah.maskuj("echo " + "b " * 600 + "token=abc")) == ah.MAKS_ZNAKOW + 1

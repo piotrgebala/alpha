@@ -14,10 +14,16 @@
 #   - `blokuj`: wpis to nazwa flagi (blokada we wszystkich narzędziach) albo mapa `flaga:`
 #     + opcjonalnie `narzedzia: [Read, …]` (tylko te narzędzia) i `decyzja: "RRRR-MM-DD"` (data
 #     decyzji użytkownika, trafia do powodu odmowy);
-#   - komentarz po `#`; wcięcia spacjami (tabulator psuje plik).
+#   - komentarz po `#`; wcięcia spacjami (tabulator psuje sekcję).
+# Sekcję `blokuj:` hook czyta NIEZALEŻNIE od reszty pliku: błąd w liście hostów nie wyłącza blokad.
 # Fail-open: nieznana flaga, nieznane narzędzie, nieznany klucz albo zły format wpisu → ten wpis
-# niczego nie blokuje. Plik zepsuty albo spoza prostego podzbioru YAML (np. wartość w kilku
-# liniach) → hook nic nie blokuje. Testy pilnują, że ten plik daje dokładnie blokady z końca pliku.
+# niczego nie blokuje. Sekcja `blokuj:` zepsuta albo spoza prostego podzbioru YAML (np. wartość
+# w kilku liniach), brak sekcji albo dwie sekcje → hook nic nie blokuje. Testy pilnują, że ten plik
+# daje dokładnie blokady z końca pliku.
+# Flaga `poswiadczenia_slabe` (od przeglądu 16c) celowo NIE stoi w `blokuj:`: to człon key/token/
+# secret… w nazwie pliku kodu albo dokumentacji, pliku w bibliotece (`site-packages`, `node_modules`,
+# biblioteka standardowa), nazwie katalogu oraz szablon `.env.example`. Widać ją w dzienniku; drugi
+# tydzień obserwacji liczy ją osobno: `jq -c 'select(any(.flagi[]; . == "poswiadczenia_slabe"))'`.
 # Zmiana listy hostów = commit z powodem (host z kodu `data/` lub `tools/`, albo adres z treści
 # zadania). Zmiana `blokuj:` = tylko z zapisaną decyzją użytkownika.
 #
