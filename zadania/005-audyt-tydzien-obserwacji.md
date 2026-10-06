@@ -2,9 +2,9 @@
 id: 005
 tytul: Hook audytowy — przegląd tygodnia obserwacji i propozycja, co blokować
 typ: przeglad
-status: czeka_na_decyzje
+status: zrobione
 zlecil: uzytkownik
-decyzja_uzytkownika: "2026-09-29: dodać zadanie „po tygodniu obserwacji decyzja, czy hook ma zacząć blokować”"
+decyzja_uzytkownika: "2026-09-29: dodać zadanie „po tygodniu obserwacji decyzja, czy hook ma zacząć blokować”; 2026-10-06: blokady „Obie” (decyzje 1 i 6), zasięg „Wszędzie” (decyzja 9), pozostałe flagi „Jak w rekomendacji” (decyzje 2–5, 7, 8)"
 utworzono: 2026-09-29
 zalezy_od: [002, 003]
 budzet: "Opus medium, krótko"
@@ -68,3 +68,14 @@ To zadanie przygotowuje materiał do tej decyzji. **Nie startuje przed 2026-10-0
     blokady (R7, `blokuj:`), potem drugi tydzień obserwacji i powtórka przeglądu tymi samymi komendami. Skill
     `data:explore-data` był w sesji wykonawcy niedostępny („Unknown skill”); procedurę przeczytano z pamięci
     podręcznej wtyczki.
+- **2026-10-06 (orkiestrator): decyzje użytkownika → `zrobione`.** Odpowiedzi użytkownika na trzy pytania orkiestratora:
+  - decyzje 1 i 6 (blokady): **„Obie”** — blokować `poswiadczenia` w narzędziach plikowych (Read, Write, Edit,
+    MultiEdit, NotebookEdit, Grep, Glob) i zapis do katalogu audytu (po R8);
+  - decyzja 9 (zasięg): **„Wszędzie”** — wbrew rekomendacji „tylko serwer”: blokada działa w każdym środowisku, które
+    wczytuje `.claude/settings.json` z repo (Windows, Cowork, rutyny w chmurze), bez zmiennej środowiskowej. Ryzyko
+    (nieznane fałszywe alarmy poza serwerem) użytkownik znał z opisu opcji;
+  - decyzje 2–5, 7, 8: **„Jak w rekomendacji”** — dalej tylko oznaczać, poprawki R1–R6, lista hostów bez zmian, potem
+    drugi tydzień obserwacji i powtórka przeglądu tymi samymi komendami.
+  - Sprawdzenie orkiestratora przed decyzją: reguła `poswiadczenia` nie łapie żadnej z 951 ścieżek na 122 gałęziach
+    repo (w tym `tools/zuzycie_tokenow.py`; wymaga separatora `._-` wokół słowa).
+  - Wdrożenie: zadanie [029](029-hook-poprawki-blokady.md).
