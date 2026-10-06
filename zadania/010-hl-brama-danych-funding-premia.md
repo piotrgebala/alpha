@@ -2,7 +2,7 @@
 id: 010
 tytul: Hyperliquid — brama danych dla fundingu i premii HL vs Binance (historia, point-in-time), bez odczytu
 typ: zbieranie_danych
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: zgoda na wszystkie 008–014 („Wszystkie 008–014”); odczyty na historii startują tylko, jeśli mapa 007 uzna rodzinę za MIERZALNĄ"
 utworzono: 2026-09-29

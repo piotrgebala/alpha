@@ -2,7 +2,7 @@
 id: 005
 tytul: Hook audytowy — przegląd tygodnia obserwacji i propozycja, co blokować
 typ: przeglad
-status: nowe
+status: w_toku
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: dodać zadanie „po tygodniu obserwacji decyzja, czy hook ma zacząć blokować”"
 utworzono: 2026-09-29
