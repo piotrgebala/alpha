@@ -292,7 +292,15 @@ def test_hl_outliving_binance_keeps_only_its_own_lock(tmp_path):
     assert _wait_for(hl / "wywolania.txt")
     assert _is_locked(hl / ".lock"), "kolektor HL powinien jeszcze żyć i trzymać swoją blokadę"
     assert not _is_locked(bn / ".lock"), "HL trzyma blokadę Binance"
-    _wait_unlocked(bb / ".lock")
+    # Uwaga 5 z przeglądu 16c: sprawdzić blokadę Bybit BEZ czekania — po wyjściu procesu Bybit, póki HL
+    # żyje (czekanie do zwolnienia przepuściłoby HL trzymającego blokadę Bybit aż do własnego końca).
+    assert _wait_for(bb / "pid")
+    pid_bybit = int((bb / "pid").read_text(encoding="utf-8"))
+    koniec = time.monotonic() + 3.0
+    while time.monotonic() < koniec and _proc_state(pid_bybit) is not None:
+        time.sleep(0.05)
+    assert _proc_state(pid_bybit) is None, "fałszywy kolektor Bybit (0,2 s) powinien już skończyć"
+    assert _is_locked(hl / ".lock"), "test wymaga, by HL jeszcze żył"
     assert not _is_locked(bb / ".lock"), "HL trzyma blokadę Bybit"
     _wait_unlocked(hl / ".lock")
 

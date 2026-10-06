@@ -17,17 +17,25 @@ Zasady:
   to OSOBNY CZŁON gzip dopisany na koniec pliku dnia (dzień UTC czasu odbioru). Standard gzip (RFC 1952)
   dopuszcza wiele członów: `zcat`, `gzip -dc` i `gzip.open` czytają plik jak jeden tekst JSONL;
 - awaria traci najwyżej bieżącą migawkę: człon idzie jednym `os.write` + `fsync`; nieudany zapis jest
-  cofany (`ftruncate` do rozmiaru sprzed zapisu), a przy pierwszym zapisie do pliku w procesie (start,
-  nowy dzień, po błędzie) `napraw_ogon` przycina plik do końca ostatniego pełnego członu — urwany ogon
-  po awarii zasilania nie psuje kolejnych migawek;
+  cofany (`ftruncate` do rozmiaru sprzed zapisu), a przy starcie (dzisiejszy plik i najnowszy starszy —
+  awaria o 23:59 i serwer wyłączony przez północ) oraz przy pierwszym zapisie do pliku w procesie
+  (nowy dzień, po błędzie) `napraw_ogon` przycina plik do końca ostatniego pełnego członu — urwany ogon
+  po awarii zasilania nie psuje kolejnych migawek. BEZ ŚLADU odcinany jest tylko urwany początek JEDNEGO
+  członu (`urwany_czlon`); każdy inny ogon (uszkodzenie w środku pliku — za nim mogą leżeć poprawne
+  migawki, śmieci, zera) jest najpierw zapisywany obok jako `<plik>.ogon-<ms>` — usuwanie danych to
+  decyzja użytkownika, kolektor niczego nie kasuje. `czytaj_dzien` czyta pełne człony i ostrzega
+  (`UrwanyOgon`) o resztę zamiast gubić cały dzień; `--status` pokazuje dziś, wczoraj i pliki `*.ogon-*`;
 - odpowiedź sprawdzana przed zapisem (`sprawdz_odpowiedz`: `[meta, konteksty]`, nazwy monet, liczba
   kontekstów = liczba monet; `NaN`/`Infinity` odrzucane już przy parsowaniu); czas odbioru musi spełniać
   wspólną regułę 2019–2100 (`data/liquidation_time.event_time_ms`, zadanie 021) — zegar spoza zakresu
   nie wyprodukuje pliku z absurdalną datą. Zła odpowiedź = brak zapisu + licznik w `status.json`;
 - rytm: migawka na każdej pełnej minucie zegara UTC; ponowienia po HTTP 429/5xx, błędach sieci
-  i uciętym JSON z rosnącym odczekaniem 2 → 20 s, ale nie dłużej niż do następnej migawki; błąd jednej
-  migawki nie przerywa pętli. Plik `WYLACZONY` w katalogu danych zatrzymuje pętlę przed następną migawką
-  (cron go wtedy nie wznawia);
+  i uciętym JSON z rosnącym odczekaniem 2 → 20 s. Cała migawka (próby i odczekania) mieści się przed
+  terminem = start + 60 − 10 s: limit czasu KAŻDEJ próby to `min(20 s, czas do terminu)`, a próby
+  krótszej niż `MIN_PROBA_S` się nie zaczyna — przeciążone API nie przesuwa następnej migawki o minutę.
+  Czekanie na pełną minutę śpi najwyżej `okres_s` naraz, a cofnięty zegar (np. korekta NTP o godzinę)
+  daje nowy termin od bieżącego czasu zamiast `sleep(3600)`. Błąd jednej migawki nie przerywa pętli.
+  Plik `WYLACZONY` w katalogu danych zatrzymuje pętlę przed następną migawką (cron go wtedy nie wznawia);
 - `status.json` (zapis atomowy: plik tymczasowy + `os.replace`, ASCII) po każdej migawce; `--status` dla
   człowieka; `kolektor.log` (start, naprawy pliku, błędy, podsumowanie co godzinę, koniec);
 - jedna instancja: `flock` na `<katalog>/.lock`. Pod cronem blokadę bierze powłoka (`tools/likwidacje.sh`,
@@ -36,7 +44,8 @@ Zasady:
 - czyste funkcje i pętla z podmienialnymi `post`, `sleep`, `clock`, `wall` — testy bez sieci
   (`tests/test_collect_hl_stan.py`).
 
-Odczyt (analiza, poza kolektorem): `czytaj_dzien(plik)` → lista rekordów; albo `zcat plik | jq`.
+Odczyt (analiza, poza kolektorem): `czytaj_dzien(plik)` → lista rekordów z pełnych członów; albo
+`zcat plik | jq` (standardowy gzip zatrzyma się na urwanym ogonie pliku jeszcze nienaprawionego).
 
     PYTHONUTF8=1 py -m data.collect_hl_stan                       # kolektor (w tle, cron)
     PYTHONUTF8=1 py -m data.collect_hl_stan --status
@@ -58,6 +67,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import warnings
 import zlib
 from collections.abc import Callable
 from pathlib import Path
@@ -70,9 +80,12 @@ ZAPYTANIE = {"type": "metaAndAssetCtxs"}
 ENV_DIR = "CLAS5_HL_STAN_DIR"
 DEFAULT_DIR = Path.home() / "likwidacje_hl" / "stan"
 OKRES_S = 60.0
-ZAPAS_S = 10.0  # ponowienia kończą się ≥ 10 s przed następną migawką
+ZAPAS_S = 10.0  # migawka (próby + odczekania) kończy się ≥ 10 s przed następną
 MAX_ODP_BYTES = 4 * 1024 * 1024  # migawka 2026-09-29: ~72 kB — zapas ~58×
-TIMEOUT_S = 20.0
+TIMEOUT_S = 20.0  # limit czasu jednej próby (przycinany do czasu, który został do terminu)
+MIN_PROBA_S = 3.0  # krótszego okna na próbę nie zaczynamy (TLS + odpowiedź zwykle 0,3–0,8 s)
+DOBA_MS = 86_400_000
+OGON = ".ogon-"  # `<plik>.ogon-<ms>`: odcięte bajty inne niż urwany ostatni człon (do przejrzenia)
 PROBY = 4
 BACKOFF_S = 2.0
 BACKOFF_MAX_S = 20.0
@@ -200,25 +213,82 @@ def koniec_pelnych_czlonow(dane: bytes) -> tuple[int, int]:
     return poz, n
 
 
-def napraw_ogon(sciezka: Path) -> tuple[int, int]:
-    """Przytnij plik do końca ostatniego pełnego członu. Zwraca (pełnych członów, odciętych bajtów)."""
+def urwany_czlon(ogon: bytes) -> bool:
+    """
+    Czy `ogon` to sam POCZĄTEK jednego członu gzip, urwany w trakcie zapisu (to, co zostawia awaria
+    zasilania w chwili dopisywania migawki): poprawny jak dotąd, ale niepełny, i nie dłuższy niż jeden
+    człon (`MAX_ODP_BYTES`). Uszkodzony człon, śmieci, zera albo kilka członów → False.
+    """
+    if not ogon or len(ogon) > MAX_ODP_BYTES:
+        return False
+    d = zlib.decompressobj(wbits=31)
+    try:
+        d.decompress(ogon)
+    except zlib.error:
+        return False
+    return not d.eof
+
+
+def _zapisz_atomowo(sciezka: Path, dane: bytes) -> None:
+    tmp = sciezka.with_name(sciezka.name + ".tmp")
+    with open(tmp, "wb") as f:
+        f.write(dane)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, sciezka)
+
+
+def napraw_ogon(sciezka: Path, teraz_ms: int | None = None) -> tuple[int, int, Path | None]:
+    """
+    Przytnij plik do końca ostatniego pełnego członu. Urwany początek jednego członu (`urwany_czlon`)
+    odcinany bez śladu; każdy inny ogon (uszkodzenie w środku pliku, za którym mogą leżeć poprawne
+    migawki; śmieci; zera po awarii) jest NAJPIERW zapisywany obok jako `<plik>.ogon-<ms>` — kolektor
+    nie usuwa danych. Zwraca (pełnych członów w pliku, odciętych bajtów, ścieżka kopii albo None).
+    """
     sciezka = Path(sciezka)
     if not sciezka.exists():
-        return 0, 0
+        return 0, 0, None
     dane = sciezka.read_bytes()
     koniec, n = koniec_pelnych_czlonow(dane)
-    if koniec < len(dane):
+    ogon = dane[koniec:]
+    kopia = None
+    if ogon:
+        if not urwany_czlon(ogon):
+            ms = int(time.time() * 1000) if teraz_ms is None else int(teraz_ms)
+            kopia = sciezka.with_name(f"{sciezka.name}{OGON}{ms}")
+            while kopia.exists():
+                ms += 1
+                kopia = sciezka.with_name(f"{sciezka.name}{OGON}{ms}")
+            _zapisz_atomowo(kopia, ogon)
         with open(sciezka, "r+b") as f:
             f.truncate(koniec)
             f.flush()
             os.fsync(f.fileno())
-    return n, len(dane) - koniec
+    return n, len(ogon), kopia
+
+
+class UrwanyOgon(UserWarning):
+    """Plik dnia ma za ostatnim pełnym członem bajty, których nie da się odczytać (pominięte)."""
 
 
 def czytaj_dzien(sciezka: Path) -> list[dict]:
-    """Plik dnia → lista rekordów (wszystkie człony; do analizy, poza kolektorem)."""
-    with gzip.open(sciezka, "rt", encoding="ascii") as f:
-        return [json.loads(linia) for linia in f if linia.strip()]
+    """
+    Plik dnia → lista rekordów z PEŁNYCH członów (do analizy, poza kolektorem). Urwany albo uszkodzony
+    ogon (plik jeszcze nienaprawiony po awarii) nie gubi całego dnia: rekordy przed nim wracają,
+    a o pominiętych bajtach mówi ostrzeżenie `UrwanyOgon`.
+    """
+    sciezka = Path(sciezka)
+    dane = sciezka.read_bytes()
+    koniec, n = koniec_pelnych_czlonow(dane)
+    if koniec < len(dane):
+        warnings.warn(
+            f"{sciezka.name}: pominięto {len(dane) - koniec} B za ostatnim pełnym członem "
+            f"(pełnych migawek {n})",
+            UrwanyOgon,
+            stacklevel=2,
+        )
+    tekst = gzip.decompress(dane[:koniec]).decode("ascii") if koniec else ""
+    return [json.loads(linia) for linia in tekst.split("\n") if linia.strip()]
 
 
 def nastepny_termin(teraz_s: float, okres_s: float = OKRES_S) -> float:
@@ -280,15 +350,17 @@ BLEDY_PRZEJSCIOWE = (OSError, http.client.HTTPException, json.JSONDecodeError)
 class Klient:
     """
     `metaAndAssetCtxs` z ponowieniami: HTTP 429/5xx, błędy sieci (`OSError`, w tym `URLError`, timeout,
-    SSL), zerwana odpowiedź i ucięty JSON → odczekanie `opoznienie(proba)`, najwyżej `proby` prób i nie
-    dłużej niż do `termin` (zegar `clock`). Pozostałe 4xx, 3xx, za duża odpowiedź, `NaN` → błąd od razu.
-    `post`, `sleep`, `clock`, `wall` podmienialne (testy bez sieci). Zwraca (JSON, liczba bajtów
-    odpowiedzi); `wyslano_s` = czas zegara (`wall`) wysłania OSTATNIEJ próby.
+    SSL), zerwana odpowiedź i ucięty JSON → odczekanie `opoznienie(proba)`, najwyżej `proby` prób.
+    Z `termin` (zegar `clock`) CAŁOŚĆ mieści się przed terminem: limit czasu próby = `min(TIMEOUT_S,
+    termin − teraz)`, a próby z oknem krótszym niż `MIN_PROBA_S` (także po odczekaniu) się nie zaczyna.
+    Pozostałe 4xx, 3xx, za duża odpowiedź, `NaN` → błąd od razu. `post(url, body, timeout)`, `sleep`,
+    `clock`, `wall` podmienialne (testy bez sieci). Zwraca (JSON, liczba bajtów odpowiedzi);
+    `wyslano_s` = czas zegara (`wall`) wysłania OSTATNIEJ próby.
     """
 
     def __init__(
         self,
-        post: Callable[[str, dict], bytes] = _post,
+        post: Callable[[str, dict, float], bytes] = _post,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
         wall: Callable[[], float] = time.time,
@@ -302,9 +374,14 @@ class Klient:
     def __call__(self, body: dict, termin: float | None = None):
         ostatni: Exception | None = None
         for proba in range(self.proby):
+            timeout = TIMEOUT_S
+            if termin is not None:
+                timeout = min(TIMEOUT_S, termin - self._clock())
+                if timeout < MIN_PROBA_S:
+                    break
             try:
                 self.wyslano_s = self._wall()
-                raw = self._post(INFO_URL, body)
+                raw = self._post(INFO_URL, body, timeout)
                 return parsuj(raw), len(raw)
             except urllib.error.HTTPError as e:  # przed OSError: HTTPError to też URLError
                 if e.code not in RETRY_HTTP:
@@ -317,20 +394,22 @@ class Klient:
             if proba + 1 >= self.proby:
                 break
             czekaj = opoznienie(proba)
-            if termin is not None and self._clock() + czekaj > termin:
+            if termin is not None and self._clock() + czekaj + MIN_PROBA_S > termin:
                 break
             self.ponowienia += 1
             self._sleep(czekaj)
-        assert ostatni is not None
+        if ostatni is None:
+            raise TimeoutError("hl stan: za mało czasu na próbę przed następną migawką")
         raise ostatni
 
 
 # ------------------------------------------------------------------ zapis
 class PisarzDzienny:
     """
-    Dopisuje człon gzip na koniec pliku dnia UTC. Plik dotknięty pierwszy raz w tym procesie (start,
-    nowy dzień, po błędzie zapisu) jest najpierw naprawiany (`napraw_ogon`). Nieudany zapis → plik
-    przycięty do rozmiaru sprzed zapisu i wyjątek dalej.
+    Dopisuje człon gzip na koniec pliku dnia UTC. Przy starcie (`napraw_przy_starcie`) naprawiany jest
+    plik dzisiejszy i najnowszy starszy (awaria tuż przed północą, serwer wyłączony przez kilka dni);
+    plik dotknięty pierwszy raz w procesie (nowy dzień, po błędzie zapisu) — przed pierwszym zapisem.
+    Nieudany zapis → plik przycięty do rozmiaru sprzed zapisu i wyjątek dalej.
     """
 
     def __init__(
@@ -338,24 +417,50 @@ class PisarzDzienny:
         root: Path,
         log: Callable[[str], None] = lambda s: None,
         zapis: Callable[[int, bytes], int] = os.write,
+        wall: Callable[[], float] = time.time,
     ) -> None:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self._log = log
         self._zapis = zapis  # podmienialny w testach (symulacja pełnego dysku)
+        self._wall = wall
         self._naprawione: set[Path] = set()
         self.przyciete_bajty = 0
+        self.kopie_ogona = 0
+
+    def _napraw(self, sciezka: Path) -> None:
+        pelne, uciete, kopia = napraw_ogon(sciezka, teraz_ms=int(self._wall() * 1000))
+        if uciete and kopia is None:
+            self.przyciete_bajty += uciete
+            self._log(
+                f"naprawa {sciezka.name}: odcięto {uciete} B urwanej ostatniej migawki "
+                f"({pelne} pełnych migawek zostaje)"
+            )
+        elif uciete:
+            self.przyciete_bajty += uciete
+            self.kopie_ogona += 1
+            self._log(
+                f"UWAGA naprawa {sciezka.name}: {uciete} B za ostatnim pełnym członem to nie urwana migawka "
+                f"(uszkodzenie w środku pliku albo śmieci) — przeniesione do {kopia.name}, w pliku zostaje "
+                f"{pelne} pełnych migawek; kopii nie kasować bez decyzji użytkownika"
+            )
+        self._naprawione.add(sciezka)
+
+    def napraw_przy_starcie(self, teraz_ms: int) -> list[Path]:
+        """Napraw plik dzisiejszy i najnowszy starszy plik dnia (jeśli są). Zwraca sprawdzone ścieżki."""
+        dzis = plik_dnia(self.root, teraz_ms)
+        starsze = sorted(
+            p for p in self.root.glob("????-??-??.jsonl.gz") if p.is_file() and p.name < dzis.name
+        )
+        sprawdzone = ([starsze[-1]] if starsze else []) + [dzis]
+        for sciezka in sprawdzone:
+            self._napraw(sciezka)
+        return sprawdzone
 
     def dopisz(self, czas_ms: int, linia: str) -> tuple[Path, int]:
         sciezka = plik_dnia(self.root, czas_ms)
         if sciezka not in self._naprawione:
-            pelne, uciete = napraw_ogon(sciezka)
-            if uciete:
-                self.przyciete_bajty += uciete
-                self._log(
-                    f"naprawa {sciezka.name}: odcięto {uciete} B urwanego ogona ({pelne} pełnych migawek zostaje)"
-                )
-            self._naprawione.add(sciezka)
+            self._napraw(sciezka)
         czlon = czlon_gzip(linia.encode("ascii"))
         fd = os.open(sciezka, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
         try:
@@ -428,7 +533,7 @@ def run(
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     log = _log_do_pliku(root) if log is None else log
-    pisarz = PisarzDzienny(root, log=log)
+    pisarz = PisarzDzienny(root, log=log, wall=wall)
     klient = Klient(post=post, sleep=sleep, clock=clock, wall=wall)
     stan: dict = {
         "start_utc": dt.datetime.now(tz=dt.timezone.utc).isoformat(timespec="seconds"),
@@ -443,6 +548,7 @@ def run(
         "bledy_zapisu": 0,
         "ponowienia": 0,
         "przyciete_bajty": 0,
+        "kopie_ogona": 0,
         "ostatnia_ms": None,
         "ostatnia_utc": None,
         "ostatni_plik": None,
@@ -455,7 +561,11 @@ def run(
     bledy = [0]
 
     def status() -> None:
-        stan.update(ponowienia=klient.ponowienia, przyciete_bajty=pisarz.przyciete_bajty)
+        stan.update(
+            ponowienia=klient.ponowienia,
+            przyciete_bajty=pisarz.przyciete_bajty,
+            kopie_ogona=pisarz.kopie_ogona,
+        )
         try:
             zapisz_status(root, **stan)
         except OSError as exc:  # status nie może zatrzymać kolektora (np. chwilowo pełny dysk)
@@ -470,6 +580,11 @@ def run(
 
     log(f"start pid {os.getpid()} → {root} ({INFO_URL}, co {okres_s:.0f} s)")
     try:
+        sprawdzone = pisarz.napraw_przy_starcie(int(round(wall() * 1000)))
+        log("przy starcie sprawdzono: " + ", ".join(p.name for p in sprawdzone))
+    except (ValueError, OSError) as exc:  # zegar spoza zakresu, błąd dysku — naprawa przy zapisie
+        log(f"naprawa przy starcie nieudana: {type(exc).__name__}: {str(exc)[:160]}")
+    try:
         while True:
             if (root / WYLACZNIK).exists():
                 stan["koniec"] = "WYLACZONY"
@@ -477,7 +592,12 @@ def run(
                 break
             termin = nastepny_termin(wall(), okres_s)
             while (zostalo := termin - wall()) > 0:
-                sleep(zostalo)
+                # zegar cofnięty (np. korekta NTP) — nowy termin od bieżącego czasu, nie sen na godzinę
+                if zostalo > okres_s:
+                    log(f"zegar cofnięty o ~{zostalo - okres_s:.0f} s — nowy termin migawki")
+                    termin = nastepny_termin(wall(), okres_s)
+                    continue
+                sleep(min(zostalo, okres_s))
             if (root / WYLACZNIK).exists():
                 stan["koniec"] = "WYLACZONY"
                 log("plik WYLACZONY — koniec pętli")
@@ -557,8 +677,24 @@ def zablokuj(root: Path, fd: int | None = None) -> int | None:
     return fd
 
 
+def _opis_pliku(sciezka: Path) -> str:
+    if not sciezka.exists():
+        return f"{sciezka.name}: brak"
+    dane = sciezka.read_bytes()
+    koniec, n = koniec_pelnych_czlonow(dane)
+    ogon = (
+        f", UWAGA: {len(dane) - koniec} B za ostatnim pełnym członem (naprawi je start kolektora)"
+        if koniec < len(dane)
+        else ""
+    )
+    return f"{sciezka.name}: {len(dane) / 1e6:.2f} MB, pełnych migawek {n}{ogon}"
+
+
 def status_text(root: Path, teraz_s: float | None = None) -> str:
-    """Stan kolektora dla człowieka: `status.json` + plik dzisiejszy (rozmiar, pełne migawki) + wyłącznik."""
+    """
+    Stan kolektora dla człowieka: `status.json` + plik dzisiejszy i wczorajszy (rozmiar, pełne migawki,
+    nieczytelny ogon) + pliki `*.ogon-*` (odcięte uszkodzone dane do przejrzenia) + wyłącznik.
+    """
     root = Path(root)
     teraz_s = time.time() if teraz_s is None else teraz_s
     wyl = (
@@ -566,6 +702,14 @@ def status_text(root: Path, teraz_s: float | None = None) -> str:
         if (root / WYLACZNIK).exists()
         else ""
     )
+    kopie = sorted(
+        p.name for p in root.glob(f"*{OGON}*") if p.is_file() and not p.name.endswith(".tmp")
+    )
+    if kopie:
+        wyl += (
+            f" UWAGA: {len(kopie)} plik(ów) z odciętymi uszkodzonymi danymi ({', '.join(kopie[:3])}"
+            f"{', …' if len(kopie) > 3 else ''}) — do przejrzenia, nie kasować bez decyzji użytkownika."
+        )
     p = root / STATUS
     if not p.exists():
         return f"brak {p} — kolektor jeszcze nic nie zapisał.{wyl}"
@@ -578,20 +722,21 @@ def status_text(root: Path, teraz_s: float | None = None) -> str:
             ost += " — UWAGA: brak świeżych migawek"
     else:
         ost = "-"
-    dzis = plik_dnia(root, int(teraz_s * 1000))
-    if dzis.exists():
-        dane = dzis.read_bytes()
-        koniec, n = koniec_pelnych_czlonow(dane)
-        ogon = f", urwany ogon {len(dane) - koniec} B" if koniec < len(dane) else ""
-        plik = f"{dzis.name}: {len(dane) / 1e6:.2f} MB, pełnych migawek {n}{ogon}"
-    else:
-        plik = f"{dzis.name}: brak"
+    try:
+        teraz_ms = int(teraz_s * 1000)
+        pliki = (
+            f"dziś {_opis_pliku(plik_dnia(root, teraz_ms))}; "
+            f"wczoraj {_opis_pliku(plik_dnia(root, teraz_ms - DOBA_MS))}"
+        )
+    except ValueError as exc:  # zegar spoza 2019–2100
+        pliki = f"pliki dnia: {exc}"
     return (
         f"kolektor HL pid {st.get('pid')} od {st.get('start_utc')}; status z {st.get('zapisano_utc')}; "
         f"migawek {st.get('migawki')} w {st.get('cykle')} cyklach (błędy sieci {st.get('bledy_sieci')}, "
-        f"odrzucone {st.get('odrzucone')}, zapisu {st.get('bledy_zapisu')}, ponowień {st.get('ponowienia')}); "
+        f"odrzucone {st.get('odrzucone')}, zapisu {st.get('bledy_zapisu')}, ponowień {st.get('ponowienia')}, "
+        f"kopie ogona {st.get('kopie_ogona', 0)}); "
         f"ostatnia {ost}, {st.get('ostatni_czlon_b')} B gzip, monet {st.get('monet')}; "
-        f"ostatni błąd: {st.get('ostatni_blad')}; koniec: {st.get('koniec')}; dziś {plik}.{wyl}"
+        f"ostatni błąd: {st.get('ostatni_blad')}; koniec: {st.get('koniec')}; {pliki}.{wyl}"
     )
 
 

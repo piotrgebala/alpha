@@ -49,22 +49,52 @@ def _odp(n: int = 3, nazwa: str = "C") -> list:
     return [{"universe": uni, "marginTables": []}, ctxs]
 
 
+class ZaDlugo(BaseException):
+    """Bezpiecznik testu: pętla bez końca (BaseException — `run` go nie połknie)."""
+
+
 class Zegar:
-    """Jeden fałszywy czas dla `wall`, `clock` i `sleep` (sen przesuwa czas, nic nie śpi naprawdę)."""
+    """Fałszywy czas: `wall` (zegar ścienny, może się cofnąć) i `clock` (monotoniczny); sen i zapytania
+    przesuwają oba, nic nie śpi naprawdę."""
 
     def __init__(self, t: float = T0) -> None:
-        self.t = t
+        self.t = t  # wall
+        self.m = t  # monotoniczny
         self.sny: list[float] = []
 
     def wall(self) -> float:
         return self.t
 
     def clock(self) -> float:
-        return self.t
+        return self.m
+
+    def uplyw(self, s: float) -> None:
+        self.t += s
+        self.m += s
+        if self.m - T0 > 1e7:
+            raise ZaDlugo("ponad 115 dni czasu testu — pętla bez końca?")
 
     def sleep(self, s: float) -> None:
         self.sny.append(s)
-        self.t += s
+        self.uplyw(s)
+
+
+class ZegarCofany(Zegar):
+    """Po pierwszym śnie zegar ścienny cofa się o `o_ile` s (np. korekta NTP); monotoniczny — nie."""
+
+    def __init__(self, o_ile: float = 3600.0, t: float = T0) -> None:
+        super().__init__(t)
+        self.o_ile, self.cofniety = o_ile, False
+
+    def sleep(self, s: float) -> None:
+        super().sleep(s)
+        if not self.cofniety:
+            self.cofniety = True
+            self.t -= self.o_ile
+
+
+class Zawies:
+    """Odpowiedź, która nie przychodzi: zapytanie trwa cały swój limit czasu i kończy się timeoutem."""
 
 
 def _http(kod: int) -> urllib.error.HTTPError:
@@ -72,15 +102,21 @@ def _http(kod: int) -> urllib.error.HTTPError:
 
 
 def _post_seq(zegar: Zegar, *odpowiedzi, czas_s: float = 0.2):
-    """Kolejne wywołania → kolejne odpowiedzi (bajty, obiekt JSON albo wyjątek); ostatnia się powtarza.
-    Każde wywołanie trwa `czas_s` sekund zegara testu."""
+    """Kolejne wywołania → kolejne odpowiedzi (bajty, obiekt JSON, wyjątek albo `Zawies`); ostatnia się
+    powtarza. Każde wywołanie trwa `czas_s` sekund zegara testu (`Zawies` — cały limit czasu próby).
+    `post.wywolania`: (adres, treść, czas startu wg zegara ściennego, limit czasu próby)."""
     lista = list(odpowiedzi)
-    wywolania: list[tuple[str, dict, float]] = []
+    wywolania: list[tuple[str, dict, float, float | None]] = []
 
-    def post(url, body):
-        wywolania.append((url, body, zegar.t))
+    def post(url, body, timeout=None):
+        wywolania.append((url, body, zegar.t, timeout))
+        if len(wywolania) > 10_000:
+            raise ZaDlugo("ponad 10 000 zapytań — pętla bez końca?")
         item = lista.pop(0) if len(lista) > 1 else lista[0]
-        zegar.t += czas_s
+        if isinstance(item, Zawies):
+            zegar.uplyw(timeout)
+            raise TimeoutError("timed out")
+        zegar.uplyw(czas_s)
         if isinstance(item, BaseException):
             raise item
         if callable(item):
@@ -123,6 +159,7 @@ def test_trzy_migawki_na_pelnych_minutach_w_pliku_dnia(tmp_path):
     starty = [w[2] for w in post.wywolania]
     assert starty == pytest.approx([T0 + 30, T0 + 90, T0 + 150], abs=1e-3)
     assert all(w[0] == hs.INFO_URL and w[1] == ZAPYTANIE for w in post.wywolania)
+    assert all(w[3] == hs.TIMEOUT_S for w in post.wywolania)  # pełny limit, gdy czasu jest dość
     assert [r["wyslano_ms"] for r in rek] == [
         _ms(2026, 10, 5, 12, 1),
         _ms(2026, 10, 5, 12, 2),
@@ -199,14 +236,52 @@ def test_uciety_json_ponowiony(tmp_path):
     assert stan["migawki"] == 1 and stan["ponowienia"] == 1 and len(post.wywolania) == 2
 
 
-def test_ponowienia_koncza_sie_przed_nastepna_migawka(tmp_path):
-    # każde zapytanie trwa 20 s i pada; termin ponowień = start cyklu + 60 − 10 s
-    stan, post, _, _ = _run(tmp_path, urllib.error.URLError("brak sieci"), czas_s=20.0)
-    assert stan["bledy_sieci"] == 3 and stan["migawki"] == 0
-    assert stan["ponowienia"] == 2 * 3  # 20 + 2 + 20 + 4 = 46 s < 50; następne 8 s by przekroczyło
-    starty = [w[2] for w in post.wywolania]
-    assert len(starty) == 9 and len({int(t // 60) for t in starty}) == 3  # 3 próby w każdej minucie
-    assert all(t % 60.0 <= 60.0 - hs.ZAPAS_S for t in starty)
+def test_przeciazone_api_nie_przesuwa_migawek(tmp_path):
+    # Uwaga 1 z przeglądu 16c: API nie odpowiada — każda próba trwa CAŁY swój limit czasu. Termin
+    # migawki = start + 60 − 10 s; limit próby przycinany do czasu, który został. Wynik: próby
+    # (start, limit) = (+0, 20), (+22, 20), (+46, 4) i koniec o +50 s — następna migawka w NASTĘPNEJ
+    # minucie (M, M+1, M+2), a nie co drugą (wcześniej trzecia próba z limitem 20 s kończyła się o +66 s).
+    stan, post, _, _ = _run(tmp_path, Zawies())
+    assert stan["bledy_sieci"] == 3 and stan["migawki"] == 0 and stan["ponowienia"] == 2 * 3
+    proby = [(w[2], w[3]) for w in post.wywolania]
+    assert len(proby) == 9
+    for cykl, minuta in enumerate((T0 + 30, T0 + 90, T0 + 150)):  # M, M+1, M+2
+        trzy = proby[3 * cykl : 3 * cykl + 3]
+        assert [s - minuta for s, _ in trzy] == pytest.approx([0, 22, 46], abs=1e-6)
+        assert [t for _, t in trzy] == pytest.approx([20, 20, 4], abs=1e-6)
+        assert all(s + t <= minuta + hs.OKRES_S - hs.ZAPAS_S + 1e-6 for s, t in trzy)
+
+
+def test_klient_nie_zaczyna_proby_bez_czasu_na_nia():
+    zegar = Zegar()
+    post = _post_seq(zegar, Zawies())
+    k = hs.Klient(post=post, sleep=zegar.sleep, clock=zegar.clock, wall=zegar.wall)
+    with pytest.raises(TimeoutError):
+        k(ZAPYTANIE, termin=zegar.clock() + hs.MIN_PROBA_S - 0.1)
+    assert post.wywolania == []  # za mało czasu — żadnego zapytania
+    with pytest.raises(TimeoutError):
+        k(ZAPYTANIE, termin=zegar.clock() + 7.0)  # jedna próba z limitem 7 s, ponowienia już nie ma
+    assert [w[3] for w in post.wywolania] == pytest.approx([7.0])
+    assert k.ponowienia == 0
+
+
+def test_cofniety_zegar_nie_usypia_na_godzine(tmp_path):
+    # Uwaga 4 z przeglądu 16c: po pierwszym śnie zegar ścienny cofa się o 1 h (korekta NTP). Pętla nie
+    # śpi 3 600 s — liczy nowy termin od bieżącego czasu; żaden sen nie przekracza okresu.
+    zegar = ZegarCofany(3600.0)
+    stan, post, _, logi = _run(tmp_path, _odp(), zegar=zegar)
+    assert stan["migawki"] == 3
+    assert max(zegar.sny) <= hs.OKRES_S
+    assert (
+        zegar.m - T0 < 4 * hs.OKRES_S
+    )  # 3 migawki w ~3,5 min czasu monotonicznego, nie po godzinie
+    rek = hs.czytaj_dzien(tmp_path / "2026-10-05.jsonl.gz")
+    assert [r["wyslano_ms"] for r in rek] == [
+        _ms(2026, 10, 5, 11, 2),
+        _ms(2026, 10, 5, 11, 3),
+        _ms(2026, 10, 5, 11, 4),
+    ]
+    assert any("zegar cofnięty" in s for s in logi)
 
 
 def test_wylacznik_zatrzymuje_petle(tmp_path):
@@ -243,8 +318,100 @@ def test_urwany_ogon_naprawiony_przy_starcie(tmp_path):
     assert hs.koniec_pelnych_czlonow(dane) == (len(dane), 3)
     linie = gzip.decompress(dane).splitlines()
     assert linie[:2] == [b'{"a":1}', b'{"a":2}'] and json.loads(linie[2])["odpowiedz"] == _odp()
-    assert stan["przyciete_bajty"] == len(c3) // 2
+    assert stan["przyciete_bajty"] == len(c3) // 2 and stan["kopie_ogona"] == 0
     assert any("naprawa" in s for s in logi)
+    assert not list(tmp_path.glob("*.ogon-*"))  # urwana ostatnia migawka — bez kopii
+
+
+def _czlony(*teksty: bytes) -> list[bytes]:
+    return [hs.czlon_gzip(t) for t in teksty]
+
+
+def _zla_suma(czlon: bytes) -> bytes:
+    """Człon z przekłamanym bajtem sumy CRC32 (uszkodzenie w środku pliku)."""
+    return czlon[:-8] + bytes([czlon[-8] ^ 0xFF]) + czlon[-7:]
+
+
+def test_urwany_czlon_rozpoznaje_tylko_urwany_poczatek_jednego_czlonu():
+    c1, c2 = _czlony(b'{"a":1}\n', b'{"a":2}\n')
+    assert hs.urwany_czlon(c1[: len(c1) // 2]) and hs.urwany_czlon(c1[:3])
+    assert not hs.urwany_czlon(b"")
+    assert not hs.urwany_czlon(c1)  # pełny człon to nie urwany
+    assert not hs.urwany_czlon(_zla_suma(c1))
+    assert not hs.urwany_czlon(b"\x00" * 4096)  # zera po awarii zasilania
+    assert not hs.urwany_czlon(_zla_suma(c1) + c2)
+    assert not hs.urwany_czlon(b"\x1f\x8b" + b"\x00" * (hs.MAX_ODP_BYTES + 1))
+
+
+def test_uszkodzony_srodek_pliku_trafia_do_kopii_nie_znika(tmp_path):
+    # Uwaga 2 z przeglądu 16c: zły bajt w 2. z 5 członów — 3 poprawne człony za nim NIE mogą zniknąć.
+    c1, c2, c3, c4, c5 = _czlony(*(b'{"a":%d}\n' % i for i in range(1, 6)))
+    plik = tmp_path / "2026-10-05.jsonl.gz"
+    ogon = _zla_suma(c2) + c3 + c4 + c5
+    plik.write_bytes(c1 + ogon)
+    pelne, uciete, kopia = hs.napraw_ogon(plik, teraz_ms=1234)
+    assert (pelne, uciete) == (1, len(ogon))
+    assert kopia == tmp_path / "2026-10-05.jsonl.gz.ogon-1234"
+    assert kopia.read_bytes() == ogon and ogon.endswith(c3 + c4 + c5)  # nic nie zginęło
+    assert plik.read_bytes() == c1
+    assert not list(tmp_path.glob("*.tmp"))
+    # druga kopia w tej samej milisekundzie nie nadpisuje pierwszej
+    plik.write_bytes(c1 + ogon)
+    assert hs.napraw_ogon(plik, teraz_ms=1234)[2].name == "2026-10-05.jsonl.gz.ogon-1235"
+
+
+def test_uszkodzony_srodek_przy_starcie_kolektora_kopia_i_uwaga(tmp_path):
+    c1, c2, c3 = _czlony(b'{"a":1}\n', b'{"a":2}\n', b'{"a":3}\n')
+    plik = tmp_path / "2026-10-05.jsonl.gz"
+    plik.write_bytes(c1 + _zla_suma(c2) + c3)
+    stan, _, zegar, logi = _run(tmp_path, _odp(), cykle=1)
+    kopie = list(tmp_path.glob("*.ogon-*"))
+    assert len(kopie) == 1 and kopie[0].read_bytes() == _zla_suma(c2) + c3
+    assert stan["kopie_ogona"] == 1 and any("UWAGA" in s for s in logi)
+    rek = hs.czytaj_dzien(plik)
+    assert rek[0] == {"a": 1} and rek[1]["odpowiedz"] == _odp()
+    tekst = hs.status_text(tmp_path, teraz_s=zegar.t)
+    assert "kopie ogona 1" in tekst and kopie[0].name in tekst
+
+
+def test_czytaj_dzien_z_urwanym_ogonem_nie_gubi_dnia(tmp_path):
+    # Uwaga 3 z przeglądu 16c: plik jeszcze nienaprawiony (np. wczorajszy po awarii o 23:59).
+    c1, c2, c3 = _czlony(b'{"a":1}\n', b'{"a":2}\n', b'{"a":3}\n')
+    plik = tmp_path / "2026-10-04.jsonl.gz"
+    plik.write_bytes(c1 + c2 + c3[: len(c3) // 2])
+    with pytest.warns(hs.UrwanyOgon, match=f"pominięto {len(c3) // 2} B"):
+        assert hs.czytaj_dzien(plik) == [{"a": 1}, {"a": 2}]
+    pusty = tmp_path / "pusty.jsonl.gz"
+    pusty.write_bytes(c1[:5])
+    with pytest.warns(hs.UrwanyOgon):
+        assert hs.czytaj_dzien(pusty) == []
+
+
+def test_start_naprawia_najnowszy_starszy_plik(tmp_path):
+    # Awaria o 23:59 i serwer wyłączony przez kilka dni: przy starcie naprawiany jest najnowszy plik
+    # sprzed dziś (tu sprzed 3 dni), choć kolektor już do niego nie pisze.
+    c1, c2 = _czlony(b'{"a":1}\n', b'{"a":2}\n')
+    starszy, najnowszy = tmp_path / "2026-10-01.jsonl.gz", tmp_path / "2026-10-02.jsonl.gz"
+    starszy.write_bytes(c1 + c2[:7])
+    najnowszy.write_bytes(c1 + c2[:7])
+    stan, _, _, logi = _run(tmp_path, _odp(), cykle=1)
+    assert najnowszy.read_bytes() == c1 and hs.czytaj_dzien(najnowszy) == [{"a": 1}]
+    assert (
+        starszy.read_bytes() == c1 + c2[:7]
+    )  # tylko najnowszy — awaria psuje plik, do którego pisano
+    assert stan["przyciete_bajty"] == 7
+    assert any("2026-10-02.jsonl.gz" in s and "sprawdzono" in s for s in logi)
+
+
+def test_status_text_pokazuje_wczoraj_i_nieczytelny_ogon(tmp_path):
+    stan, _, zegar, _ = _run(tmp_path, _odp(), cykle=1)
+    c1, c2 = _czlony(b'{"a":1}\n', b'{"a":2}\n')
+    (tmp_path / "2026-10-04.jsonl.gz").write_bytes(c1 + c2[:9])  # wczoraj, po awarii, przed startem
+    tekst = hs.status_text(tmp_path, teraz_s=zegar.t)
+    assert "dziś 2026-10-05.jsonl.gz" in tekst and "pełnych migawek 1" in tekst
+    assert (
+        "wczoraj 2026-10-04.jsonl.gz" in tekst and "UWAGA: 9 B za ostatnim pełnym członem" in tekst
+    )
 
 
 def test_blad_zapisu_cofa_czlon_i_nastepny_zapis_dziala(tmp_path):
@@ -522,14 +689,23 @@ def test_wlasciwosc_odczekanie_w_granicach(proba):
 )
 def test_wlasciwosc_naprawa_ogona(tmp_path, linie, ogon):
     pelne = b"".join(hs.czlon_gzip((json.dumps(s) + "\n").encode("ascii")) for s in linie)
-    if isinstance(ogon, int):
+    urwany = isinstance(ogon, int)
+    if urwany:
         nastepny = hs.czlon_gzip(b'{"urwany":true}\n')
         ogon = nastepny[: ogon % len(nastepny)]
     dane = pelne + ogon
     assert hs.koniec_pelnych_czlonow(dane) == (len(pelne), len(linie))
+    for stary in tmp_path.glob("dzien.jsonl.gz*"):  # przykłady hypothesis dzielą katalog
+        stary.unlink()
     plik = tmp_path / "dzien.jsonl.gz"
     plik.write_bytes(dane)
-    assert hs.napraw_ogon(plik) == (len(linie), len(ogon))
+    n, uciete, kopia = hs.napraw_ogon(plik, teraz_ms=7)
+    assert (n, uciete) == (len(linie), len(ogon))
+    assert plik.read_bytes() == pelne
+    if urwany or (ogon and hs.urwany_czlon(ogon)):
+        assert kopia is None  # urwany początek jednego członu — odcięty bez śladu
+    elif ogon:
+        assert kopia is not None and kopia.read_bytes() == ogon  # wszystko inne zachowane obok
     with open(plik, "ab") as f:
         f.write(hs.czlon_gzip(b'{"po":1}\n'))
     tekst = gzip.decompress(plik.read_bytes()).decode("ascii").splitlines()
