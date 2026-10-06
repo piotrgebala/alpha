@@ -165,7 +165,9 @@ cat ~/.clas5_audyt/*.jsonl | jq -r '.hosty_spoza_listy[]?' | sort | uniq -c    #
 
 1. **Tydzień obserwacji** od scalenia etapu 1. Nic nie blokuje.
 2. **Raport tygodnia** (Claude, wpis w `zadania/` jako typ `przeglad`): liczba wywołań, flagi według rodzaju,
-   każda flaga z oceną „prawdziwa / fałszywy alarm”, hosty do dopisania lub odrzucenia.
+   każda flaga z oceną „prawdziwa / fałszywy alarm”, hosty do dopisania lub odrzucenia. Pierwszy raport
+   (tydzień 2026-09-29…10-05, zadanie 005, z listą decyzji dla każdej flagi):
+   [`13_tydzien_obserwacji.md`](13_tydzien_obserwacji.md).
 3. **Decyzja użytkownika dla KAŻDEJ flagi osobno.** Blokować tylko te z zerem fałszywych alarmów w tygodniu.
    Proponowana kolejność: `poswiadczenia` → `siec_poza_lista` → `zapis_poza_repo`. Nigdy nie blokować
    `zapis_tmp` ani `siec_host_nieznany` (za dużo niejednoznacznych przypadków).
