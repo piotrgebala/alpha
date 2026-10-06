@@ -466,6 +466,9 @@ Razem: 6 wczytań, 6 różnych skilli: `anthropic-skills:clas5-quant`, `anthropi
 - **`security-review`** — przegląd nowego połączenia sieciowego; wynik wyżej.
 - **`data:validate-data`** — bramka 16a: druga droga pięciu liczb, „kogo nie ma w zbiorze”, czerwone flagi, werdykt
   Caveats.
-- Momenty z tabeli zasady 19 bez skilla: `engineering:code-review` (16c) — **zrobi orkiestrator** przed scaleniem;
-  `data:statistical-analysis` (16b) — runda nie ma efektów ani przedziałów (tylko daty, liczby rekordów i rozmiary),
-  więc moment nie zachodzi; `quant-strategy-catalog` — brak nowej hipotezy; `dataviz` — brak wykresów.
+- **`engineering:code-review`** (16c) — przegląd diffu przez recenzenta orkiestratora 2026-10-06 (wczytanie
+  w `runs/skille/master.jsonl`, 06:22 UTC, bo recenzent pracował z głównego checkoutu); werdykt i uwagi 1–6
+  w sekcji „Bramka 16c”.
+- Momenty z tabeli zasady 19 bez skilla: `data:statistical-analysis` (16b) — runda nie ma efektów ani przedziałów
+  (tylko daty, liczby rekordów i rozmiary), więc moment nie zachodzi; `quant-strategy-catalog` — brak nowej
+  hipotezy; `dataviz` — brak wykresów.

@@ -3190,3 +3190,8 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   wstrzymanych/wycofanych kontraktów od 2026-10-06, rejestr `dziennik/rozliczenia.csv`; [wpis](dziennik/README.md).
   Pierwszy przebieg z regułami 2026-10-07. Stare worktree: usunięte 9, pominięte 6 (zablokowane 007/016/017/023,
   ze zmianą 020/022).
+- **Zadanie 010 (2026-10-06): HS0 scalone** (`47551cd`, zgoda 29.09) — publiczne API Hyperliquid daje godzinowy
+  funding od 2023-05-12 (3,4 roku BTC/ETH/SOL), 20 z 26 monet koszyka na HL, wniosek 117, bez odczytu. Kolektor stanu
+  rynku HL (`metaAndAssetCtxs` co 60 s, ~19 MB/dobę, `~/likwidacje_hl/stan/`) działa od 07:11 UTC, nadzór w
+  `tools/likwidacje.sh`. **Ryzyko:** dane HL tylko na serwerze — kopia poza serwerem (~7 GB/rok) czeka na decyzję
+  użytkownika. [Runda](runs/2026-10-05_hs0-hl-stan-rynku/README.md), [karta](zadania/010-hl-brama-danych-funding-premia.md).
