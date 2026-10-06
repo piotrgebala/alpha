@@ -64,6 +64,7 @@ body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(
         <button type="button" role="tab" id="tab-dziennik" aria-selected="true" aria-controls="panel-dziennik" tabindex="0">Dziennik</button>
         <button type="button" role="tab" id="tab-tokeny" aria-selected="false" aria-controls="panel-tokeny" tabindex="-1">Tokeny</button>
         <button type="button" role="tab" id="tab-mapa" aria-selected="false" aria-controls="panel-mapa" tabindex="-1">Mapa</button>
+        <button type="button" role="tab" id="tab-radar" aria-selected="false" aria-controls="panel-radar" tabindex="-1">Radar</button>
       </div>
     </div>
     <nav class="ext" aria-label="Inne strony projektu">
@@ -76,6 +77,7 @@ body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(
   <section class="panel" role="tabpanel" id="panel-dziennik" aria-labelledby="tab-dziennik"></section>
   <section class="panel" role="tabpanel" id="panel-tokeny" aria-labelledby="tab-tokeny" hidden></section>
   <section class="panel" role="tabpanel" id="panel-mapa" aria-labelledby="tab-mapa" hidden></section>
+  <section class="panel" role="tabpanel" id="panel-radar" aria-labelledby="tab-radar" hidden></section>
 </main>
 <script>
 (function () {
@@ -83,7 +85,7 @@ body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(
   // Nonce tego skryptu (CSP platformy). Tylko synchronicznie: currentScript istnieje wyłącznie
   // w trakcie wykonania skryptu. Właściwość .nonce, bo atrybut przeglądarka ukrywa.
   var NONCE = (document.currentScript && document.currentScript.nonce) || '';
-  var ZAKLADKI = ['dziennik', 'tokeny', 'mapa'];
+  var ZAKLADKI = ['dziennik', 'tokeny', 'mapa', 'radar'];
   var KLUCZ = 'pulpit-clas5-zakladka';
   var root = document.documentElement;
   var pas = document.querySelector('.tabs-scroll');
@@ -197,7 +199,7 @@ body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(
     if (i >= 0 && ZAKLADKI[i] !== aktywna) wybierz(i, { zapisz: true });
   });
 
-  // Start: #dziennik / #tokeny / #mapa w adresie > ostatnio wybrana zakładka > Dziennik.
+  // Start: #dziennik / #tokeny / #mapa / #radar w adresie > ostatnio wybrana zakładka > Dziennik.
   var start = zAdresu();
   if (start < 0) {
     try { start = ZAKLADKI.indexOf(localStorage.getItem(KLUCZ)); } catch (e) { start = -1; }
