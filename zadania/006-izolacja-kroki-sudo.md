@@ -4,10 +4,10 @@ tytul: Izolacja wykonawców — kroki z sudo (użytkownik) i sprawdzenie po nich
 typ: infra
 status: czeka_na_decyzje
 zlecil: uzytkownik
-decyzja_uzytkownika: "2026-09-29: dodać zadanie „kroki z sudo z docs/rag/13, które możesz wykonać tylko Ty”"
+decyzja_uzytkownika: "2026-09-29: dodać zadanie „kroki z sudo z docs/rag/13, które możesz wykonać tylko Ty”; 2026-10-06: „Po drugim tygodniu” — start po zadaniu 030"
 utworzono: 2026-09-29
-zalezy_od: [002, 005]
-nie_wczesniej_niz: 2026-10-06
+zalezy_od: [002, 005, 030]
+nie_wczesniej_niz: 2026-10-14
 budzet: "Opus medium do sprawdzenia"
 ---
 
@@ -47,3 +47,7 @@ Postęp: etap 1 — nie rozpoczęty; etap 2 — nie rozpoczęty; etap 3 — nie 
 ## Wynik
 
 - **2026-09-30, decyzja użytkownika: „6 czekaj”.** Wraca po przeglądzie 005 (od 2026-10-06), razem z decyzją o blokowaniu.
+- **2026-10-06, decyzja użytkownika: „Po drugim tygodniu”.** Po decyzjach z 005 (blokady „Obie”, zasięg „Wszędzie”,
+  wdrożenie w zadaniu 029) kroki z `sudo` czekają na drugi tydzień obserwacji hooka (zadanie 030, od 2026-10-14).
+  Wtedy decyzja o starcie na danych po poprawkach reguł. Do tego czasu wykonawcy mogą w Bash czytać `~/.ssh`
+  (hook tylko oznacza); w narzędziach plikowych odczyt kluczy blokuje hook (029).

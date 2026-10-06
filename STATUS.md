@@ -3196,7 +3196,13 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   `tools/likwidacje.sh`. **Ryzyko:** dane HL tylko na serwerze — kopia poza serwerem (~7 GB/rok) czeka na decyzję
   użytkownika. [Runda](runs/2026-10-05_hs0-hl-stan-rynku/README.md), [karta](zadania/010-hl-brama-danych-funding-premia.md).
 - **Zadanie 005 (2026-10-06): raport tygodnia hooka audytowego scalony** (`5c6ceab`) — 2797 wywołań, 364 z flagą,
-  0 nadużyć, 359 fałszywych alarmów (głównie błędy reguł hooka, np. `2>&1`). **Czeka na decyzję użytkownika:**
+  0 nadużyć, 359 fałszywych alarmów (głównie błędy reguł hooka, np. `2>&1`). **Decyzje użytkownika 2026-10-06 → zadanie 029:**
   9 decyzji (blokować / oznaczać / poprawić regułę) w [raporcie](docs/rag/13_tydzien_obserwacji.md); rekomendacja:
   wąska blokada `poswiadczenia` w narzędziach plikowych i zapisu do katalogu audytu, reszta dalej tylko oznacza.
   [Karta](zadania/005-audyt-tydzien-obserwacji.md).
+- **Zadanie 029 (2026-10-06): hook audytowy blokuje dwie wąskie rzeczy** (merge `33d798e`). Decyzje użytkownika
+  2026-10-06: „Obie”, „Wszędzie”, „Jak w rekomendacji”. Blokowane są pliki z kluczami w narzędziach plikowych i zapis
+  do katalogu audytu, wszędzie, gdzie działa hook. Poprawki R1–R8: wierszy z flagą 364 → 97 na danych z tego samego
+  tygodnia; w powtórce tygodnia 0 odmów. Odwrót: `blokuj: []` w `config/audyt_hosty.yaml`. Drugi tydzień obserwacji:
+  [030](zadania/030-audyt-drugi-tydzien.md) (od 10-14). 006 rusza po nim (decyzja „Po drugim tygodniu”).
+  [Karta](zadania/029-hook-poprawki-blokady.md).
