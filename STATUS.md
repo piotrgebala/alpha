@@ -3186,3 +3186,7 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   wniosek 116, [`runs/DRAFT_E1.md`](runs/DRAFT_E1.md)); 018 „Zamknąć 018” (`odrzucone`; brama zbierała pod E1, brak API
   Liquid poza MCP); stare worktree: „Tak, scalone i czyste”. Kolektory LK0/LB0 działają dalej (zatrzymanie = osobna
   decyzja). Do następnej wersji skilla `quant-strategy-catalog`: oznaczyć E1 (kaskady likwidacji) jako zamknięte.
+- **Zadanie 025 (2026-10-06): Poprawka 13 dziennika scalona** (`2f65588`, decyzja „Poprawka 025 + black”) — rozliczenie
+  wstrzymanych/wycofanych kontraktów od 2026-10-06, rejestr `dziennik/rozliczenia.csv`; [wpis](dziennik/README.md).
+  Pierwszy przebieg z regułami 2026-10-07. Stare worktree: usunięte 9, pominięte 6 (zablokowane 007/016/017/023,
+  ze zmianą 020/022).

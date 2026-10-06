@@ -2,7 +2,7 @@
 id: 025
 tytul: Dziennik przy wstrzymaniu lub wycofaniu kontraktu — zamarzła cena ostatnia, brak rozliczenia likwidacji i zamknięcia
 typ: dziennik
-status: nowe
+status: zrobione
 zlecil: orkiestrator
 decyzja_uzytkownika: "2026-10-05: „Poprawka 025 + black” — Poprawka N wg szkicu w przeglad.md oraz samo formatowanie black data/fetch_ohlcv.py bez zmiany logiki"
 utworzono: 2026-09-29
@@ -54,3 +54,11 @@ zmiana dziennika wymaga osobnej decyzji.
   likwidacja na cenie mark, brak nowych pozycji na zamrożonej cenie, dni bez obrotu nie liczą się do koszyka,
   alarm przy zniknięciu pliku).
 - **2026-10-05:** decyzja użytkownika „Poprawka 025 + black”. Wykonanie: wykonawca, wpis „Poprawka N” w `dziennik/README.md`, sprawdzenie parsera strony; merge poza 02:00–03:00 UTC.
+- **2026-10-06, scalenie (orkiestrator):** Poprawka 13 + black — merge `2f65588` (gałąź `zadanie-025-poprawka-13`,
+  `6b0114e`), wypchnięte `337cd8d`. Reguły R1–R7 od `POPRAWKA13_OD = 2026-10-06`; rejestr `dziennik/rozliczenia.csv`
+  (tylko dopisywany, commituje go automat przez `zapisz_do_gita.sh`). 16c „Approve z uwagami” — uwagi 1–3 poprawione
+  (rozliczenie niezmienne po 1. zapisie, testy t vs t+k, R7 na kolumnach `close`), 4 opisana. Sonda: mark dla wycofanych
+  jest; oficjalnej ceny rozliczenia API nie podaje (BRAK DANYCH). Próba na kopii: kod 0, historia zmieniona 0. Druga
+  droga (orkiestrator): `ast.dump` `data/fetch_ohlcv.py` identyczne. Pełny pytest po scaleniu: 2180 passed, 2 skipped,
+  kod 0. Dowody: `zadania/025-dowody/poprawka13_*`, wpis „Poprawka 13” w `dziennik/README.md`.
+  Co zostało: sprawdzić przebieg 2026-10-07 02:30 (pierwszy z regułami) — „OK”, historia zmieniona 0.
