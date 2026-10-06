@@ -185,10 +185,11 @@ def test_project_agents_run_on_opus_with_medium_effort():
         assert "\nmodel: haiku" not in plik.read_text(encoding="utf-8").split("---")[1], plik.name
 
 
-def test_audit_hook_watches_executor_tools_and_never_blocks():
-    """Zadanie 002 (docs/rag/13): hook audytowy `tools/audyt_hook.py` w PreToolUse na każdym
+def test_audit_hook_watches_executor_tools_and_fails_open():
+    """Zadania 002 i 029 (docs/rag/13): hook audytowy `tools/audyt_hook.py` w PreToolUse na każdym
     narzędziu, które sięga po sieć, pliki lub powłokę; wywołanie `py || python3 || true` jak
-    pozostałe hooki — błąd interpretera nie może zablokować narzędzia (tryb „tylko oznacza”)."""
+    pozostałe hooki — błąd interpretera nie może zablokować narzędzia (fail-open). Blokuje tylko
+    JSON odmowy dla flag z `blokuj:` w `config/audyt_hosty.yaml` (testy: test_audyt_hook.py)."""
     matches = [(m, c) for m, c in hooks_for("PreToolUse") if "tools/audyt_hook.py" in c]
     assert matches, "brak hooka tools/audyt_hook.py w PreToolUse"
     for tool in (

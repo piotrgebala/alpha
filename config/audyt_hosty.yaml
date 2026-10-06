@@ -1,14 +1,35 @@
-# Lista hostów dozwolonych dla hooka audytowego wykonawców (`tools/audyt_hook.py`, zadanie 002,
-# docs/rag/13). Polecenie sieciowe do hosta SPOZA tej listy dostaje flagę `siec_poza_lista`
-# w dzienniku `~/.clas5_audyt/RRRR-MM-DD.jsonl`. Hook tylko OZNACZA — niczego nie blokuje.
+# Konfiguracja hooka audytowego wykonawców (`tools/audyt_hook.py`; zadania 002 i 029, docs/rag/13).
 #
-# Format (celowo najprostszy — hook czyta go bez biblioteki YAML, żeby był szybki):
-#   - jeden host na linię jako element listy `hosty`;
-#   - `*.domena` = każda poddomena (sama `domena` NIE jest wtedy objęta — dopisz ją osobno);
-#   - komentarz po `#`.
-# Zmiana listy = commit z powodem (host z kodu `data/` lub `tools/`, albo adres z treści zadania).
+# 1) `hosty:` — hosty dozwolone. Polecenie sieciowe do hosta SPOZA tej listy dostaje flagę
+#    `siec_poza_lista` w dzienniku `~/.clas5_audyt/RRRR-MM-DD.jsonl`. Ta flaga tylko OZNACZA.
+# 2) `blokuj:` (na końcu pliku) — flagi, które hook BLOKUJE (ADR-13, etap 2, od 2026-10-06).
+#    Hook odmawia wtedy wykonania narzędzia i podaje powód; pozostałe flagi tylko oznacza.
+#    Lista działa wszędzie, gdzie działa hook (serwer, Windows, Cowork). Nie ma zmiennej
+#    środowiskowej, która by ją włączała albo wyłączała (decyzja użytkownika 2026-10-06: „Wszędzie”).
+#    Ścieżka odwrotu: wyczyścić listę (`blokuj: []`) — hook wraca do samego oznaczania.
 #
-# Źródło wpisów: grep po `data/` i `tools/` (2026-09-29) + adresy z zadań tablicy.
+# Format (celowo prosty — hook czyta plik bez biblioteki YAML, żeby był szybki):
+#   - `hosty`: jeden host na linię jako element listy; `*.domena` = każda poddomena (sama `domena`
+#     NIE jest wtedy objęta — dopisz ją osobno); host zaczynający się od `*` lub `:` w cudzysłowie;
+#   - `blokuj`: wpis to nazwa flagi (blokada we wszystkich narzędziach) albo mapa `flaga:`
+#     + opcjonalnie `narzedzia: [Read, …]` (tylko te narzędzia) i `decyzja: "RRRR-MM-DD"` (data
+#     decyzji użytkownika, trafia do powodu odmowy);
+#   - komentarz po `#`; wcięcia spacjami (tabulator psuje sekcję).
+# Sekcję `blokuj:` hook czyta NIEZALEŻNIE od reszty pliku: błąd w liście hostów nie wyłącza blokad.
+# Fail-open: nieznana flaga, nieznane narzędzie, nieznany klucz albo zły format wpisu → ten wpis
+# niczego nie blokuje. Sekcja `blokuj:` zepsuta albo spoza prostego podzbioru YAML (np. wartość
+# w kilku liniach), brak sekcji albo dwie sekcje → hook nic nie blokuje. Testy pilnują, że ten plik
+# daje dokładnie blokady z końca pliku.
+# Flaga `poswiadczenia_slabe` (od przeglądu 16c) celowo NIE stoi w `blokuj:`: to człon key/token/
+# secret… w nazwie pliku kodu albo dokumentacji, pliku w bibliotece (`site-packages`, `node_modules`,
+# biblioteka standardowa), dłuższej nazwie katalogu (`runs/…-tokens`) oraz szablon `.env.example`.
+# Widać ją w dzienniku; drugi tydzień obserwacji liczy ją osobno:
+# `jq -c 'select(any(.flagi[]; . == "poswiadczenia_slabe"))'`. Katalog o nazwie będącej CAŁYM słowem
+# (`secrets`, `.secrets`, `keys`, `api_tokens`) to przypadek twardy (`poswiadczenia`, odmowa).
+# Zmiana listy hostów = commit z powodem (host z kodu `data/` lub `tools/`, albo adres z treści
+# zadania). Zmiana `blokuj:` = tylko z zapisaną decyzją użytkownika.
+#
+# Źródło wpisów hostów: grep po `data/` i `tools/` (2026-09-29) + adresy z zadań tablicy.
 hosty:
   # --- lokalnie ---
   - localhost
@@ -41,3 +62,15 @@ hosty:
   - objects.githubusercontent.com
   - pypi.org
   - files.pythonhosted.org
+
+# Blokady (ADR-13, etap 2; zadanie 029). Tydzień 2026-09-29…10-05: obie dałyby 0 odmów.
+blokuj:
+  # Decyzja użytkownika 2026-10-06 („Obie”): pliki z poświadczeniami (klucze SSH, .env, *.pem…)
+  # blokowane w narzędziach plikowych. W Bash flaga dalej tylko oznacza (tam były fałszywe alarmy).
+  - flaga: poswiadczenia
+    narzedzia: [Read, Write, Edit, MultiEdit, NotebookEdit, Grep, Glob]
+    decyzja: "2026-10-06"
+  # Decyzja użytkownika 2026-10-06 („Obie”): zapis do katalogu dziennika audytu (R8) — we
+  # wszystkich narzędziach, łącznie z Bash. Odczyt katalogu (`dziennik_audytu`) tylko oznacza.
+  - flaga: dziennik_audytu_zapis
+    decyzja: "2026-10-06"

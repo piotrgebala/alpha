@@ -1,0 +1,2 @@
+{"czas": "2026-10-06T08:00:28+00:00", "zdarzenie": "PostToolUse", "kto": "claude", "skill": "update-config", "wtyczka": "", "argumenty": "", "galaz": "zadanie-029-hook-poprawki-blokady", "sesja": "ed160eab-47d1-4803-933d-6b55fba6a20c", "agent": "general-purpose"}
+{"czas": "2026-10-06T08:00:28+00:00", "zdarzenie": "PostToolUse", "kto": "claude", "skill": "engineering:testing-strategy", "wtyczka": "engineering", "argumenty": "", "galaz": "zadanie-029-hook-poprawki-blokady", "sesja": "ed160eab-47d1-4803-933d-6b55fba6a20c", "agent": "general-purpose"}
