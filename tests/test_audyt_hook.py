@@ -1683,7 +1683,8 @@ def test_16c_hard_credential_files_are_still_denied(tmp_path, repo, dom, narzedz
 def test_16c_rodzaj_poswiadczen():
     r = ah.rodzaj_poswiadczen
     assert r("/r/secrets.py") == PS and r("/r/secrets.json") == P
-    assert r("/r/tokens", katalog=True) == PS and r("/r/tokens", katalog=False) == P
+    assert r("/r/tokens", katalog=True) == P  # cała nazwa katalogu to słowo poświadczeń
+    assert r("/r/t1-tokens", katalog=True) == PS and r("/r/t1-tokens", katalog=False) == P
     assert r("/usr/lib/python3.12/lib-dynload/x_token.so") == PS  # biblioteka standardowa
     assert r("/r/.config/ghostty/config") is None and r("/r/.config/gh") == P
     assert r("/r/README.md") is None and r("/r/.env.example") == PS and r("/r/.env.prod") == P
@@ -1909,3 +1910,37 @@ def test_16c_maskuj_on_prefix_keeps_masks_and_truncation_mark():
     assert ah.maskuj("api_key=" + "z9" * 300) == "api_key=***"
     assert ah.maskuj("k=" + "a1" * 500 + " " + "b" * 1000) == "k=***…"  # ucięte, choć krótkie
     assert len(ah.maskuj("echo " + "b " * 600 + "token=abc")) == ah.MAKS_ZNAKOW + 1
+
+
+# --- ponowny przegląd 16c: katalog o nazwie będącej słowem poświadczeń --------------------------
+@pytest.mark.parametrize(
+    ("narzedzie", "wejscie"),
+    [
+        ("Grep", {"path": "/run/secrets", "pattern": "x", "output_mode": "content"}),
+        ("Grep", {"path": ".secrets", "pattern": "x"}),
+        ("Glob", {"path": "/srv/projekt/keys", "pattern": "*"}),
+        ("Grep", {"path": "/srv/API_KEYS", "pattern": "x"}),
+        ("Grep", {"path": "/srv/Credentials", "pattern": "x"}),
+        ("Grep", {"path": "/srv", "glob": "tokens/*", "pattern": "x"}),
+        ("Read", {"file_path": "keys/x.py"}),  # plik kodu w takim katalogu: twardy jak w `.ssh/`
+        ("Read", {"file_path": "/run/secrets/db_password"}),
+    ],
+)
+def test_16c_directory_named_credential_word_is_denied(tmp_path, repo, narzedzie, wejscie):
+    rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wejscie)
+    assert rekord["zablokowano"] == [P] and odmowa is not None
+
+
+@pytest.mark.parametrize("nazwa", ["2026-10-10_t1-tokens", "runs-keys-audit", "my-secrets"])
+def test_16c_credential_word_inside_longer_directory_name_stays_weak(tmp_path, repo, nazwa):
+    (repo / "runs" / nazwa).mkdir(parents=True)
+    rekord, odmowa = wywolaj(tmp_path, repo, "Grep", {"path": f"runs/{nazwa}", "pattern": "x"})
+    assert rekord["flagi"] == [PS] and odmowa is None
+
+
+def test_16c_exact_credential_word_component():
+    r = ah.rodzaj_poswiadczen
+    assert r("/r/keys/x.py") == P and r("/r/.secrets") == P and r("/r/apikeys") == P
+    assert r("/r/api-tokens/a.md") == P and r("/r/Passwords/x") == P
+    assert r("/r/secrets.py") == PS and r("/r/t1-tokens", katalog=True) == PS
+    assert r("/r/keyset/a.py") is None and r("/r/monkeys/a.txt") is None

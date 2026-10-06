@@ -1035,18 +1035,23 @@ _KOD_I_DOKUMENTY = (
 _KATALOGI_BIBLIOTEK = {"site-packages", "dist-packages", "node_modules"}
 _BIBLIOTEKA_STANDARDOWA = re.compile(r"(^|/)lib(64)?/python\d+(\.\d+)*(/|$)")
 _SZABLONY_ENV = {".env.example", ".env.sample", ".env.template", ".env.dist"}
+# składnik ścieżki, którego CAŁA nazwa (bez wiodącej kropki) to słowo poświadczeń: `secrets`, `.keys`,
+# `api_tokens`… — katalog z sekretami, twardy jak `.ssh` (ponowny przegląd 16c: `/run/secrets`)
+_CALA_NAZWA_POSW = re.compile(r"(api[_-]?)?(keys?|secrets?|tokens?|credentials?|passwords?)")
 
 
 def rodzaj_poswiadczen(sciezka: str, katalog: bool | None = None) -> str | None:
     """Flaga poświadczeń dla ścieżki albo None.
 
     `poswiadczenia` (twarda; blokowana w narzędziach plikowych): katalogi `.ssh`, `.gnupg`, `.aws`,
-    `.kube`, `.docker` i `.config/gh` (jako składniki ścieżki), nazwy z `_NAZWY_POSW`, `.env`,
+    `.kube`, `.docker` i `.config/gh` (jako składniki ścieżki), składnik o nazwie będącej całym
+    słowem poświadczeń (`secrets`, `.keys`, `api_tokens`…), nazwy z `_NAZWY_POSW`, `.env`,
     `.env.*`, `*.env`, rozszerzenia kluczy, `id_rsa*`/`id_ed25519*`/`id_ecdsa*` oraz człon
     key/token/secret/credential/password w nazwie pliku danych.
     `poswiadczenia_slabe` (tylko flaga): szablony `.env.example`/`.sample`/`.template`/`.dist`
     oraz ten człon w nazwie pliku kodu lub dokumentacji (`_KOD_I_DOKUMENTY`), pliku w bibliotece
-    (`site-packages`, `dist-packages`, `node_modules`, biblioteka standardowa Pythona) albo katalogu.
+    (`site-packages`, `dist-packages`, `node_modules`, biblioteka standardowa Pythona) albo katalogu,
+    w którego dłuższej nazwie słowo jest tylko częścią (`runs/2026-10-10_t1-tokens`).
     `katalog=None` — sprawdzić na dysku, ale tylko wtedy, gdy decyduje człon w nazwie."""
     czesci = sciezka.replace("\\", "/").lower().split("/")
     nazwa, katalogi = czesci[-1], czesci[:-1]
@@ -1054,6 +1059,8 @@ def rodzaj_poswiadczen(sciezka: str, katalog: bool | None = None) -> str | None:
         return F_POSW
     if any(czesci[k] == ".config" and czesci[k + 1] == "gh" for k in range(len(czesci) - 1)):
         return F_POSW  # składniki `.config/gh`, nie podciąg: `~/.config/ghostty` to nie GitHub
+    if any(_CALA_NAZWA_POSW.fullmatch(c.lstrip(".")) for c in czesci):
+        return F_POSW  # `/run/secrets`, `.secrets/`, `keys/x.py` — także plik kodu w takim katalogu
     if nazwa in _SZABLONY_ENV:
         return F_POSW_SLABE
     if nazwa == ".env" or nazwa.startswith(".env.") or nazwa.endswith(".env"):

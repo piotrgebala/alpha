@@ -512,7 +512,8 @@ ucięte w dzienniku na 300 znakach. W takich wierszach (b) i (c) widzą tylko po
 | `poswiadczenia_slabe` (nowa, przegląd 16c) | — | — | 0 | 0 / 0 | — | 0 |
 | wiersze z flagą | 364 | 316 | 97 | 50 / 47 | — | — |
 
-Tabela jest liczona kodem po poprawkach z przeglądu 16c (ADR-13, „Poprawki po przeglądzie 16c”). Na tym
+Tabela jest liczona kodem po poprawkach z przeglądu 16c i po ponownym przeglądzie (katalog `secrets`, `keys`…
+znów twardy; ADR-13, „Poprawki po przeglądzie 16c”). Na tym
 tygodniu poprawki nie zmieniły żadnej liczby, a nowa flaga słaba `poswiadczenia_slabe` ma 0 wierszy.
 
 **Odmowy przy nowym `blokuj:`: 0** (oczekiwane 0). Co z tego wynika: w tym tygodniu żadna z dwóch blokad nie

@@ -101,8 +101,8 @@ z powodem). Do powtórki po etapie 2: czy hook ma być fail-closed w trybie blok
 | `siec_host_nieznany` | polecenie sieciowe, którego hosta nie widać w tekście (np. adres w zmiennej) |
 | `zapis_poza_repo` | zapis poza dozwolonymi katalogami (niżej); od 2026-10-06 bez flagi `~/.claude/plans/` i — w sesji głównej — `~/.claude/projects/<projekt>/memory/` (R6) |
 | `zapis_tmp` | zapis w `/tmp`, `/var/tmp`, `$TMPDIR`; od 2026-10-06 bez flagi własny scratchpad sesji (R5) |
-| `poswiadczenia` | odczyt lub zapis: `.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `~/.config/gh` (składniki ścieżki), `.git-credentials`, `.netrc`, `.pgpass`, `.pypirc`, `.env`/`.env.*`/`*.env`, `*.pem`, `*.key`, `*.p12`, `id_rsa*`/`id_ed25519*`, pliki DANYCH z członem `key(s)`/`secret(s)`/`token(s)`/`credential(s)`/`password(s)` w nazwie; w kodzie interpretera (`python - <<EOF`, `python -c`, `node -e`) podciąg ścieżki wrażliwej — **od 2026-10-06 blokowana w narzędziach plikowych** |
-| `poswiadczenia_slabe` | od przeglądu 16c (2026-10-06): ten sam człon w nazwie pliku kodu lub dokumentacji (`.py`, `.md`, `.js`…), pliku w bibliotece (`site-packages`, `dist-packages`, `node_modules`, biblioteka standardowa), w nazwie katalogu, oraz szablony `.env.example`/`.sample`/`.template`/`.dist` — **tylko oznacza** (nie ma jej w `blokuj:`) |
+| `poswiadczenia` | odczyt lub zapis: `.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `~/.config/gh` (składniki ścieżki), katalog o nazwie będącej CAŁYM słowem poświadczeń (`secrets`, `.secrets`, `keys`, `api_tokens`…), `.git-credentials`, `.netrc`, `.pgpass`, `.pypirc`, `.env`/`.env.*`/`*.env`, `*.pem`, `*.key`, `*.p12`, `id_rsa*`/`id_ed25519*`, pliki DANYCH z członem `key(s)`/`secret(s)`/`token(s)`/`credential(s)`/`password(s)` w nazwie; w kodzie interpretera (`python - <<EOF`, `python -c`, `node -e`) podciąg ścieżki wrażliwej — **od 2026-10-06 blokowana w narzędziach plikowych** |
+| `poswiadczenia_slabe` | od przeglądu 16c (2026-10-06): ten sam człon w nazwie pliku kodu lub dokumentacji (`.py`, `.md`, `.js`…), pliku w bibliotece (`site-packages`, `dist-packages`, `node_modules`, biblioteka standardowa), w dłuższej nazwie katalogu (`runs/…-tokens`), oraz szablony `.env.example`/`.sample`/`.template`/`.dist` — **tylko oznacza** (nie ma jej w `blokuj:`) |
 | `dziennik_audytu` | narzędzie czyta katalog audytu (do 2026-10-06 także zapis — wtedy jedna flaga); także podciąg `.clas5_audyt` w kodzie interpretera |
 | `dziennik_audytu_zapis` | od 2026-10-06 (R8): narzędzie zmienia katalog audytu — **blokowana we wszystkich narzędziach** |
 | `wejscie_nieczytelne`, `blad_analizy` | hook nie zrozumiał wejścia albo analiza padła (nigdy nie blokuje) |
@@ -289,6 +289,12 @@ wersji i test, że prawdziwe zdarzenie dalej jest blokowane albo oznaczane.
 7. Maskowanie miało czas kwadratowy (40 KB → 6,4 s, 80 KB → 25,7 s, ponad limit hooka). Teraz maskuje się
    tylko początek tekstu (300 + 512 znaków); długość schematu adresu w wykrywaniu URL jest ograniczona.
 
+Ponowny przegląd 16c (ten sam dzień): katalog o nazwie będącej całym słowem poświadczeń (bez wiodącej kropki,
+bez rozróżniania wielkości liter, z ewentualnym przedrostkiem `api`) znów jest przypadkiem twardym —
+`Grep(path="/run/secrets")` dostaje odmowę, a słowo jako część dłuższej nazwy katalogu
+(`runs/2026-10-10_t1-tokens`) daje dalej tylko flagę słabą. Plik w takim katalogu, także plik kodu
+(`keys/x.py`), jest twardy tak samo jak plik w `.ssh/`.
+
 Powtórka tygodnia nowymi regułami (0 odmów w tygodniu i 0 w dniu 2026-10-06; szczegóły i komendy):
 [`13_tydzien_obserwacji.md`](13_tydzien_obserwacji.md), sekcja 9.
 
@@ -305,7 +311,10 @@ nie zostaną zablokowane. Ograniczenia wprowadzone świadomie:
 - plik kodu z prawdziwymi sekretami (np. `config/secrets.py`) dostaje tylko `poswiadczenia_slabe`, bez
   odmowy — tak zdecydował orkiestrator po przeglądzie 16c, żeby nie blokować modułów o takich nazwach;
 - ścieżka zaczynająca się od nieznanej zmiennej (`$D/plik`) i zapis względny po `cd -` bez znanego
-  poprzedniego katalogu nie dostają flag zależnych od miejsca.
+  poprzedniego katalogu nie dostają flag zależnych od miejsca;
+- znana luka sprzed zadania 029, do zadania 030: polecenia wewnątrz `"$( … )"` w podwójnym cudzysłowie
+  nie są analizowane jako polecenia, więc np. `echo "$(curl https://evil.io)"` albo
+  `x="$(rm ~/.clas5_audyt/a.jsonl)"` nie dostają flagi (bez cudzysłowu `$( … )` działa).
 
 Blokady chronią przed pomyłką i prostą próbą; twardą granicą jest etap 3.
 

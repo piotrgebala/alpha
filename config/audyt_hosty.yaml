@@ -22,8 +22,10 @@
 # daje dokładnie blokady z końca pliku.
 # Flaga `poswiadczenia_slabe` (od przeglądu 16c) celowo NIE stoi w `blokuj:`: to człon key/token/
 # secret… w nazwie pliku kodu albo dokumentacji, pliku w bibliotece (`site-packages`, `node_modules`,
-# biblioteka standardowa), nazwie katalogu oraz szablon `.env.example`. Widać ją w dzienniku; drugi
-# tydzień obserwacji liczy ją osobno: `jq -c 'select(any(.flagi[]; . == "poswiadczenia_slabe"))'`.
+# biblioteka standardowa), dłuższej nazwie katalogu (`runs/…-tokens`) oraz szablon `.env.example`.
+# Widać ją w dzienniku; drugi tydzień obserwacji liczy ją osobno:
+# `jq -c 'select(any(.flagi[]; . == "poswiadczenia_slabe"))'`. Katalog o nazwie będącej CAŁYM słowem
+# (`secrets`, `.secrets`, `keys`, `api_tokens`) to przypadek twardy (`poswiadczenia`, odmowa).
 # Zmiana listy hostów = commit z powodem (host z kodu `data/` lub `tools/`, albo adres z treści
 # zadania). Zmiana `blokuj:` = tylko z zapisaną decyzją użytkownika.
 #
