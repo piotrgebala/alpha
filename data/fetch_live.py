@@ -251,25 +251,60 @@ def fetch_mark_1d(
     return parse_mark_klines_1d(rows, end_ms)
 
 
+MARK_COLS = ["symbol", "open_time", "open", "high", "low", "close"]
+
+
+def _read_mark_file(path: Path) -> pd.DataFrame | None:
+    """Istniejący `MARK_FILE` (brak pliku = None). Plik nieczytelny albo bez kolumn = wyjątek."""
+    if not path.exists():
+        return None
+    old = pd.read_parquet(path)
+    missing = [c for c in MARK_COLS if c not in old.columns]
+    if missing:
+        raise ValueError(f"{MARK_FILE}: brak kolumn {missing}")
+    return old[MARK_COLS]
+
+
 def fetch_mark_safe(
-    exchange, out_dir: Path, end_ms: int, pacing_s: float = REQUEST_PACING_S
-) -> list[str] | None:
+    exchange,
+    out_dir: Path,
+    end_ms: int,
+    pacing_s: float = REQUEST_PACING_S,
+    settled: set[tuple[str, str]] | None = None,
+) -> dict:
     """
     Poprawka 13 (R2): cena mark 1d od daty wejścia poprawki TYLKO dla monet koszyka z wykrytym
-    wstrzymaniem (`live_journal.halted_symbols` na świeżo pobranych plikach i statusach) — zwykle
-    żadnej, czyli zero zapytań. Nowe świece zastępują w `MARK_FILE` stare o tym samym kluczu (symbol,
-    dzień), pozostałe zostają: świeca zamkniętego dnia się nie zmienia, a nieudane pobranie nie kasuje
-    ceny już zapisanej. Błąd (także pojedynczej monety) → wydruk; zwraca listę monet albo `None` przy
-    błędzie ogólnym. Bez ceny mark dziennik rozlicza po ostatnim normalnym zamknięciu („przybliżona”).
+    wstrzymaniem, którego rejestr rozliczeń dziennika jeszcze nie zapisał (`settled` = klucze
+    (symbol, d1); `live_journal.halted_symbols` na świeżo pobranych plikach i statusach) — zwykle
+    żadnej, czyli zero zapytań; zdarzenie już rozliczone bierze cenę z rejestru, więc późniejsza
+    cena mark niczego nie zmienia. Nowe świece zastępują w `MARK_FILE` stare o tym samym kluczu
+    (symbol, dzień), pozostałe zostają. Plik nieczytelny (np. przerwany zapis) jest przebudowywany
+    z samego nowego pobrania — rozliczenia już zapisane się nie zmieniają (rejestr). Zwraca
+    {"symbols": monety, "blad": None albo „BŁĄD <typ>” — do pola logu „cena mark BŁĄD …”}. Błąd
+    pobrania pojedynczej monety → wydruk (dziennik rozliczy ją bez ceny mark i zgłosi to w logu).
     """
     from backtest import live_journal as lj
 
+    out: dict = {"symbols": [], "blad": None}
+    path = Path(out_dir) / MARK_FILE
+    try:
+        old = _read_mark_file(path)
+    except Exception as exc:  # noqa: BLE001 — zepsuty plik: przebudowa, błąd do logu dziennika
+        out["blad"] = f"BŁĄD {type(exc).__name__}"
+        print(
+            f"[live] cena mark BŁĄD {type(exc).__name__}: plik {MARK_FILE} nieczytelny — usunięty "
+            "i przebudowany z nowego pobrania; zapisane rozliczenia bez zmian (rejestr)",
+            flush=True,
+        )
+        path.unlink(missing_ok=True)
+        old = None
     try:
         if lj.POPRAWKA13_OD is None:
-            return []
-        syms = [s for s in lj.halted_symbols(out_dir) if SYMBOL_RE.fullmatch(s)]
+            return out
+        syms = [s for s in lj.halted_symbols(out_dir, settled) if SYMBOL_RE.fullmatch(s)]
+        out["symbols"] = syms
         if not syms:
-            return []
+            return out
         start_ms = int(lj.POPRAWKA13_OD.value // 1_000_000)
         frames, failed = [], []
         for sym in syms:
@@ -278,25 +313,23 @@ def fetch_mark_safe(
             except Exception as exc:  # noqa: BLE001 — jedna moneta nie blokuje pozostałych
                 failed.append(f"{sym} {type(exc).__name__}")
             time.sleep(pacing_s)
-        path = Path(out_dir) / MARK_FILE
-        parts = [pd.read_parquet(path)] if path.exists() else []
-        parts += [f for f in frames if len(f)]
+        parts = ([old] if old is not None else []) + [f[MARK_COLS] for f in frames if len(f)]
         if parts:
             mark = pd.concat(parts, ignore_index=True)
             mark["open_time"] = pd.to_datetime(mark["open_time"], utc=True)
             mark = mark.drop_duplicates(["symbol", "open_time"], keep="last")
-            cols = ["symbol", "open_time", "open", "high", "low", "close"]
-            mark.sort_values(["symbol", "open_time"])[cols].to_parquet(path, index=False)
+            mark.sort_values(["symbol", "open_time"])[MARK_COLS].to_parquet(path, index=False)
         print(f"[live] cena mark (poprawka 13): {len(syms)} monet: {', '.join(syms)}", flush=True)
         if failed:
             print(f"[live] cena mark BŁĄD: {', '.join(failed)}", flush=True)
-        return syms
+        return out
     except Exception as exc:  # noqa: BLE001 — cena mark pomocnicza, nie może zatrzymać pobierania
+        out["blad"] = out["blad"] or f"BŁĄD {type(exc).__name__}"
         print(
             f"[live] cena mark BŁĄD {type(exc).__name__}: {str(exc)[:120]} — bez aktualizacji",
             flush=True,
         )
-        return None
+        return out
 
 
 def fetch_fng_safe(out_dir: Path) -> Path | None:
@@ -343,7 +376,14 @@ def fetch_coinm_funding_safe(out_dir: Path) -> Path | None:
         return None
 
 
-def run(out_dir: Path = LIVE_DIR, start: str = LIVE_START) -> dict:
+def run(
+    out_dir: Path = LIVE_DIR, start: str = LIVE_START, settled: set[tuple[str, str]] | None = None
+) -> dict:
+    """
+    Pobranie wszystkich źródeł dziennika do `out_dir`. `settled` (poprawka 13) = zdarzenia już
+    zapisane w rejestrze rozliczeń dziennika — dla nich cena mark nie jest pobierana. Zwraca
+    {"symbols", "fetched_at", "mark_blad"} (`mark_blad` = błąd ceny mark do pola logu albo None).
+    """
     import ccxt
 
     from data.fetch_external import fetch_coinbase_daily
@@ -379,8 +419,9 @@ def run(out_dir: Path = LIVE_DIR, start: str = LIVE_START) -> dict:
     spot.to_parquet(out_dir / "spot_BTC-USDT_8h.parquet", index=False)
     fetch_fng_safe(out_dir)
     fetch_coinm_funding_safe(out_dir)
-    fetch_mark_safe(ex, out_dir, end_ms)  # poprawka 13 (R2): tylko monety z wykrytym wstrzymaniem
-    return {"symbols": len(symbols), "fetched_at": now.isoformat()}
+    # poprawka 13 (R2): tylko monety z wykrytym, jeszcze nierozliczonym wstrzymaniem
+    mark = fetch_mark_safe(ex, out_dir, end_ms, settled=settled)
+    return {"symbols": len(symbols), "fetched_at": now.isoformat(), "mark_blad": mark["blad"]}
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ pliku członka koszyka. Data wejścia (`POPRAWKA13_OD`) zawsze przez `monkeypatc
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -547,29 +548,162 @@ def test_run_logs_halt_field_parsed_by_page(tmp_path, monkeypatch):
 
 
 def test_run_missing_basket_file_raises_h_alarm(tmp_path, monkeypatch):
-    """R7: członek koszyka z koszyk.csv bez pliku świec → pole z „BŁĄD” (kontrola (h) strony); przed
-    datą wejścia poprawki bez pola."""
+    """R7: członek koszyka z koszyk.csv bez świec w danych — bez pliku albo z plikiem pustym (pusta
+    odpowiedź giełdy nadpisuje plik, a `price_panels` go pomija) → pole z „BŁĄD” (kontrola (h)
+    strony); przed datą wejścia poprawki bez pola."""
     src = tmp_path / "live"
     _write(src, "baza")
     jdir = tmp_path / "dziennik"
     _run(src, jdir, monkeypatch)
     ks = pd.read_csv(jdir / "koszyk.csv")
-    assert ks.loc[ks["symbol"] == DEAD, "czlonek_top20"].any()
+    assert ks.loc[ks["symbol"].isin([DEAD, FROZ]), "czlonek_top20"].all()
     (src / f"{DEAD}_1d.parquet").unlink()
     (src / f"{DEAD}_funding.parquet").unlink()
+    empty = pd.read_parquet(src / f"{FROZ}_1d.parquet").iloc[:0]
+    empty.to_parquet(src / f"{FROZ}_1d.parquet", index=False)  # plik jest, świec brak
+    assert lj.missing_basket_files(jdir, src) == [DEAD]  # samo istnienie pliku nie wystarcza…
+    cols = lj.price_panels(src)["close"].columns
+    assert lj.missing_basket_files(jdir, src, cols) == [DEAD, FROZ]  # …więc liczą się kolumny
     _, log = _run(src, jdir, monkeypatch)
     line = log[-1]
-    assert f" | pliki świec BŁĄD brak {DEAD} | historia zmieniona: " in line
-    assert sd.LOG_RE.match(line) and sd.error_fields(line) == [("pliki świec", f"BŁĄD brak {DEAD}")]
+    want = f"BŁĄD brak {DEAD}, {FROZ}"
+    assert f" | pliki świec {want} | historia zmieniona: " in line
+    assert sd.LOG_RE.match(line) and sd.error_fields(line) == [("pliki świec", want)]
     runs, _ = sd.parse_log(line)
-    assert any(
-        p.startswith("(h) pliki świec: BŁĄD brak C01USDT")
-        for p in sd.checks(_state(runs[-1]), line)
-    )
+    assert any(p.startswith(f"(h) pliki świec: {want}") for p in sd.checks(_state(runs[-1]), line))
     assert runs[-1]["changed"] > 0  # zanik pliku przelicza historię — alarm mówi dlaczego
     # data wejścia po as_of: bez pola (linia jak przed poprawką)
     _, log3 = _run(src, jdir, monkeypatch, od=pd.Timestamp("2026-12-01", tz="UTC"))
     assert "pliki świec" not in log3[-1]
+
+
+# ------------------------------------------------------------------ rejestr rozliczeń (przegląd 16c)
+E = pd.Timestamp("2026-08-10", tz="UTC")  # dzień zdarzenia w danych małych (146 dni od 2026-05-01)
+SMALL_OD = pd.Timestamp("2026-07-01", tz="UTC")  # data wejścia poprawki w danych małych
+
+
+def _small_env(monkeypatch, od=SMALL_OD):
+    """Silnik od 2026-06-01, wynik od 2026-07-01 — przebieg na danych małych trwa ~2 s."""
+    monkeypatch.setattr(lj, "ENGINE_START", pd.Timestamp("2026-06-01", tz="UTC"))
+    monkeypatch.setattr(lj, "JOURNAL_START", pd.Timestamp("2026-07-01", tz="UTC"))
+    monkeypatch.setattr(lj, "X1_START", pd.Timestamp("2026-07-01", tz="UTC"))
+    monkeypatch.setattr(lj, "POPRAWKA13_OD", od)
+
+
+def _cut(src: Path, dst: Path, last: pd.Timestamp) -> Path:
+    """Kopia katalogu danych do dnia `last` włącznie — dane przebiegu, w którym `last` = as_of."""
+    dst.mkdir(parents=True, exist_ok=True)
+    for f in sorted(src.iterdir()):
+        df = pd.read_parquet(f)
+        col = next((c for c in ("open_time", "timestamp") if c in df.columns), None)
+        if col is not None:
+            df = df[pd.to_datetime(df[col], utc=True) < last + DAY]
+        df.to_parquet(dst / f.name, index=False)
+    return dst
+
+
+def _run_small(src: Path, jdir: Path) -> str:
+    lj.run(fetch=False, live_dir=src, journal_dir=jdir)
+    return (jdir / "przebiegi.log").read_text(encoding="utf-8").splitlines()[-1]
+
+
+def _mark_row(src: Path, sym: str, day: pd.Timestamp, scale: float) -> tuple:
+    c = scale * float(
+        pd.read_parquet(src / f"{sym}_1d.parquet").set_index("open_time")["close"].iloc[-1]
+    )
+    return (sym, day, c * 1.01, c * 1.08, c * 0.93, c)
+
+
+def test_settlement_fixed_at_first_write_when_mark_arrives_late(tmp_path, monkeypatch):
+    """Uwaga 1 przeglądu 16c: w dniu wykrycia pobranie ceny mark zawodzi → rozliczenie „przybliżona”
+    zapisane w rejestrze i „BŁĄD” w logu tego przebiegu; następny przebieg ma już cenę mark, a mimo to
+    cena i źródło zostają (historia zmieniona: 0). Bez rejestru ten sam przebieg zmieniłby historię.
+    """
+    _small_env(monkeypatch)
+    full = tmp_path / "full"
+    _small(full, "wycofanie", E, seed=3)
+    _write_status(full, {DEAD: ("SETTLING", "2026-08-10 09:00")})
+    jdir = tmp_path / "dziennik"
+    t0 = _cut(full, tmp_path / "t0", E)
+    line0 = _run_small(t0, jdir)
+    prev_close = float(pd.read_parquet(t0 / f"{DEAD}_1d.parquet")["close"].iloc[-1])
+    assert f" | wstrzymane: {DEAD} od {E.date()}, cena {prev_close:.8g} (przybliżona)" in line0
+    assert f" | rozliczenie BŁĄD bez ceny mark {DEAD} | historia zmieniona: 0" in line0
+    assert sd.LOG_RE.match(line0)
+    assert sd.error_fields(line0) == [("rozliczenie", f"BŁĄD bez ceny mark {DEAD}")]
+    reg0 = lj.read_settlements(jdir)
+    assert reg0[["symbol", "d1", "zrodlo", "zapisano_as_of"]].values.tolist() == [
+        [DEAD, str(E.date()), "przybliżona", str(E.date())]
+    ]
+    assert reg0["cena"].iloc[0] == prev_close and np.isnan(reg0["mark_high"].iloc[0])
+    # ponowiony przebieg tej samej nocy: rejestr bez zmian, alarm nadal w logu
+    assert " | rozliczenie BŁĄD bez ceny mark " in _run_small(t0, jdir)
+    # następna noc: cena mark przyszła (świeca z dnia wykrycia jest w pliku)
+    t1 = _cut(full, tmp_path / "t1", E + DAY)
+    _write_mark(t1, [_mark_row(t0, DEAD, E, 0.5)])
+    backup = tmp_path / "bez_rejestru"
+    shutil.copytree(jdir, backup)
+    line1 = _run_small(t1, jdir)
+    assert line1.endswith("| historia zmieniona: 0") and "rozliczenie BŁĄD" not in line1
+    assert f"cena {prev_close:.8g} (przybliżona)" in line1
+    pd.testing.assert_frame_equal(lj.read_settlements(jdir), reg0)
+    tr = pd.read_csv(jdir / "transakcje.csv")
+    w = tr[(tr["symbol"] == DEAD) & (tr["powod_wyjscia"] == "wycofanie")]
+    assert len(w) and (w["cena_wyjscia"] == prev_close).all()
+    # kontrola: bez rejestru nowa cena mark przeliczyłaby rozliczenie (tak było przed poprawką 16c)
+    (backup / lj.SETTLE_CSV).unlink()
+    line_b = _run_small(t1, backup)
+    assert int(sd.LOG_RE.match(line_b)["ch"]) > 0
+
+
+def test_corrupted_mark_file_keeps_recorded_settlement_and_logs_error(tmp_path, monkeypatch):
+    """Uwaga 1(b): zepsuty plik ceny mark nie zmienia zapisanego rozliczenia „mark” (rejestr), a log
+    dostaje pole z „BŁĄD” (kontrola (h)); nieczytelny rejestr → własne pole z „BŁĄD”."""
+    _small_env(monkeypatch)
+    full = tmp_path / "full"
+    _small(full, "wycofanie", E, seed=3)
+    t0 = _cut(full, tmp_path / "t0", E)
+    _write_mark(t0, [_mark_row(t0, DEAD, E, 0.7)])
+    jdir = tmp_path / "dziennik"
+    line0 = _run_small(t0, jdir)
+    assert "(mark)" in line0 and "BŁĄD" not in line0 and line0.endswith("historia zmieniona: 0")
+    reg0 = lj.read_settlements(jdir)
+    assert reg0["zrodlo"].tolist() == ["mark"]
+    t1 = _cut(full, tmp_path / "t1", E + 3 * DAY)
+    (t1 / fetch_live.MARK_FILE).write_bytes(b"przerwany zapis")
+    line1 = _run_small(t1, jdir)
+    assert line1.endswith("| historia zmieniona: 0") and "(mark)" in line1
+    errs = sd.error_fields(line1)
+    assert len(errs) == 1 and errs[0][0] == "cena mark" and errs[0][1].startswith("BŁĄD ")
+    pd.testing.assert_frame_equal(lj.read_settlements(jdir), reg0)
+    # rejestr nieczytelny: przebieg idzie dalej, pole „rejestr rozliczeń BŁĄD …”, rejestru nie dopisuje
+    (jdir / lj.SETTLE_CSV).write_text("zepsuty\n", encoding="utf-8")
+    line2 = _run_small(t1, jdir)
+    assert sd.LOG_RE.match(line2)
+    assert ("rejestr rozliczeń", "BŁĄD ValueError") in sd.error_fields(line2)
+    assert (jdir / lj.SETTLE_CSV).read_text(encoding="utf-8") == "zepsuty\n"
+
+
+@pytest.mark.parametrize("scenario", ["wycofanie", "zamrozenie", "luka", "obrot0", "krach"])
+def test_rows_up_to_t_identical_in_runs_t_and_later(tmp_path, monkeypatch, scenario):
+    """Uwaga 2(c): po dacie wejścia kolejne przebiegi (przed zdarzeniem, w dniu wykrycia, po nim i po
+    końcu wyłączenia) przeliczają całą historię i nie zmieniają ani jednego zapisanego wiersza."""
+    _small_env(monkeypatch)
+    full = tmp_path / "full"
+    _small(full, scenario, E, seed=3)
+    if scenario != "krach":
+        base = _cut(full, tmp_path / "base", E - DAY)
+        _write_mark(full, [_mark_row(base, s, E, 0.8) for s in (DEAD, FROZ)])
+    jdir = tmp_path / "dziennik"
+    for k, last in enumerate((E - 2 * DAY, E, E + 3 * DAY, E + 10 * DAY, E + 30 * DAY)):
+        line = _run_small(_cut(full, tmp_path / f"t{k}", last), jdir)
+        assert sd.LOG_RE.match(line)
+        assert line.endswith("| historia zmieniona: 0"), (last.date(), line[-200:])
+    reg = lj.read_settlements(jdir)
+    if scenario == "krach":
+        assert reg.empty
+    else:
+        assert reg["d1"].tolist() == [str(E.date())] and reg["zrodlo"].tolist() == ["mark"]
 
 
 def _state(last_run: dict) -> dict:
@@ -612,6 +746,15 @@ def test_missing_basket_files_and_load_tolerance(tmp_path, dirs):
         and p["mark_close"].empty
         and isinstance(p["mark_close"].index, pd.DatetimeIndex)
     )
+    assert p["mark_blad"].startswith("BŁĄD ")  # zepsuty plik ceny mark → pole logu
+    assert lj.price_panels(dirs["baza"])["mark_blad"] is None  # brak pliku to nie błąd
+    t = lj.truncate(p, p["close"].index[50])  # wartości bez osi czasu przechodzą bez zmian
+    assert t["mark_blad"] == p["mark_blad"] and t["status"] is p["status"]
+    # nieczytelny rejestr rozliczeń = wyjątek (przebieg zgłasza „rejestr rozliczeń BŁĄD …”)
+    assert lj.read_settlements(tmp_path / "brak").empty
+    (jdir / lj.SETTLE_CSV).write_text("zla,naglowek\n1,2\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        lj.read_settlements(jdir)
 
 
 # ------------------------------------------------------------------ log: format i parser strony
@@ -779,81 +922,118 @@ def test_property_rows_before_entry_date_identical(
     }
 
 
-@settings(max_examples=60, deadline=None)
+def _view_data(seed: int, n: int = 90) -> dict:
+    """Dane w pamięci jak z `load_live` (BTC + C01…C21, od 2026-06-01): świece z rozrzutem, obrót
+    równy (koszyk = 20 pierwszych alfabetycznie, C01 w środku), funding 0, statusy puste."""
+    idx = pd.date_range("2026-06-01", periods=n, freq="D", tz="UTC")
+    cols = ["BTCUSDT"] + [f"C{i:02d}USDT" for i in range(1, 22)]
+    rng = np.random.default_rng(seed)
+    close = pd.DataFrame(
+        10 * np.exp(np.cumsum(rng.normal(0, 0.05, (n, len(cols))), axis=0)), index=idx, columns=cols
+    )
+    return {
+        "close": close,
+        "open": close * 1.003,
+        "high": close * 1.03,
+        "low": close * 0.97,
+        "volume": close * 0 + 1e6,
+        "funding": close * 0,
+        "status": pd.DataFrame(columns=["status", "contract_type", "delivery"]),
+    }
+
+
+@settings(max_examples=40, deadline=None)
 @given(
+    seed=st.integers(0, 50),
     n_halt=st.integers(1, 12),
-    start=st.integers(3, 25),
+    i0=st.integers(32, 60),
     kind=st.sampled_from(["koniec", "zamrozenie", "obrot0", "luka"]),
     mark=st.one_of(
         st.none(),
-        st.tuples(st.floats(0.01, 50), st.floats(0.0, 2.0), st.floats(0.0, 0.99)),
-        st.sampled_from([(np.nan, 0.1, 0.1), (-1.0, 0.1, 0.1), (0.0, 0.1, 0.1)]),
+        st.tuples(
+            st.floats(1_000, 5_000),
+            st.floats(0.01, 0.5),
+            st.floats(0.01, 0.5),
+            st.sampled_from([0.9, 1.1]),
+        ),
+        st.sampled_from([(np.nan, 0.1, 0.1, 0.9), (-1.0, 0.1, 0.1, 0.9), (0.0, 0.1, 0.1, 0.9)]),
     ),
 )
-def test_property_settlement_price_and_no_new_positions(n_halt, start, kind, mark):
-    """(b) Od dnia wykrycia do końca wyłączenia moneta ma zerową wagę trendu i nie trafia do nóg X1;
-    (c) cena rozliczenia leży w [minimum, maksimum] ceny mark z dnia wykrycia, a bez poprawnej ceny
-    mark to ostatnie normalne zamknięcie z flagą „przybliżona”."""
-    n = 60
-    d, members = _mini(n, coins=tuple(f"K{i}USDT" for i in range(12)))
+def test_property_settlement_price_and_no_new_positions(seed, n_halt, i0, kind, mark):
+    """Na widoku dziennika (`journal_view` — te same znaki, nogi i panele, z których liczy silnik):
+    (b) od dnia wykrycia do końca wyłączenia moneta ma zerową wagę trendu i nie trafia do nóg X1
+    (a przed wykryciem wagę ma — test nie jest pusty); (c) cena rozliczenia to DOKŁADNIE zamknięcie
+    ceny mark z dnia wykrycia, a ekstrema R3 to dokładnie jego maksimum i minimum. Cena mark leży
+    daleko od ceny ostatniej, open ≠ close ≠ high ≠ low, a dni obok mają inne świece mark — więc
+    pomyłka pola (open/high/low/close ostatnie) albo dnia wychodzi. Bez poprawnej ceny mark:
+    ostatnie normalne zamknięcie z flagą „przybliżona” i bez sprawdzenia likwidacji."""
+    d = _view_data(seed)
     idx = d["close"].index
-    rng = np.random.default_rng(start * 100 + n_halt)
-    d["close"].loc[:, d["close"].columns[1:]] = 10 * np.exp(
-        np.cumsum(rng.normal(0, 0.05, (n, 12)), axis=0)
-    )
-    for k, f in (("open", 1.001), ("high", 1.02), ("low", 0.98)):
-        d[k] = d["close"] * f
-    sym, i0 = "K0USDT", start
-    span = idx[i0 : i0 + n_halt]
-    if kind == "koniec":
-        d["close"].loc[idx[i0] :, sym] = np.nan
-        span = idx[i0:]
-    elif kind == "luka":
-        d["close"].loc[span, sym] = np.nan
+    sym, d1 = DEAD, idx[i0]
+    span = idx[i0 : i0 + n_halt] if kind != "koniec" else idx[i0:]
+    last = float(d["close"].at[idx[i0 - 1], sym])
+    if kind in ("koniec", "luka"):
+        for k in ("open", "high", "low", "close", "volume"):
+            d[k].loc[span, sym] = np.nan
     elif kind == "zamrozenie":
-        last = d["close"].at[idx[i0 - 1], sym]
         for k in ("open", "high", "low", "close"):
             d[k].loc[span, sym] = last
         d["volume"].loc[span, sym] = 0.0
     else:
         d["volume"].loc[span, sym] = 0.0
     if mark is not None:
-        c, up, dn = mark
-        mk = pd.DataFrame({sym: [c]}, index=[idx[i0]])
-        d.update(mark_close=mk, mark_high=mk * (1 + up), mark_low=mk * (1 - dn))
-    lj_od = idx[1]
-    old = lj.POPRAWKA13_OD
-    lj.POPRAWKA13_OD = lj_od
+        c, up, dn, a = mark
+        days = [idx[i0 - 1], d1, idx[i0 + 1]]
+        mk = {  # dni obok: inne świece (pomyłka dnia wychodzi)
+            "mark_close": [2.0 * c, c, 3.0 * c],
+            "mark_high": [2.5 * c, c * (1 + up), 3.5 * c],
+            "mark_low": [1.5 * c, c * (1 - dn), 2.5 * c],
+        }
+        for k, vals in mk.items():
+            d[k] = pd.DataFrame({sym: vals}, index=days)
+    as_of = idx[-1]
+    old = (lj.ENGINE_START, lj.POPRAWKA13_OD)
+    lj.ENGINE_START, lj.POPRAWKA13_OD = idx[30], idx[31]
     try:
-        ev = [e for e in lj.halt_events(d, members) if e["symbol"] == sym]
-        adj, excl, settle = lj.apply_halts(d, ev)
+        v = lj.journal_view(d, as_of)
+        dates = [formation_dates(idx, lj.ENGINE_START, as_of + DAY, ph) for ph in range(lj.PHASES)]
     finally:
-        lj.POPRAWKA13_OD = old
-    assert len(ev) == 1 and ev[0]["d1"] == idx[i0] and ev[0]["d2"] == span[-1]
+        lj.ENGINE_START, lj.POPRAWKA13_OD = old
+    ev = [e for e in v["events"] if e["symbol"] == sym]
+    assert len(ev) == 1 and ev[0]["d1"] == d1 and ev[0]["d2"] == span[-1]
     e = ev[0]
-    assert e["e"] == max(span[-1], idx[i0] + pd.Timedelta(days=lj.HALT_MIN_DAYS - 1))
+    assert e["e"] == max(span[-1], d1 + pd.Timedelta(days=lj.HALT_MIN_DAYS - 1))
     if mark is not None and np.isfinite(mark[0]) and mark[0] > 0:
-        assert e["zrodlo"] == "mark"
-        assert d["mark_low"].iat[0, 0] - 1e-12 <= e["cena"] <= d["mark_high"].iat[0, 0] + 1e-12
+        c, up, dn, _ = mark
+        assert e["zrodlo"] == "mark" and e["cena"] == c
+        assert e["mark_high"] == c * (1 + up) and e["mark_low"] == c * (1 - dn)
+        assert v["close"].at[d1, sym] == c
+        assert v["high"].at[d1, sym] == c * (1 + up) and v["low"].at[d1, sym] == c * (1 - dn)
     else:
-        assert e["zrodlo"] == "przybliżona" and e["cena"] == d["close"].at[idx[i0 - 1], sym]
-    # (b): każde formowanie w oknie wyłączenia — waga 0 i brak w nogach
-    signs = lj.signal_sign(adj["close"]).mask(excl)
-    vols = ewma_vol(adj["close"])
-    win = [t for t in idx if e["d1"] <= t <= e["e"]]
-    j = list(adj["close"].columns).index(sym)
-    for _, w in build_formations(signs, vols, members, win):
-        assert w[j] == 0
-    legs = lj.masked_legs(excl)
-    sig = signal_panel(adj["close"])
-    for t in win:
-        lg = legs(sig.loc[t], members[idx[0]], None, 5)
-        assert lg is None or (sym not in lg[0] and sym not in lg[1])
+        assert e["zrodlo"] == "przybliżona" and e["cena"] == last
+        assert np.isnan(v["high"].at[d1, sym]) and np.isnan(v["low"].at[d1, sym])
+    # (b): znaki, σ̂ i skład z widoku — każde formowanie w oknie wyłączenia: waga 0, brak w nogach
+    vols = ewma_vol(v["close"])
+    j = list(v["close"].columns).index(sym)
+    legs = lj.masked_legs(v["excl"])
+    sig = signal_panel(v["close"])
+    month_starts = sorted(v["members"])
+    before = []
+    for ts in dates:
+        for t, (_, w) in zip(ts, build_formations(v["signs"], vols, v["members"], ts), strict=True):
+            if e["d1"] <= t <= e["e"]:
+                assert w[j] == 0
+                lg = legs(sig.loc[t], v["members"][_month_of(t, month_starts)])
+                assert lg is None or (sym not in lg[0] and sym not in lg[1])
+            elif t < e["d1"]:
+                before.append(w[j])
+    assert any(x != 0 for x in before)  # przed wykryciem moneta ma pozycję — test nie jest pusty
     # po rozliczeniu: zwrot 0 i brak ekstremów (żadnej likwidacji po dniu wykrycia)
-    after = adj["close"][sym].loc[(idx > e["d1"]) & (idx <= e["e"])]
-    assert (after == e["cena"]).all()
-    assert adj["low"][sym].loc[(idx > e["d1"]) & (idx <= e["e"])].isna().all()
-    assert list(settle.index[settle[sym]]) == [e["d1"]]
+    win_after = (idx > e["d1"]) & (idx <= e["e"])
+    assert (v["close"][sym].loc[win_after] == e["cena"]).all()
+    assert v["low"][sym].loc[win_after].isna().all() and v["high"][sym].loc[win_after].isna().all()
+    assert list(v["settle"].index[v["settle"][sym]]) == [d1]
+    assert v["excl"][sym].loc[(idx >= e["d1"]) & (idx <= e["e"])].all()
 
 
 # ------------------------------------------------------------------ fetch_live: statusy i cena mark
@@ -957,40 +1137,54 @@ def test_parse_and_fetch_mark_only_closed_days():
     assert fetch_live.parse_mark_klines_1d([], end).empty
 
 
-def test_fetch_mark_safe_only_for_halted_coins_and_merges(dirs, tmp_path, monkeypatch, capsys):
-    import shutil
-
+def test_fetch_mark_safe_only_for_unsettled_halts_and_merges(dirs, tmp_path, monkeypatch, capsys):
     src = tmp_path / "live"
     shutil.copytree(dirs["wycofanie"], src)
     end = int(pd.Timestamp("2026-09-24 00:30", tz="UTC").value // 1_000_000)
     ex = _FakeEx({DEAD: [_k("2026-08-20", 1, 2, 0.5, 1.5)]})
+    nothing = {"symbols": [], "blad": None}
     monkeypatch.setattr(lj, "POPRAWKA13_OD", pd.Timestamp("2026-12-01", tz="UTC"))
-    assert (
-        fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0) == [] and ex.calls == []
-    )  # przed datą
+    assert fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0) == nothing and ex.calls == []
     monkeypatch.setattr(lj, "POPRAWKA13_OD", START)
     assert lj.halted_symbols(src) == [DEAD]
+    # zdarzenie już w rejestrze rozliczeń: cena mark niepotrzebna — zero zapytań
+    done = {(DEAD, str(D.date()))}
+    assert lj.halted_symbols(src, done) == []
+    assert fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0, settled=done) == nothing
+    assert ex.calls == []
     _write_mark(src, [("OLDUSDT", pd.Timestamp("2026-08-05", tz="UTC"), 1, 1, 1, 1)])
-    assert fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0) == [DEAD]
+    got = fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0, settled={("XUSDT", "2026-08-20")})
+    assert got == {"symbols": [DEAD], "blad": None}
     assert [c["symbol"] for c in ex.calls] == [DEAD]
     assert ex.calls[0]["startTime"] == int(START.value // 1_000_000)
     m = pd.read_parquet(src / fetch_live.MARK_FILE)
     assert set(m["symbol"]) == {DEAD, "OLDUSDT"}  # stare świece zostają
     p = lj.price_panels(src)
-    assert p["mark_close"].at[D, DEAD] == 1.5
+    assert p["mark_close"].at[D, DEAD] == 1.5 and p["mark_blad"] is None
     # błąd pobrania monety: zapisane świece zostają, wydruk z błędem
     ex_bad = _FakeEx({}, fail=(DEAD,))
-    assert fetch_live.fetch_mark_safe(ex_bad, src, end, pacing_s=0) == [DEAD]
+    assert fetch_live.fetch_mark_safe(ex_bad, src, end, pacing_s=0)["symbols"] == [DEAD]
     assert "cena mark BŁĄD: C01USDT RuntimeError" in capsys.readouterr().out
     assert pd.read_parquet(src / fetch_live.MARK_FILE).equals(m)
-    # błąd ogólny (np. katalog bez świec) → None, bez wyjątku
+    # zepsuty plik: przebudowa z nowego pobrania (bez starych świec) + błąd do pola logu
+    (src / fetch_live.MARK_FILE).write_bytes(b"przerwany zapis")
+    got = fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0)
+    assert got["symbols"] == [DEAD] and got["blad"].startswith("BŁĄD ")
+    assert set(pd.read_parquet(src / fetch_live.MARK_FILE)["symbol"]) == {DEAD}
+    assert "nieczytelny — usunięty i przebudowany" in capsys.readouterr().out
+    # zepsuty plik, a wszystko rozliczone: plik usunięty (następny odczyt bez błędu), błąd do logu
+    (src / fetch_live.MARK_FILE).write_bytes(b"przerwany zapis")
+    got = fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0, settled=done)
+    assert got["symbols"] == [] and got["blad"].startswith("BŁĄD ")
+    assert not (src / fetch_live.MARK_FILE).exists() and lj.price_panels(src)["mark_blad"] is None
+    # błąd ogólny (np. katalog bez świec) → błąd w wyniku, bez wyjątku
     empty = tmp_path / "pusty"
     empty.mkdir()
-    assert fetch_live.fetch_mark_safe(ex, empty, end, pacing_s=0) is None
+    assert fetch_live.fetch_mark_safe(ex, empty, end, pacing_s=0)["blad"] == "BŁĄD ValueError"
     # wyłączona poprawka = zero zapytań
     monkeypatch.setattr(lj, "POPRAWKA13_OD", None)
     ex.calls.clear()
-    assert fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0) == [] and ex.calls == []
+    assert fetch_live.fetch_mark_safe(ex, src, end, pacing_s=0) == nothing and ex.calls == []
 
 
 def test_fetch_live_run_saves_statuses_and_fetches_mark_last():
@@ -999,6 +1193,11 @@ def test_fetch_live_run_saves_statuses_and_fetches_mark_last():
     src = inspect.getsource(fetch_live.run)
     assert src.index("save_statuses_safe(info, out_dir)") < src.index("fetch_klines_1d(")
     assert src.index("fetch_coinm_funding_safe(out_dir)") < src.index("fetch_mark_safe(ex, out_dir")
+    assert "settled=settled" in src and '"mark_blad": mark["blad"]' in src
+    # dziennik czyta rejestr PRZED pobraniem i przekazuje rozliczone zdarzenia
+    run_src = inspect.getsource(lj.run)
+    assert run_src.index("read_settlements(journal_dir)") < run_src.index("fetch_run(live_dir")
+    assert run_src.index("settlement_rows(") < run_src.index('journal_dir / "sygnaly.csv"')
     for name in (fetch_live.STATUS_FILE, fetch_live.MARK_FILE):  # pliki pomocnicze to nie monety
         assert not name.endswith("_1d.parquet") and not name.endswith("_funding.parquet")
 

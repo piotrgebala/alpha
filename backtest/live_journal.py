@@ -52,7 +52,10 @@ Zasady zapisu (`dziennik/`):
   na ekstremach mark tego dnia (R3), brak nowych pozycji przez wstrzymanie i co najmniej 7 dni (R4), dni
   z obrotem 0 poza historią koszyka (R5), `powod_wyjscia = "wycofanie"` (R6), alarm przy zniknięciu pliku
   członka koszyka (R7). Silnik rund bez zmian — reguły zmieniają tylko panele wejściowe dziennika
-  (`journal_view`). Pola logu „wstrzymane: …” i „pliki świec BŁĄD …” tylko przy zdarzeniu.
+  (`journal_view`). `rozliczenia.csv` — rejestr rozliczeń (append-only): cena, źródło i ekstrema mark
+  zdarzenia ustalone przy pierwszym zapisie i potem niezmienne. Pola logu „wstrzymane: …”,
+  „rozliczenie BŁĄD …”, „rejestr rozliczeń BŁĄD …”, „cena mark BŁĄD …” i „pliki świec BŁĄD …” tylko
+  przy zdarzeniu albo błędzie.
 
     PYTHONUTF8=1 py -m backtest.live_journal              # pobranie danych + zapis
     PYTHONUTF8=1 py -m backtest.live_journal --bez-pobierania
@@ -193,6 +196,13 @@ X1_PHASE_COLS = ["r_long", "r_short", "r_ls_gross", "funding_net", "cost", "turn
 POPRAWKA13_OD: pd.Timestamp | None = pd.Timestamp("2026-10-06", tz="UTC")
 HALT_MIN_DAYS = HOLD_DAYS  # moneta poza dziennikiem co najmniej 7 dni od dnia wykrycia (R4)
 SETTLED = "wycofanie"  # `powod_wyjscia` pozycji rozliczonej przy wstrzymaniu (R6)
+# Rejestr rozliczeń (poprawka 13, po przeglądzie 16c): cena, źródło i ekstrema mark każdego zdarzenia
+# ustalane przy PIERWSZYM zapisie i potem niezmienne (append-only, w gicie z resztą dziennika) — cena
+# mark, która przyjdzie później, albo zepsuty plik ceny mark nie zmieniają zapisanej historii.
+SETTLE_CSV = "rozliczenia.csv"
+SETTLE_KEY = ["symbol", "d1"]
+SETTLE_VALUES = ["cena", "zrodlo", "mark_high", "mark_low"]
+SETTLE_COLS = [*SETTLE_KEY, *SETTLE_VALUES, "zapisano_as_of"]
 
 
 # ------------------------------------------------------------------ dane
@@ -215,7 +225,8 @@ def load_live(live_dir: Path = LIVE_DIR) -> dict:
 def price_panels(live_dir: Path = LIVE_DIR) -> dict:
     """
     Panele świec perpetuali z `live_dir` (close, high, low, volume, open) + poprawka 13: statusy
-    kontraktów (`status`) i panele ceny mark (`mark_close`, `mark_high`, `mark_low`).
+    kontraktów (`status`), panele ceny mark (`mark_close`, `mark_high`, `mark_low`) i `mark_blad`
+    („BŁĄD <typ>”, gdy plik ceny mark jest, ale się nie czyta; inaczej None).
     """
     from data.fetch_live import MARK_FILE, STATUS_FILE, symbol_files
 
@@ -251,32 +262,39 @@ def _read_statuses(path: Path) -> pd.DataFrame:
         return empty
 
 
-def _read_mark(path: Path) -> dict[str, pd.DataFrame]:
-    """Panele ceny mark (dni × symbole) z `fetch_live.fetch_mark_safe`; brak/błąd = puste panele."""
+def _read_mark(path: Path) -> dict:
+    """
+    Panele ceny mark (dni × symbole) z `fetch_live.fetch_mark_safe` + `mark_blad`. Brak pliku = puste
+    panele; plik nieczytelny = puste panele i „BŁĄD <typ>” (pole logu „cena mark BŁĄD …”). Rozliczenia
+    już zapisane biorą cenę z rejestru, więc zepsuty plik zmienia najwyżej NOWE rozliczenia.
+    """
     keys = ("mark_close", "mark_high", "mark_low")
     empty = pd.DataFrame(index=pd.DatetimeIndex([], tz="UTC", name="open_time"))
     if not path.exists():
-        return {k: empty for k in keys}
+        return {**{k: empty for k in keys}, "mark_blad": None}
     try:
         m = pd.read_parquet(path)
         m["open_time"] = pd.to_datetime(m["open_time"], utc=True)
         m = m.drop_duplicates(["symbol", "open_time"], keep="last")
-        return {
+        panels = {
             k: m.pivot(index="open_time", columns="symbol", values=k[len("mark_") :]).sort_index()
             for k in keys
         }
-    except Exception:  # noqa: BLE001 — bez ceny mark rozliczenie jest „przybliżone” (R2 iii)
-        return {k: empty for k in keys}
+        return {**panels, "mark_blad": None}
+    except Exception as exc:  # noqa: BLE001 — bez ceny mark nowe rozliczenie jest „przybliżone”
+        return {**{k: empty for k in keys}, "mark_blad": f"BŁĄD {type(exc).__name__}"}
 
 
 def truncate(data: dict, as_of: pd.Timestamp) -> dict:
     """
     Wszystko ≤ `as_of` (dzień ostatniej zamkniętej świecy) — jedyne dane, które wolno widzieć.
-    Tabela bez osi czasu (statusy kontraktów, poprawka 13) przechodzi bez zmian.
+    Wartości bez osi czasu (statusy kontraktów, rejestr rozliczeń, opis błędu — poprawka 13)
+    przechodzą bez zmian.
     """
     out = {}
     for k, v in data.items():
-        out[k] = v[v.index <= as_of] if isinstance(v.index, pd.DatetimeIndex) else v
+        idx = getattr(v, "index", None)
+        out[k] = v[idx <= as_of] if isinstance(idx, pd.DatetimeIndex) else v
     return out
 
 
@@ -387,13 +405,31 @@ def _halt_reason(d: dict, sym: str, day: pd.Timestamp) -> str:
     return "open = high = low = close"
 
 
+def _recorded(d: dict) -> dict[tuple[str, str], dict]:
+    """Rozliczenia z rejestru (`d["rozliczenia"]`, ramka `SETTLE_COLS`) → {(symbol, d1): wartości}."""
+    reg = d.get("rozliczenia")
+    if reg is None or not len(reg):
+        return {}
+    out = {}
+    for r in reg.itertuples(index=False):
+        out[(str(r.symbol), str(r.d1))] = {
+            "cena": float(r.cena),
+            "zrodlo": str(r.zrodlo),
+            "mark_high": float(r.mark_high),
+            "mark_low": float(r.mark_low),
+        }
+    return out
+
+
 def halt_events(d: dict, members: dict) -> list[dict]:
     """
     R1–R2: wstrzymania monet koszyka (członek któregokolwiek miesiąca silnika, bez BTC). Seria dni
     wstrzymania zaczęta w dniu ≥ `POPRAWKA13_OD` = zdarzenie: `d1` (dzień wykrycia = rozliczenia),
     `d2` (ostatni dzień serii w danych), `e` = max(d2, d1 + 6 dni) — koniec wyłączenia monety (R4:
     pełny cykl 7 faz, żeby żadna faza nie trzymała rozliczonej pozycji, gdy moneta wróci), cena
-    i źródło rozliczenia (`_settlement`), przyczyna. Seria zaczęta przed datą wejścia zostaje przy
+    i źródło rozliczenia, przyczyna. Cena, źródło i ekstrema mark zdarzenia zapisanego w rejestrze
+    (`d["rozliczenia"]`, `zapisane=True`) pochodzą z rejestru — niezmienne po pierwszym zapisie;
+    nowe liczy `_settlement` (`zapisane=False`). Seria zaczęta przed datą wejścia zostaje przy
     dawnych zasadach (żaden zapisany wiersz się nie zmienia). Nowa seria w oknie wyłączenia
     przedłuża okno, a nie rozlicza drugi raz (pozycji już nie ma).
     """
@@ -403,6 +439,7 @@ def halt_events(d: dict, members: dict) -> list[dict]:
     idx = raw.index
     span = pd.Timedelta(days=HALT_MIN_DAYS - 1)
     coins = sorted({s for syms in members.values() for s in syms} & set(raw.columns))
+    recorded = _recorded(d)
     events = []
     for sym in coins:
         flags = raw[sym].to_numpy()
@@ -420,10 +457,68 @@ def halt_events(d: dict, members: dict) -> list[dict]:
                     prev.update(d2=d2, e=max(prev["e"], d2))
                 else:
                     prev = {"symbol": sym, "d1": d1, "d2": d2, "e": max(d2, d1 + span)}
-                    prev.update(_settlement(d, raw, sym, i), przyczyna=_halt_reason(d, sym, d1))
+                    key = (sym, d1.date().isoformat())
+                    if key in recorded:
+                        prev.update(recorded[key], zapisane=True)
+                    else:
+                        prev.update(_settlement(d, raw, sym, i), zapisane=False)
+                    prev["przyczyna"] = _halt_reason(d, sym, d1)
                     events.append(prev)
             i = j + 1
     return events
+
+
+def read_settlements(journal_dir: Path) -> pd.DataFrame:
+    """
+    Rejestr rozliczeń `dziennik/rozliczenia.csv` (`SETTLE_COLS`; brak pliku = pusta ramka). Plik
+    nieczytelny albo bez kolumn = wyjątek: `run` zgłasza wtedy „rejestr rozliczeń BŁĄD …” w logu.
+    """
+    path = Path(journal_dir) / SETTLE_CSV
+    if not path.exists():
+        return pd.DataFrame(columns=SETTLE_COLS)
+    reg = pd.read_csv(path, dtype={"symbol": str, "d1": str, "zrodlo": str, "zapisano_as_of": str})
+    missing = [c for c in SETTLE_COLS if c not in reg.columns]
+    if missing:
+        raise ValueError(f"{SETTLE_CSV}: brak kolumn {missing}")
+    return reg[SETTLE_COLS]
+
+
+def settled_keys(register: pd.DataFrame) -> set[tuple[str, str]]:
+    """Klucze (symbol, d1 RRRR-MM-DD) zdarzeń już rozliczonych w rejestrze."""
+    return {(str(s), str(d)) for s, d in zip(register["symbol"], register["d1"], strict=True)}
+
+
+def settlement_rows(events: list[dict], as_of: pd.Timestamp) -> pd.DataFrame:
+    """Nowe wiersze rejestru: zdarzenia jeszcze niezapisane — pierwszy zapis w przebiegu `as_of`."""
+    rows = [
+        {
+            "symbol": e["symbol"],
+            "d1": e["d1"].date().isoformat(),
+            "cena": e["cena"],
+            "zrodlo": e["zrodlo"],
+            "mark_high": e["mark_high"],
+            "mark_low": e["mark_low"],
+            "zapisano_as_of": as_of.date().isoformat(),
+        }
+        for e in events
+        if not e.get("zapisane")
+    ]
+    return pd.DataFrame(rows, columns=SETTLE_COLS)
+
+
+def approx_settlements(register: pd.DataFrame, new: pd.DataFrame, as_of: pd.Timestamp) -> list[str]:
+    """
+    Monety rozliczone tej nocy (pierwszy zapis w przebiegu z tym samym `as_of`, także ponowionym)
+    bez ceny mark — pole logu „rozliczenie BŁĄD bez ceny mark …”; „przybliżona” zostaje na stałe.
+    """
+    frames = [f for f in (register, new) if f is not None and len(f)]
+    if not frames:
+        return []
+    rows = pd.concat(frames, ignore_index=True)
+    sel = (rows["zapisano_as_of"].astype(str) == as_of.date().isoformat()) & (
+        rows["zrodlo"].astype(str) == "przybliżona"
+    )
+    return sorted(set(rows.loc[sel, "symbol"].astype(str)))
 
 
 def apply_halts(d: dict, events: list[dict]) -> tuple[dict, pd.DataFrame, pd.DataFrame]:
@@ -501,10 +596,13 @@ def drop_excluded(pos: pd.DataFrame, excl: pd.DataFrame, as_of: pd.Timestamp) ->
     return pos[~pos["symbol"].map(lambda s: bool(out.get(s, False)))]
 
 
-def halted_symbols(live_dir: Path = LIVE_DIR) -> list[str]:
+def halted_symbols(
+    live_dir: Path = LIVE_DIR, settled: set[tuple[str, str]] | None = None
+) -> list[str]:
     """
-    Monety koszyka ze zdarzeniem wstrzymania (R1) od `POPRAWKA13_OD` w danych `live_dir` — dla nich
-    `fetch_live.fetch_mark_safe` pobiera cenę mark (R2). Zwykle pusta lista.
+    Monety koszyka ze zdarzeniem wstrzymania (R1) od `POPRAWKA13_OD` w danych `live_dir`, którego
+    rejestr jeszcze nie rozliczył (`settled` = klucze (symbol, d1) z rejestru; None = wszystkie) —
+    dla nich `fetch_live.fetch_mark_safe` pobiera cenę mark (R2). Zwykle pusta lista.
     """
     if POPRAWKA13_OD is None:
         return []
@@ -514,7 +612,10 @@ def halted_symbols(live_dir: Path = LIVE_DIR) -> list[str]:
         return []
     d = truncate(p, as_of)
     events = halt_events(d, basket_members(d["volume"], _months(as_of)))
-    return sorted({e["symbol"] for e in events})
+    done = settled or set()
+    return sorted(
+        {e["symbol"] for e in events if (e["symbol"], e["d1"].date().isoformat()) not in done}
+    )
 
 
 def components(
@@ -1515,8 +1616,12 @@ def halt_entries(events: list[dict], members: dict, as_of: pd.Timestamp) -> list
     return [e for e in events if e["d2"] == as_of and e["symbol"] in relevant]
 
 
-def missing_basket_files(journal_dir: Path, live_dir: Path) -> list[str]:
-    """R7: członkowie koszyka z `koszyk.csv` (`czlonek_top20`) bez pliku świec w `live_dir`."""
+def missing_basket_files(journal_dir: Path, live_dir: Path, columns=None) -> list[str]:
+    """
+    R7: członkowie koszyka z `koszyk.csv` (`czlonek_top20`) bez świec w danych przebiegu — bez pliku
+    w `live_dir` albo bez kolumny w panelu `close` (`columns`; plik pusty po pustej odpowiedzi giełdy
+    `price_panels` pomija, więc moneta znikałaby z historii bez alarmu).
+    """
     from data.fetch_live import symbol_files
 
     path = Path(journal_dir) / "koszyk.csv"
@@ -1524,19 +1629,32 @@ def missing_basket_files(journal_dir: Path, live_dir: Path) -> list[str]:
         return []
     ks = pd.read_csv(path, dtype=str)
     members = set(ks.loc[ks["czlonek_top20"].str.strip() == "True", "symbol"])
-    return sorted(members - set(symbol_files(live_dir)))
+    have = set(symbol_files(live_dir))
+    if columns is not None:
+        have &= set(columns)
+    return sorted(members - have)
 
 
 def _price_txt(price: float) -> str:
     return f"{price:.8g}" if np.isfinite(price) else "brak"
 
 
-def halt_log(entries: list[dict], missing: list[str], error: str | None = None) -> str:
+def halt_log(
+    entries: list[dict],
+    missing: list[str],
+    error: str | None = None,
+    approx: list[str] | None = None,
+    mark_err: str | None = None,
+    reg_err: str | None = None,
+) -> str:
     """
-    Pola `przebiegi.log` poprawki 13 — tylko przy zdarzeniu (bez niego linia jak przed poprawką):
-    „wstrzymane: SYM od RRRR-MM-DD, cena X (mark|przybliżona); …” (R6) i alarm „pliki świec BŁĄD
-    brak SYM, …” (R7 — słowo „BŁĄD” zapala kontrolę (h) strony bez zmiany parsera). Pola stoją po
-    „koszyk”, przed polami carry; bez „|” i nowej linii, nie zaczynają się od „carry ”.
+    Pola `przebiegi.log` poprawki 13 — tylko przy zdarzeniu albo błędzie (bez nich linia jak przed
+    poprawką), w tej kolejności: „wstrzymane: SYM od RRRR-MM-DD, cena X (mark|przybliżona); …” (R6);
+    „rozliczenie BŁĄD bez ceny mark SYM, …” (rozliczenie zapisane tej nocy bez ceny mark —
+    „przybliżona” na stałe); „rejestr rozliczeń BŁĄD <typ>” (rejestr nieczytelny); „cena mark BŁĄD
+    <typ>” (plik ceny mark nieczytelny, przebudowany); „pliki świec BŁĄD brak SYM, …” (R7). Słowo
+    „BŁĄD” zapala kontrolę (h) strony bez zmiany parsera. Pola stoją po „koszyk”, przed polami
+    carry; bez „|”, znaków sterujących i nowej linii, nie zaczynają się od „carry ”.
     """
     fields = []
     if entries:
@@ -1547,6 +1665,12 @@ def halt_log(entries: list[dict], missing: list[str], error: str | None = None) 
                 for e in entries
             )
         )
+    if approx:
+        fields.append("rozliczenie BŁĄD bez ceny mark " + ", ".join(approx))
+    if reg_err:
+        fields.append(f"rejestr rozliczeń {reg_err}")
+    if mark_err:
+        fields.append(f"cena mark {mark_err}")
     if missing:
         fields.append("pliki świec BŁĄD brak " + ", ".join(missing))
     elif error:
@@ -1555,9 +1679,31 @@ def halt_log(entries: list[dict], missing: list[str], error: str | None = None) 
     return "".join(f" | {f}" for f in clean)
 
 
-def summarize_halts(entries: list[dict], missing: list[str], error: str | None = None) -> str:
-    """Linie wydruku poprawki 13 — tylko przy zdarzeniu (inaczej pusty tekst)."""
+def summarize_halts(
+    entries: list[dict],
+    missing: list[str],
+    error: str | None = None,
+    approx: list[str] | None = None,
+    mark_err: str | None = None,
+    reg_err: str | None = None,
+) -> str:
+    """Linie wydruku poprawki 13 — tylko przy zdarzeniu albo błędzie (inaczej pusty tekst)."""
     lines = []
+    if approx:
+        lines.append(
+            "  UWAGA: BŁĄD — rozliczenie bez ceny mark (zapisane w rejestrze na stałe jako "
+            "„przybliżona”, ostatnie normalne zamknięcie): " + ", ".join(approx)
+        )
+    if reg_err:
+        lines.append(
+            f"  UWAGA: rejestr rozliczeń ({SETTLE_CSV}) nieczytelny: {reg_err} — nowe rozliczenia "
+            "nie są zapisywane, a przeliczenie może zmienić historię"
+        )
+    if mark_err:
+        lines.append(
+            f"  UWAGA: plik ceny mark nieczytelny: {mark_err} — przebudowany; rozliczenia już "
+            "zapisane bez zmian (rejestr)"
+        )
     if entries:
         od = POPRAWKA13_OD.date() if POPRAWKA13_OD is not None else "—"
         lines.append(
@@ -1583,13 +1729,20 @@ def summarize_halts(entries: list[dict], missing: list[str], error: str | None =
 # ------------------------------------------------------------------ przebieg
 def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURNAL_DIR) -> str:
     started = pd.Timestamp.now(tz="UTC")
+    # poprawka 13: rejestr rozliczeń przed pobraniem — cena mark tylko dla zdarzeń jeszcze nierozliczonych
+    try:
+        register, reg_err = read_settlements(journal_dir), None
+    except Exception as exc:  # noqa: BLE001 — błąd rejestru do logu, dziennik liczy dalej
+        register, reg_err = pd.DataFrame(columns=SETTLE_COLS), f"BŁĄD {type(exc).__name__}"
+    fetch_info: dict = {}
     if fetch:
         from data.fetch_live import run as fetch_run
 
-        fetch_run(live_dir)
+        fetch_info = fetch_run(live_dir, settled=None if reg_err else settled_keys(register))
     cfg = load_config()
     fee = cfg["costs"]["taker_fee_rate"] + cfg["costs"]["slippage_bps"] / 10_000.0
     data = load_live(live_dir)
+    data["rozliczenia"] = register
     last = {
         "binance": data["close"][BTC].last_valid_index(),  # BTC: obie składowe go potrzebują
         "coinbase_premia": data["premium"].index.max(),
@@ -1597,6 +1750,14 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     as_of = min(last.values())
     engines: dict = {}  # poprawka 11: ramki silnika tego przebiegu (tylko do zapisu rozbicia)
     pos, k, hist, rets = positions(data, as_of, fee, engines)
+    # poprawka 13: pierwszy zapis rozliczeń nowych zdarzeń — przed innymi plikami, więc ponowiony
+    # przebieg tej samej nocy i każdy następny biorą cenę, źródło i ekstrema mark z rejestru
+    new_rz = settlement_rows(engines.get("halts", []), as_of)
+    ch_rz: list[str] = []
+    if reg_err is None and len(new_rz):
+        _, ch_rz = append_rows(journal_dir / SETTLE_CSV, new_rz, SETTLE_KEY, SETTLE_VALUES)
+    p13_approx = approx_settlements(register, new_rz if reg_err is None else None, as_of)
+    p13_mark_err = data.get("mark_blad") or (fetch_info or {}).get("mark_blad")
     res = journal_rows(hist, rets)
     n_sig, ch_sig = append_rows(
         journal_dir / "sygnaly.csv",
@@ -1715,7 +1876,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     p13_missing, p13_err = [], None
     if _p13_on(as_of):
         try:
-            p13_missing = missing_basket_files(journal_dir, live_dir)
+            p13_missing = missing_basket_files(journal_dir, live_dir, data["close"].columns)
         except Exception as exc:  # noqa: BLE001 — kontrola plików nie zatrzymuje dziennika
             p13_err = f"BŁĄD {type(exc).__name__}"
     try:
@@ -1741,7 +1902,7 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
     status = stop_status(dd)
     # zmiany carry NIE wchodzą do wspólnego licznika (kryterium 2 głównego dziennika, kontrola (b)
     # strony) — mają własne pole „carry zmiany N” (`carry_log`), a daty są w wydruku carry
-    changed = ch_sig + ch_res + ch_x1 + ch_st + ch_fg + ch_tr + ch_rb + ch_fz + ch_ks
+    changed = ch_rz + ch_sig + ch_res + ch_x1 + ch_st + ch_fg + ch_tr + ch_rb + ch_fz + ch_ks
     late = (started.normalize() - as_of).days > 1
     summary = (
         summarize(pos, k, as_of, eq, dd, status, late, changed, last)
@@ -1758,11 +1919,14 @@ def run(fetch: bool = True, live_dir: Path = LIVE_DIR, journal_dir: Path = JOURN
         + "\n"
         + summarize_carry(rows_ca, ca_txt, ca_flag, ca_err, ca_days)
     )
-    p13_text = summarize_halts(p13_entries, p13_missing, p13_err)
+    p13_extra = {"approx": p13_approx, "mark_err": p13_mark_err, "reg_err": reg_err}
+    p13_text = summarize_halts(p13_entries, p13_missing, p13_err, **p13_extra)
     if p13_text:
         summary += "\n" + p13_text
     ca_log = carry_log(ca_flag, ca_days)  # poprawka 12: tylko przy kłopocie albo zmianach
-    p13_log = halt_log(p13_entries, p13_missing, p13_err)  # poprawka 13: tylko przy zdarzeniu
+    p13_log = halt_log(
+        p13_entries, p13_missing, p13_err, **p13_extra
+    )  # poprawka 13: przy zdarzeniu
     log = (
         f"{started.isoformat()} | as_of {as_of.date()} | binance {last['binance'].date()} | "
         f"premia {last['coinbase_premia'].date()} | sygnały +{n_sig} | wyniki +{n_res} | "
