@@ -1,8 +1,9 @@
 # HS0 — Hyperliquid: funding od 2023-05-12 (BTC/ETH/SOL 3,4 roku), krótkie świece tylko ~5 000 wstecz, kolektor stanu rynku gotowy (19 MB/dobę), 2026-10-05
 
-> **STATUS: ZAKOŃCZONA NA GAŁĘZI `zadanie-010-hl-stan-rynku` — czeka na przegląd diffu (bramka 16c) i scalenie
-> (orkiestrator).** Sonda wykonana według pre-rejestracji `a6f0fbc`; kontrola pozytywna **ZALICZONA** (20 z 20 monet);
-> kolektor gotowy (krótka próba). **Scalenie do `master` = start kolektora** (cron klonu dziennika, jak LB0).
+> **STATUS: ZAKOŃCZONA NA GAŁĘZI `zadanie-010-hl-stan-rynku`; przegląd 16c (orkiestrator, 2026-10-06): Approve
+> z uwagami — uwagi 1–6 poprawione; czeka na scalenie.** Sonda wykonana według pre-rejestracji `a6f0fbc`; kontrola
+> pozytywna **ZALICZONA** (20 z 20 monet); kolektor gotowy (dwie krótkie próby). **Scalenie do `master` = start
+> kolektora** (cron klonu dziennika, jak LB0).
 > **0 wariantów — POZA licznikami.** To brama danych (zbieranie i sprawdzenie źródła), nie pomiar hipotezy. Żadnego
 > zestawienia z cenami Binance ani z wynikami strategii.
 
@@ -13,7 +14,7 @@ opłatę „funding”). Handlują tam inni ludzie niż na Binance. Chcieliśmy 
 pobrać za darmo i czy da się tanio zapisywać stan rynku co minutę od dziś.
 
 1. **Funding — historia jest, ale krótsza niż na Binance.** BTC, ETH i SOL: od 2023-05-12, czyli **3,4 roku**.
-   Reszta koszyka: od dnia wejścia monety na HL, **1,0–3,4 roku** (mediana 3,15). Przez pierwsze ~4 tygodnie
+   Pozostałe 17 monet koszyka: od dnia wejścia monety na HL, **1,0–3,4 roku** (mediana 3,15; dla wszystkich 20 — 3,25). Przez pierwsze ~4 tygodnie
    (2023-05-12 → ~06-08) funding liczono co 8 godzin; potem co godzinę, prawie bez dziur (3 brakujące godziny w 3 latach).
 2. **Świece — dzienne tak, krótsze tylko z ostatnich miesięcy.** Publiczne API oddaje najwyżej ~5 000 ostatnich
    świec danego interwału i nie pozwala sięgnąć głębiej: minutowe — **3,5 dnia**, godzinowe — **208 dni**,
@@ -26,8 +27,8 @@ pobrać za darmo i czy da się tanio zapisywać stan rynku co minutę od dziś.
 4. **Kontrola pozytywna zaliczona:** stawka fundingu z historii i świeca minutowa zgadzają się z tym, co było widać
    na żywo tuż przed pełną godziną — **20 z 20 monet w obu testach**.
 5. **Kolektor stanu rynku gotowy.** Co minutę zapisuje pełną odpowiedź `metaAndAssetCtxs` (stawka fundingu, cena
-   mark/oracle/mid, premia, otwarte pozycje, obrót — 234 monety). Próba: 3 migawki, 0 błędów, **19,0 MB na dobę**.
-   Ruszy sam po scaleniu.
+   mark/oracle/mid, premia, otwarte pozycje, obrót — 234 monety). Dwie próby po 3 migawki, 0 błędów,
+   **18,7–19,0 MB na dobę**. Ruszy sam po scaleniu.
 
 **Co to znaczy dla decyzji:** funding i premię HL da się badać na historii najwyżej **3,4 roku** (baza Binance ma
 5,5 roku), a minutowy stan rynku (mark, oracle, otwarte pozycje) — dopiero od startu kolektora. Każdy pomysł na tych
@@ -46,18 +47,22 @@ danych to NOWA hipoteza z rachunkiem mocy przed odczytem. Ten raport niczego nie
   testy bez sieci. Dane kolektora POZA repo: `$HOME/likwidacje_hl/stan/` (zmienna `CLAS5_HL_STAN_DIR`).
 - **Commity:** pre-rejestracja `a6f0fbc` (19:21:45 UTC — przed pierwszym zapytaniem sondy o 19:31:04); kod sondy
   i kolektora `2f1a6b1` (sonda uruchomiona na tym commicie, `sonda_historii.py` sha256 `ff8a6b9e…bcb57385`); testy,
-  nadzór i próba kolektora `07c5b54`; wynik i dokumentacja — commit zamykający gałąź.
+  nadzór i próba kolektora `07c5b54`; wynik i dokumentacja `9d68835`; poprawki po przeglądzie 16c (kod) `f9e34ff` —
+  powtórzona próba kolektora na tym commicie (`data/collect_hl_stan.py` sha256 `d4db539d…a745db6676b`); dokumentacja
+  poprawek — commit zamykający gałąź.
 - **Komendy** (z katalogu repo; w worktree wykonawcy interpreter `/home/dantey1/alpha/.venv/bin/python`):
   - `PYTHONUTF8=1 .venv/bin/python runs/2026-10-05_hs0-hl-stan-rynku/sonda_historii.py > runs/2026-10-05_hs0-hl-stan-rynku/raw_output.txt 2>&1`
     — 2026-10-05 19:31:04 → 20:41:34 UTC (z czekaniem na pełną godzinę dla kontroli pozytywnej);
-  - `PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --dir "$(mktemp -d)" --max-cycles 3` — 19:37:40 → 19:40:00;
-    oględziny katalogu (gzip -t, zcat, człony, `status.json`, `--status`) → `raw_output_kolektor.txt`;
+  - `PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --dir "$(mktemp -d)" --max-cycles 3` — próba 1:
+    2026-10-05 19:37:40 → 19:40:00 (kod roboczy sprzed `07c5b54`, bez zapisanego hasha); próba 2 po poprawkach 16c:
+    2026-10-06 06:44:49 → 06:47:00 (commit `f9e34ff`, sha256 w pliku); oględziny katalogu (gzip -t, zcat, człony,
+    `status.json`, `--status`) → `raw_output_kolektor.txt` (obie próby);
   - `PYTHONUTF8=1 .venv/bin/python runs/2026-10-05_hs0-hl-stan-rynku/druga_droga.py <plik dnia z próby kolektora>`
     — 20:42:55 → 20:55:30 UTC → `raw_output_druga_droga.txt` (bramka 16a).
 - **Budżet wag sondy:** 18 809 wagi (liczonej ostrożnie: 20 + ⌈n/20⌉) w 415 zapytaniach, **0 × HTTP 429, 0 × 5xx,
   0 × BRAK DANYCH**; tempo z konstrukcji ≤ 500 wagi/min (odstęp 0,12 s na jednostkę wagi). Druga droga: ~140 zapytań
   co 5 s (≤ 480 wagi/min), uruchomiona po zakończeniu sondy.
-- **Testy:** `tests/test_collect_hl_stan.py` (44, bez sieci, w tym 7 właściwości `hypothesis`),
+- **Testy:** `tests/test_collect_hl_stan.py` (52 po poprawkach 16c, bez sieci, w tym 7 właściwości `hypothesis`),
   `tests/test_likwidacje_sh.py` (14; 6 nowych dla bloku HL, 1 rozszerzony).
 - **Koszyk:** `dziennik/koszyk.csv` czytany przez `pd.read_csv(usecols=["symbol", "czlonek_top20"])`. Uwaga uczciwości:
   przy pierwszym oglądaniu nagłówka pliku (`head -3`) wykonawca zobaczył też 2 pierwsze wiersze wszystkich kolumn
@@ -209,7 +214,7 @@ Pokrycie **20/26 = 77 %**. Reguła „1000X → kX” zadziałała raz (kPEPE); 
 | | | | ZEC | 2025-10-02 | 1,01 |
 
   Podsumowanie: ≥ 3 lata — 12 z 20 monet; 2–3 lata — 4 (ACE, ADA, NEAR, ENA); < 2 lata — 4 (HYPE, TRUMP, PUMP, ZEC).
-  17 monet poza BTC/ETH/SOL: min 1,01 / **mediana 3,15** / maks 3,40 roku. Wszystkie kończą się na 2026-10-05 20:00.
+  17 monet poza BTC/ETH/SOL: min 1,01 / **mediana 3,15** / maks 3,40 roku (wszystkie 20 z BTC/ETH/SOL: mediana 3,25). Wszystkie kończą się na 2026-10-05 20:00.
 
 ### P3 — świece (`candleSnapshot`, BTC)
 
@@ -276,7 +281,12 @@ z konstrukcji (średnia z całego przebiegu 267/min, razem z czekaniem na pełn�
   (przed pierwszą migawką, bez zapytania do sieci): czyste wyjście, w logu „koniec: przerwanie”, status zapisany.
 - **Wzrost:** ~56 B gzip na monetę na migawkę, czyli każda nowa moneta HL dokłada ~0,08 MB/dobę; 20 MB/dobę wypada przy
   ~246 monetach (dziś 234).
-- **Kryterium „gotowy” z pre-rejestracji: spełnione.**
+- **Próba 2 — po poprawkach z przeglądu 16c** (2026-10-06 06:45, 06:46, 06:47 UTC; commit `f9e34ff`, sha256 pliku
+  kolektora `d4db539d6f9c4011c7f28f9dd52dcfbe40478e38b425e1e208fc1a745db6676b`): 3 migawki, 0 błędów, 0 ponowień,
+  0 kopii ogona; człony **12 964 / 13 020 / 13 017 B** gzip, średnio **13 000 B → 18,7 MB/dobę**; `gzip -t` OK,
+  3 linie, 0 bajtów spoza ASCII, `czytaj_dzien` bez ostrzeżenia; w logu „przy starcie sprawdzono: 2026-10-06.jsonl.gz”;
+  `--status` pokazuje dziś i wczoraj. Próba 1 szła na kodzie roboczym bez zapisanego hasha — dlatego powtórzona.
+- **Kryterium „gotowy” z pre-rejestracji: spełnione** (obie próby).
 
 ## Bramka 16a — walidacja write-upu (skill `data:validate-data` + `docs/skills/bramki-jakosci.md`)
 
@@ -331,7 +341,8 @@ z konstrukcji (średnia z całego przebiegu 267/min, razem z czekaniem na pełn�
   wycofane zostają w API — przyszła karta nie musi patrzeć tylko na „ocalałych”.
 - Kontrola pozytywna 20/20 — historia to te same liczby co na żywo (jednostki, czas, moneta).
 - Kolektor tani i odporny: 20 wagi/min (1,7 % limitu IP), 19 MB/dobę, bez kluczy; człon gzip na migawkę z naprawą
-  urwanego ogona, jedna instancja (`flock` w katalogu danych), wyłącznik, status; 44 testy bez sieci + 6 testów nadzoru.
+  urwanego ogona (uszkodzenia w środku pliku — do kopii `*.ogon-*`, nic nie znika), jedna instancja (`flock` w katalogu
+  danych), wyłącznik, status; 52 testy bez sieci + 6 testów nadzoru.
 - 0 × 429, 0 × BRAK DANYCH w 415 zapytaniach sondy.
 
 **(−)**
@@ -354,7 +365,11 @@ z konstrukcji (średnia z całego przebiegu 267/min, razem z czekaniem na pełn�
 - **Ręczny start** z dowolnego klonu: `nohup bash tools/likwidacje.sh >/dev/null 2>&1 &` (blokady w katalogach danych
   są wspólne — druga instancja żadnego kolektora nie wystartuje; działające kolektory Binance i Bybit nie są dotykane).
 - **Stan:** `PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --status` — „ostatnia … s temu” poniżej ~120 s,
-  błędy ~0, „pełnych migawek” rośnie o 60 na godzinę; powyżej 5 min bez migawki wydruk mówi „UWAGA”.
+  błędy ~0, „pełnych migawek” rośnie o 60 na godzinę; powyżej 5 min bez migawki wydruk mówi „UWAGA”. Pokazuje plik
+  dzisiejszy i wczorajszy (z nieczytelnym ogonem, jeśli jest) oraz pliki `*.ogon-*`.
+- **Pliki `<dzień>.jsonl.gz.ogon-<ms>`:** powstają tylko, gdy przy naprawie za ostatnim pełnym członem leży coś innego
+  niż urwana ostatnia migawka (uszkodzenie w środku pliku, śmieci). Zawierają odcięte bajty w całości — także poprawne
+  migawki stojące za uszkodzeniem. Kolektor ich nie kasuje; co z nimi zrobić, decyduje użytkownik.
 - **Wyłącznik:** plik `$HOME/likwidacje_hl/stan/WYLACZONY` — cron nie startuje kolektora, a działający kończy się przed
   następną migawką (≤ 60 s).
 - **Katalog danych:** `$HOME/likwidacje_hl/stan` (zmiana: `CLAS5_HL_STAN_DIR`): `YYYY-MM-DD.jsonl.gz`, `status.json`,
@@ -370,11 +385,39 @@ limit odpowiedzi 4 MB; parsowanie tylko `json.loads` (bez `eval`, `pickle`, YAML
 plików wyłącznie z lokalnego zegara po regule 2019–2100 — dane z sieci nie wpływają na ścieżki; zapis JSON w ASCII —
 odpowiedź serwera nie rozbije linii pliku; w powłoce `$1` w cudzysłowach, katalog z zaufanej zmiennej środowiska;
 `git rev-parse` w sondzie przez `subprocess` z listą argumentów; brak kluczy i sekretów. Przegląd zrobiony w tej sesji
-bez podzadań (oszczędność tokenów, `docs/rag/12`: workflow wieloagentowe tylko na wyraźne życzenie).
+bez podzadań (oszczędność tokenów, `docs/rag/12`: workflow wieloagentowe tylko na wyraźne życzenie). Poprawki po 16c
+(2026-10-06) nie zmieniają warstwy sieciowej poza krótszym limitem czasu próby; nowe pliki `*.ogon-*` dostają nazwę
+wyłącznie z nazwy pliku dnia i lokalnego zegara (dane z sieci nie wpływają na ścieżki).
 
 ## Bramka 16c (przegląd diffu przed scaleniem)
 
-Robi orkiestrator (`engineering:code-review`) — poza tą gałęzią.
+**16c (orkiestrator, 2026-10-06): Approve z uwagami — uwagi 1–6 poprawione** (na tej gałęzi, commit kodu `f9e34ff`):
+
+1. **Ponowienia przesuwały migawki o minutę.** Termin ograniczał tylko START ponowienia, a próba trwała do 20 s —
+   przy przeciążonym API migawki wypadały w minutach M, M+2, M+4. Teraz limit czasu KAŻDEJ próby to
+   `min(20 s, czas do terminu)`, a próby krótszej niż 3 s (`MIN_PROBA_S`) się nie zaczyna; cała migawka kończy się
+   przed terminem (start + 50 s). Test `test_przeciazone_api_nie_przesuwa_migawek` żąda minut M, M+1, M+2 i prób
+   (+0 s, 20), (+22 s, 20), (+46 s, 4); test `test_klient_nie_zaczyna_proby_bez_czasu_na_nia`. Mutant bez przycinania
+   limitu — oba testy czerwone.
+2. **Naprawa ogona kasowała poprawne migawki za uszkodzeniem.** Teraz bez śladu odcinany jest tylko urwany początek
+   JEDNEGO członu (`urwany_czlon`); każdy inny ogon najpierw trafia do `<plik>.ogon-<ms>` (zapis atomowy, kolejna kopia
+   w tej samej milisekundzie nie nadpisuje poprzedniej), z wpisem „UWAGA” w logu, licznikiem `kopie_ogona` w statusie
+   i ostrzeżeniem w `--status`. Testy: zły bajt w 2. z 5 członów — 3 poprawne człony zachowane w kopii; rozpoznanie
+   urwanego członu; właściwość `hypothesis` (kopia = dokładnie odcięte bajty, albo brak kopii tylko dla urwanego członu).
+3. **Wczorajszy plik z urwanym ogonem.** Przy starcie naprawiany jest plik dzisiejszy i najnowszy starszy (awaria o 23:59,
+   serwer wyłączony przez północ albo kilka dni); `czytaj_dzien` czyta pełne człony i ostrzega `UrwanyOgon` zamiast
+   rzucać `EOFError` dla całego dnia; `--status` pokazuje dziś i wczoraj. Testy: start naprawia najnowszy starszy plik
+   (sprzed 3 dni), czytanie pliku z urwanym ogonem, status z wczorajszym nieczytelnym ogonem.
+4. **Cofnięty zegar usypiał pętlę na godzinę.** Czekanie śpi najwyżej `okres_s` naraz, a gdy do terminu zostaje więcej
+   niż okres (zegar cofnięty), termin liczy się od nowa. Test z zegarem cofniętym o 1 h: żaden sen > 60 s, 3 migawki
+   w ~3,5 min. Mutant bez granicy snu — test czerwony.
+5. **Test blokady Bybit przepuszczał błąd.** `test_hl_outliving_binance_keeps_only_its_own_lock` sprawdza teraz blokadę
+   Bybit bez czekania: po wyjściu procesu Bybit (pid z piaskownicy), póki HL jeszcze żyje.
+6. **Mediana i hash próby.** „Mediana 3,15” dotyczy 17 monet bez BTC/ETH/SOL (dla wszystkich 20 — 3,25) — dopisane
+   w `runs/INDEX.md` (wiersz HS0, wniosek 117) i w tym README. Próba kolektora powtórzona po poprawkach na commicie
+   `f9e34ff`, z sha256 pliku kolektora (`raw_output_kolektor.txt`, „PRÓBA 2”).
+
+Po poprawkach: pełny pytest (OMP_NUM_THREADS=4, pipefail) — **2206 passed, 3 skipped, kod 0**; ruff + black czyste.
 
 ## Wniosek
 

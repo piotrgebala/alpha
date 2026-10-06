@@ -56,3 +56,70 @@ człon 13244 B gzip / 72465 B surowo; czas_utc 2026-10-05T19:40:00.333+00:00; wy
 }
 == --status
 kolektor HL pid 3370323 od 2026-10-05T19:37:40+00:00; status z 2026-10-05T19:40:00+00:00; migawek 3 w 3 cyklach (błędy sieci 0, odrzucone 0, zapisu 0, ponowień 0); ostatnia 2026-10-05T19:40:00.333+00:00 (25 s temu), 13244 B gzip, monet 234; ostatni błąd: None; koniec: max_cycles=3; dziś 2026-10-05.jsonl.gz: 0.04 MB, pełnych migawek 3.
+
+================================================================================================
+== PRÓBA 2 (po poprawkach z przeglądu 16c, 2026-10-06): PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --dir "$(mktemp -d)" --max-cycles 3
+== uwaga: próba 1 (wyżej, 2026-10-05 19:37:40–19:40:00) szła na kodzie z commitu 2f1a6b1 + zmianach roboczych przed 07c5b54 — bez zapisanego hasha
+commit kodu: f9e34ff (Zadanie 010 / HS0: poprawki po przeglądzie 16c (uwagi 1–5) w kolektorze stanu HL i test)
+sha256 data/collect_hl_stan.py: d4db539d6f9c4011c7f28f9dd52dcfbe40478e38b425e1e208fc1a745db6676b
+zmiany robocze w data/collect_hl_stan.py względem commitu: 0 (0 = kod z commitu)
+katalog: /tmp/claude-1000/-home-dantey1-alpha/1cef6a66-4706-4193-a479-9f7e0b075783/scratchpad/hs0_proba2.YIyQ
+start 2026-10-06 06:44:49 UTC, koniec 2026-10-06 06:47:00 UTC, kod wyjścia 0 (stdout procesu pusty)
+
+== ls -la
+drwx------ 4096 .
+drwx------ 4096 ..
+-rw-r--r-- 0 .lock
+-rw-r--r-- 39001 2026-10-06.jsonl.gz
+-rw-rw-r-- 331 kolektor.log
+-rw-rw-r-- 596 status.json
+
+== gzip -t (standardowy gzip, wszystkie człony)
+gzip -t: OK
+== zcat | wc -l ; zcat | wc -c ; wc -c pliku
+3
+216252
+39001
+== zcat | LC_ALL=C grep -c (bajty spoza ASCII)
+0
+
+== człony gzip i rekordy (Python, data.collect_hl_stan)
+pełnych członów: 3; koniec ostatniego pełnego: 39001 B z 39001 B
+człon 12964 B gzip / 72053 B surowo; czas_utc 2026-10-06T06:45:00.950+00:00; wyslano→odebrano 950 ms; monet 234 (wycofane 56), kontekstów 234
+człon 13020 B gzip / 72104 B surowo; czas_utc 2026-10-06T06:46:00.583+00:00; wyslano→odebrano 583 ms; monet 234 (wycofane 56), kontekstów 234
+człon 13017 B gzip / 72095 B surowo; czas_utc 2026-10-06T06:47:00.780+00:00; wyslano→odebrano 780 ms; monet 234 (wycofane 56), kontekstów 234
+średnio 13000 B gzip na migawkę → × 1 440 = 18.7 MB/dobę (próg pre-rejestracji ~20)
+czytaj_dzien: 3 rekordów (bez ostrzeżenia o ogonie)
+
+== kolektor.log
+2026-10-06T06:44:49+00:00 start pid 1414922 → /tmp/claude-1000/-home-dantey1-alpha/1cef6a66-4706-4193-a479-9f7e0b075783/scratchpad/hs0_proba2.YIyQ (https://api.hyperliquid.xyz/info, co 60 s)
+2026-10-06T06:44:49+00:00 przy starcie sprawdzono: 2026-10-06.jsonl.gz
+2026-10-06T06:47:00+00:00 koniec: max_cycles=3; migawek 3, cykli 3
+
+== status.json
+{
+ "zapisano_utc": "2026-10-06T06:47:00+00:00",
+ "start_utc": "2026-10-06T06:44:49+00:00",
+ "pid": 1414922,
+ "zrodlo": "https://api.hyperliquid.xyz/info",
+ "zapytanie": "metaAndAssetCtxs",
+ "okres_s": 60.0,
+ "cykle": 3,
+ "migawki": 3,
+ "bledy_sieci": 0,
+ "odrzucone": 0,
+ "bledy_zapisu": 0,
+ "ponowienia": 0,
+ "przyciete_bajty": 0,
+ "kopie_ogona": 0,
+ "ostatnia_ms": 1791269220780,
+ "ostatnia_utc": "2026-10-06T06:47:00.780+00:00",
+ "ostatni_plik": "2026-10-06.jsonl.gz",
+ "ostatni_czlon_b": 13017,
+ "ostatnia_odpowiedz_b": 71986,
+ "monet": 234,
+ "ostatni_blad": null,
+ "koniec": "max_cycles=3"
+}
+== --status
+kolektor HL pid 1414922 od 2026-10-06T06:44:49+00:00; status z 2026-10-06T06:47:00+00:00; migawek 3 w 3 cyklach (błędy sieci 0, odrzucone 0, zapisu 0, ponowień 0, kopie ogona 0); ostatnia 2026-10-06T06:47:00.780+00:00 (19 s temu), 13017 B gzip, monet 234; ostatni błąd: None; koniec: max_cycles=3; dziś 2026-10-06.jsonl.gz: 0.04 MB, pełnych migawek 3; wczoraj 2026-10-05.jsonl.gz: brak.
