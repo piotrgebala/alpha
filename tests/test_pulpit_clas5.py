@@ -1,4 +1,4 @@
-"""Testy tools/pulpit_clas5.py — strona „Pulpit CLAS-5” (Dziennik | Tokeny | Mapa | Radar w jednym artefakcie).
+"""Testy tools/pulpit_clas5.py — strona „Pulpit CLAS-5” (Radar | Dziennik | Tokeny | Mapa w jednym artefakcie).
 
 Strażnicy: (1) ładunek zakładki to dokładnie szkielet platformy + preludium + źródło (bajt w bajt),
 a preludium jest pierwszym skryptem dziecka; (2) w blokach JSON nie ma surowego „<”, więc nic nie
@@ -25,7 +25,7 @@ from hypothesis import strategies as st
 from tools import pulpit_clas5 as pc
 
 ROOT = Path(__file__).resolve().parents[1]
-IDS = ["dziennik", "tokeny", "mapa", "radar"]
+IDS = ["radar", "dziennik", "tokeny", "mapa"]
 OTWARCIE = '<script type="application/json" id="strona-{}">'
 BLOK_RE = re.compile(r'<script type="application/json" id="strona-([a-z]+)">(.*?)</script>', re.S)
 PLIKI = [pc.SZABLON, *(sciezka for _, sciezka in pc.ZAKLADKI)]
@@ -157,7 +157,7 @@ def test_zakladki_z_panelami_i_ladunkami(zlozony):
         )
     assert [ident for ident, _ in pc.ZAKLADKI] == IDS
     assert list(bloki(zlozony)) == IDS
-    assert "var ZAKLADKI = ['dziennik', 'tokeny', 'mapa', 'radar'];" in sz
+    assert "var ZAKLADKI = ['radar', 'dziennik', 'tokeny', 'mapa'];" in sz
 
 
 def test_hosty_zewnetrzne_powloki(zlozony):
@@ -291,7 +291,7 @@ def test_znonce_z_nonce_i_bez_node(tmp_path, zlozony):
         assert len(tagi) == len(re.findall(r"<script(?=[\s>])[^>]*>", html, re.I))
         assert all(len(re.findall(r"\snonce\s*=", t, re.I)) == 1 for t in tagi)  # bez podwajania
         assert wyjscie.replace(wstawka, "") == html  # tylko wstawka, nic więcej
-    assert [wyjscia[2 * k + 1].count(wstawka) for k in range(len(IDS))] == [2, 2, 1, 2]  # preludium + strona
+    assert [wyjscia[2 * k + 1].count(wstawka) for k in range(len(IDS))] == [2, 2, 2, 1]  # preludium + strona
     assert wyjscia[-1].count(wstawka) == 1  # tylko <SCRIPT type="module">
 
 

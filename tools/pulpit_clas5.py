@@ -1,7 +1,7 @@
-"""Pulpit CLAS-5 — składa jedną stronę z zakładkami Dziennik | Tokeny | Mapa | Radar (artefakt claude.ai).
+"""Pulpit CLAS-5 — składa jedną stronę z zakładkami Radar | Dziennik | Tokeny | Mapa (artefakt claude.ai).
 
 Publikuje się `tools/pulpit_clas5.html`, pod adresem dawnej strony dziennika (adres w README.md,
-zakładki #dziennik, #tokeny, #mapa, #radar). Powłoka `tools/pulpit_clas5_szablon.html` ma nagłówek
+zakładki #radar, #dziennik, #tokeny, #mapa). Powłoka `tools/pulpit_clas5_szablon.html` ma nagłówek
 z zakładkami; każda zakładka to osobna strona w <iframe srcdoc>, tworzonym przy pierwszym otwarciu.
 Źródła zakładek zostają samodzielnymi stronami i działają bez zmian:
 
@@ -45,10 +45,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SZABLON = Path("tools/pulpit_clas5_szablon.html")
 WYJSCIE = ROOT / "tools" / "pulpit_clas5.html"
 ZAKLADKI: tuple[tuple[str, Path], ...] = (
+    ("radar", Path("tools/strona_radar.html")),
     ("dziennik", Path("docs/strona_dziennik.html")),
     ("tokeny", Path("tools/strona_tokeny.html")),
     ("mapa", Path("docs/mapa_projektu.html")),
-    ("radar", Path("tools/strona_radar.html")),
 )
 ZNACZNIK = "<!--@LADUNKI@-->"
 SKRYPT_RUTYNY = Path("tools/strona_dziennika.py")
