@@ -1,0 +1,90 @@
+HS0 druga droga — start 2026-10-05 20:42:55 UTC
+
+(1) najstarszy funding — okna miesięczne od 2022-01 (bez startTime = 0)
+  BTC: pola rekordu fundingHistory ['coin', 'fundingRate', 'premium', 'time']; najstarszy {"coin": "BTC", "fundingRate": "-0.0006133368", "premium": "-0.0009133368", "time": 1683849600048}
+  BTC: najstarszy rekord 2023-05-12 00:00:00 (1683849600048 ms; 17 zapytań)
+  ETH: pola rekordu fundingHistory ['coin', 'fundingRate', 'premium', 'time']; najstarszy {"coin": "ETH", "fundingRate": "0.0000863563", "premium": "-0.0002136437", "time": 1683849600048}
+  ETH: najstarszy rekord 2023-05-12 00:00:00 (1683849600048 ms; 17 zapytań)
+  SOL: pola rekordu fundingHistory ['coin', 'fundingRate', 'premium', 'time']; najstarszy {"coin": "SOL", "fundingRate": "-0.0002365296", "premium": "-0.0005365296", "time": 1683849600048}
+  SOL: najstarszy rekord 2023-05-12 00:00:00 (1683849600048 ms; 17 zapytań)
+
+(1b) [po wyniku] liczba rekordów fundingu BTC oknami półmiesięcznymi; odstępy per miesiąc
+  2023-05: 60 rek. (godzin w oknie 480); odstępy 1 h: 0, 8 h: 57, inne: 2 [8.40 h, 7.60 h]
+  2023-06: 573 rek. (godzin w oknie 720); odstępy 1 h: 551, 8 h: 21, inne: 0
+  2023-07: 743 rek. (godzin w oknie 744); odstępy 1 h: 741, 8 h: 0, inne: 1 [2.00 h]
+  2023-08: 743 rek. (godzin w oknie 744); odstępy 1 h: 741, 8 h: 0, inne: 1 [2.00 h]
+  2023-09: 720 rek. (godzin w oknie 720); odstępy 1 h: 717, 8 h: 0, inne: 2 [1.03 h, 0.97 h]
+  2023-10: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2023-11: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2023-12: 744 rek. (godzin w oknie 744); odstępy 1 h: 741, 8 h: 0, inne: 2 [1.07 h, 0.93 h]
+  2024-01: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2024-02: 696 rek. (godzin w oknie 696); odstępy 1 h: 695, 8 h: 0, inne: 0
+  2024-03: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2024-04: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2024-05: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2024-06: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2024-07: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2024-08: 743 rek. (godzin w oknie 744); odstępy 1 h: 741, 8 h: 0, inne: 1 [2.00 h]
+  2024-09: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2024-10: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2024-11: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2024-12: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2025-01: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2025-02: 672 rek. (godzin w oknie 672); odstępy 1 h: 671, 8 h: 0, inne: 0
+  2025-03: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2025-04: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2025-05: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2025-06: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2025-07: 744 rek. (godzin w oknie 744); odstępy 1 h: 739, 8 h: 0, inne: 4 [1.25 h, 0.75 h, 1.03 h, 0.97 h]
+  2025-08: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2025-09: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2025-10: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2025-11: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2025-12: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2026-01: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2026-02: 672 rek. (godzin w oknie 672); odstępy 1 h: 671, 8 h: 0, inne: 0
+  2026-03: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2026-04: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2026-05: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2026-06: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2026-07: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2026-08: 744 rek. (godzin w oknie 744); odstępy 1 h: 743, 8 h: 0, inne: 0
+  2026-09: 720 rek. (godzin w oknie 720); odstępy 1 h: 719, 8 h: 0, inne: 0
+  2026-10: 117 rek. (godzin w oknie 116); odstępy 1 h: 116, 8 h: 0, inne: 0
+  SUMA BTC (okna półmiesięczne, do 2026-10-05 20:02:23): 29259 rekordów (pełne stronicowanie w sondzie: 29 259)
+  miesiące z odstępem ≠ 1 h albo z brakami: ['2023-05', '2023-06', '2023-07', '2023-08', '2023-09', '2023-12', '2024-08', '2025-07']
+
+(2) pokrycie koszyka — meta z pliku kolektora (metaAndAssetCtxs) + reguła jako regex
+  monet w zapisanej migawce: 234 (wycofane 56)
+  koszyk: 26 symboli; na HL 20 (notowane 20); poza HL: ['AKEUSDT', 'BTWUSDT', 'CYSUSDT', 'LSKUSDT', 'QNTUSDT', 'TUTUSDT']
+
+(3) rozmiar dobowy z pliku próby kolektora
+  plik 39575 B gzip, 217139 B po rozpakowaniu, linii 3; średnio 13192 B gzip i 72380 B surowo na migawkę → × 1 440 = 19.0 MB/dobę gzip (104 MB surowo)
+  czasy odbioru: ['2026-10-05T19:38:00.818+00:00', '2026-10-05T19:39:00.347+00:00', '2026-10-05T19:40:00.333+00:00']
+  opóźnienie odpowiedzi (czas_ms − wyslano_ms): [817, 347, 333] ms
+
+(4) [po wyniku, opisowo] świece 1d sprzed pierwszego fundingu — czy to handel na HL?
+  BTC: świec 1d 2239; przed pierwszym fundingiem (2023-05-12 00:00:00): 996, z n = 0: 921, z v = 0: 921; od fundingu: 1242
+    2020-08-19 00:00:00: o 11962.0 c 11763.9 v 0.0 n 0
+    2020-08-20 00:00:00: o 11763.9 c 11857.9 v 0.0 n 0
+    2023-05-10 00:00:00: o 27614.0 c 27588.0 v 130.01531 n 3110
+    2023-05-11 00:00:00: o 27588.0 c 26958.0 v 94.34273 n 3879
+    2023-05-13 00:00:00: o 26779.0 c 26756.0 v 59.69247 n 2219
+    2023-05-14 00:00:00: o 26757.0 c 26901.0 v 64.55242 n 2506
+    mediana n: przed fundingiem 0, od fundingu 150508
+  ZEC: świec 1d 1368; przed pierwszym fundingiem (2025-10-02 14:00:00): 999, z n = 0: 999, z v = 0: 999; od fundingu: 368
+    2023-01-07 00:00:00: o 41.35 c 41.5 v 0.0 n 0
+    2023-01-08 00:00:00: o 41.5 c 42.75 v 0.0 n 0
+    2025-09-30 00:00:00: o 72.04 c 74.14 v 0.0 n 0
+    2025-10-01 00:00:00: o 74.14 c 120.8 v 0.0 n 0
+    2025-10-03 00:00:00: o 131.39 c 127.54 v 438920.13 n 77733
+    2025-10-04 00:00:00: o 127.59 c 157.16 v 376204.17 n 73894
+    mediana n: przed fundingiem 0, od fundingu 82744
+  ADA: świec 1d 2079; przed pierwszym fundingiem (2023-10-22 06:00:00): 999, z n = 0: 999, z v = 0: 999; od fundingu: 1079
+    2021-01-26 00:00:00: o 0.34309 c 0.34387 v 0.0 n 0
+    2021-01-27 00:00:00: o 0.34386 c 0.31143 v 0.0 n 0
+    2023-10-20 00:00:00: o 0.2469 c 0.2511 v 0.0 n 0
+    2023-10-21 00:00:00: o 0.2511 c 0.2585 v 0.0 n 0
+    2023-10-23 00:00:00: o 0.26385 c 0.28044 v 15287646.0 n 2425
+    2023-10-24 00:00:00: o 0.28097 c 0.27912 v 18806904.0 n 2930
+    mediana n: przed fundingiem 0, od fundingu 7234

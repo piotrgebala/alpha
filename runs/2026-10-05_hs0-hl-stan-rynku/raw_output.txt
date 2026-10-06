@@ -1,0 +1,175 @@
+HS0 sonda historii Hyperliquid — start 2026-10-05 19:31:04 UTC; commit 2f1a6b1; python 3.12.3; źródło https://api.hyperliquid.xyz/info
+
+=== P1 — spis perpetuali głównej giełdy ===
+monet w meta: 234; notowane 178; wycofane (isDelisted) 56
+wycofane: AI AI16Z ARK BADGER BLAST BLZ BNT CANTO CATI CHILLGUY CYBER DOOD FRIEND FTM FTT FXS HPOS ILV IP JELLY LAUNCHCOIN LISTA LOOM MATIC MAV MAVIA MEW MKR MYRO NEIROETH NFTI NTRN OGN OM OMNI ORBS OX PANDORA PIXEL PROMPT RDNT REQ RLB RNDR SCR SHIA STG STRAX TON TST UNIBOT USTC VINE YZY ZEREBRO kDOGS
+perpDexs: 11 pozycji (null = główna giełda: True); rynki HIP-3 poza zbiorem: xyz flx vntl hyna km abcd cash para mkts io
+
+=== P5 — koszyk top-20 (dziennik/koszyk.csv: tylko symbol, czlonek_top20) ===
+symboli z czlonek_top20 = True: 26
+           BTCUSDT →        BTC: notowana
+           ETHUSDT →        ETH: notowana
+           SOLUSDT →        SOL: notowana
+           XRPUSDT →        XRP: notowana
+           ZECUSDT →        ZEC: notowana
+          HYPEUSDT →       HYPE: notowana
+          DOGEUSDT →       DOGE: notowana
+           BNBUSDT →        BNB: notowana
+         TRUMPUSDT →      TRUMP: notowana
+           TUTUSDT →        TUT: brak na HL
+           ENAUSDT →        ENA: notowana
+      1000PEPEUSDT →      kPEPE: notowana
+          PUMPUSDT →       PUMP: notowana
+           ACEUSDT →        ACE: notowana
+           SUIUSDT →        SUI: notowana
+           ADAUSDT →        ADA: notowana
+           CYSUSDT →        CYS: brak na HL
+          LINKUSDT →       LINK: notowana
+           AKEUSDT →        AKE: brak na HL
+           BTWUSDT →        BTW: brak na HL
+          NEARUSDT →       NEAR: notowana
+           UNIUSDT →        UNI: notowana
+           LSKUSDT →        LSK: brak na HL
+           QNTUSDT →        QNT: brak na HL
+           ARBUSDT →        ARB: notowana
+           WLDUSDT →        WLD: notowana
+koszyk na HL: 20/26 (notowane 20, wycofane 0)
+
+=== Kontrola pozytywna K1 (funding) i K2 (świeca 1m) ===
+czekam na migawkę o 2026-10-05 19:59:05 UTC (pełna godzina H = 2026-10-05 20:00:00)
+migawka odebrana 2026-10-05 19:59:05.383 UTC; w oknie [HH:59:00, HH:59:40]: True
+rozmiar migawki: 72287 B surowo, 13187 B gzip (poziom 9) → × 1 440 = 19.0 MB/dobę (druga droga szacunku kolektora)
+     BTC: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 85720.5 świeca 2026-10-05 19:59:00 l 85698 h 85730 c 85699 |c/px−1| 2.5 pb → zgodna
+     ETH: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 2708.65 świeca 2026-10-05 19:59:00 l 2707.9 h 2708.7 c 2708.1 |c/px−1| 2.0 pb → zgodna
+     SOL: K1 r_ctx +0.00000352 r_hist +0.00000335 (czas 2026-10-05 20:00:00.065) |Δ| 1.63e-07 tol 1.88e-06 → zgodna; K2 midPx 120.125 świeca 2026-10-05 19:59:00 l 120.12 h 120.21 c 120.2 |c/px−1| 6.2 pb → zgodna
+     XRP: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 1.50295 świeca 2026-10-05 19:59:00 l 1.5016 h 1.5046 c 1.5029 |c/px−1| 0.3 pb → zgodna
+     ZEC: K1 r_ctx +0.00002750 r_hist +0.00002748 (czas 2026-10-05 20:00:00.065) |Δ| 2.09e-08 tol 7.87e-06 → zgodna; K2 midPx 1340.95 świeca 2026-10-05 19:59:00 l 1339.5 h 1341.2 c 1340.1 |c/px−1| 6.3 pb → zgodna
+    HYPE: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 94.1575 świeca 2026-10-05 19:59:00 l 94.14 h 94.273 c 94.272 |c/px−1| 12.2 pb → zgodna
+    DOGE: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 0.095408 świeca 2026-10-05 19:59:00 l 0.095409 h 0.095466 c 0.095441 |c/px−1| 3.5 pb → zgodna
+     BNB: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 787.915 świeca 2026-10-05 19:59:00 l 787.8 h 787.89 c 787.8 |c/px−1| 1.5 pb → zgodna
+   TRUMP: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 2.05335 świeca 2026-10-05 19:59:00 l 2.0534 h 2.0548 c 2.0548 |c/px−1| 7.1 pb → zgodna
+     ENA: K1 r_ctx +0.00003821 r_hist +0.00003832 (czas 2026-10-05 20:00:00.065) |Δ| 1.11e-07 tol 1.06e-05 → zgodna; K2 midPx 0.24842 świeca 2026-10-05 19:59:00 l 0.24829 h 0.24841 c 0.24831 |c/px−1| 4.4 pb → zgodna
+   kPEPE: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 0.004414 świeca 2026-10-05 19:59:00 l 0.004414 h 0.004415 c 0.004415 |c/px−1| 2.3 pb → zgodna
+    PUMP: K1 r_ctx +0.00001318 r_hist +0.00001320 (czas 2026-10-05 20:00:00.065) |Δ| 2.06e-08 tol 4.29e-06 → zgodna; K2 midPx 0.006348 świeca 2026-10-05 19:59:00 l 0.006345 h 0.006358 c 0.006358 |c/px−1| 15.8 pb → zgodna
+     ACE: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 0.1905 świeca 2026-10-05 19:59:00 l 0.1907 h 0.1907 c 0.1907 |c/px−1| 10.5 pb → zgodna
+     SUI: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 1.19705 świeca 2026-10-05 19:59:00 l 1.1964 h 1.2048 c 1.2048 |c/px−1| 64.7 pb → zgodna
+     ADA: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 0.265945 świeca 2026-10-05 19:59:00 l 0.266 h 0.26609 c 0.26609 |c/px−1| 5.5 pb → zgodna
+    LINK: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 13.9135 świeca 2026-10-05 19:59:00 l 13.914 h 13.917 c 13.917 |c/px−1| 2.5 pb → zgodna
+    NEAR: K1 r_ctx +0.00004875 r_hist +0.00004913 (czas 2026-10-05 20:00:00.065) |Δ| 3.78e-07 tol 1.32e-05 → zgodna; K2 midPx 5.18685 świeca 2026-10-05 19:59:00 l 5.1856 h 5.1998 c 5.1943 |c/px−1| 14.4 pb → zgodna
+     UNI: K1 r_ctx +0.00002092 r_hist +0.00002116 (czas 2026-10-05 20:00:00.065) |Δ| 2.45e-07 tol 6.23e-06 → zgodna; K2 midPx 9.1023 świeca 2026-10-05 19:59:00 l 9.1001 h 9.1025 c 9.1016 |c/px−1| 0.8 pb → zgodna
+     ARB: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 0.20683 świeca 2026-10-05 19:59:00 l 0.2069 h 0.20713 c 0.20708 |c/px−1| 12.1 pb → zgodna
+     WLD: K1 r_ctx +0.00001250 r_hist +0.00001250 (czas 2026-10-05 20:00:00.065) |Δ| 0.00e+00 tol 4.13e-06 → zgodna; K2 midPx 0.56369 świeca 2026-10-05 19:59:00 l 0.56344 h 0.5637 c 0.56369 |c/px−1| 0.0 pb → zgodna
+BTC/ETH/SOL zgodne w K1 i K2: True; pozostałe (17): K1 100%, K2 100% (próg 80%); |c/px−1| mediana 4.9 pb, maks. 64.7 pb (n 20)
+KONTROLA POZYTYWNA: ZALICZONA
+[budżet] wag 900, zapytań 43, 429: 0, 5xx: 0, BRAK DANYCH: 0; średnio 29 wagi/min
+
+=== P3 — świece BTC: [0, teraz] i okno starsze niż 5 000 świec (teraz = 2026-10-05 20:02:23) ===
+  1m: [0, teraz] → 5113 świec, pierwsza 2026-10-02 06:50:00, ostatnia 2026-10-05 20:02:00, głębokość 3.5 dnia; okno [teraz − 6 000, teraz − 5 500 świec] (2026-10-01 16:02:23 … 2026-10-02 00:22:23) → 0 świec
+  5m: [0, teraz] → 5023 świec, pierwsza 2026-09-18 09:30:00, ostatnia 2026-10-05 20:00:00, głębokość 17.4 dnia; okno [teraz − 6 000, teraz − 5 500 świec] (2026-09-15 00:02:23 … 2026-09-16 17:42:23) → 0 świec
+ 15m: [0, teraz] → 5008 świec, pierwsza 2026-08-14 16:15:00, ostatnia 2026-10-05 20:00:00, głębokość 52.2 dnia; okno [teraz − 6 000, teraz − 5 500 świec] (2026-08-04 08:02:23 … 2026-08-09 13:02:23) → 0 świec
+  1h: [0, teraz] → 5002 świec, pierwsza 2026-03-11 11:00:00, ostatnia 2026-10-05 20:00:00, głębokość 208.4 dnia; okno [teraz − 6 000, teraz − 5 500 świec] (2026-01-28 20:02:23 … 2026-02-18 16:02:23) → 0 świec
+  4h: [0, teraz] → 5001 świec, pierwsza 2024-06-24 12:00:00, ostatnia 2026-10-05 20:00:00, głębokość 833.3 dnia; okno [teraz − 6 000, teraz − 5 500 świec] (2024-01-09 20:02:23 … 2024-04-02 04:02:23) → 0 świec
+  1d: [0, teraz] → 2239 świec, pierwsza 2020-08-19 00:00:00, ostatnia 2026-10-05 00:00:00, głębokość 2238.0 dnia; okno starsze niż 5 000 dni nie dotyczy (przed startem HL)
+
+=== P2/P3/P4 — per moneta zestawu S (60: 3 + koszyk 17 + wycofane 40 z 56) ===
+     BTC [notowana] funding: 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2020-08-19 00:00:00 → 2026-10-05 00:00:00 (6.13 r., 2239 świec)
+     ETH [notowana] funding: 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2020-08-19 00:00:00 → 2026-10-05 00:00:00 (6.13 r., 2239 świec)
+     SOL [notowana] funding: 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2020-09-14 00:00:00 → 2026-10-05 00:00:00 (6.06 r., 2213 świec)
+     XRP [notowana] funding: 2023-06-18 00:00:00 → 2026-10-05 20:00:00 (3.30 r.; 1. strona 500 rek., mediana odstępu 1.0000011111111111 h); świece 1d: 2020-09-21 00:00:00 → 2026-10-05 00:00:00 (6.04 r., 2206 świec)
+     ZEC [notowana] funding: 2025-10-02 14:00:00 → 2026-10-05 20:00:00 (1.01 r.; 1. strona 500 rek., mediana odstępu 1.0 h); świece 1d: 2023-01-07 00:00:00 → 2026-10-05 00:00:00 (3.74 r., 1368 świec)
+    HYPE [notowana] funding: 2024-12-05 10:00:00 → 2026-10-05 20:00:00 (1.83 r.; 1. strona 500 rek., mediana odstępu 0.9999991666666667 h); świece 1d: 2024-12-05 00:00:00 → 2026-10-05 00:00:00 (1.83 r., 670 świec)
+    DOGE [notowana] funding: 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2020-08-19 00:00:00 → 2026-10-05 00:00:00 (6.13 r., 2239 świec)
+     BNB [notowana] funding: 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2020-08-19 00:00:00 → 2026-10-05 00:00:00 (6.13 r., 2239 świec)
+   TRUMP [notowana] funding: 2025-01-18 06:00:00 → 2026-10-05 20:00:00 (1.71 r.; 1. strona 500 rek., mediana odstępu 1.0000002777777777 h); świece 1d: 2025-01-18 00:00:00 → 2026-10-05 00:00:00 (1.71 r., 626 świec)
+     ENA [notowana] funding: 2024-04-02 14:00:00 → 2026-10-05 20:00:00 (2.51 r.; 1. strona 500 rek., mediana odstępu 0.9999966666666666 h); świece 1d: 2024-04-02 00:00:00 → 2026-10-05 00:00:00 (2.51 r., 917 świec)
+   kPEPE [notowana] funding: 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2023-05-05 00:00:00 → 2026-10-05 00:00:00 (3.42 r., 1250 świec)
+    PUMP [notowana] funding: 2025-07-10 04:00:00 → 2026-10-05 20:00:00 (1.24 r.; 1. strona 500 rek., mediana odstępu 1.0000005555555556 h); świece 1d: 2025-07-10 00:00:00 → 2026-10-05 00:00:00 (1.24 r., 453 świec)
+     ACE [notowana] funding: 2023-12-18 14:00:00 → 2026-10-05 20:00:00 (2.80 r.; 1. strona 500 rek., mediana odstępu 0.9999986111111111 h); świece 1d: 2023-12-18 00:00:00 → 2026-10-05 00:00:00 (2.80 r., 1023 świec)
+     SUI [notowana] funding: 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2023-05-03 00:00:00 → 2026-10-05 00:00:00 (3.43 r., 1252 świec)
+     ADA [notowana] funding: 2023-10-22 06:00:00 → 2026-10-05 20:00:00 (2.96 r.; 1. strona 500 rek., mediana odstępu 1.0000011111111111 h); świece 1d: 2021-01-26 00:00:00 → 2026-10-05 00:00:00 (5.69 r., 2079 świec)
+    LINK [notowana] funding: 2023-05-18 08:00:00 → 2026-10-05 20:00:00 (3.39 r.; 1. strona 500 rek., mediana odstępu 1.0000066666666667 h); świece 1d: 2020-08-22 00:00:00 → 2026-10-05 00:00:00 (6.12 r., 2236 świec)
+    NEAR [notowana] funding: 2023-11-01 17:00:00 → 2026-10-05 20:00:00 (2.93 r.; 1. strona 500 rek., mediana odstępu 1.0000025 h); świece 1d: 2021-02-13 00:00:00 → 2026-10-05 00:00:00 (5.64 r., 2061 świec)
+     UNI [notowana] funding: 2023-08-11 23:00:00 → 2026-10-05 20:00:00 (3.15 r.; 1. strona 500 rek., mediana odstępu 1.0000008333333332 h); świece 1d: 2020-11-15 00:00:00 → 2026-10-05 00:00:00 (5.89 r., 2151 świec)
+     ARB [notowana] funding: 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2023-03-23 00:00:00 → 2026-10-05 00:00:00 (3.54 r., 1293 świec)
+     WLD [notowana] funding: 2023-07-24 14:00:00 → 2026-10-05 20:00:00 (3.20 r.; 1. strona 500 rek., mediana odstępu 1.0000022222222222 h); świece 1d: 2023-07-24 00:00:00 → 2026-10-05 00:00:00 (3.20 r., 1170 świec)
+      AI [wycofana] funding: 2024-02-19 14:00:00 → 2025-04-12 23:00:00 (1.15 r.; 1. strona 500 rek., mediana odstępu 1.0000022222222222 h); świece 1d: 2024-01-08 00:00:00 → 2025-04-11 00:00:00 (1.26 r., 460 świec)
+   AI16Z [wycofana] funding: 2025-01-01 05:00:00 → 2025-11-07 23:00:00 (0.85 r.; 1. strona 500 rek., mediana odstępu 0.9999997222222222 h); świece 1d: 2025-01-01 00:00:00 → 2025-11-06 00:00:00 (0.85 r., 310 świec)
+     ARK [wycofana] funding: 2023-10-06 14:00:00 → 2026-06-26 23:00:00 (2.72 r.; 1. strona 500 rek., mediana odstępu 1.0000005555555556 h); świece 1d: 2023-09-19 00:00:00 → 2026-06-25 00:00:00 (2.77 r., 1011 świec)
+  BADGER [wycofana] funding: 2023-11-09 15:00:00 → 2025-04-12 23:00:00 (1.42 r.; 1. strona 500 rek., mediana odstępu 1.0000016666666667 h); świece 1d: 2023-11-09 00:00:00 → 2025-04-11 00:00:00 (1.42 r., 520 świec)
+   BLAST [wycofana] funding: 2024-06-26 16:00:00 → 2026-05-26 23:00:00 (1.91 r.; 1. strona 500 rek., mediana odstępu 1.0000002777777777 h); świece 1d: 2024-06-26 00:00:00 → 2026-05-25 00:00:00 (1.91 r., 699 świec)
+     BLZ [wycofana] funding: 2023-09-12 12:00:00 → 2024-12-23 23:00:00 (1.28 r.; 1. strona 500 rek., mediana odstępu 0.9999988888888889 h); świece 1d: 2020-12-17 00:00:00 → 2024-12-22 00:00:00 (4.01 r., 1467 świec)
+     BNT [wycofana] funding: 2023-10-08 16:00:00 → 2025-04-05 23:00:00 (1.49 r.; 1. strona 500 rek., mediana odstępu 1.0000005555555556 h); świece 1d: 2023-08-10 00:00:00 → 2025-04-04 00:00:00 (1.65 r., 604 świec)
+   CANTO [wycofana] funding: 2023-10-09 16:00:00 → 2024-08-14 23:00:00 (0.85 r.; 1. strona 500 rek., mediana odstępu 1.0 h); świece 1d: 2023-10-09 00:00:00 → 2024-08-13 00:00:00 (0.85 r., 310 świec)
+    CATI [wycofana] funding: 2024-09-25 06:00:00 → 2025-04-12 23:00:00 (0.55 r.; 1. strona 500 rek., mediana odstępu 1.0000005555555556 h); świece 1d: 2024-09-20 00:00:00 → 2025-04-11 00:00:00 (0.56 r., 204 świec)
+CHILLGUY [wycofana] funding: 2024-11-25 06:00:00 → 2026-05-26 23:00:00 (1.50 r.; 1. strona 500 rek., mediana odstępu 0.9999994444444444 h); świece 1d: 2024-11-25 00:00:00 → 2026-05-25 00:00:00 (1.49 r., 547 świec)
+   CYBER [wycofana] funding: 2023-08-31 02:00:00 → 2025-04-12 23:00:00 (1.62 r.; 1. strona 500 rek., mediana odstępu 0.9999980555555555 h); świece 1d: 2023-08-21 00:00:00 → 2025-04-11 00:00:00 (1.64 r., 600 świec)
+    DOOD [wycofana] funding: 2025-05-09 14:00:00 → 2026-06-26 23:00:00 (1.13 r.; 1. strona 500 rek., mediana odstępu 1.0000002777777777 h); świece 1d: 2025-05-09 00:00:00 → 2026-06-25 00:00:00 (1.13 r., 413 świec)
+  FRIEND [wycofana] funding: 2023-08-21 03:00:00 → 2024-05-03 23:00:00 (0.70 r.; 1. strona 500 rek., mediana odstępu 0.9999994444444444 h); świece 1d: 2023-08-21 00:00:00 → 2024-05-02 00:00:00 (0.70 r., 256 świec)
+     FTM [wycofana] funding: 2023-05-25 00:00:00 → 2025-01-13 23:00:00 (1.64 r.; 1. strona 500 rek., mediana odstępu 1.000003611111111 h); świece 1d: 2020-09-24 00:00:00 → 2025-01-12 00:00:00 (4.30 r., 1572 świec)
+     FTT [wycofana] funding: 2023-09-25 13:00:00 → 2026-05-26 23:00:00 (2.67 r.; 1. strona 500 rek., mediana odstępu 0.9999997222222222 h); świece 1d: 2023-09-25 00:00:00 → 2026-05-25 00:00:00 (2.66 r., 974 świec)
+     FXS [wycofana] funding: 2023-07-30 21:00:00 → 2026-01-07 23:00:00 (2.44 r.; 1. strona 500 rek., mediana odstępu 1.0000022222222222 h); świece 1d: 2023-01-20 00:00:00 → 2026-01-06 00:00:00 (2.96 r., 1083 świec)
+    HPOS [wycofana] funding: 2023-07-31 20:00:00 → 2025-04-05 23:00:00 (1.68 r.; 1. strona 500 rek., mediana odstępu 1.0000019444444443 h); świece 1d: 2023-05-10 00:00:00 → 2025-04-04 00:00:00 (1.90 r., 696 świec)
+     ILV [wycofana] funding: 2023-11-17 16:00:00 → 2025-04-05 23:00:00 (1.38 r.; 1. strona 500 rek., mediana odstępu 1.0000008333333332 h); świece 1d: 2023-11-10 00:00:00 → 2025-04-04 00:00:00 (1.40 r., 512 świec)
+      IP [wycofana] funding: 2025-02-13 10:00:00 → 2026-06-30 23:00:00 (1.38 r.; 1. strona 500 rek., mediana odstępu 0.9999994444444444 h); świece 1d: 2025-02-13 00:00:00 → 2026-06-29 00:00:00 (1.37 r., 502 świec)
+   JELLY [wycofana] funding: 2025-01-30 05:00:00 → 2025-03-27 23:00:00 (0.16 r.; 1. strona 500 rek., mediana odstępu 1.0 h); świece 1d: 2025-01-30 00:00:00 → 2025-03-26 00:00:00 (0.15 r., 56 świec)
+LAUNCHCOIN [wycofana] funding: 2025-05-14 15:00:00 → 2025-10-26 23:00:00 (0.45 r.; 1. strona 500 rek., mediana odstępu 1.0 h); świece 1d: 2025-05-14 00:00:00 → 2025-10-25 00:00:00 (0.45 r., 165 świec)
+   LISTA [wycofana] funding: 2024-06-28 04:00:00 → 2025-04-12 23:00:00 (0.79 r.; 1. strona 500 rek., mediana odstępu 1.0000002777777777 h); świece 1d: 2024-06-20 00:00:00 → 2025-04-11 00:00:00 (0.81 r., 296 świec)
+    LOOM [wycofana] funding: 2023-09-28 23:00:00 → 2024-12-13 23:00:00 (1.21 r.; 1. strona 500 rek., mediana odstępu 0.9999994444444444 h); świece 1d: 2023-09-28 00:00:00 → 2024-12-12 00:00:00 (1.21 r., 442 świec)
+   MATIC [wycofana] funding: 2023-05-12 00:00:00 → 2024-09-11 00:00:00 (1.34 r.; 1. strona 500 rek., mediana odstępu 1.000008888888889 h); świece 1d: 2020-10-22 00:00:00 → 2024-09-09 00:00:00 (3.88 r., 1419 świec)
+     MAV [wycofana] funding: 2023-12-20 13:00:00 → 2026-05-06 23:00:00 (2.38 r.; 1. strona 500 rek., mediana odstępu 0.9999975 h); świece 1d: 2023-06-29 00:00:00 → 2026-05-05 00:00:00 (2.85 r., 1042 świec)
+   MAVIA [wycofana] funding: 2024-02-06 23:00:00 → 2026-05-06 23:00:00 (2.25 r.; 1. strona 500 rek., mediana odstępu 1.0000033333333334 h); świece 1d: 2024-02-06 00:00:00 → 2026-05-05 00:00:00 (2.24 r., 820 świec)
+     MEW [wycofana] funding: 2024-07-23 16:00:00 → 2026-05-06 23:00:00 (1.79 r.; 1. strona 500 rek., mediana odstępu 1.0000011111111111 h); świece 1d: 2024-06-17 00:00:00 → 2026-05-05 00:00:00 (1.88 r., 688 świec)
+     MKR [wycofana] funding: 2023-07-21 05:00:00 → 2025-09-06 23:00:00 (2.13 r.; 1. strona 500 rek., mediana odstępu 1.0000027777777778 h); świece 1d: 2020-10-25 00:00:00 → 2025-09-05 00:00:00 (4.86 r., 1777 świec)
+    MYRO [wycofana] funding: 2024-03-05 17:00:00 → 2025-03-30 23:00:00 (1.07 r.; 1. strona 500 rek., mediana odstępu 1.0000002777777777 h); świece 1d: 2024-03-05 00:00:00 → 2025-03-29 00:00:00 (1.07 r., 390 świec)
+NEIROETH [wycofana] funding: 2024-10-23 13:00:00 → 2025-09-26 23:00:00 (0.93 r.; 1. strona 500 rek., mediana odstępu 1.0000008333333332 h); świece 1d: 2024-09-06 00:00:00 → 2025-09-25 00:00:00 (1.05 r., 385 świec)
+    NFTI [wycofana] funding: 2023-11-30 01:00:00 → 2024-06-26 23:00:00 (0.57 r.; 1. strona 500 rek., mediana odstępu 1.0000005555555556 h); świece 1d: 2023-11-30 00:00:00 → 2024-06-25 00:00:00 (0.57 r., 209 świec)
+    NTRN [wycofana] funding: 2023-12-12 19:00:00 → 2025-04-05 23:00:00 (1.31 r.; 1. strona 500 rek., mediana odstępu 0.9999997222222222 h); świece 1d: 2023-11-14 00:00:00 → 2025-04-04 00:00:00 (1.39 r., 508 świec)
+     OGN [wycofana] funding: 2023-10-01 03:00:00 → 2025-08-05 23:00:00 (1.85 r.; 1. strona 500 rek., mediana odstępu 0.9999994444444444 h); świece 1d: 2021-04-01 00:00:00 → 2025-08-04 00:00:00 (4.34 r., 1587 świec)
+      OM [wycofana] funding: 2025-02-16 16:00:00 → 2026-02-24 23:00:00 (1.02 r.; 1. strona 500 rek., mediana odstępu 1.0 h); świece 1d: 2024-02-13 00:00:00 → 2026-02-23 00:00:00 (2.03 r., 742 świec)
+    OMNI [wycofana] funding: 2024-04-29 03:00:00 → 2025-09-26 23:00:00 (1.41 r.; 1. strona 500 rek., mediana odstępu 1.0 h); świece 1d: 2024-04-17 00:00:00 → 2025-09-25 00:00:00 (1.44 r., 527 świec)
+    ORBS [wycofana] funding: 2023-10-13 20:00:00 → 2025-04-05 23:00:00 (1.48 r.; 1. strona 500 rek., mediana odstępu 1.0000002777777777 h); świece 1d: 2023-10-13 00:00:00 → 2025-04-04 00:00:00 (1.48 r., 540 świec)
+      OX [wycofana] funding: 2023-08-17 22:00:00 → 2024-06-28 23:00:00 (0.87 r.; 1. strona 500 rek., mediana odstępu 1.0 h); świece 1d: 2023-05-30 00:00:00 → 2024-06-27 00:00:00 (1.08 r., 395 świec)
+ PANDORA [wycofana] funding: 2024-02-09 16:00:00 → 2024-06-28 23:00:00 (0.38 r.; 1. strona 500 rek., mediana odstępu 1.0000027777777778 h); świece 1d: 2024-02-02 00:00:00 → 2024-06-27 00:00:00 (0.40 r., 147 świec)
+   PIXEL [wycofana] funding: 2024-02-19 14:00:00 → 2025-04-12 23:00:00 (1.15 r.; 1. strona 500 rek., mediana odstępu 1.0000022222222222 h); świece 1d: 2024-02-19 00:00:00 → 2025-04-11 00:00:00 (1.14 r., 418 świec)
+  PROMPT [wycofana] funding: 2025-04-12 03:00:00 → 2026-05-06 23:00:00 (1.07 r.; 1. strona 500 rek., mediana odstępu 1.0 h); świece 1d: 2025-04-11 00:00:00 → 2026-05-05 00:00:00 (1.07 r., 390 świec)
+[budżet] wag 10800, zapytań 234, 429: 0, 5xx: 0, BRAK DANYCH: 0; średnio 204 wagi/min
+
+=== P2 — pełne stronicowanie fundingu BTC, ETH, SOL ===
+BTC: 29259 rekordów na 60 stronach (rozmiary stron: maks 500, ostatnie [500, 259, 0]); 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.); oczekiwanych godzin 29829; duplikaty 0; mediana odstępu 1.0 h; odstępów ≠ 1 h (±1 min): 92; dziur > 1,5 h: 84; czasów poza pełną godziną (> 1 min): 5; fundingRate nie-tekst: 0
+    dziura 2023-05-23 00:00:00 → 2023-05-23 08:23:53 (8.4 h)
+    dziura 2023-05-16 08:00:00 → 2023-05-16 16:00:00 (8.0 h)
+    dziura 2023-05-15 08:00:00 → 2023-05-15 16:00:00 (8.0 h)
+    dziura 2023-05-12 00:00:00 → 2023-05-12 08:00:00 (8.0 h)
+    dziura 2023-06-01 16:00:00 → 2023-06-02 00:00:00 (8.0 h)
+ETH: 29259 rekordów na 60 stronach (rozmiary stron: maks 500, ostatnie [500, 259, 0]); 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.); oczekiwanych godzin 29829; duplikaty 0; mediana odstępu 1.0 h; odstępów ≠ 1 h (±1 min): 92; dziur > 1,5 h: 84; czasów poza pełną godziną (> 1 min): 5; fundingRate nie-tekst: 0
+    dziura 2023-05-23 00:00:00 → 2023-05-23 08:23:53 (8.4 h)
+    dziura 2023-05-16 08:00:00 → 2023-05-16 16:00:00 (8.0 h)
+    dziura 2023-05-15 08:00:00 → 2023-05-15 16:00:00 (8.0 h)
+    dziura 2023-05-12 00:00:00 → 2023-05-12 08:00:00 (8.0 h)
+    dziura 2023-06-01 16:00:00 → 2023-06-02 00:00:00 (8.0 h)
+SOL: 29259 rekordów na 60 stronach (rozmiary stron: maks 500, ostatnie [500, 259, 0]); 2023-05-12 00:00:00 → 2026-10-05 20:00:00 (3.40 r.); oczekiwanych godzin 29829; duplikaty 0; mediana odstępu 1.0 h; odstępów ≠ 1 h (±1 min): 92; dziur > 1,5 h: 84; czasów poza pełną godziną (> 1 min): 5; fundingRate nie-tekst: 0
+    dziura 2023-05-23 00:00:00 → 2023-05-23 08:23:53 (8.4 h)
+    dziura 2023-05-16 08:00:00 → 2023-05-16 16:00:00 (8.0 h)
+    dziura 2023-05-15 08:00:00 → 2023-05-15 16:00:00 (8.0 h)
+    dziura 2023-05-12 00:00:00 → 2023-05-12 08:00:00 (8.0 h)
+    dziura 2023-06-01 16:00:00 → 2023-06-02 00:00:00 (8.0 h)
+
+=== Druga droga — najstarszy funding BTC ===
+(a) pierwsza strona od startTime = 0: najstarszy rekord 2023-05-12 00:00:00 (1683849600048 ms)
+(b) okno [t0 − 60 dni, t0 − 1 ms] → 0 rekordów (oczekiwane 0)
+(c) pełne stronicowanie: najstarszy 2023-05-12 00:00:00 — zgodny z (a)
+(d) pierwsza świeca 1d BTC (start notowań) 2020-08-19 00:00:00; funding zaczyna się +996.0 dnia względem niej
+
+=== Podsumowanie ===
+BTC/ETH/SOL: monet 3; lata fundingu min 3.40 / mediana 3.40 / maks 3.40
+    lata świec 1d min 6.06 / mediana 6.13 / maks 6.13
+    BRAK DANYCH funding: brak; świece 1d: brak
+koszyk top-20 na HL (bez BTC/ETH/SOL): monet 17; lata fundingu min 1.01 / mediana 3.15 / maks 3.40
+    lata świec 1d min 1.24 / mediana 3.54 / maks 6.13
+    BRAK DANYCH funding: brak; świece 1d: brak
+wycofane (próbka): monet 40; lata fundingu min 0.16 / mediana 1.33 / maks 2.72
+    lata świec 1d min 0.15 / mediana 1.41 / maks 4.86
+    BRAK DANYCH funding: brak; świece 1d: brak
+najstarszy funding w zestawie S: BTC 2023-05-12 00:00:00
+koszyk top-20: na HL 20/26; poza HL: ['TUTUSDT', 'CYSUSDT', 'AKEUSDT', 'BTWUSDT', 'LSKUSDT', 'QNTUSDT']
+[budżet końcowy] wag 18809, zapytań 415, 429: 0, 5xx: 0, BRAK DANYCH: 0; średnio 267 wagi/min; koniec 2026-10-05 20:41:34 UTC
