@@ -1,9 +1,37 @@
-# HS0 — Hyperliquid: brama danych dla fundingu i stanu rynku (sonda historii + kolektor `metaAndAssetCtxs`), 2026-10-05
+# HS0 — Hyperliquid: funding od 2023-05-12 (BTC/ETH/SOL 3,4 roku), krótkie świece tylko ~5 000 wstecz, kolektor stanu rynku gotowy (19 MB/dobę), 2026-10-05
 
-> **STATUS: PRE-REJESTRACJA — zapisana PRZED pierwszym zapytaniem sondy.** Wynik, wniosek i rekomendacja zostaną
-> dopisane w kolejnych commitach tej gałęzi.
+> **STATUS: ZAKOŃCZONA NA GAŁĘZI `zadanie-010-hl-stan-rynku` — czeka na przegląd diffu (bramka 16c) i scalenie
+> (orkiestrator).** Sonda wykonana według pre-rejestracji `a6f0fbc`; kontrola pozytywna **ZALICZONA** (20 z 20 monet);
+> kolektor gotowy (krótka próba). **Scalenie do `master` = start kolektora** (cron klonu dziennika, jak LB0).
 > **0 wariantów — POZA licznikami.** To brama danych (zbieranie i sprawdzenie źródła), nie pomiar hipotezy. Żadnego
 > zestawienia z cenami Binance ani z wynikami strategii.
+
+## W skrócie — prostym językiem (zasada 17)
+
+Hyperliquid (HL) to giełda kontraktów perpetual (kontrakt bez daty wygaśnięcia; co godzinę jedna strona płaci drugiej
+opłatę „funding”). Handlują tam inni ludzie niż na Binance. Chcieliśmy wiedzieć dwie rzeczy: ile historii da się
+pobrać za darmo i czy da się tanio zapisywać stan rynku co minutę od dziś.
+
+1. **Funding — historia jest, ale krótsza niż na Binance.** BTC, ETH i SOL: od 2023-05-12, czyli **3,4 roku**.
+   Reszta koszyka: od dnia wejścia monety na HL, **1,0–3,4 roku** (mediana 3,15). Przez pierwsze ~4 tygodnie
+   (2023-05-12 → ~06-08) funding liczono co 8 godzin; potem co godzinę, prawie bez dziur (3 brakujące godziny w 3 latach).
+2. **Świece — dzienne tak, krótsze tylko z ostatnich miesięcy.** Publiczne API oddaje najwyżej ~5 000 ostatnich
+   świec danego interwału i nie pozwala sięgnąć głębiej: minutowe — **3,5 dnia**, godzinowe — **208 dni**,
+   4-godzinne — **2,3 roku**. Dzienne — całość, ale uwaga: przed wejściem monety na HL API dokleja do ~1 000 dni
+   świec **bez żadnej transakcji** (liczba transakcji 0, wolumen 0). To nie jest handel na HL i trzeba je odfiltrować.
+3. **Koszyk top-20:** 20 z 26 symboli oznaczonych w pliku koszyka jako top-20 jest na HL (brak: TUT, CYS, AKE, BTW,
+   LSK, QNT). **Monety wycofane z HL zachowują historię** (40 z 40 sprawdzonych; funding i świece urywają się
+   razem, w okolicy dnia wycofania).
+   Danych brakujących (BRAK DANYCH): **zero** w 415 zapytaniach.
+4. **Kontrola pozytywna zaliczona:** stawka fundingu z historii i świeca minutowa zgadzają się z tym, co było widać
+   na żywo tuż przed pełną godziną — **20 z 20 monet w obu testach**.
+5. **Kolektor stanu rynku gotowy.** Co minutę zapisuje pełną odpowiedź `metaAndAssetCtxs` (stawka fundingu, cena
+   mark/oracle/mid, premia, otwarte pozycje, obrót — 234 monety). Próba: 3 migawki, 0 błędów, **19,0 MB na dobę**.
+   Ruszy sam po scaleniu.
+
+**Co to znaczy dla decyzji:** funding i premię HL da się badać na historii najwyżej **3,4 roku** (baza Binance ma
+5,5 roku), a minutowy stan rynku (mark, oracle, otwarte pozycje) — dopiero od startu kolektora. Każdy pomysł na tych
+danych to NOWA hipoteza z rachunkiem mocy przed odczytem. Ten raport niczego nie mierzy o zyskach.
 
 ## Metadane
 
@@ -16,6 +44,25 @@
 - **Plan kodu:** sonda jednorazowa `runs/2026-10-05_hs0-hl-stan-rynku/sonda_historii.py` (pełny stdout →
   `raw_output.txt`); kolektor `data/collect_hl_stan.py` (stan rynku co 60 s) + blok nadzoru w `tools/likwidacje.sh`;
   testy bez sieci. Dane kolektora POZA repo: `$HOME/likwidacje_hl/stan/` (zmienna `CLAS5_HL_STAN_DIR`).
+- **Commity:** pre-rejestracja `a6f0fbc` (19:21:45 UTC — przed pierwszym zapytaniem sondy o 19:31:04); kod sondy
+  i kolektora `2f1a6b1` (sonda uruchomiona na tym commicie, `sonda_historii.py` sha256 `ff8a6b9e…bcb57385`); testy,
+  nadzór i próba kolektora `07c5b54`; wynik i dokumentacja — commit zamykający gałąź.
+- **Komendy** (z katalogu repo; w worktree wykonawcy interpreter `/home/dantey1/alpha/.venv/bin/python`):
+  - `PYTHONUTF8=1 .venv/bin/python runs/2026-10-05_hs0-hl-stan-rynku/sonda_historii.py > runs/2026-10-05_hs0-hl-stan-rynku/raw_output.txt 2>&1`
+    — 2026-10-05 19:31:04 → 20:41:34 UTC (z czekaniem na pełną godzinę dla kontroli pozytywnej);
+  - `PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --dir "$(mktemp -d)" --max-cycles 3` — 19:37:40 → 19:40:00;
+    oględziny katalogu (gzip -t, zcat, człony, `status.json`, `--status`) → `raw_output_kolektor.txt`;
+  - `PYTHONUTF8=1 .venv/bin/python runs/2026-10-05_hs0-hl-stan-rynku/druga_droga.py <plik dnia z próby kolektora>`
+    — 20:42:55 → 20:55:30 UTC → `raw_output_druga_droga.txt` (bramka 16a).
+- **Budżet wag sondy:** 18 809 wagi (liczonej ostrożnie: 20 + ⌈n/20⌉) w 415 zapytaniach, **0 × HTTP 429, 0 × 5xx,
+  0 × BRAK DANYCH**; tempo z konstrukcji ≤ 500 wagi/min (odstęp 0,12 s na jednostkę wagi). Druga droga: ~140 zapytań
+  co 5 s (≤ 480 wagi/min), uruchomiona po zakończeniu sondy.
+- **Testy:** `tests/test_collect_hl_stan.py` (44, bez sieci, w tym 7 właściwości `hypothesis`),
+  `tests/test_likwidacje_sh.py` (14; 6 nowych dla bloku HL, 1 rozszerzony).
+- **Koszyk:** `dziennik/koszyk.csv` czytany przez `pd.read_csv(usecols=["symbol", "czlonek_top20"])`. Uwaga uczciwości:
+  przy pierwszym oglądaniu nagłówka pliku (`head -3`) wykonawca zobaczył też 2 pierwsze wiersze wszystkich kolumn
+  (miesiąc, pozycja, obrót, flaga fundingu dla BTCUSDT i ETHUSDT); żadna z tych wartości nie weszła do sondy ani do
+  wniosków.
 
 ## Poprzedzające wyniki
 
@@ -113,3 +160,269 @@ historii: `bez-wyniku`, `odczyt_programu = nie`.
 
 Plik `$HOME/likwidacje_hl/stan/WYLACZONY` (cron przestaje startować kolektor, działający kończy się przy najbliższej
 migawce), usunięcie bloku HL z `tools/likwidacje.sh`. Dane leżą poza repo — ich kasowanie to decyzja użytkownika.
+
+## Wynik — sonda historii (pełny zapis: `raw_output.txt`)
+
+### P1 — spis
+
+- `meta` głównej giełdy: **234 perpetuale — 178 notowanych, 56 wycofanych** (`isDelisted`).
+- `perpDexs`: 11 pozycji — główna giełda (`null`) i **10 rynków HIP-3** (osobne giełdy budowane na HL przez innych:
+  xyz, flx, vntl, hyna, km, abcd, cash, para, mkts, io). Te rynki są POZA sondą i poza kolektorem (zapytanie bez
+  parametru `dex` zwraca tylko główną giełdę).
+
+### P5 — pokrycie koszyka top-20
+
+W pliku koszyka **26 różnych symboli** ma `czlonek_top20 = True`. Jeden skład ma 20 monet, więc plik obejmuje więcej niż
+jeden skład; kolumny miesiąca zgodnie z poleceniem nie czytano — to suma składów, nie jeden skład.
+
+| wynik | symbole |
+|---|---|
+| na HL, notowane (**20**) | BTC, ETH, SOL, XRP, ZEC, HYPE, DOGE, BNB, TRUMP, ENA, kPEPE (← 1000PEPEUSDT), PUMP, ACE, SUI, ADA, LINK, NEAR, UNI, ARB, WLD |
+| na HL, wycofane | 0 |
+| brak na HL (**6**) | TUTUSDT, CYSUSDT, AKEUSDT, BTWUSDT, LSKUSDT, QNTUSDT |
+
+Pokrycie **20/26 = 77 %**. Reguła „1000X → kX” zadziałała raz (kPEPE); innych symboli „1000…” w koszyku nie ma.
+
+### P2 — funding (`fundingHistory`)
+
+- **Rekord** = jedno rozliczenie: `coin`, `fundingRate` (stawka godzinowa, tekst), `premium` (premia, tekst), `time` (ms;
+  pełna godzina + kilkadziesiąt ms). **Limit strony: 500 rekordów**; stronicowanie „następny `startTime` = ostatni
+  czas + 1 ms” działa.
+- **Rozdzielczość (druga droga, okna półmiesięczne):** maj 2023 — 60 rekordów, wszystkie co **8 h**; czerwiec 2023 —
+  21 odstępów 8 h, potem co godzinę (przejście ~2023-06-08); **od lipca 2023 co godzinę**.
+- **BTC, ETH, SOL — pełne stronicowanie:** po **29 259 rekordów** na 60 stronach, **2023-05-12 00:00 → 2026-10-05 20:00
+  UTC = 3,40 roku**; 0 duplikatów. Godzin w tym okresie jest 29 829, więc brakuje 570 (1,9 %): **567 to okres
+  8-godzinny** (maj–czerwiec 2023), 3 to pojedyncze brakujące godziny (2023-07, 2023-08, 2024-08); 5 rozliczeń ma czas
+  przesunięty o 2–24 min (2023-05, 2023-09, 2023-12, 2× 2025-07). Liczby są identyczne dla trzech monet, bo rozliczenie
+  jest wspólne dla całej giełdy; stawki są różne (pierwszy rekord: BTC −0,000613, ETH +0,000086, SOL −0,000237).
+- **Koszyk (20 monet na HL):** funding od dnia wejścia monety na HL.
+
+| moneta | pierwszy funding | lata | moneta | pierwszy funding | lata |
+|---|---|---|---|---|---|
+| BTC, ETH, SOL | 2023-05-12 | 3,40 | ACE | 2023-12-18 | 2,80 |
+| DOGE, BNB, kPEPE, SUI, ARB | 2023-05-12 | 3,40 | ADA | 2023-10-22 | 2,96 |
+| LINK | 2023-05-18 | 3,39 | NEAR | 2023-11-01 | 2,93 |
+| XRP | 2023-06-18 | 3,30 | ENA | 2024-04-02 | 2,51 |
+| WLD | 2023-07-24 | 3,20 | HYPE | 2024-12-05 | 1,83 |
+| UNI | 2023-08-11 | 3,15 | TRUMP | 2025-01-18 | 1,71 |
+| | | | PUMP | 2025-07-10 | 1,24 |
+| | | | ZEC | 2025-10-02 | 1,01 |
+
+  Podsumowanie: ≥ 3 lata — 12 z 20 monet; 2–3 lata — 4 (ACE, ADA, NEAR, ENA); < 2 lata — 4 (HYPE, TRUMP, PUMP, ZEC).
+  17 monet poza BTC/ETH/SOL: min 1,01 / **mediana 3,15** / maks 3,40 roku. Wszystkie kończą się na 2026-10-05 20:00.
+
+### P3 — świece (`candleSnapshot`, BTC)
+
+| interwał | świec dla okna [0, teraz] | najstarsza (UTC) | głębokość | okno starsze niż 5 000 świec |
+|---|---|---|---|---|
+| 1m | 5 113 | 2026-10-02 06:50 | **3,5 dnia** | 0 świec |
+| 5m | 5 023 | 2026-09-18 09:30 | 17,4 dnia | 0 |
+| 15m | 5 008 | 2026-08-14 16:15 | 52,2 dnia | 0 |
+| 1h | 5 002 | 2026-03-11 11:00 | **208 dni** | 0 |
+| 4h | 5 001 | 2024-06-24 12:00 | **2,3 roku** | 0 |
+| 1d | 2 239 | 2020-08-19 | 6,1 roku (z doklejką, niżej) | nie dotyczy |
+
+API oddaje **~5 000 ostatnich świec** (od 5 001 do 5 113 — granica nie jest dokładnie 5 000; nie badaliśmy dlaczego)
+i ma **twardy limit głębokości**: okno starsze zwraca 0, więc stronicowania wstecz nie ma. Krótkich świec HL nie da się odzyskać później —
+trzeba by je zbierać na bieżąco (kolektor stanu tego nie robi: zapisuje migawki, nie świece).
+
+**Świece 1d sprzed wejścia monety na HL** (druga droga, punkt 4 — dopisany PO obejrzeniu wyniku, opisowo): BTC ma 996
+świec dziennych sprzed pierwszego fundingu; **921 z nich (2020-08-19 → ~2023-02) ma 0 transakcji i 0 wolumenu**,
+a ostatnie ~75 dni to już handel na HL (np. 2023-05-10: 3 110 transakcji) — HL handlował BTC przed pierwszym
+zapisanym fundingiem. ZEC i ADA: po **999** świec sprzed fundingu, **wszystkie** z 0 transakcji. Dlatego kolumny „lata
+świec 1d” w `raw_output.txt` (BTC 6,13; mediana koszyka 3,54; maks. wycofanych 4,86 — MKR) są **zawyżone** o doklejoną
+historię bez handlu. Prawdziwa historia handlu zaczyna się mniej więcej przy pierwszym fundingu. Każde użycie świec HL
+musi odfiltrować `n = 0`.
+
+### P4 — monety wycofane
+
+Sprawdzono **40 z 56** (pierwsze alfabetycznie: AI … PROMPT; poza próbą: RDNT, REQ, RLB, RNDR, SCR, SHIA, STG, STRAX,
+TON, TST, UNIBOT, USTC, VINE, YZY, ZEREBRO, kDOGS). **40 z 40 ma funding i świece 1d** (0 BRAK DANYCH). Funding: min 0,16
+roku (JELLY) / **mediana 1,33** / maks 2,72 (ARK); funding i świece urywają się razem w okolicy wycofania (np. MATIC
+2024-09-11, FTM 2025-01-13, AI 2025-04-12). Wniosek: historia HL nie jest „tylko ocaleni” — monety wycofane są w API
+(mniejsze ryzyko obciążenia ocalałych, czyli patrzenia wyłącznie na monety, które przetrwały).
+
+### Kontrola pozytywna K1/K2 (migawka 2026-10-05 19:59:05.383 UTC, pełna godzina H = 20:00 UTC)
+
+Zestaw: BTC, ETH, SOL + 17 notowanych monet koszyka = 20 monet.
+
+- **K1 (funding): 20/20 zgodnych.** 14 monet ma po obu stronach dokładnie 0,0000125 (stawka bazowa HL — sama część
+  odsetkowa, gdy premia jest mała). 6 pozostałych (SOL, ZEC, ENA, PUMP, NEAR, UNI) różni się o 2·10⁻⁸ … 3,8·10⁻⁷
+  (0,08–4,6 % stawki; największa różnica NEAR: 4,875·10⁻⁵ na żywo, 4,913·10⁻⁵ rozliczone) przy tolerancji
+  1,9·10⁻⁶ … 1,3·10⁻⁵. Rekord rozliczenia ma czas H + 65 ms. Wniosek: `fundingRate` z historii to ta sama godzinowa
+  stawka, którą `metaAndAssetCtxs` pokazuje na żywo w polu `funding` (bez mnożnika 8 i bez procentów).
+- **K2 (świeca 1m): 20/20 zgodnych.** `midPx` z migawki (5. sekunda minuty 19:59) leży w zakresie świecy 19:59 (± 20 pb)
+  u wszystkich monet. Opisowo |zamknięcie / midPx − 1|: mediana 4,9 pb, maks. 64,7 pb (SUI — skok ceny pod koniec
+  minuty; mid i tak w zakresie świecy).
+- **Werdykt według pre-rejestracji: KONTROLA ZALICZONA** (BTC, ETH, SOL zgodne w K1 i K2; pozostałe 100 % i 100 %
+  wobec progu 80 %).
+
+### Budżet wag
+
+18 809 wagi (liczonej ostrożnie) w 415 zapytaniach; **0 × 429, 0 × 5xx, 0 × BRAK DANYCH**; tempo ≤ 500 wagi/min
+z konstrukcji (średnia z całego przebiegu 267/min, razem z czekaniem na pełną godzinę).
+
+## Wynik — kolektor stanu rynku (próba; `raw_output_kolektor.txt`)
+
+- **Format** jak w pre-rejestracji: plik `YYYY-MM-DD.jsonl.gz` (dzień UTC czasu odbioru), człon gzip na migawkę,
+  linia JSON w ASCII: `czas_ms`, `czas_utc`, `wyslano_ms`, `odpowiedz` = pełne `[meta, konteksty]`. Meta: `universe`,
+  `marginTables`, `collateralToken`. Kontekst monety: `dayBaseVlm`, `dayNtlVlm`, `funding`, `impactPxs`, `markPx`,
+  `midPx`, `openInterest`, `oraclePx`, `premium`, `prevDayPx`.
+- **Próba 3 cykli** (19:38, 19:39, 19:40 UTC, katalog z `mktemp -d`): 3 migawki; 0 błędów sieci, 0 odrzuconych,
+  0 błędów zapisu, 0 ponowień; człony **13 145 / 13 186 / 13 244 B** gzip (72,3–72,5 kB surowo); średnio **13 192 B →
+  19,0 MB/dobę** (kryterium „≤ ~20 MB” spełnione, zapas ~5 %); `gzip -t` OK; `zcat | wc -l` = 3; 0 bajtów spoza ASCII;
+  234 monety w każdej migawce; czas odpowiedzi 333–817 ms (pierwsze zapytanie dłużej — nowe połączenie TLS).
+- `status.json`, `kolektor.log` i `--status` działają (wydruk w `raw_output_kolektor.txt`). SIGTERM sprawdzony ręcznie
+  (przed pierwszą migawką, bez zapytania do sieci): czyste wyjście, w logu „koniec: przerwanie”, status zapisany.
+- **Wzrost:** ~56 B gzip na monetę na migawkę, czyli każda nowa moneta HL dokłada ~0,08 MB/dobę; 20 MB/dobę wypada przy
+  ~246 monetach (dziś 234).
+- **Kryterium „gotowy” z pre-rejestracji: spełnione.**
+
+## Bramka 16a — walidacja write-upu (skill `data:validate-data` + `docs/skills/bramki-jakosci.md`)
+
+**Przeliczenie drugą drogą (A3)** — `druga_droga.py`, osobny kod i inne zapytania niż sonda
+(`raw_output_druga_droga.txt`):
+
+| liczba | sonda | druga droga | zgodność |
+|---|---|---|---|
+| najstarszy funding BTC | 2023-05-12 00:00:00.048 (`startTime = 0`; pełne stronicowanie; okno 60 dni wcześniej puste) | 2023-05-12 00:00:00.048 (okna miesięczne od 2022-01) | ✓ co do ms |
+| najstarszy funding ETH, SOL | 2023-05-12 | 2023-05-12 | ✓ |
+| rekordów fundingu BTC do 2026-10-05 20:02:23 | 29 259 (pełne stronicowanie) | 29 259 (suma 83 okien półmiesięcznych) | ✓ co do sztuki |
+| pokrycie koszyka | 20/26 (endpoint `meta`, reguła w kodzie) | 20/26 (meta z pliku kolektora — `metaAndAssetCtxs`; reguła jako wyrażenia regularne) | ✓, te same 6 poza HL |
+| rozmiar dobowy | migawka z sondy 13 187 B gzip (własny kod) → 19,0 MB | średnio 13 192 B z pliku kolektora (rozmiar / linie) → 19,0 MB | ✓ |
+
+**Kogo NIE ma w zbiorze (A2):**
+
+1. **10 rynków HIP-3** — poza sondą i poza kolektorem.
+2. **6 z 26 symboli koszyka** nie ma na HL (TUT, CYS, AKE, BTW, LSK, QNT).
+3. **16 z 56 monet wycofanych** nie sprawdzono (poza próbą 40) — „wycofane mają historię” to 40/40, nie 56/56.
+4. **Pierwsze tygodnie HL:** funding co 8 h do ~2023-06-08; handel BTC na HL przed 2023-05-12 (~75 dni) nie ma rekordów
+   fundingu.
+5. **Świece 1d sprzed notowania** (do ~1 000 dni, 0 transakcji) — to nie handel na HL; do odfiltrowania.
+6. **Krótkie świece starsze niż ~5 000 interwałów** — niedostępne wcale (nie da się ich odzyskać później).
+7. **Kolektor:** tylko główna giełda, tylko co 60 s (co dzieje się między migawkami, ginie), bez spotu, bez historii
+   sprzed startu; minuty, gdy proces nie żyje (restart serwera — cron wznawia w ≤ 5 min).
+
+**Czerwone flagi (A4):**
+
+- *Identyczne liczby dla BTC, ETH i SOL* (29 259 rekordów, te same dziury) — sprawdzone: rozliczenie jest wspólne dla
+  giełdy, a stawki są różne (pierwszy rekord BTC −0,000613, ETH +0,000086, SOL −0,000237), więc zapytania nie gubią
+  wymiaru monety.
+- *„Wynik idealnie potwierdza”* — 20/20 w K1 i K2. Tolerancje celowo łapią błąd jednostek, czasu albo monety, a nie drobny
+  ruch premii; 14 z 20 monet ma po obu stronach stawkę bazową, więc dla nich K1 sprawdza tylko jednostki i czas. To
+  słaby test treści, mocny test zgodności formatu — tak go czytamy.
+- *Okrągłe liczby* — 500 (limit strony), ~5 000 (limit świec), 999 (świece bez handlu przed notowaniem ZEC i ADA) — to
+  granice API, opisane wyżej.
+
+**Werdykt 16a (Claude, wykonawca gałęzi): Caveats.** Zastrzeżenia, które czytelnik musi znać:
+
+1. Świece 1d zawierają doklejoną historię bez handlu — „lata świec” z tabel sondy są zawyżone; historia handlu zaczyna
+   się mniej więcej przy pierwszym fundingu.
+2. Funding w maju–czerwcu 2023 co 8 h — szereg godzinowy zaczyna się ~2023-06-08 (~3,3 roku, nie 3,4).
+3. Pokrycie koszyka liczone na 26 symbolach z kilku składów (bez kolumny miesiąca).
+4. Kontrola pozytywna to jedna godzina i jedna minuta; próba kolektora — 3 minuty.
+5. Kolektor ~19 MB/dobę, blisko progu 20 MB, i rośnie z nowymi monetami (~0,08 MB/dobę na monetę).
+
+## Co na plus (+) / Co na minus (−)
+
+**(+)**
+
+- Funding HL ma **3,4 roku** historii (co godzinę od czerwca 2023), w każdym rekordzie także premię (`premium`); monety
+  wycofane zostają w API — przyszła karta nie musi patrzeć tylko na „ocalałych”.
+- Kontrola pozytywna 20/20 — historia to te same liczby co na żywo (jednostki, czas, moneta).
+- Kolektor tani i odporny: 20 wagi/min (1,7 % limitu IP), 19 MB/dobę, bez kluczy; człon gzip na migawkę z naprawą
+  urwanego ogona, jedna instancja (`flock` w katalogu danych), wyłącznik, status; 44 testy bez sieci + 6 testów nadzoru.
+- 0 × 429, 0 × BRAK DANYCH w 415 zapytaniach sondy.
+
+**(−)**
+
+- **Krótsza historia niż Binance** (3,4 wobec 5,5 roku bazy) — każda karta na historii HL ma mniejszą moc.
+- **Brak historii stanu minutowego** (mark, oracle, mid, otwarte pozycje) — tylko prospektywnie, od startu kolektora.
+- Świece 1m / 1h tylko 3,5 dnia / 208 dni wstecz; świece dzienne z doklejoną historią bez handlu.
+- **Kopii poza serwerem brak — RYZYKO.** ~19 MB/dobę to ~7 GB/rok; to za dużo do repo kopii likwidacji (git).
+  Awaria dysku serwera = utrata całej zebranej historii stanu, której nie da się pobrać ponownie. Miejsce kopii
+  (dysk zewnętrzny, chmura) to decyzja użytkownika.
+- Rozmiar blisko progu ~20 MB/dobę i rośnie z każdą nową monetą.
+- Tylko główna giełda (bez HIP-3) i tylko co 60 s.
+
+## Nadzór i uruchomienie
+
+- **Start = scalenie do `master` + cron klonu dziennika.** Linia crona już istnieje (LK0/LB0):
+  `*/5 * * * * bash $HOME/alpha-dziennik/tools/likwidacje.sh`. Gdy klon dziennika pobierze `master`, najbliższy przebieg
+  crona sam uruchomi kolektor HL w tle (blok 1c skryptu). Nikt nie robi osobnego kroku. Kto chce scalić bez startu:
+  najpierw `mkdir -p ~/likwidacje_hl/stan && touch ~/likwidacje_hl/stan/WYLACZONY`.
+- **Ręczny start** z dowolnego klonu: `nohup bash tools/likwidacje.sh >/dev/null 2>&1 &` (blokady w katalogach danych
+  są wspólne — druga instancja żadnego kolektora nie wystartuje; działające kolektory Binance i Bybit nie są dotykane).
+- **Stan:** `PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --status` — „ostatnia … s temu” poniżej ~120 s,
+  błędy ~0, „pełnych migawek” rośnie o 60 na godzinę; powyżej 5 min bez migawki wydruk mówi „UWAGA”.
+- **Wyłącznik:** plik `$HOME/likwidacje_hl/stan/WYLACZONY` — cron nie startuje kolektora, a działający kończy się przed
+  następną migawką (≤ 60 s).
+- **Katalog danych:** `$HOME/likwidacje_hl/stan` (zmiana: `CLAS5_HL_STAN_DIR`): `YYYY-MM-DD.jsonl.gz`, `status.json`,
+  `kolektor.log`, `kolektor.out`, `.lock`. Odczyt: `zcat <plik> | head -1` albo `data.collect_hl_stan.czytaj_dzien`.
+
+## security-review (zasada 19 — nowe połączenie sieciowe)
+
+**0 podatności wysokich i średnich.** Przejrzane: `data/collect_hl_stan.py`, blok 1c w `tools/likwidacje.sh`,
+`sonda_historii.py`, `druga_droga.py`. Sprawdzone: adres stały (`sprawdz_adres`: tylko `https`, host
+`api.hyperliquid.xyz`, port 443, ścieżka `/info`, bez danych logowania — test na 8 złych adresach); TLS z weryfikacją
+certyfikatu i nazwy hosta (`ssl.create_default_context`, test); przekierowania wyłączone, zmienne `*_proxy` ignorowane;
+limit odpowiedzi 4 MB; parsowanie tylko `json.loads` (bez `eval`, `pickle`, YAML), `NaN`/`Infinity` odrzucane; nazwy
+plików wyłącznie z lokalnego zegara po regule 2019–2100 — dane z sieci nie wpływają na ścieżki; zapis JSON w ASCII —
+odpowiedź serwera nie rozbije linii pliku; w powłoce `$1` w cudzysłowach, katalog z zaufanej zmiennej środowiska;
+`git rev-parse` w sondzie przez `subprocess` z listą argumentów; brak kluczy i sekretów. Przegląd zrobiony w tej sesji
+bez podzadań (oszczędność tokenów, `docs/rag/12`: workflow wieloagentowe tylko na wyraźne życzenie).
+
+## Bramka 16c (przegląd diffu przed scaleniem)
+
+Robi orkiestrator (`engineering:code-review`) — poza tą gałęzią.
+
+## Wniosek
+
+Publiczne API Hyperliquid daje **godzinowy funding od czerwca 2023** (rekordy od 2023-05-12, pierwsze tygodnie co 8 h):
+3,4 roku dla BTC, ETH i SOL i 1,0–3,4 roku dla pozostałych monet koszyka; 20 z 26 symboli koszyka jest na HL, a monety
+wycofane zachowują historię. Historia zgadza się z tym, co widać na żywo (kontrola 20/20). Krótkich świec nie da się
+odzyskać wstecz (~5 000 ostatnich), a dzienne trzeba czyścić z doklejonych dni bez handlu. Stanu rynku minuta po minucie
+API nie przechowuje — dlatego kolektor `metaAndAssetCtxs` co 60 s: gotowy, przetestowany, ~19 MB/dobę, startuje po
+scaleniu. Nic nie odczytano: żadnej premii HL−Binance, żadnego zwrotu.
+
+## Rekomendacja
+
+1. **Scalić po przeglądzie 16c, świadomie: scalenie = start kolektora.** Przy scaleniu (orkiestrator): zdanie w
+   `STATUS.md` (kolektor HL od dnia scalenia, ryzyko braku kopii), sprawdzenie `--status` po kilku minutach.
+2. **Kopia poza serwerem — decyzja użytkownika** (miejsce na ~7 GB/rok). Do tego czasu dane HL są tylko na serwerze.
+3. **Przed jakąkolwiek kartą „funding/premia HL”:** rachunek mocy na ≤ 3,3 roku godzinowej historii (zasada 18), nowa
+   seria z własnym licznikiem i progiem t z rejestru odczytów; świece HL tylko z `n > 0`.
+4. **Opcjonalnie, osobna decyzja:** krótkie świece HL znikają po ~5 000 interwałach — gdyby były potrzebne, trzeba je
+   zbierać na bieżąco (np. 1m raz na dobę dla 178 notowanych monet: ~180 zapytań po ~44 wagi, ~8 tys. wagi na dobę,
+   średnio ~5–6 wagi/min).
+5. Po tygodniu: `--status`, rozmiar plików, 1 440 migawek na dobę.
+
+## Użyte skille (zasada 19)
+
+### Użyte skille — gałąź `zadanie-010-hl-stan-rynku` (rejestr automatyczny)
+
+| czas | kto | skill | argumenty (skrót) |
+|---|---|---|---|
+| 2026-10-05T19:13:22+00:00 | claude (agent: general-purpose) | `anthropic-skills:clas5-runda` |  |
+| 2026-10-05T19:13:22+00:00 | claude (agent: general-purpose) | `anthropic-skills:clas5-quant` |  |
+| 2026-10-05T19:13:23+00:00 | claude (agent: general-purpose) | `data:explore-data` |  |
+| 2026-10-05T19:21:49+00:00 | claude (agent: general-purpose) | `engineering:testing-strategy` | data/collect_hl_stan.py — kolektor metaAndAssetCtxs Hyperliquid co 60 s (POST https, plik dzienny z członami gzip, przycinanie urwanego ogona, status.json, flock, WYLACZONY); testy bez sieci z wstrzy… |
+| 2026-10-05T19:41:37+00:00 | claude (agent: general-purpose) | `security-review` |  |
+| 2026-10-05T20:02:36+00:00 | claude (agent: general-purpose) | `data:validate-data` | HS0 (zadanie 010): sonda historii API Hyperliquid (fundingHistory, candleSnapshot: lata historii, pokrycie koszyka top-20, monety wycofane, BRAK DANYCH) + kontrola pozytywna K1/K2 + próba kolektora m… |
+
+Razem: 6 wczytań, 6 różnych skilli: `anthropic-skills:clas5-quant`, `anthropic-skills:clas5-runda`, `data:explore-data`, `data:validate-data`, `engineering:testing-strategy`, `security-review`.
+
+- **`anthropic-skills:clas5-runda`** — procedura rundy: pre-rejestracja przed pierwszym zapytaniem, 0 wariantów,
+  katalog rundy, wiersz w INDEX, wniosek 117, rejestr odczytów historii.
+- **`anthropic-skills:clas5-quant`** — nowe źródło danych: bez odczytu (żadnej premii HL−Binance), kontrola pozytywna
+  źródła, a długość historii (3,4 roku) zapisana jako wejście przyszłego rachunku mocy.
+- **`data:explore-data`** — profil nowego zbioru: rozdzielczość i dziury fundingu (8 h na starcie, 570 brakujących
+  godzin), duplikaty, limity API, doklejone świece bez handlu (`n = 0`).
+- **`engineering:testing-strategy`** — plan testów bez sieci (fałszywe `post`/`sleep`/`clock`, właściwości
+  `hypothesis` — jedna znalazła przepełnienie w odczekaniu, poprawione) i testów nadzoru w piaskownicy.
+- **`security-review`** — przegląd nowego połączenia sieciowego; wynik wyżej.
+- **`data:validate-data`** — bramka 16a: druga droga pięciu liczb, „kogo nie ma w zbiorze”, czerwone flagi, werdykt
+  Caveats.
+- Momenty z tabeli zasady 19 bez skilla: `engineering:code-review` (16c) — **zrobi orkiestrator** przed scaleniem;
+  `data:statistical-analysis` (16b) — runda nie ma efektów ani przedziałów (tylko daty, liczby rekordów i rozmiary),
+  więc moment nie zachodzi; `quant-strategy-catalog` — brak nowej hipotezy; `dataviz` — brak wykresów.

@@ -108,3 +108,4 @@ backtest/e1_kaskady.py                       # E1K (zadanie 011) — wykonywalna
 backtest/run_e1k_czestosc.py                 # E1K (zadanie 011)
 runs/2026-10-05_e1k-karta-kaskad/druga_droga.py   # E1K — bramka 16a
 runs/2026-10-05_hs0-hl-stan-rynku/sonda_historii.py   # HS0 (zadanie 010)
+runs/2026-10-05_hs0-hl-stan-rynku/druga_droga.py   # HS0 — bramka 16a
