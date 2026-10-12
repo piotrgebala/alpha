@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import json
+import shutil
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -1049,3 +1050,16 @@ def test_raport_progow_model_spoza_cennika_jawnie():
     assert (
         mieszane["wywolan_bez_ceny"] == 20 and mieszane["model_ceny_odczytu"] == "claude-opus-5-5"
     )
+
+
+def test_wszystkie_czyta_wszystkie_projekty(root, tmp_path, monkeypatch, capsys):
+    # --wszystkie = cały ~/.claude/projects (każdy projekt), nie tylko bieżący
+    home = tmp_path / "dom"
+    proj = home / ".claude" / "projects"
+    proj.mkdir(parents=True)
+    for nazwa in ("-a", "-b"):
+        shutil.copytree(root, proj / nazwa)
+    monkeypatch.setattr(zt.Path, "home", classmethod(lambda cls: home))
+    assert zt.main(["--wszystkie", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["razem_wywolan"] == 8
+    assert zt.main(["--wszystkie", "--katalog", str(root)]) == 2

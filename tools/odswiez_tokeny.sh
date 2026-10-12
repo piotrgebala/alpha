@@ -17,7 +17,7 @@ mkdir -p "$DIR"
 PY=python3
 [ -x .venv/bin/python ] && PY=.venv/bin/python
 
-PYTHONUTF8=1 "$PY" tools/zuzycie_tokenow.py --stan "$STAN"
+PYTHONUTF8=1 "$PY" tools/zuzycie_tokenow.py --wszystkie --stan "$STAN"
 
 if [ "$(git -C "$DANE" symbolic-ref --short -q HEAD 2>/dev/null)" != "tokeny-dane" ]; then
   echo "$(teraz) BŁĄD: $DANE nie jest klonem gałęzi tokeny-dane (przygotowanie: docs/rag/12)" >&2
