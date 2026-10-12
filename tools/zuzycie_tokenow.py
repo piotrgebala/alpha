@@ -503,7 +503,11 @@ def merge_days(old: list[dict], new: dict[str, dict], today: str) -> list[dict]:
 
 
 def write_state(
-    path: Path, scan: Scan, now: datetime | None = None, limit: int = DOC_LIMIT
+    path: Path,
+    scan: Scan,
+    now: datetime | None = None,
+    limit: int = DOC_LIMIT,
+    zrodlo: str = "zapisy Claude Code projektu alpha na serwerze Linux (bez Windows i Cowork)",
 ) -> dict:
     """Dokument strony „Tokeny CLAS-5”: scala plik `path` (historia) ze świeżym skanem, przycina
     najstarsze dni do `limit` bajtów i zapisuje atomowo. Uszkodzony plik historii = błąd, nie reset.
@@ -513,7 +517,7 @@ def write_state(
     state = {
         "wersja": 1,
         "wygenerowano": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "zrodlo": "zapisy Claude Code projektu alpha na serwerze Linux (bez Windows i Cowork)",
+        "zrodlo": zrodlo,
         "kolumny_modelu": MODEL_COLS,
         "kolumny_zrodla": ["koszt", "wywolan"],
         "cennik": {  # nowy klucz (T8): ceny, po których liczone są klucze `usd` i `usd_z` dni
@@ -1136,6 +1140,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--katalog", type=Path, help="katalog zapisów (domyślnie: projekt z bieżącego katalogu)"
     )
+    ap.add_argument(
+        "--wszystkie",
+        action="store_true",
+        help="zużycie CAŁKOWITE: zapisy wszystkich projektów z ~/.claude/projects, nie tylko tego",
+    )
     ap.add_argument("--od", default="", help="od dnia UTC, RRRR-MM-DD")
     ap.add_argument("--json", action="store_true", help="wynik jako JSON")
     tryb = ap.add_mutually_exclusive_group()
@@ -1160,13 +1169,27 @@ def main(argv: list[str] | None = None) -> int:
     if a.jednostki and not a.progi:
         print("BŁĄD: --jednostki działa tylko z --progi", file=sys.stderr)
         return 2
-    root = a.katalog or project_dir(Path.cwd())
+    if a.wszystkie and a.katalog:
+        print("BŁĄD: --wszystkie i --katalog się wykluczają", file=sys.stderr)
+        return 2
+    root = (
+        Path.home() / ".claude" / "projects"
+        if a.wszystkie
+        else a.katalog or project_dir(Path.cwd())
+    )
     if not root.is_dir():
         print(f"BŁĄD: brak katalogu zapisów {root}", file=sys.stderr)
         return 1
     if a.stan:
         try:
-            st = write_state(a.stan, scan_project(root, a.od))
+            extra = (
+                {
+                    "zrodlo": "zapisy Claude Code wszystkich projektów na serwerze Linux (bez Windows i Cowork)"
+                }
+                if a.wszystkie
+                else {}
+            )
+            st = write_state(a.stan, scan_project(root, a.od), **extra)
         except (OSError, ValueError, KeyError, TypeError) as e:
             print(f"BŁĄD: plik stanu {a.stan}: {e}", file=sys.stderr)
             return 1

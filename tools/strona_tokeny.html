@@ -90,9 +90,9 @@ footer p{max-width:none}
 <div class="wrap">
   <header>
     <h1>Tokeny CLAS-5</h1>
-    <div class="meta" id="meta">Claude Code · projekt alpha · serwer Linux</div>
+    <div class="meta" id="meta">Claude Code · wszystkie projekty · serwer Linux</div>
     <div class="fresh" id="fresh" hidden><i></i><span></span></div>
-    <p class="lede">Ile tokenów zużywa praca Claude Code nad projektem alpha, dzień po dniu, według modelu i źródła.
+    <p class="lede">Ile tokenów zużywa praca Claude Code we wszystkich projektach, dzień po dniu, według modelu i źródła.
       Koszt jest liczony w jednostkach wejścia. Każdy token waży tyle, ile w cenniku Claude: odczyt z pamięci
       podręcznej 0,1, zapis 2, odpowiedź 5. To proporcje do porównań, nie złotówki.</p>
   </header>
@@ -139,7 +139,7 @@ footer p{max-width:none}
   </main>
 
   <footer>
-    <p>Źródło: zapisy rozmów Claude Code projektu alpha na serwerze Linux (~/.claude/projects). Komputer
+    <p>Źródło: zapisy rozmów Claude Code wszystkich projektów na serwerze Linux (~/.claude/projects). Komputer
       z Windows i Cowork mają własne zapisy, więc ich tu nie ma.</p>
     <p>Odświeżanie: codziennie. O 04:30 UTC cron serwera uruchamia tools/odswiez_tokeny.sh: monitor
       tools/zuzycie_tokenow.py --stan liczy dni i wypycha plik stan.json (same liczby) na gałąź tokeny-dane
@@ -253,7 +253,7 @@ footer p{max-width:none}
     const n = S.days.length;
     const calls = S.days.reduce((a, x) => a + x.calls, 0);
     $('meta').textContent = dm(S.first) + '.' + S.first.slice(0, 4) + '–' + dm(S.today) + '.' + S.today.slice(0, 4) +
-      ' · ' + n + (n === 1 ? ' dzień' : ' dni') + ' · ' + F0.format(calls) + ' wywołań modelu · serwer Linux, projekt alpha';
+      ' · ' + n + (n === 1 ? ' dzień' : ' dni') + ' · ' + F0.format(calls) + ' wywołań modelu · serwer Linux, wszystkie projekty';
     const t = Date.parse(S.gen);
     const ageH = (Date.now() - t) / 3.6e6;
     const when = dm(S.gen.slice(0, 10)) + '.' + S.gen.slice(0, 4) + ', ' + S.gen.slice(11, 16) + ' UTC';
