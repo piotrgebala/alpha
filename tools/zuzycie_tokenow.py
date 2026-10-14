@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import itertools
 import json
 import os
 import re
@@ -184,6 +185,7 @@ class Call:
     # klucz poprzednika w łańcuchu rozmowy (parentUuid); POCZATEK = wywołanie otwiera łańcuch
     # (start sesji, wznowienie po streszczeniu); "" = nieznany — wtedy poprzednie wywołanie w czasie
     poprzednik: str = ""
+    repo: str = ""  # nazwa repozytorium (tryb --wszystkie); "" = skan jednego projektu
 
     @property
     def usd(self) -> float | None:
@@ -332,15 +334,46 @@ def scan_file(path: Path, source: str, scan: Scan, since: str = "") -> None:
     scan.files += 1
 
 
-def scan_project(root: Path, since: str = "") -> Scan:
+def scan_project(root: Path, since: str = "", repo: str = "") -> Scan:
     scan = Scan()
     if not root.is_dir():
         return scan
     for path in sorted(root.rglob("*.jsonl")):
         if "memory" in path.relative_to(root).parts:
             continue
+        n = len(scan.calls)
         scan_file(path, source_of(path, root), scan, since)
+        for call in scan.calls[n:]:
+            call.repo = repo
     return scan
+
+
+def repo_name(root: Path) -> str:
+    """Nazwa repozytorium katalogu zapisów: ostatni człon pola `cwd` z zapisów (to ścieżka robocza
+    sesji), a gdy go brak — nazwa katalogu zapisów."""
+    for path in sorted(root.glob("*.jsonl")):
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for line in itertools.islice(fh, 50):
+                try:
+                    cwd = json.loads(line).get("cwd")
+                except (json.JSONDecodeError, AttributeError):
+                    continue
+                if isinstance(cwd, str) and cwd:
+                    return re.split(r"[\\/]", cwd.rstrip("\\/"))[-1] or root.name
+    return root.name
+
+
+def scan_all(projects: Path, since: str = "") -> Scan:
+    """Wszystkie projekty z `~/.claude/projects` na tej maszynie; każde wywołanie z nazwą repo."""
+    total = Scan()
+    for d in sorted(p for p in projects.iterdir() if p.is_dir()):
+        sc = scan_project(d, since, repo_name(d))
+        total.calls.extend(sc.calls)
+        total.skills.update(sc.skills)
+        total.content.update(sc.content)
+        total.bad_lines += sc.bad_lines
+        total.files += sc.files
+    return total
 
 
 def summarize(scan: Scan) -> dict:
@@ -461,6 +494,7 @@ def day_rows(scan: Scan) -> dict[str, dict]:
                 "ses": 0,
                 "usd": {},
                 "usd_z": {},
+                "repo": {},
             },
         )
         c, k, usd = call.counts, cost(call.counts), call.usd
@@ -468,6 +502,11 @@ def day_rows(scan: Scan) -> dict[str, dict]:
         m = r["m"].setdefault(call.model, [0.0] + [0] * (len(MODEL_COLS) - 1))
         for i, v in enumerate((k, 1, c["inp"], c["cw5"] + c["cw1h"], c["cr"], c["out"])):
             m[i] += v
+        if call.repo:  # tryb --wszystkie: [koszt w jednostkach, wywołań, USD z ceną]
+            rp = r["repo"].setdefault(call.repo, [0.0, 0, 0.0])
+            rp[0] += k
+            rp[1] += 1
+            rp[2] += usd or 0.0
         group = "workflow" if call.source.startswith("workflow:") else call.source
         z = r["z"].setdefault(GROUP_KEY[group], [0.0, 0])
         z[0] += k
@@ -485,6 +524,9 @@ def day_rows(scan: Scan) -> dict[str, dict]:
         r["prz"][1] = round(r["prz"][1])
         r["usd"] = {m: None if v is None else round(v, 4) for m, v in r["usd"].items()}
         r["usd_z"] = {g: round(v, 4) for g, v in r["usd_z"].items()}
+        r["repo"] = {n: [round(v[0]), v[1], round(v[2], 4)] for n, v in r["repo"].items()}
+        if not r["repo"]:
+            del r["repo"]
         if ctx[d]:
             r["ctx"] = [int(statistics.median(ctx[d])), max(ctx[d])]
         r["ses"] = len(sessions[d])
@@ -503,7 +545,11 @@ def merge_days(old: list[dict], new: dict[str, dict], today: str) -> list[dict]:
 
 
 def write_state(
-    path: Path, scan: Scan, now: datetime | None = None, limit: int = DOC_LIMIT
+    path: Path,
+    scan: Scan,
+    now: datetime | None = None,
+    limit: int = DOC_LIMIT,
+    zrodlo: str = "",
 ) -> dict:
     """Dokument strony „Tokeny CLAS-5”: scala plik `path` (historia) ze świeżym skanem, przycina
     najstarsze dni do `limit` bajtów i zapisuje atomowo. Uszkodzony plik historii = błąd, nie reset.
@@ -513,7 +559,8 @@ def write_state(
     state = {
         "wersja": 1,
         "wygenerowano": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "zrodlo": "zapisy Claude Code projektu alpha na serwerze Linux (bez Windows i Cowork)",
+        "zrodlo": zrodlo
+        or "zapisy Claude Code projektu alpha na serwerze Linux (bez Windows i Cowork)",
         "kolumny_modelu": MODEL_COLS,
         "kolumny_zrodla": ["koszt", "wywolan"],
         "cennik": {  # nowy klucz (T8): ceny, po których liczone są klucze `usd` i `usd_z` dni
@@ -1136,6 +1183,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--katalog", type=Path, help="katalog zapisów (domyślnie: projekt z bieżącego katalogu)"
     )
+    ap.add_argument(
+        "--wszystkie",
+        action="store_true",
+        help="skanuj wszystkie projekty z ~/.claude/projects tej maszyny (dni dostają klucz `repo`)",
+    )
     ap.add_argument("--od", default="", help="od dnia UTC, RRRR-MM-DD")
     ap.add_argument("--json", action="store_true", help="wynik jako JSON")
     tryb = ap.add_mutually_exclusive_group()
@@ -1160,13 +1212,29 @@ def main(argv: list[str] | None = None) -> int:
     if a.jednostki and not a.progi:
         print("BŁĄD: --jednostki działa tylko z --progi", file=sys.stderr)
         return 2
-    root = a.katalog or project_dir(Path.cwd())
+    if a.wszystkie and a.katalog:
+        print("BŁĄD: --wszystkie i --katalog się wykluczają", file=sys.stderr)
+        return 2
+    root = (
+        Path.home() / ".claude" / "projects"
+        if a.wszystkie
+        else a.katalog or project_dir(Path.cwd())
+    )
     if not root.is_dir():
         print(f"BŁĄD: brak katalogu zapisów {root}", file=sys.stderr)
         return 1
+    skan = (lambda: scan_all(root, a.od)) if a.wszystkie else (lambda: scan_project(root, a.od))
     if a.stan:
         try:
-            st = write_state(a.stan, scan_project(root, a.od))
+            st = write_state(
+                a.stan,
+                skan(),
+                zrodlo=(
+                    "zapisy Claude Code wszystkich repozytoriów na tej maszynie"
+                    if a.wszystkie
+                    else ""
+                ),
+            )
         except (OSError, ValueError, KeyError, TypeError) as e:
             print(f"BŁĄD: plik stanu {a.stan}: {e}", file=sys.stderr)
             return 1
@@ -1178,13 +1246,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if a.progi:
         try:
-            r = raport_progow(scan_project(root, a.od), jednostki=a.jednostki)
+            r = raport_progow(skan(), jednostki=a.jednostki)
         except ValueError as e:
             print(f"BŁĄD: symulacja progów: {e}", file=sys.stderr)
             return 1
         print(json.dumps(r, ensure_ascii=False, indent=1) if a.json else raport_progow_tekst(r))
         return 0
-    s = summarize(scan_project(root, a.od))
+    s = summarize(skan())
     print(json.dumps(s, ensure_ascii=False, indent=1) if a.json else report(s))
     return 0
 

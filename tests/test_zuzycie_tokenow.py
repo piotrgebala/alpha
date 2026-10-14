@@ -1049,3 +1049,21 @@ def test_raport_progow_model_spoza_cennika_jawnie():
     assert (
         mieszane["wywolan_bez_ceny"] == 20 and mieszane["model_ceny_odczytu"] == "claude-opus-5-5"
     )
+
+
+def test_scan_all_splits_days_by_repo(tmp_path):
+    """--wszystkie: nazwa repo z pola cwd (albo z nazwy katalogu); sumy repo = sumy dnia."""
+    proj = tmp_path / "projects"
+    rec = {"cwd": "/home/user/repo-a", **_asst("a1", "2026-09-27T10:00:00Z", inp=10, out=5)}
+    _write(proj / "-home-user-repo-a" / "s.jsonl", [rec])
+    _write(
+        proj / "C--Users-x-repo-b" / "s.jsonl",
+        [_asst("b1", "2026-09-27T11:00:00Z", inp=20, out=5)],
+    )
+    scan = zt.scan_all(proj)
+    rows = zt.day_rows(scan)["2026-09-27"]
+    assert set(rows["repo"]) == {"repo-a", "C--Users-x-repo-b"}
+    assert rows["repo"]["repo-a"][1] == 1
+    assert sum(v[0] for v in rows["repo"].values()) == sum(v[0] for v in rows["z"].values())
+    # skan jednego projektu nie dodaje klucza `repo` (zgodność wsteczna z wersją 1)
+    assert "repo" not in zt.day_rows(zt.scan_project(proj / "C--Users-x-repo-b"))["2026-09-27"]

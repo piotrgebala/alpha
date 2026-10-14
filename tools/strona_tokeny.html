@@ -122,6 +122,11 @@ footer p{max-width:none}
     <h2 class="lab">Modele w wybranym okresie</h2>
     <div class="tw"><table id="t-mod"></table></div>
 
+    <div id="repo-box" hidden>
+      <h2 class="lab">Repozytoria w wybranym okresie</h2>
+      <div class="tw"><table id="t-repo"></table></div>
+    </div>
+
     <h2 class="lab">Skąd koszt: główna sesja, workflow, subagenci</h2>
     <div class="legend" id="lg2"></div>
     <figure class="chart" id="c2"></figure>
@@ -226,7 +231,9 @@ footer p{max-width:none}
       const ctx = Array.isArray(r.ctx) && +r.ctx[0] > 0 ? [+r.ctx[0], +r.ctx[1] || 0] : null;
       const prz = Array.isArray(r.prz) ? [+r.prz[0] || 0, +r.prz[1] || 0] : [0, 0];
       const mainCalls = r.z && Array.isArray(r.z.main) ? +r.z.main[1] || 0 : 0;
-      days.push({ d, partial: d === today, total, calls, fam, src, models, ctx, prz, ses: +r.ses || 0, mainCalls });
+      const repos = {};
+      for (const [k, v] of Object.entries(r.repo || {})) if (Array.isArray(v)) repos[k] = [+v[0] || 0, +v[1] || 0, +v[2] || 0];
+      days.push({ d, partial: d === today, total, calls, fam, src, models, ctx, prz, ses: +r.ses || 0, mainCalls, repos });
     }
     return { gen, today, first, days };
   }
@@ -442,6 +449,17 @@ footer p{max-width:none}
     if (!ids.length) h += '<tr><td colspan="8">Brak wywołań w wybranym okresie.</td></tr>';
     $('t-mod').innerHTML = h + '</tbody>';
   }
+  function renderRepoTable(days) {
+    const agg = {};
+    days.forEach((x) => Object.entries(x.repos).forEach(([n, v]) => { const a = agg[n] || (agg[n] = [0, 0, 0]); v.forEach((q, i) => { a[i] += q; }); }));
+    const names = Object.keys(agg).sort((a, b) => agg[b][0] - agg[a][0]);
+    $('repo-box').hidden = !names.length;   // dane sprzed trybu „wszystkie repozytoria” nie mają podziału
+    if (!names.length) return;
+    const tot = names.reduce((s, n) => s + agg[n][0], 0);
+    let h = '<thead><tr><th>Repozytorium</th><th class="n">Koszt, mln jedn.</th><th class="n">Udział</th><th class="n">Wywołań</th></tr></thead><tbody>';
+    names.forEach((n) => { h += '<tr><td>' + esc(n) + '</td><td class="n">' + mln(agg[n][0]) + '</td><td class="n">' + pc(tot ? agg[n][0] / tot : 0) + '</td><td class="n">' + F0.format(agg[n][1]) + '</td></tr>'; });
+    $('t-repo').innerHTML = h + '</tbody>';
+  }
   function renderSrcNote(days) {
     const t = days.reduce((s, x) => s + x.total, 0);
     const s = (k) => days.reduce((a, x) => a + (x.src[k] || 0), 0);
@@ -490,6 +508,7 @@ footer p{max-width:none}
     document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.n === period)));
     drawAll();
     renderModelTable(CUR);
+    renderRepoTable(CUR);
     renderSrcNote(CUR);
     renderDays(CUR);
   }
