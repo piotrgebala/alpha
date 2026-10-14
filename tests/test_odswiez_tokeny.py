@@ -98,3 +98,21 @@ def test_missing_or_wrong_data_clone_fails_without_push(sandbox):
     r = _run(repo, env)
     assert r.returncode == 1
     assert _git("--git-dir", str(origin), "branch", "--list") == ""
+
+
+def test_two_machines_are_summed_in_stan_json(sandbox):
+    repo, dane, origin, env = sandbox
+    assert _run(repo, {**env, "TOKENY_MASZYNA": "serwer"}).returncode == 0
+    # druga maszyna: własny klon danych i własna historia, ten sam origin
+    dane2 = Path(env["HOME"]) / "alpha-tokeny2"
+    _git("clone", "-q", "-b", "tokeny-dane", str(origin), str(dane2))
+    for k, v in (("user.name", "t"), ("user.email", "t@example.com")):
+        _git("config", k, v, cwd=dane2)
+    shutil.rmtree(repo / "runs")
+    env2 = {**env, "TOKENY_MASZYNA": "windows", "TOKENY_DANE": str(dane2)}
+    r = _run(repo, env2)
+    assert r.returncode == 0, r.stderr
+    files = _git("--git-dir", str(origin), "ls-tree", "-r", "--name-only", "tokeny-dane").split()
+    assert files == ["maszyny/serwer.json", "maszyny/windows.json", "stan.json"]
+    razem = json.loads(_git("--git-dir", str(origin), "show", "tokeny-dane:stan.json"))
+    assert razem["dni"][0]["m"]["claude-opus-5-5"][1] == 2

@@ -1067,3 +1067,23 @@ def test_scan_all_splits_days_by_repo(tmp_path):
     assert sum(v[0] for v in rows["repo"].values()) == sum(v[0] for v in rows["z"].values())
     # skan jednego projektu nie dodaje klucza `repo` (zgodność wsteczna z wersją 1)
     assert "repo" not in zt.day_rows(zt.scan_project(proj / "C--Users-x-repo-b"))["2026-09-27"]
+
+
+def test_polacz_stany_sums_same_day_across_machines(tmp_path):
+    def stan(proj, mid, inp):
+        _write(proj / "s.jsonl", [_asst(mid, "2026-09-27T10:00:00Z", inp=inp, out=5)])
+        p = tmp_path / f"{mid}.json"
+        zt.write_state(p, zt.scan_project(proj, repo=mid), now=TERAZ)
+        return p
+
+    a, b = stan(tmp_path / "a", "a", 10), stan(tmp_path / "b", "b", 30)
+    st = zt.polacz_stany([a, b], tmp_path / "razem.json", now=TERAZ)
+    (dzien,) = st["dni"]
+    assert dzien["repo"].keys() == {"a", "b"}
+    sa, sb = (json.loads(p.read_text())["dni"][0] for p in (a, b))
+    assert dzien["m"]["?"][1] == 2 and dzien["m"]["?"][0] == sa["m"]["?"][0] + sb["m"]["?"][0]
+    assert dzien["ctx"] == max(sa["ctx"], sb["ctx"], key=lambda c: c[1])
+    bad = tmp_path / "zly.json"
+    bad.write_text('{"wersja": 2, "dni": []}')
+    with pytest.raises(ValueError):
+        zt.polacz_stany([a, bad], tmp_path / "x.json", now=TERAZ)

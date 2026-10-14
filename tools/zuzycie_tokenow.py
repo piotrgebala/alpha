@@ -580,6 +580,69 @@ def write_state(
     return state
 
 
+def _dodaj(a: list, b: list) -> list:
+    return [x + y for x, y in zip(a, b, strict=True)]
+
+
+def polacz_dzien(a: dict, b: dict) -> dict:
+    """Ten sam dzień z dwóch maszyn: liczniki się sumują; kontekst głównej sesji = wiersz z większym
+    maksimum (mediany nie da się złożyć z samych median); USD modelu spoza cennika zostaje null."""
+    out = {"d": a["d"]}
+    for k in ("m", "z", "repo"):
+        if k in a or k in b:
+            ka, kb = a.get(k, {}), b.get(k, {})
+            out[k] = {
+                n: _dodaj(ka[n], kb[n]) if n in ka and n in kb else ka.get(n) or kb[n]
+                for n in sorted(set(ka) | set(kb))
+            }
+    for k in ("usd", "usd_z"):
+        ka, kb = a.get(k, {}), b.get(k, {})
+        out[k] = {
+            n: (
+                None
+                if (n in ka and ka[n] is None) or (n in kb and kb[n] is None)
+                else round(ka.get(n, 0.0) + kb.get(n, 0.0), 4)
+            )
+            for n in sorted(set(ka) | set(kb))
+        }
+    out["ctx"] = max(a.get("ctx", [0, 0]), b.get("ctx", [0, 0]), key=lambda c: c[1])
+    out["prz"] = _dodaj(a.get("prz", [0, 0]), b.get("prz", [0, 0]))
+    out["ses"] = a.get("ses", 0) + b.get("ses", 0)
+    return out
+
+
+def polacz_stany(
+    pliki: list[Path], path: Path, now: datetime | None = None, limit: int = DOC_LIMIT
+) -> dict:
+    """Dokument strony z kilku stanów maszyn (każdy plik = jedna maszyna, własna historia dni):
+    dni o tej samej dacie sumowane, przycięcie do `limit` bajtów jak w write_state. Pliki z innym
+    `wersja` lub cennikiem bez wspólnych kolumn = błąd, nie ciche złożenie."""
+    now = now or datetime.now(timezone.utc)
+    docs = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(pliki)]
+    if not docs or any(d.get("wersja") != 1 for d in docs):
+        raise ValueError("brak stanów maszyn albo inna wersja formatu")
+    dni: dict[str, dict] = {}
+    for d in docs:
+        for r in d["dni"]:
+            dni[r["d"]] = polacz_dzien(dni[r["d"]], r) if r["d"] in dni else r
+    state = {
+        "wersja": 1,
+        "wygenerowano": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "zrodlo": f"zapisy Claude Code z {len(docs)} maszyn (suma po dniach)",
+        "kolumny_modelu": docs[0]["kolumny_modelu"],
+        "kolumny_zrodla": docs[0]["kolumny_zrodla"],
+        "cennik": docs[0]["cennik"],
+        "dni": [dni[d] for d in sorted(dni)],
+    }
+    while len(state["dni"]) > 1 and len(json.dumps(state, ensure_ascii=False).encode()) > limit:
+        state["dni"].pop(0)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(state, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    os.replace(tmp, path)
+    return state
+
+
 def report(s: dict) -> str:
     """Raport tekstowy: koszt w USD po cenie modelu i w milionach dawnych jednostek (M)."""
     tot, tot_usd = s["razem_koszt"] or 1.0, s["razem_usd"] or 1.0
@@ -1188,6 +1251,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="skanuj wszystkie projekty z ~/.claude/projects tej maszyny (dni dostają klucz `repo`)",
     )
+    ap.add_argument(
+        "--polacz",
+        type=Path,
+        metavar="KATALOG",
+        help="z --stan: złóż stany maszyn (KATALOG/*.json) w jeden dokument strony",
+    )
     ap.add_argument("--od", default="", help="od dnia UTC, RRRR-MM-DD")
     ap.add_argument("--json", action="store_true", help="wynik jako JSON")
     tryb = ap.add_mutually_exclusive_group()
@@ -1212,6 +1281,17 @@ def main(argv: list[str] | None = None) -> int:
     if a.jednostki and not a.progi:
         print("BŁĄD: --jednostki działa tylko z --progi", file=sys.stderr)
         return 2
+    if a.polacz:
+        if not a.stan:
+            print("BŁĄD: --polacz wymaga --stan", file=sys.stderr)
+            return 2
+        try:
+            st = polacz_stany(sorted(a.polacz.glob("*.json")), a.stan)
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            print(f"BŁĄD: łączenie stanów z {a.polacz}: {e}", file=sys.stderr)
+            return 1
+        print(f"połączono: dni {len(st['dni'])} → {a.stan}")
+        return 0
     if a.wszystkie and a.katalog:
         print("BŁĄD: --wszystkie i --katalog się wykluczają", file=sys.stderr)
         return 2
