@@ -3163,6 +3163,11 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
 - **Decyzje użytkownika 2026-09-29 (tablica):** LH0 — tryb ograniczony bez kosztów, najpierw pomiar wag na dłuższym oknie
   (zadanie 004); przegląd tygodnia hooka audytowego od 2026-10-06 (005); kroki z `sudo` izolacji — użytkownik, sprawdzenie
   orkiestrator (006).
+- **Zadanie 004 / LH0 krok 1 (2026-10-05): STOP, LH0 zamknięte** (decyzja użytkownika 2026-10-05: „tak zamknij 004”).
+  Pomiar 26 h: pełne odpytanie już dla samego BTC średnio 1 209 wagi/min (próg 600), tani filtr gubi ~93 % likwidacji.
+  E1 zostaje na LK0 + LB0; 010 (funding/premia HL) i 018 — osobne decyzje użytkownika. Wniosek 115,
+  [runda](runs/2026-09-29_lh0-kolektor-hyperliquid/README.md), [zadanie](zadania/004-lh0-tryb-ograniczony.md).
+  Ścieżka odwrotu: nowy pomiar przy innym źródle (węzeł, płatne S3) — nowa decyzja.
 - **Zadanie 007 (2026-09-29, backlog, 0 odczytów):** [mapa hipotez](docs/mapa_hipotez_2026-10.md) — z 10 rodzin żadna nie jest dziś mierzalna (B3, B4, C1, D3, G1, Y2 NIEMIERZALNE przy progu t 3,84; E1, PT1 i dwie z Hyperliquid BRAK DANYCH); proponowana kolejność: karta E1 (011) → sonda HL (010) → PT1 na życzenie (012), reszta zamknąć bez odczytu — decyzja użytkownika.
 - **Po mapie 007 (2026-09-29, decyzja użytkownika):** 008 (B3), 009 (G1), 013 (Y2) zamknięte bez odczytu; 010 i 011 — decyzja po pomiarze 004 (30.09); 012 (PT1) tylko na życzenie, pełna baza 1990–2026; 014 bez zmian.
 - **Zadanie 017 / LP1 (2026-09-29, przegląd, 0 odczytów zwrotu):** płaski próg likwidacji dziennika (MMR 1 %, cena ostatnia) daje prawie tę samą liczbę likwidacji co progi Binance + cena mark przy ~10 tys. USDT/monetę (2× +1,4 %, 3× −2,1 %; próg decyzji 10 %) — **Poprawki nie proponujemy**; warunek powrotu: pozycja > ~50–100 tys. USDT/monetę (post hoc +14…+17 %) albo małe alty. Luki danych do osobnych zadań: zamrożona cena ostatnia przy wstrzymaniu/wycofaniu kontraktu (FTT, ALPACA, LUNA); 4 nazwy plików `universe_full` na serwerze w cp866 — wniosek 111, [runda](runs/2026-09-29_lp1-likwidacja-progi-binance/README.md), [zadanie](zadania/017-likwidacja-progi-binance.md).
@@ -3174,3 +3179,30 @@ pokrycia ≥ 70 %); (c) poprawka 8 — decyzja 2026-09-25: TAK, WYKONANA; (d) ko
   droga: sha256 3 202 plików). Klon dziennika był poprawny. Ryzyko: TP1/LP1 przeliczone od nowa mogą się lekko różnić
   (1 moneta × 1 miesiąc) — [zadanie](zadania/024-nazwy-cp866-universe.md).
 - **Zadanie 028 / ML1 (2026-09-30, 0 wariantów, 0 zwrotów):** model XGBoost 1d BTC (10 cech, V = 7) uczony na 2021–2025 i zamrożony (sha256 `d1a39ee4…`, pre-rejestracja `e99dc82`); próg „górne 20 % pewności” = 0,424963, ale kalibracja nie rośnie (49,5 % vs 52,8 %) i na rozbiegu 2026 próg daje 9 % sygnałów (~13/rok) → tor P niemierzalny przez lata; tor P i kolektory 5 cech = decyzja użytkownika — wniosek 114, [runda](runs/2026-09-30_ml1-wolny-horyzont/README.md).
+- **Zadanie 026 (2026-10-05, przegląd, 0 odczytów):** [przegląd badań CP1 i E1](docs/przeglad_literatury_cp1_e1.md) — dla samego sygnału CP1 (premia Coinbase → BTC na tydzień) BRAK ŹRÓDŁA. Mechanizm pokrewny jest umiarkowany (napływy ETF, premia GBTC → BTC), ale dwa wyniki przeczą roli prowadzącej Coinbase (cenę ustala Binance, premie rosną z BTC albo po nim), więc szczebel 1(a) zostaje **słaby**; zmiana statusu = decyzja użytkownika. **Notka dla zadania 011:** zakładany efekt E1 do rachunku mocy = 0,75 % brutto na epizod w 24 h (zakres 0–1,3 %; interpretacja z 4 źródeł, nie pomiar) — poniżej progu po roku (0,9–1,3 %), więc odczyt najwcześniej po ~3 latach.
+- **Decyzje użytkownika 2026-10-05:** 028 „Zamknąć” (ML1 zamknięte, tor P nie startuje); 018 „Zbierać”; 025 „Poprawka 025 + black”. Plan: 025, 018, 010 wykonawcami w nowej sesji; 011 w toku.
+- **Zadanie 011 / E1K (2026-10-05, 0 wariantów, 0 odczytów E1):** karta E1 zapisana przed zliczeniem (`580092c`, [`runs/DRAFT_E1.md`](runs/DRAFT_E1.md)); Bybit 7 dni: 0 kaskad (≤ 189 dni/rok), przy efekcie 0,75 % i koszcie 0,5 % potrzeba 1 537–3 140 dni z kaskadą (≥ 4,2–8,6 roku nawet codziennie) — **NIEMIERZALNA, odczyt nie startuje**. **Do decyzji użytkownika:** zbierać i kontrola mocy z liczników 2026-12-27 (rekomendacja) albo zamknąć E1 teraz. Wniosek 116, [runda](runs/2026-10-05_e1k-karta-kaskad/README.md). Ścieżka odwrotu: nowa karta (wariant 2) decyzją użytkownika.
+- **Decyzje użytkownika 2026-10-05 (wieczór, orkiestrator):** E1 „Zamknąć E1 teraz” (0 odczytów, kontrola mocy 27.12 odwołana;
+  wniosek 116, [`runs/DRAFT_E1.md`](runs/DRAFT_E1.md)); 018 „Zamknąć 018” (`odrzucone`; brama zbierała pod E1, brak API
+  Liquid poza MCP); stare worktree: „Tak, scalone i czyste”. Kolektory LK0/LB0 działają dalej (zatrzymanie = osobna
+  decyzja). Do następnej wersji skilla `quant-strategy-catalog`: oznaczyć E1 (kaskady likwidacji) jako zamknięte.
+- **Zadanie 025 (2026-10-06): Poprawka 13 dziennika scalona** (`2f65588`, decyzja „Poprawka 025 + black”) — rozliczenie
+  wstrzymanych/wycofanych kontraktów od 2026-10-06, rejestr `dziennik/rozliczenia.csv`; [wpis](dziennik/README.md).
+  Pierwszy przebieg z regułami 2026-10-07. Stare worktree: usunięte 9, pominięte 6 (zablokowane 007/016/017/023,
+  ze zmianą 020/022).
+- **Zadanie 010 (2026-10-06): HS0 scalone** (`47551cd`, zgoda 29.09) — publiczne API Hyperliquid daje godzinowy
+  funding od 2023-05-12 (3,4 roku BTC/ETH/SOL), 20 z 26 monet koszyka na HL, wniosek 117, bez odczytu. Kolektor stanu
+  rynku HL (`metaAndAssetCtxs` co 60 s, ~19 MB/dobę, `~/likwidacje_hl/stan/`) działa od 07:11 UTC, nadzór w
+  `tools/likwidacje.sh`. **Ryzyko:** dane HL tylko na serwerze — kopia poza serwerem (~7 GB/rok) czeka na decyzję
+  użytkownika. [Runda](runs/2026-10-05_hs0-hl-stan-rynku/README.md), [karta](zadania/010-hl-brama-danych-funding-premia.md).
+- **Zadanie 005 (2026-10-06): raport tygodnia hooka audytowego scalony** (`5c6ceab`) — 2797 wywołań, 364 z flagą,
+  0 nadużyć, 359 fałszywych alarmów (głównie błędy reguł hooka, np. `2>&1`). **Decyzje użytkownika 2026-10-06 → zadanie 029:**
+  9 decyzji (blokować / oznaczać / poprawić regułę) w [raporcie](docs/rag/13_tydzien_obserwacji.md); rekomendacja:
+  wąska blokada `poswiadczenia` w narzędziach plikowych i zapisu do katalogu audytu, reszta dalej tylko oznacza.
+  [Karta](zadania/005-audyt-tydzien-obserwacji.md).
+- **Zadanie 029 (2026-10-06): hook audytowy blokuje dwie wąskie rzeczy** (merge `33d798e`). Decyzje użytkownika
+  2026-10-06: „Obie”, „Wszędzie”, „Jak w rekomendacji”. Blokowane są pliki z kluczami w narzędziach plikowych i zapis
+  do katalogu audytu, wszędzie, gdzie działa hook. Poprawki R1–R8: wierszy z flagą 364 → 97 na danych z tego samego
+  tygodnia; w powtórce tygodnia 0 odmów. Odwrót: `blokuj: []` w `config/audyt_hosty.yaml`. Drugi tydzień obserwacji:
+  [030](zadania/030-audyt-drugi-tydzien.md) (od 10-14). 006 rusza po nim (decyzja „Po drugim tygodniu”).
+  [Karta](zadania/029-hook-poprawki-blokady.md).

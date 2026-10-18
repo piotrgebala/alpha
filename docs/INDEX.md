@@ -4,7 +4,7 @@
 > jednozdaniowym opisem każdego. Nie zastępuje żadnego z nich — `STATUS.md` zostaje
 > jedynym źródłem aktualnego statusu, `docs/rag/*.md` jedynym źródłem pełnych uzasadnień decyzji.
 >
-> Ostatnia aktualizacja: 2026-09-28.
+> Ostatnia aktualizacja: 2026-10-06.
 
 ## Dokumenty nadrzędne (root)
 
@@ -17,6 +17,7 @@
 | [`mapa_projektu.html`](mapa_projektu.html) | Źródło zakładki „Mapa” strony „Pulpit CLAS-5” (https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#mapa; składa `tools/pulpit_clas5.py`): przepływ od pomysłu do kapitału, automaty dnia, mapa myśli i stan wiedzy — widok; przy sprzeczności wygrywają pliki źródłowe |
 | [`strona_dziennik.html`](strona_dziennik.html) | Źródło zakładki „Dziennik” strony „Pulpit CLAS-5” (https://claude.ai/artifact/NKxticRcxgFFXxntNZnZ4b#dziennik): stan dziennika papierowego z dokumentu bazy `dziennik/stan` (rutyna Cowork, 06:30 UTC); odtworzone 2026-09-28 z opublikowanej strony |
 | [`mapa_hipotez_2026-10.md`](mapa_hipotez_2026-10.md) | Mapa hipotez (zadanie 007, 2026-09-29, 0 odczytów): 10 rodzin (B3, B4, C1, D3, G1, Y2, PT1, E1, Hyperliquid ×2) z pięcioma polami, filtrem (a)–(f), rachunkiem mocy liczonym dwiema drogami (skrypt `mapa_hipotez_2026-10_moc.py`, wydruk `.txt`) i werdyktem: 6 NIEMIERZALNYCH, 4 BRAK DANYCH; kolejność E1 → HL → PT1 |
+| [`przeglad_literatury_cp1_e1.md`](przeglad_literatury_cp1_e1.md) | Przegląd badań (zadanie 026, 2026-10-05, 0 odczytów): premia Coinbase — dla samego sygnału BRAK ŹRÓDŁA, mechanizm pokrewny umiarkowany, szczebel 1(a) słaby; E1 — zakładany efekt 0,75 % brutto na epizod w 24 h (zakres 0–1,3 %) do karty 011; propozycja 1(b) na funduszach krajowych zamkniętych |
 
 ## `docs/rag/` — pełne uzasadnienia decyzji
 
@@ -34,7 +35,8 @@
 | [`10_preferencje_uzytkownika.md`](rag/10_preferencje_uzytkownika.md) | Preferencje użytkownika przeniesione z pamięci lokalnej Claude Code (2026-09-24): sposób handlu (3× na części kapitału, depozyt = ekspozycja/3), cel zwrotów (bez carry), rynek przed 2022, skille z chmury konta |
 | [`11_przeglad_kandydatow_2026-09-27.md`](rag/11_przeglad_kandydatow_2026-09-27.md) | Przegląd całego projektu (2026-09-27, 0 odczytów): 35 kandydatów do testów i dziennika — 3 przeszły (kolektor likwidacji Bybit, kopia i indeks LK0, rozbicie zwrotu dziennika), 18 wymaga decyzji użytkownika, 14 odrzuconych z powodem; historia 2021–2026 nie rozstrzygnie nowej hipotezy (41. odczyt, dowód wymaga t ≈ 3,84) |
 | [`12_zuzycie_tokenow.md`](rag/12_zuzycie_tokenow.md) | Pomiar zużycia tokenów (2026-09-28): 57 % główna sesja (kontekst 0,5–0,8 mln na wywołanie, 9 % przepisania po przerwie), 43 % workflow; ocena wytycznych (Headroom: nie; nowa sesja na zadanie: tak) i zasady oszczędzania; monitor `tools/zuzycie_tokenow.py`; strona „Tokeny CLAS-5” i warianty jej codziennego odświeżania |
-| [`13_izolacja_wykonawcow.md`](rag/13_izolacja_wykonawcow.md) | **ADR-13 (2026-09-29, zadanie 002):** izolacja wykonawców tablicy — etap 1 hook audytowy `tools/audyt_hook.py` (tylko oznacza: sieć poza `config/audyt_hosty.yaml`, zapisy poza repo, poświadczenia; dziennik `~/.clas5_audyt/`), etap 2 blokowanie po tygodniu za decyzją użytkownika, etap 3 osobny użytkownik `clas5wyk` + proxy + repo pośrednie — numerowana lista kroków z `sudo` i ścieżka odwrotu; przykład dziennika `13_przyklad_audytu.jsonl` |
+| [`13_izolacja_wykonawcow.md`](rag/13_izolacja_wykonawcow.md) | **ADR-13 (2026-09-29, zadanie 002):** izolacja wykonawców tablicy — etap 1 hook audytowy `tools/audyt_hook.py` (tylko oznacza: sieć poza `config/audyt_hosty.yaml`, zapisy poza repo, poświadczenia; dziennik `~/.clas5_audyt/`), etap 2 blokowanie po tygodniu za decyzją użytkownika (wdrożony 2026-10-06, zadanie 029: `poswiadczenia` blokowane w narzędziach plikowych, zapis do katalogu audytu we wszystkich; lista `blokuj:` w `config/audyt_hosty.yaml`, poprawki reguł R1–R8, fail-open), etap 3 osobny użytkownik `clas5wyk` + proxy + repo pośrednie — numerowana lista kroków z `sudo` i ścieżka odwrotu; przykład dziennika `13_przyklad_audytu.jsonl` |
+| [`13_tydzien_obserwacji.md`](rag/13_tydzien_obserwacji.md) | **Tydzień obserwacji hooka audytowego (zadanie 005, 2026-10-06):** 2797 wywołań, 364 z flagą (13 %), 0 nadużyć, 4 prawdziwe zdarzenia (pomiar LH0 poza repo), reszta głównie fałszywe alarmy samego hooka; poprawki reguł R1–R8 z miejscem w `tools/audyt_hook.py`; propozycja dla każdej flagi (blokować teraz tylko `poswiadczenia` w narzędziach plikowych i zapis do katalogu audytu) i komendy `jq`/Python do powtórzenia; sekcja 9 (zadanie 029): powtórka tygodnia regułami R1–R8 — 0 odmów w tygodniu i 2026-10-06, 97 wierszy z flagą na tekście z dziennika (reszta różnic to cięcie poleceń na 300 znakach) |
 | [`Repo lessons i sigma — co przydatne dla alpha.md`](<rag/Repo lessons i sigma — co przydatne dla alpha.md>) | Przegląd dwóch innych projektów użytkownika (SIGMA na QuantConnect, lessons/AI_devs) — wytyczne 1–7 wdrożone w `docs/skills/bramki-jakosci.md` (A6, B6a, C1), kontrola negatywna NC1, strażnik `tests/test_runs_index_guard.py`, odchudzony `CLAUDE.md`. Kolejność propozycji w pliku jest już nieaktualna (D1/O1 zamknięte, carry odrzucone jako cel) |
 
 ## `docs/skills/` — procedury pracy (wersjonowane z repo, niezależne od pluginów)

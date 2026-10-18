@@ -2,7 +2,7 @@
 id: 004
 tytul: LH0 — tryb ograniczony: pomiar wag na dłuższym oknie, potem kolektor likwidacji Hyperliquid na kilku głównych monetach
 typ: zbieranie_danych
-status: w_toku
+status: zrobione
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Tryb ograniczony, bez kosztów: kolektor tylko na kilka głównych monet. Najpierw trzeba zmierzyć na dłuższym oknie, czy zmieści się w limicie.”"
 utworzono: 2026-09-29
@@ -83,3 +83,14 @@ kod 0. Pomiar 26 h od 08:33:37 UTC (koniec ≈ 2026-09-30 10:33 UTC), kopia skry
 (sha256 `3bf50945…84bbe1` = `c9cd2bd`, sprawdzone przez orkiestratora). Własne zużycie pomiaru ≈ 330–360 wagi/min, 0 × 429.
 Próg (pre-rejestracja): średnio ≤ 600 wagi/min i p95 ≤ 1 200; filtr nie gubi, gdy górna granica 95 % (Clopper–Pearson)
 udziału zgubionych likwidacji ≤ 5 %. Dalej: `--podsumuj` → `raw_output.txt`, werdykt A, potem B–D albo STOP.
+
+**Stan 2026-10-05 (zrobione — wynik STOP, LH0 zamknięte):** decyzja użytkownika 2026-10-05: „tak zamknij 004”
+(po raporcie werdyktu A). Kroki B–D NIE wykonane (zgodnie z krokiem A: „Jeśli żaden zestaw nie mieści się w progu: STOP”).
+- `--podsumuj` (bez zapytań, kod 0, skrypt sha256 `3bf50945…84bbe1`) dopisane do
+  `runs/2026-09-29_lh0-kolektor-hyperliquid/raw_output.txt` („KROK 1A — pomiar wag”), wydruk odtwarzalny bajt w bajt;
+  hashe surowych plików w nagłówku sekcji. 26 h, 1 546 pełnych minut, 33 048 zapytań, 0 × 429.
+- Werdykt A: żaden sposób × zestaw nie spełnia łącznie kosztu (śr ≤ 600, p95 ≤ 1 200) i „nie gubi” (CP95 ≤ 5 %).
+  Pełne S1: 1 209 / p95 2 449; jedyny „mieści się” M2 F1 (S3 459 / 869) gubi 65/70 (92,9 %, CP do 97,6 %).
+- Druga droga (`runs/2026-09-29_lh0-kolektor-hyperliquid/druga_droga_krok1.py`, niezależny kod): 1 209 / 1 005 / 2 449
+  i 65/70 — zgodne. Bramki 16a **Caveats** (bez kaskady w oknie), 16b, 16c w README rundy; wniosek 115 w `runs/INDEX.md`;
+  `STATUS.md`; `data/measure_hl_weights.py` + skrypt drugiej drogi zamrożone (`runs/ZAMROZONE.txt`).

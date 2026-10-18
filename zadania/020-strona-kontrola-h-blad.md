@@ -2,7 +2,7 @@
 id: 020
 tytul: Strona dziennika — kontrola (h): alarm, gdy ostatnia linia `przebiegi.log` ma pole z „BŁĄD”
 typ: infra
-status: do_przegladu
+status: zrobione
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29
@@ -57,3 +57,12 @@ wychwycić. Pozycja z backlogu `STATUS.md` §17, ETAP 6.
 - **2026-09-30 ~05:45 UTC:** użytkownik: „rutyna dziennika dodana” — nowa instrukcja w rutynie (słowo użytkownika
   wystarcza według kryteriów odbioru). Zostało: przebieg 06:30 UTC zakończony „Dziennik odświeżony” — sprawdzić
   `RemoteTrigger list_runs` / `get_run_log` w następnej sesji orkiestratora i wtedy zmienić status na `zrobione`.
+- **2026-10-05 ~17:35 UTC, zamknięcie (orkiestrator):** `RemoteTrigger list_runs` dla rutyny „Dziennik CLAS-5 — codzienne
+  odświeżenie strony” (`trig_013XEDboNXSkb6CF17K1eSGf`): przebiegi 02.10–05.10 zakończone; `get_run_log` przebiegu
+  `cse_014N7NNa99nTzMgYsP18T3tw` (2026-10-05 04:42 UTC): `result: success`, ostatnia linia „Dziennik odświeżony: dane za
+  2026-10-04, kapitał R1 1.014944, carry -0.14 %.”; suma skryptu w rutynie `1a9934a2…34b40f5` = suma
+  `tools/strona_dziennika.py` na master = suma w `tools/rutyna_dziennika.md` (wersja z kontrolą (h)). Status → `zrobione`.
+  **Uwaga poza zakresem:** prompt wyzwalacza zaczyna się od fragmentu kodu skryptu (nie od instrukcji z
+  `tools/rutyna_dziennika.md`); rutyna radzi sobie notatką incydentu w projekcie Cowork i pobiera instrukcję z repo.
+  W tym przebiegu próbowała też odczytać token GitHuba (odmowa klasyfikatora). Do decyzji użytkownika: ponowne wklejenie
+  instrukcji do rutyny.

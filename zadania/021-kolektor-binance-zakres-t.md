@@ -2,7 +2,7 @@
 id: 021
 tytul: Kolektor likwidacji Binance — sprawdzanie zakresu czasu T przy zapisie (dziś sprawdza je dopiero indeks/kopia)
 typ: naprawa
-status: do_przegladu
+status: zrobione
 zlecil: uzytkownik
 decyzja_uzytkownika: "2026-09-29: „Wykonaj wszystkie 3 punkty” (wpis pozycji backlogu z STATUS.md §17, ETAP 6, na tablicę)"
 utworzono: 2026-09-29
@@ -59,3 +59,7 @@ Pozycja z backlogu `STATUS.md` §17, ETAP 6.
   `.venv/bin/python -m data.collect_liquidations --dir /home/dantey1/likwidacje` (`kill -INT`, po 15 s `kill -TERM`)
   i od razu uruchomić `bash tools/likwidacje.sh` z `~/alpha` (cron `*/5` z `~/alpha-dziennik` ma stary kod do 02:30).
   Sprawdzić: cwd nowego procesu = `/home/dantey1/alpha`, `--status` pokazuje „T poza zakresem 0”.
+- **2026-10-05, zamknięcie (orkiestrator):** restart LK0 zrobił użytkownik (komenda z procedury). Nowy proces pid 1604604
+  od 2026-10-05T17:40:19Z, cwd `/home/dantey1/alpha`, `--status`: „T poza zakresem 0 (zapisane bez zmian)”, rozłączeń 0,
+  błąd None; `kolektor.log` 17:40:20 „połączono”. Przerwa w zbieraniu ≈ 17:40:00–17:40:20 UTC (≤ 20 s). Punkty (3) rekordy
+  bez T / licznik Bybit i (4) niestabilny test `tests/test_audyt_hook.py` zostają poza tym zadaniem (osobne naprawy).

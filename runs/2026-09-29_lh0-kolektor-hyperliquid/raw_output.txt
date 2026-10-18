@@ -123,3 +123,108 @@ surowe trades (JSON bez spacji): 30.3 MB w oknie -> 992 MB/dobe
 ### 8) df -h $HOME   (2026-09-29T07:57:43Z)
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/nvme0n1p2  1.8T  310G  1.4T  18% /
+
+
+## KROK 1A — pomiar wag (zadanie 004)
+# komenda (2026-10-05 ~17:21 UTC, bez zapytań sieciowych): ~/alpha/.venv/bin/python /home/dantey1/likwidacje_hl/pomiar_krok1/measure_hl_weights.py --dir /home/dantey1/likwidacje_hl/pomiar_krok1 --podsumuj   (kod wyjścia 0)
+# skrypt sha256 3bf50945f0c25ea04fe291240cb07757ddfb1a4251df4bf47386b6141184bbe1
+# minuty.jsonl: 9629254 B, sha256 5406a4fa2a09cb74c7f950210a93e74fc511e706ff3a11b76a6090db7bddee63
+# zapytania.jsonl: 11405788 B, sha256 08dadba14aff280b8c58d5c0862c56cadd0a54c4bf8319ad24a2efb7b02c7f4c
+# status.json: 643 B, sha256 63c2a8408c56eedd5f9eb88d5d9ec4b08c5e0bda4304a3d5d3df4bac2fac101a
+# pomiar.log: 33889 B, sha256 ebd80ae39fbe633e42230a481e1aba767b06a1d14f2081d91e883ff34cd83533
+
+minut zapisanych: 1561, pełnych (połączenie bez przerwy): 1546
+zakres (UTC, minuty od epoki): 29844512 .. 29846072 = 2026-09-29 08:32 .. 2026-09-30 10:32
+zapytań: próbka ok=30125, pełne okna ok=2923, statusy={'ok': 33048}
+odpowiedzi 429 łącznie: 0
+waga samego pomiaru [wagi/min]: średnia 451 mediana 424 p95 693 maks 796
+
+ŚREDNIA WAGA ZAPYTANIA z próbki (w̄, liczba zapytań) per okno N i zestaw:
+  N= 1: S1: 20.9 (n=8472)  S2: 20.9 (n=13066)  S3: 20.9 (n=15436)
+  N= 5: S1: 21.3 (n=5182)  S2: 21.4 (n=7584)  S3: 21.4 (n=9011)
+  N=15: S1: 21.7 (n=2480)  S2: 21.9 (n=3516)  S3: 21.8 (n=4185)
+  N=60: S1: 23.1 (n=906)  S2: 22.9 (n=1251)  S3: 22.8 (n=1493)
+
+KOSZT SPOSOBÓW [wagi/min] = unikalne adresy × w̄ (/N dla M3); w nawiasie dolna granica 20/zapytanie. Próg: średnia ≤ 600 ORAZ p95 ≤ 1 200.
+zestaw sposób          okien  adr.śr     w̄   średnia   mediana       p95      maks (dolna śr.) M4 oszcz.  werdykt
+S1     M1 pełny/1min    1546    57.8   20.9     1 209     1 005     2 449     9 692       1 155    40.4 %  NIE
+S1     M2 F1/1min       1546    11.1   20.9       231       209       480     1 107         221    59.5 %  mieści się
+S1     M2 F2/1min       1546    32.9   21.0       690       587     1 362     4 821         658    41.6 %  NIE
+S1     M3 N=5            301   203.3   21.3       868       713     1 959     5 126         813    30.5 %  NIE
+S1     M3 N=15            93   502.2   21.7       728       603     1 691     3 380         670    27.3 %  NIE
+S1     M3 N=60            17 1 629.9   23.1       628       565     1 727     1 727         543    25.1 %  NIE
+S2     M1 pełny/1min    1546    88.9   20.9     1 858     1 546     3 720    14 064       1 779    43.2 %  NIE
+S2     M2 F1/1min       1546    19.5   20.7       403       372       765     1 901         390    69.5 %  mieści się
+S2     M2 F2/1min       1546    52.0   20.9     1 086       940     2 088     6 681       1 041    45.7 %  NIE
+S2     M3 N=5            301   296.1   21.4     1 268     1 032     2 810     6 801       1 184    30.0 %  NIE
+S2     M3 N=15            93   713.2   21.9     1 039       851     2 488     4 510         951    26.2 %  NIE
+S2     M3 N=60            17 2 273.6   22.9       867       792     2 358     2 358         758    23.9 %  NIE
+S3     M1 pełny/1min    1546   105.0   20.9     2 196     1 819     4 412    15 955       2 100    42.4 %  NIE
+S3     M2 F1/1min       1546    22.2   20.7       459       414       869     2 171         444    67.7 %  mieści się
+S3     M2 F2/1min       1546    61.7   20.9     1 290     1 107     2 549     7 834       1 235    44.7 %  NIE
+S3     M3 N=5            301   352.1   21.4     1 509     1 238     3 197     7 773       1 408    29.3 %  NIE
+S3     M3 N=15            93   846.1   21.8     1 232     1 022     2 843     5 230       1 128    25.4 %  NIE
+S3     M3 N=60            17 2 669.6   22.8     1 014       935     2 689     2 689         890    21.4 %  NIE
+  (M4 oszcz. = górna granica udziału zapytań zbędnych przy pełnej wiedzy o pozycji; koszt M4 = koszt × (1 − oszcz.))
+
+CZY FILTR GUBI LIKWIDACJE (próbka losowa; jednostka = zlecenie likwidacyjne; próg: górna granica CP95 ≤ 5 %):
+  S1 F1: likwidacji=40 zgubionych=37 udział=92.5 % górna CP95=98.4 % → gubi / nierozstrzygnięte (próbka)
+  S1 F2: likwidacji=40 zgubionych=37 udział=92.5 % górna CP95=98.4 % → gubi / nierozstrzygnięte (próbka)
+  S1 poziom zlecenia (samo zlecenie likwidacyjne): z F1=0 z F2=0 z 4 dopasowanych do `trades`
+  S2 F1: likwidacji=56 zgubionych=51 udział=91.1 % górna CP95=97.0 % → gubi / nierozstrzygnięte (próbka)
+  S2 F2: likwidacji=56 zgubionych=49 udział=87.5 % górna CP95=94.8 % → gubi / nierozstrzygnięte (próbka)
+  S2 poziom zlecenia (samo zlecenie likwidacyjne): z F1=0 z F2=1 z 13 dopasowanych do `trades`
+  S3 F1: likwidacji=70 zgubionych=65 udział=92.9 % górna CP95=97.6 % → gubi / nierozstrzygnięte (próbka)
+  S3 F2: likwidacji=70 zgubionych=61 udział=87.1 % górna CP95=93.9 % → gubi / nierozstrzygnięte (próbka)
+  S3 poziom zlecenia (samo zlecenie likwidacyjne): z F1=0 z F2=1 z 21 dopasowanych do `trades`
+
+PEŁNE OKNA 1-min (wszystkie strony aktywne S3 odpytane):
+  okien=25 adresów=2923 waga=61364 likwidacji=0 zachowanych przez F1=0 F2=0
+
+OPÓŹNIENIE WYKRYCIA [s] = odbiór odpowiedzi − T wypełnienia (próbka), per N:
+  N= 1: likwidacji=23 mediana=75 p95=106 maks=111
+  N= 5: likwidacji=21 mediana=292 p95=855 maks=885
+  N=15: likwidacji=17 mediana=795 p95=1 403 maks=1 403
+  N=60: likwidacji=9 mediana=3 483 p95=5 164 maks=5 164
+
+STRONICOWANIE: zapytań z > 1 stroną=13 (per N: {15: 9, 60: 4}), uciętych na 5 stronach=0
+metody likwidacji w próbce: {'market': 70}
+
+### status.json na końcu pomiaru
+{
+ "czas": "2026-09-30T10:33:38Z",
+ "pid": 1387584,
+ "start": "2026-09-29T08:33:36Z",
+ "koniec_plan": "2026-09-30T10:33:36Z",
+ "waga_ostatnie_60s": 689,
+ "polaczony": false,
+ "ostatnia_transakcja_s_temu": 4.2,
+ "zadan_w_kolejce": 80,
+ "liczniki": {
+  "minuty": 1561,
+  "minuty_ok": 1546,
+  "okna_niepelne_N1": 15,
+  "okna_N1": 1546,
+  "okna_niepelne_N5": 11,
+  "zapytania": 33048,
+  "waga": 702644,
+  "likwidacje": 70,
+  "okna_N5": 301,
+  "okna_niepelne_N15": 11,
+  "okna_N15": 93,
+  "okna_niepelne_N60": 9,
+  "pelne_okna": 25,
+  "okna_N60": 17,
+  "rozlaczenia": 10,
+  "porzucone_przeterminowane": 237
+ },
+ "spoznione": 98,
+ "duplikaty": 635
+}
+
+## KROK 1A — druga droga (bramka 16a; niezależny kod, bez importu skryptu pomiaru)
+# komenda: ~/alpha/.venv/bin/python runs/2026-09-29_lh0-kolektor-hyperliquid/druga_droga_krok1.py   (2026-10-05)
+M1 S1: minut=1546 w̄=20.93 (n=8472) średnia=1209 mediana=1005 p95≈2449
+S3 F1 per rekord: likwidacji=70 zgubionych=65 udział=92.9 %
+S3 F1 unikalne (adres,oid): 67 zgubionych=63 udział=94.0 % CP95 górna=97.9 %
+rozkład N rekordów z likwidacją: {1: 23, 5: 21, 15: 17, 60: 9}

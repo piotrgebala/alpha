@@ -1,0 +1,112 @@
+E1K — częstość kaskad (karta runs/DRAFT_E1.md, część A 580092c); 0 cen, 0 odczytów E1
+W = 60 min, θ = 0.005, H = 24 h, wejście floor_min(t*) + 2 min
+koszyk: dziennik/koszyk.csv — 40 par (miesiąc, moneta) top-20, miesiące ['2026-09', '2026-10']
+
+=== BYBIT (pełne; źródło sygnału) ===
+pliki dni zamkniętych: 2026-09-27 … 2026-10-04 (8)
+okres: 2026-09-27 20:48 → 2026-10-05 00:00 UTC = 7.133 dnia
+linie 99577, złe 0, odwrotne (CM, pominięte) 0, liniowe 99577
+uniwersum 2026-09: 20 monet, z likwidacjami w danych 19, bez żadnej likwidacji: ['PUMPUSDT']; likwidacji w uniwersum 12754
+uniwersum 2026-10: 20 monet, z likwidacjami w danych 19, bez żadnej likwidacji: ['PUMPUSDT']; likwidacji w uniwersum 13483
+przerwy > 15 min bez żadnej likwidacji (cały rynek): 0
+największa suma w oknie 60 min / próg (5 najbliższych progu par moneta–strona):
+  SUIUSDT        long  0.526 (2026-09-29 01:37)
+  XRPUSDT        long  0.482 (2026-10-02 18:40)
+  LINKUSDT       long  0.470 (2026-10-02 18:47)
+  ADAUSDT        long  0.431 (2026-09-28 04:05)
+  QNTUSDT        long  0.380 (2026-10-04 21:25)
+par moneta–strona z ilorazem ≥ 0,5: 1, ≥ 0,25: 9, wszystkich: 50
+KASKADY: 0 (95 % Poisson [0.0; 3.7]), dni z ≥ 1 kaskadą: 0 [0.0; 3.7]
+
+=== BINANCE (próbka ≤ 1/s/symbol; tylko dolna granica) ===
+pliki dni zamkniętych: 2026-09-25 … 2026-10-04 (10)
+okres: 2026-09-25 13:35 → 2026-10-05 00:00 UTC = 9.434 dnia
+linie 334512, złe 0, odwrotne (CM, pominięte) 1501, liniowe 333011
+uniwersum 2026-09: 20 monet, z likwidacjami w danych 20, bez żadnej likwidacji: —; likwidacji w uniwersum 40519
+uniwersum 2026-10: 20 monet, z likwidacjami w danych 20, bez żadnej likwidacji: —; likwidacji w uniwersum 25500
+przerwy > 15 min bez żadnej likwidacji (cały rynek): 0
+największa suma w oknie 60 min / próg (5 najbliższych progu par moneta–strona):
+  SUIUSDT        long  1.760 (2026-09-26 20:59)
+  ZECUSDT        long  1.654 (2026-09-29 01:50)
+  DOGEUSDT       long  1.491 (2026-10-02 19:12)
+  LINKUSDT       long  1.272 (2026-10-02 19:16)
+  1000PEPEUSDT   long  1.206 (2026-09-28 03:35)
+par moneta–strona z ilorazem ≥ 0,5: 17, ≥ 0,25: 30, wszystkich: 52
+KASKADY: 9 (95 % Poisson [4.1; 17.1]), dni z ≥ 1 kaskadą: 5 [1.6; 11.7]
+  na dzień obserwacji: 0.954; na rok: 348 [159; 661]
+  dni z kaskadą na rok: 193 [63; 451]; średnio 1.80 kaskady na taki dzień; na miesiąc (30 d): 29
+  strona zlikwidowana: {'long': 8, 'short': 1}
+  monety: {'SUIUSDT': 2, '1000PEPEUSDT': 2, 'ZECUSDT': 1, 'LINKUSDT': 1, 'DOGEUSDT': 1, 'ARBUSDT': 1, 'PUMPUSDT': 1}
+  dni: {'2026-09-26': 1, '2026-09-28': 2, '2026-09-29': 1, '2026-10-02': 4, '2026-10-04': 1}
+  suma w oknie / próg w chwili t*: min 1.004, mediana 1.012, maks 1.126
+    2026-09-26 20:42 SUIUSDT        long  kier +1 okno        919,785 próg      860,594
+    2026-09-28 03:33 1000PEPEUSDT   long  kier +1 okno      1,168,253 próg    1,073,711
+    2026-09-28 03:33 SUIUSDT        long  kier +1 okno        941,987 próg      860,594
+    2026-09-29 01:19 ZECUSDT        long  kier +1 okno      4,348,250 próg    4,297,738
+    2026-10-02 18:39 LINKUSDT       long  kier +1 okno      1,224,096 próg    1,086,821
+    2026-10-02 18:40 DOGEUSDT       long  kier +1 okno      2,868,796 próg    2,838,747
+    2026-10-02 18:40 1000PEPEUSDT   long  kier +1 okno      1,538,311 próg    1,523,426
+    2026-10-02 19:16 ARBUSDT        long  kier +1 okno      1,311,521 próg    1,304,829
+    2026-10-04 16:37 PUMPUSDT       short kier -1 okno      1,101,587 próg    1,096,804
+
+zgodność: kaskad Bybit z kaskadą Binance (ta sama moneta i strona, ±60 min): 0/0
+
+=== RACHUNEK MIERZALNOŚCI (karta §9; Bybit) ===
+udział dni z kaskadą f = 0.0000 → abstynencja 1 − f = 1.0000; k̄ = 1.00; ρ = 0.6
+dni z kaskadą na rok: 0 (Poisson 95 %: 0 – 189)
+  expected_trades(n_dni=365, abstynencja=1.0000) = 0  (1 l.)
+  expected_trades(n_dni=730, abstynencja=1.0000) = 0  (2 l.)
+  expected_trades(n_dni=1095, abstynencja=1.0000) = 0  (3 l.)
+  expected_trades(n_dni=1825, abstynencja=1.0000) = 0  (5 l.)
+
+Scenariusz rozstrzygający μ 0.75%, σ 5%, C 0.5% przy n = 0 (3 lata):
+  [ROZSTRZYGAJĄCY] μ 0.75% σ 5% C 0.5%: σ_dnia 5.00%; potrzebne n50 1,537 (~inf l.), n80 3,140 (~inf l.); MDE brutto po 3 l. inf%; p 0.5596 p* 0.5284 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+    lata przy Poissonie 95 % częstości (0–189 dni/rok): n50 8.1 – inf l.; n80 16.6 – inf l.
+    ile dni z kaskadą na rok trzeba, by zdążyć w 3 lata: 50 % mocy 512, 80 % 1,047 (rok ma 365)
+  [opis] μ 0.00% σ 5% C 0.3%: σ_dnia 5.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5000 p* 0.5376 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.00% σ 5% C 0.5%: σ_dnia 5.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5000 p* 0.5627 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.00% σ 5% C 1.0%: σ_dnia 5.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5000 p* 0.6253 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.00% σ 8% C 0.3%: σ_dnia 8.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5000 p* 0.5235 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.00% σ 8% C 0.5%: σ_dnia 8.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5000 p* 0.5392 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.00% σ 8% C 1.0%: σ_dnia 8.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5000 p* 0.5783 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.50% σ 5% C 0.3%: σ_dnia 5.00%; potrzebne n50 2,401 (~inf l.), n80 4,906 (~inf l.); MDE brutto po 3 l. inf%; p 0.5398 p* 0.5148 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.50% σ 5% C 0.5%: σ_dnia 5.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5398 p* 0.5398 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.50% σ 5% C 1.0%: σ_dnia 5.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5398 p* 0.6024 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.50% σ 8% C 0.3%: σ_dnia 8.00%; potrzebne n50 6,146 (~inf l.), n80 12,558 (~inf l.); MDE brutto po 3 l. inf%; p 0.5249 p* 0.5093 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.50% σ 8% C 0.5%: σ_dnia 8.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5249 p* 0.5249 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.50% σ 8% C 1.0%: σ_dnia 8.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5249 p* 0.5641 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.75% σ 5% C 0.3%: σ_dnia 5.00%; potrzebne n50 474 (~inf l.), n80 969 (~inf l.); MDE brutto po 3 l. inf%; p 0.5596 p* 0.5034 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.75% σ 5% C 0.5%: σ_dnia 5.00%; potrzebne n50 1,537 (~inf l.), n80 3,140 (~inf l.); MDE brutto po 3 l. inf%; p 0.5596 p* 0.5284 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.75% σ 5% C 1.0%: σ_dnia 5.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5596 p* 0.5909 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.75% σ 8% C 0.3%: σ_dnia 8.00%; potrzebne n50 1,214 (~inf l.), n80 2,481 (~inf l.); MDE brutto po 3 l. inf%; p 0.5373 p* 0.5021 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.75% σ 8% C 0.5%: σ_dnia 8.00%; potrzebne n50 3,934 (~inf l.), n80 8,037 (~inf l.); MDE brutto po 3 l. inf%; p 0.5373 p* 0.5178 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 0.75% σ 8% C 1.0%: σ_dnia 8.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5373 p* 0.5569 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.00% σ 5% C 0.3%: σ_dnia 5.00%; potrzebne n50 196 (~inf l.), n80 400 (~inf l.); MDE brutto po 3 l. inf%; p 0.5793 p* 0.4920 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.00% σ 5% C 0.5%: σ_dnia 5.00%; potrzebne n50 384 (~inf l.), n80 785 (~inf l.); MDE brutto po 3 l. inf%; p 0.5793 p* 0.5169 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.00% σ 5% C 1.0%: σ_dnia 5.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5793 p* 0.5793 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.00% σ 8% C 0.3%: σ_dnia 8.00%; potrzebne n50 502 (~inf l.), n80 1,025 (~inf l.); MDE brutto po 3 l. inf%; p 0.5497 p* 0.4950 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.00% σ 8% C 0.5%: σ_dnia 8.00%; potrzebne n50 983 (~inf l.), n80 2,009 (~inf l.); MDE brutto po 3 l. inf%; p 0.5497 p* 0.5107 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.00% σ 8% C 1.0%: σ_dnia 8.00%; potrzebne n50 inf (~inf l.), n80 inf (~inf l.); MDE brutto po 3 l. inf%; p 0.5497 p* 0.5497 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.30% σ 5% C 0.3%: σ_dnia 5.00%; potrzebne n50 96 (~inf l.), n80 196 (~inf l.); MDE brutto po 3 l. inf%; p 0.6026 p* 0.4784 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.30% σ 5% C 0.5%: σ_dnia 5.00%; potrzebne n50 150 (~inf l.), n80 307 (~inf l.); MDE brutto po 3 l. inf%; p 0.6026 p* 0.5032 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.30% σ 5% C 1.0%: σ_dnia 5.00%; potrzebne n50 1,067 (~inf l.), n80 2,180 (~inf l.); MDE brutto po 3 l. inf%; p 0.6026 p* 0.5653 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.30% σ 8% C 0.3%: σ_dnia 8.00%; potrzebne n50 246 (~inf l.), n80 502 (~inf l.); MDE brutto po 3 l. inf%; p 0.5645 p* 0.4865 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.30% σ 8% C 0.5%: σ_dnia 8.00%; potrzebne n50 384 (~inf l.), n80 785 (~inf l.); MDE brutto po 3 l. inf%; p 0.5645 p* 0.5021 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+  [opis] μ 1.30% σ 8% C 1.0%: σ_dnia 8.00%; potrzebne n50 2,732 (~inf l.), n80 5,581 (~inf l.); MDE brutto po 3 l. inf%; p 0.5645 p* 0.5411 p_wykr(3 l.) nan → trafność N/D, zwrot NIEMIERZALNA ⇒ NIEMIERZALNA
+
+Scenariusz rozstrzygający przy częstości założonej (nie zmierzonej): górna granica Poissona i każdy dzień
+  górna granica 95 %: 1 l. → n 189; wald_half_width 7.13 pp; p 0.5596 p* 0.5284 p_wykr 0.5997 → trafność NIEMIERZALNA; MDE netto 0.71% wobec założonego netto 0.25% → zwrot NIEMIERZALNA
+  górna granica 95 %: 2 l. → n 378; wald_half_width 5.04 pp; p 0.5596 p* 0.5284 p_wykr 0.5788 → trafność NIEMIERZALNA; MDE netto 0.50% wobec założonego netto 0.25% → zwrot NIEMIERZALNA
+  górna granica 95 %: 3 l. → n 566; wald_half_width 4.12 pp; p 0.5596 p* 0.5284 p_wykr 0.5696 → trafność NIEMIERZALNA; MDE netto 0.41% wobec założonego netto 0.25% → zwrot NIEMIERZALNA
+  górna granica 95 %: 5 l. → n 944; wald_half_width 3.19 pp; p 0.5596 p* 0.5284 p_wykr 0.5603 → trafność NIEMIERZALNA; MDE netto 0.32% wobec założonego netto 0.25% → zwrot NIEMIERZALNA
+  365 dni/rok (sufit jednostki „dzień”): 1 l. → n 365; wald_half_width 5.13 pp; p 0.5596 p* 0.5284 p_wykr 0.5797 → trafność NIEMIERZALNA; MDE netto 0.51% wobec założonego netto 0.25% → zwrot NIEMIERZALNA
+  365 dni/rok (sufit jednostki „dzień”): 2 l. → n 730; wald_half_width 3.63 pp; p 0.5596 p* 0.5284 p_wykr 0.5647 → trafność NIEMIERZALNA; MDE netto 0.36% wobec założonego netto 0.25% → zwrot NIEMIERZALNA
+  365 dni/rok (sufit jednostki „dzień”): 3 l. → n 1095; wald_half_width 2.96 pp; p 0.5596 p* 0.5284 p_wykr 0.5580 → trafność MIERZALNA; MDE netto 0.30% wobec założonego netto 0.25% → zwrot NIEMIERZALNA
+  365 dni/rok (sufit jednostki „dzień”): 5 l. → n 1825; wald_half_width 2.29 pp; p 0.5596 p* 0.5284 p_wykr 0.5513 → trafność MIERZALNA; MDE netto 0.23% wobec założonego netto 0.25% → zwrot MIERZALNA
+
+=== GRANICA DUŻEGO n (n = 1 000 000; σ_dnia = 5 %, C = 0,5 %) ===
+  μ 0.450%: p 0.53586; p* uogólnione 0.54212 → NIEMIERZALNA; p* uproszczone 0.56267 → NIEMIERZALNA; zwrot → NIEMIERZALNA
+  μ 0.550%: p 0.54380; p* uogólnione 0.53754 → MIERZALNA; p* uproszczone 0.56267 → NIEMIERZALNA; zwrot → MIERZALNA
+  μ 0.750%: p 0.55962; p* uogólnione 0.52838 → MIERZALNA; p* uproszczone 0.56267 → NIEMIERZALNA; zwrot → MIERZALNA
+  μ 0.800%: p 0.56356; p* uogólnione 0.52609 → MIERZALNA; p* uproszczone 0.56267 → NIEMIERZALNA; zwrot → MIERZALNA
+  uproszczony próg wymaga μ > 0.7887% = 1.577 × C (karze cel); uogólniony: μ > C

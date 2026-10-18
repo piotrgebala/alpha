@@ -7,6 +7,7 @@
 #    gdy istnieje, cron NIE startuje kolektora Bybit (działający proces trzeba wtedy zakończyć ręcznie).
 # 2) Binance (data/collect_liquidations.py, próbka, runda LK0) — bez zmian: exec pod blokadą
 #    $HOME/likwidacje/.lock (skrypt zamienia się w kolektor i trzyma blokadę).
+# Obok (blok 1c): stan rynku Hyperliquid (data/collect_hl_stan.py, runda HS0) — ten sam wzór co Bybit.
 # flock trzyma JEDNĄ instancję każdego kolektora na maszynie (blokady w katalogach danych, wspólne dla
 # wszystkich klonów); gdy oba działają, skrypt kończy się od razu; gdy któryś padł (błąd, restart
 # serwera) — cron wznawia go w ≤ 5 min. Dane POZA repo (pliki dzienne JSONL, status.json,
@@ -15,6 +16,7 @@
 #   nohup bash tools/likwidacje.sh >/dev/null 2>&1 &
 # Stan: PYTHONUTF8=1 .venv/bin/python -m data.collect_liquidations --dir "$HOME/likwidacje" --status
 #       PYTHONUTF8=1 .venv/bin/python -m data.collect_liquidations_bybit --status
+#       PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --status
 cd "$(dirname "$0")/.."
 
 BDIR="${CLAS5_LIKWIDACJE_BYBIT_DIR:-$HOME/likwidacje_bybit}"
@@ -39,6 +41,25 @@ fi
 #     `exec 9>` — kopia nie dziedziczy blokady Binance i nie zatrzymuje kolektorów.
 if [ -f tools/likwidacje_kopia.sh ]; then
     ( setsid bash tools/likwidacje_kopia.sh </dev/null >/dev/null 2>&1 & )
+fi
+
+# 1c) Stan rynku Hyperliquid (data/collect_hl_stan.py, runda HS0, zadanie 010): `metaAndAssetCtxs` co 60 s
+#     do $HOME/likwidacje_hl/stan (zmiana: CLAS5_HL_STAN_DIR). Wzór Bybit: podwójny fork + setsid, PRZED
+#     `exec 9>`; własna blokada flock w katalogu danych (fd 7) przekazana kolektorowi przez --blokada-fd 7
+#     (kolektor sprawdza, że to ta sama blokada; ręcznie uruchomiony bierze ją sam). Wyłącznik: plik
+#     $HOME/likwidacje_hl/stan/WYLACZONY — cron nie startuje kolektora, a działający kończy się przed
+#     najbliższą migawką. Kopii poza serwerem nie ma (~20 MB/dobę) — ryzyko zapisane w README rundy HS0.
+#     Stan: PYTHONUTF8=1 .venv/bin/python -m data.collect_hl_stan --status
+HDIR="${CLAS5_HL_STAN_DIR:-$HOME/likwidacje_hl/stan}"
+mkdir -p "$HDIR"
+HL_CMD='exec 7>"$1/.lock"; flock -n 7 || exit 0; export PYTHONUTF8=1 OMP_NUM_THREADS=1;
+exec .venv/bin/python -m data.collect_hl_stan --dir "$1" --blokada-fd 7 >> "$1/kolektor.out" 2>&1'
+if [ ! -e "$HDIR/WYLACZONY" ]; then
+    if command -v setsid >/dev/null 2>&1; then
+        ( setsid bash -c "$HL_CMD" _ "$HDIR" </dev/null >/dev/null 2>&1 & )
+    else
+        ( nohup bash -c "$HL_CMD" _ "$HDIR" </dev/null >/dev/null 2>&1 & )
+    fi
 fi
 
 DIR="${CLAS5_LIKWIDACJE_DIR:-$HOME/likwidacje}"

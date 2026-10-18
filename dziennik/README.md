@@ -407,6 +407,162 @@ odpowiedzi giełdy (W2); test właściwości pilnuje reguły zamknięcia dnia �
 znaczników 0–999 ms (D3). Świadomie bez zmiany: „carry brak pliku” zgłaszane już przed startem (D2 — wczesne ostrzeżenie;
 kryterium (a) liczy od 30.09).
 
+## Poprawka 13 (2026-10-05, decyzja użytkownika — rozliczenie monety wstrzymanej lub wycofanej)
+
+Decyzja użytkownika 2026-10-05: „Poprawka 025 + black” (Poprawka N według szkicu w `zadania/025-dowody/przeglad.md`
+i samo formatowanie `black` pliku `data/fetch_ohlcv.py`, bez zmiany logiki). Zmienia się wyłącznie to, jak dziennik
+rozlicza monetę, której kontrakt giełda wstrzymała albo wycofała. Sygnały, wagi, dźwignie, progi, koszyk w zwykłych
+warunkach i dotychczasowe pliki — **bez zmian**. Reguły działają od **2026-10-06**.
+
+**Co i dlaczego.** Przegląd kodu z zadania 025 (`zadania/025-dowody/przeglad.md`, bez wyników dziennika) pokazał, że gdy
+Binance wycofuje kontrakt, dziennik trzymał pozycję po ostatniej znanej cenie (zwrot 0, „jak gotówka”), nie liczył
+likwidacji ani ceny rozliczenia i dalej otwierał pozycje po cenie zamrożonej. LP1 (zadanie 017) pokazało, że w takiej
+chwili cena ostatnia stoi, a cena **mark** (cena, po której giełda liczy depozyt i likwidację) dalej się zmienia — dla
+ALPACA w maju 2025 nawet 42–95 % niżej niż cena zamrożona. Zdarzenie jest rzadkie: **6 na 1 300** par moneta-miesiąc
+w koszyku top-20 (0,46 %, przedział 95 % 0,21–1,00 %), mniej więcej raz w roku. Szkoda dotyczy głównie **X1**: moneta to
+tam 10 % kapitału, bez dźwigni i bez likwidacji, więc rozliczenie 90 % niżej to ok. −9 % kapitału X1, którego dziennik by
+nie pokazał. W trendzie (portfel R1) wagi są małe (0,15–2 % kapitału fazy), a depozyt izolowany ogranicza stratę.
+
+**Konstrukcja — reguły R1–R7** (kod: `backtest/live_journal.py`, sekcja „poprawka 13”, oraz `data/fetch_live.py`):
+
+| reguła | co robi |
+|---|---|
+| R1 wykrycie | W każdym przebiegu, dla każdej monety koszyka (członek któregokolwiek miesiąca od startu silnika; BTC nie podlega regule, bo wyznacza dzień dziennika). Dzień wstrzymania = (a) brak świecy, gdy BTC ma świecę, albo (b) obrót 0 albo open = high = low = close, albo (c) kontrakt bez statusu TRADING w `exchangeInfo` (dni po ostatniej świecy). Seria kolejnych takich dni = jedno zdarzenie; **dzień wykrycia** = pierwszy dzień serii. |
+| R2 cena rozliczenia | W dniu wykrycia: (i) oficjalna cena Binance — **BRAK DANYCH** (publiczne API jej nie podaje, sonda niżej), pominięta; (ii) zamknięcie ceny mark z dnia wykrycia; (iii) gdy mark nie ma — ostatnie normalne zamknięcie (ostatni dzień bez warunku R1), oznaczone „przybliżona”. **Cenę, źródło i ekstrema mark ustala pierwszy przebieg, który widzi zdarzenie, i zapisuje w rejestrze `dziennik/rozliczenia.csv`; potem są niezmienne** — cena mark, która przyjdzie później, ani zepsuty plik ceny mark ich nie zmienią. Gdy w tym pierwszym przebiegu ceny mark brak, „przybliżona” zostaje na stałe, a log dostaje pole „rozliczenie BŁĄD bez ceny mark SYM”. |
+| R3 likwidacja trendu | W dniu wykrycia minimum i maksimum ceny mark porównane z progiem jak dotąd (1/dźwignia − 1 % = 49 % od ceny wejścia przy 2×). Dni zwykłego handlu przed wykryciem sprawdza, jak dotąd, cena ostatnia (te dni są już zapisane; przy zwykłym handlu mark ≈ cena ostatnia). Po dniu wykrycia: zwrot 0, bez likwidacji, funding 0. X1 bez likwidacji (jak dotąd). |
+| R4 brak nowych pozycji | Od dnia wykrycia moneta nie dostaje wagi w trendzie ani miejsca w nogach X1 (jak brak znaku) — przez całe wstrzymanie i **co najmniej 7 dni** (pełny cykl 7 faz: dopiero wtedy żadna faza nie trzyma już rozliczonej pozycji, a moneta, która wróci do handlu, może znów dostać pozycję). Moneta rozliczona znika też z pozycji ogłaszanych na jutro (`sygnaly.csv`, `x1_sygnaly.csv`). |
+| R5 koszyk | Od miesiąca zaczynającego się w dniu wejścia lub później (pierwszy: **2026-11**) dni z obrotem 0 nie liczą się do 30 notowań — zamrożona moneta nie wejdzie do koszyka (jak FTT 2022-12, ALPACA 2025-05). Filtr żyje w dzienniku (`basket_members`); funkcja wspólna z rundami (`rebalance_premium.monthly_members`) bez zmian, więc liczby zamrożonych rund też. Ten sam filtr: ranking w `koszyk.csv` i lista monet, dla których pobieramy funding (`fetch_live.funding_symbols`). |
+| R6 zapis | Pozycja rozliczona ma w `transakcje.csv` `powod_wyjscia = "wycofanie"`, datę wyjścia = dzień wykrycia i cenę rozliczenia (zamiast pustego pola). W `przebiegi.log` pole „wstrzymane: SYM od RRRR-MM-DD, cena X (mark\|przybliżona)” — tylko przy zdarzeniu. |
+| R7 alarm | Symbol z `koszyk.csv` (kolumna `czlonek_top20`) bez świec w danych przebiegu — bez pliku w `data/raw/live` albo z plikiem pustym (pusta odpowiedź giełdy nadpisuje plik, a panel go pomija; sprawdzane są kolumny panelu cen) → pole logu „pliki świec BŁĄD brak SYM, …”. Słowo „BŁĄD” zapala istniejącą kontrolę (h) strony dziennika. |
+
+- **Silnik rund bez zmian.** Reguły zmieniają tylko panele wejściowe dziennika (`journal_view`): cena rozliczenia
+  w cenie zamknięcia od dnia wykrycia (zwrot dnia wykrycia = rozliczenie, potem 0), ekstrema mark w dniu wykrycia,
+  funding 0 po nim, znak bez monet wyłączonych. Z tego samego widoku liczą się wynik trendu, X1 i lista transakcji, więc
+  tożsamość „suma pozycji = wynik fazy” zostaje.
+- **Data wejścia 2026-10-06** (`POPRAWKA13_OD`) — pierwszy pełny dzień UTC po zapisaniu poprawki (ta sama zasada co
+  start X1 w poprawce 3 i carry w poprawce 12). Dni wcześniejsze liczą się jak dotąd: seria wstrzymania zaczęta przed
+  tą datą zostaje przy dawnych zasadach, a R5 zaczyna się od miesiąca 2026-11. Dlatego nocne przeliczenie historii od
+  2025-09-01 nie zmienia żadnego zapisanego wiersza („historia zmieniona: 0”). Warunek: kod na `master` przed
+  przebiegiem 2026-10-07 ok. 02:30 UTC (pierwszy przebieg z dniem 06.10). Gdyby scalenie przyszło później, a w dniach
+  od 06.10 wystąpiło zdarzenie, przebieg zgłosi „historia zmieniona” (stare wiersze zostają) — wtedy przed scaleniem
+  przesunąć datę na pierwszy dzień bez zapisanego wyniku.
+
+**Dane.** Status kontraktów — z tego samego zapytania `exchangeInfo`, które dziennik już robi (bez nowego połączenia);
+plik `data/raw/live/binance_status.parquet` (symbol, status, typ kontraktu, `deliveryDate`), nadpisywany w każdym
+przebiegu. Cena mark — publiczne `markPriceKlines` 1d (fapi.binance.com, bez klucza, ten sam obiekt ccxt co świece),
+pobierana **tylko dla zdarzeń, których rejestr rozliczeń jeszcze nie zapisał** (dziennik czyta rejestr przed pobraniem),
+od daty wejścia — zwykle żadnej, czyli zwykle zero dodatkowych zapytań; plik `data/raw/live/binance_mark_daily.parquet`
+(nowa świeca zastępuje starą z tego samego dnia, reszta zostaje). Plik nieczytelny (np. przerwany zapis) jest usuwany
+i budowany od nowa z bieżącego pobrania, a log dostaje pole „cena mark BŁĄD <typ>”; rozliczenia już zapisane biorą cenę
+z rejestru, więc się nie zmieniają. Błąd pobrania nie zatrzymuje dziennika: bez ceny mark nowe rozliczenie jest
+„przybliżone” (z polem „rozliczenie BŁĄD …”).
+**Sonda 2026-10-05** (`zadania/025-dowody/poprawka13_sonda_mark.py` → `poprawka13_sonda_mark.txt`, tylko odczyt):
+- wycofane kontrakty zostają w `exchangeInfo` ze statusem SETTLING (133 symbole USDT) i polem `deliveryDate` = chwila
+  wycofania (ALPACA 2025-04-30 09:00 UTC, FTT 2022-11-14 04:00, BNX 2025-03-17 09:00, TON 2026-06-23 09:00); EOS i LUNA
+  zniknęły z listy całkiem;
+- świece ceny mark API zwraca dla wszystkich sześciu przypadków z zadania 025, także dla usuniętych EOS i LUNA — **dane
+  są**. Cena ostatnia stoi od chwili wycofania (np. ALPACA 1,19 z obrotem 0), a mark się rusza (ALPACA 2025-05-01:
+  0,24–0,60);
+- oficjalnej ceny rozliczenia API nie podaje: `/futures/data/delivery-price` zwraca 0 rekordów dla każdego z tych
+  perpetuali (dla BTCUSDT tylko rozliczenia kontraktów kwartalnych) — **BRAK DANYCH**, krok (i) pominięty.
+
+**Plik i log.** Nowy plik **`dziennik/rozliczenia.csv`** — rejestr rozliczeń, append-only jak pozostałe (automat
+commituje go z `dziennik/*.csv`; powstaje dopiero przy pierwszym zdarzeniu): `symbol`, `d1` (dzień wykrycia), `cena`,
+`zrodlo` (mark / przybliżona), `mark_high`, `mark_low` (ekstrema mark do R3; puste przy „przybliżona”), `zapisano_as_of`
+(dzień `as_of` przebiegu, który zapisał wiersz). Zdarzenie zapisane bierze wartości wyłącznie z rejestru; inny wynik
+przeliczenia pokazałby się jako „historia zmieniona”. `transakcje.csv`: nowy powód wyjścia „wycofanie” (cena wyjścia =
+cena rozliczenia, zwrot policzony). `przebiegi.log`: **bez zdarzenia linia znak w znak jak przed poprawką** (pilnuje
+`PRE_P12_LOG` w `tests/test_journal_carry.py`). Przy zdarzeniu albo błędzie, po polu „koszyk”, a przed polami carry,
+w tej kolejności:
+- „wstrzymane: SYM od RRRR-MM-DD, cena X (mark|przybliżona)” — moneta wstrzymana w dniu `as_of`, z koszyka bieżącego
+  tygodnia (miesiąca `as_of` albo `as_of` − 7 dni); kilka monet rozdziela „; ”;
+- „rozliczenie BŁĄD bez ceny mark SYM, …” — rozliczenie zapisane tej nocy (także w ponowionym przebiegu tej nocy) bez
+  ceny mark; następne noce już bez pola, a „przybliżona” zostaje w „wstrzymane: …”;
+- „rejestr rozliczeń BŁĄD <typ>” — rejestr nieczytelny (przebieg liczy dalej, ale rejestru nie dopisuje);
+- „cena mark BŁĄD <typ>” — plik ceny mark nieczytelny (przebudowany);
+- „pliki świec BŁĄD brak SYM, …” (R7).
+
+Pola nie zawierają znaku „|”, znaków sterujących ani nowej linii, nie zaczynają się od „carry ” i stoją po polu „stan
+rynku”, więc parser strony (`tools/strona_dziennika.LOG_RE`, bez zmian) czyta linię i licznik „historia zmieniona”;
+pola z „BŁĄD” zapalają kontrolę (h). Wydruk: linia „Wstrzymania (poprawka 13 …)” z przyczyną, ceną i końcem wyłączenia
+oraz linie „UWAGA” do każdego pola z błędem — tylko przy zdarzeniu albo błędzie.
+
+**Ścieżka odwrotu.** `POPRAWKA13_OD = None` w `backtest/live_journal.py` wyłącza R1–R7 (dziennik liczy jak przed poprawką;
+test `test_run_without_event_is_byte_identical_to_disabled`) albo revert commita poprawki. Jeśli od 06.10 wystąpi
+zdarzenie, wyłączenie przeliczy dni po nim po staremu i przebieg zgłosi „historia zmieniona” (stare wiersze zostają).
+Pliki pomocnicze w `data/raw/live` mogą zostać — dziennik bez poprawki ich nie czyta; `dziennik/rozliczenia.csv`
+zostaje w gicie jako historia (danych nie kasujemy).
+
+**Testy** (`tests/test_live_journal_p13.py`, 32 testy, w tym 3 testy właściwości `hypothesis`; scenariusze z
+`zadania/025-dowody/dowod_syntetyczny.py`: baza, wycofanie, krach, zamrożenie, zanik pliku; data wejścia zawsze przez
+`monkeypatch`): wykrycie (a)–(c) bez fałszywych alarmów (nowa moneta przed notowaniem, BTC, dzień bez świecy BTC);
+zdarzenia — okno wyłączenia max(koniec serii, wykrycie + 6 dni), seria w oknie nie rozlicza drugi raz, seria sprzed daty
+wejścia zostaje przy dawnych zasadach; panele po rozliczeniu (cena, mark, funding 0, dane wejściowe nietknięte); R5
+tylko od daty wejścia, top-20 rankingu = koszyk; **bez zdarzenia składowe, pozycje i transakcje bit w bit jak z
+poprawką wyłączoną**; **wycofanie z ceną mark równą świecy krachu daje w dniu D tę samą cenę i te same likwidacje
+trendu co „prawda”** (krach przy trwającym handlu; dane z dowodu kroku 1: cena −2,671 % kapitału trendu i 7 likwidacji
+w obu, różnica 0; dawne zasady −0,441 % i 0 likwidacji, czyli ukryte 2,23 pp); pozycje
+kończą się w dniu wykrycia ze statusem „wycofanie” i ceną bez NaN, brak ich w pozycjach ogłaszanych; tożsamość listy
+transakcji z wynikiem fazy przy rozliczeniach i likwidacjach na mark; zamrożenie — zero nowych wag i miejsc w X1, koszyk
+bez zamrożonej monety; przebieg bez zdarzenia — pliki bajt w bajt i linia logu (poza czasem) jak z poprawką wyłączoną;
+przebieg ze zdarzeniem — pole „wstrzymane: …” w miejscu opisanym wyżej, parser strony czyta linię, (h) milczy,
+powtórka bez zmian historii; R7 — brak pliku i plik pusty (sprawdzane kolumny panelu) dają pole z „BŁĄD”, (h) zgłasza
+„pliki świec”; nieczytelne pliki statusu i mark nie zatrzymują dziennika; pobieranie bez sieci (statusy: nazwy i teksty
+spoza wzorca odrzucone; świece mark tylko zamknięte; mark tylko dla zdarzeń nierozliczonych w rejestrze, scalanie ze
+starym plikiem, zepsuty plik przebudowany z błędem do logu, błąd monety nie blokuje innych, wyłączona poprawka = zero
+zapytań); funding dla koszyka dziennika. **Rejestr rozliczeń (przegląd 16c):** cena mark zawodzi w dniu wykrycia →
+„przybliżona” w rejestrze i „rozliczenie BŁĄD bez ceny mark” w logu (także w ponowionym przebiegu tej nocy); dzień
+później cena mark jest, a historia zmieniona = 0 i cena bez zmian (kontrola: bez rejestru ten sam przebieg zmienia
+historię); zepsuty plik mark → rozliczenie „mark” z rejestru bez zmian, „cena mark BŁĄD” w logu; nieczytelny rejestr →
+„rejestr rozliczeń BŁĄD”, bez dopisywania; **stabilność t vs t+k**: w scenariuszach wycofanie, zamrożenie, luka,
+obrót 0 i krach kolejne przebiegi (2 dni przed zdarzeniem, w dniu wykrycia, 3, 10 i 30 dni po nim) przeliczają całą
+historię i dają „historia zmieniona: 0”. Własności `hypothesis`: (a) dla dowolnego zdarzenia (wycofanie, zamrożenie,
+luka, obrót 0, krach bez wstrzymania) i dowolnej daty wejścia wszystko, co dziennik zapisuje dla dni sprzed niej, jest
+identyczne z wersją bez poprawki; (b) na widoku `journal_view` (te same znaki, nogi i panele co silnik) w oknie
+wyłączenia zero wagi i brak w nogach X1, a przed wykryciem moneta pozycję ma (test nie jest pusty); (c) cena
+rozliczenia to dokładnie zamknięcie mark z dnia wykrycia, a ekstrema R3 dokładnie jego maksimum i minimum — cena mark
+leży daleko od ceny ostatniej, a dni obok mają inne świece, więc pomyłka pola albo dnia wychodzi; bez poprawnej ceny
+mark ostatnie normalne zamknięcie z flagą „przybliżona”; linia logu z polami poprawki zawsze czytelna dla parsera
+strony, (h) tylko dla pól z „BŁĄD”. Kontrola mutacji: z wyłączonym warunkiem daty wejścia padają test zdarzeń
+i własność (a); z rejestrem ignorowanym — oba testy rejestru; z ceną = maksimum mark — własność (c); z R7 bez kolumn
+panelu — test R7.
+
+**Próba na kopii** — powtórzona 2026-10-06 po przeglądzie 16c, na końcowym kodzie
+(`zadania/025-dowody/poprawka13_proba_na_kopii.txt`). Kopia `~/alpha-dziennik` w katalogu tymczasowym, bez katalogu
+repozytorium; kod klonu = `master` 5cba008, podmienione 3 pliki z gałęzi. Bez treści wyników — tylko kody, liczniki,
+format i `cmp`:
+- **A — ten sam program co `uruchom.sh`, bez kroków git, z pobraniem danych** (12,3 min; `as_of` 2026-10-05 jak
+  przebieg 02:42 UTC): kod 0, „historia zmieniona: 0”; wszystkie pliki `dziennik/*` bajt w bajt jak przed próbą, poza
+  jedną nową linią `przebiegi.log`; ta linia pasuje do `strona_dziennika.LOG_RE` i do formatu sprzed poprawki
+  (`PRE_P12_LOG`, 17 pól jak w ostatnim przebiegu klonu), bez pól poprawki 13; rejestru rozliczeń brak (żadnego
+  zdarzenia). Plik statusów: 871 kontraktów USDT (133 SETTLING); cena mark niepobrana — żadnej monety ze
+  wstrzymaniem, więc zero nowych zapytań.
+- **B — diagnostycznie, bez sieci: data wejścia cofnięta na 2026-09-24**: na prawdziwych danych R1 nie wykrywa żadnego
+  wstrzymania w koszyku ani od 2026-09-24, ani od 2025-09-01 (brak fałszywych alarmów); R5 i R7 aktywne, a koszyk,
+  log („historia zmieniona: 0”, bez pól poprawki) i pliki — bez zmian; każdy członek koszyka ma świece.
+- **C — stary kod (5cba008) i nowy na tych samych danych, bez sieci:** oba kod 0; wszystkie pliki identyczne, nowa
+  linia logu identyczna poza czasem przebiegu, wydruk identyczny; czas obliczeń 6,5 s / 6,6 s (bez pobierania).
+
+**Przegląd bezpieczeństwa** (`security-review`, 2026-10-05 — nowe połączenie sieciowe w łańcuchu dziennika): **brak
+podatności** z realną drogą ataku (0 wysokich, 0 średnich). Nowe zapytanie `markPriceKlines` idzie na stały host
+fapi.binance.com przez ccxt, publicznie, bez klucza; symbole pochodzą z nazw lokalnych plików sprawdzonych `SYMBOL_RE`
+(i jeszcze raz przed zapytaniem), parametry koduje ccxt. Ścieżki plików to stałe (`STATUS_FILE`, `MARK_FILE`) — żadna
+dana z giełdy nie trafia do ścieżki. Status i typ kontraktu spoza wzorca `[A-Z_]{1,40}` zapisywane jako „NIEZNANY”,
+`deliveryDate` i świece zamieniane na liczby. Pola logu: tylko symbole ze `SYMBOL_RE`, daty, liczby i stałe słowa; po
+przeglądzie dodane czyszczenie wszystkich znaków niedrukowalnych (nie tylko „|” i nowej linii). Odczyt parquet/CSV
+dotyczy plików pisanych przez ten sam program (`data/raw` poza gitem); do `przebiegi.log` nie trafia treść odpowiedzi
+giełdy (komunikaty błędów tylko do wydruku, którego automat nie commituje). Poprawki po przeglądzie 16c nie dodają
+połączeń (to samo zapytanie `markPriceKlines`, odtąd tylko dla zdarzeń nierozliczonych); rejestr rozliczeń pisze i czyta
+wyłącznie dziennik, a jego teksty w polach logu przechodzą to samo czyszczenie (znaki niedrukowalne, „|”).
+
+**Przegląd kodu** — 16c (orkiestrator, 2026-10-05): **Approve z uwagami** — uwagi 1, 2, 3 poprawione, 4 opisana
+w Znanych przybliżeniach. (1) Cena rozliczenia zmieniała się, gdy cena mark przyszła dzień później albo plik mark się
+zepsuł („historia zmieniona” na stałe, bez alarmu w logu) → rejestr `dziennik/rozliczenia.csv` (wartości z pierwszego
+zapisu, cena mark pobierana tylko dla zdarzeń nierozliczonych) i pola „rozliczenie BŁĄD …”, „cena mark BŁĄD …”,
+„rejestr rozliczeń BŁĄD …”. (2) Testy: cena mark spóźniona o dzień, zepsuty plik mark, stabilność wierszy między
+przebiegami t i t+k w pięciu scenariuszach, wzmocnione własności (b) i (c). (3) R7 porównuje członków koszyka
+z kolumnami panelu cen (plik pusty po pustej odpowiedzi giełdy też daje alarm).
+
 ## Przeniesienie na serwer (2026-09-24, decyzja użytkownika: „tak, przenosimy dziennik”)
 
 Reguły, kod i pliki — bez zmian; zmienia się tylko maszyna (serwer Linux w Polsce działa całą dobę).
@@ -491,6 +647,12 @@ baterii, limit 3 h, jedna instancja naraz. Przebieg jest idempotentny — ponowi
 - `carry_wyniki.csv` (poprawka 12) — noga carry COIN-M do weryfikacji, osobno: dzień UTC od 2026-09-29, liczba rozliczeń
   fundingu (oczekiwane 3) i znacznik `komplet`, suma stawek, koszt wejścia (tylko pierwszy dzień), netto, netto skumulowane.
   Tylko zapis, bez wpływu na inne nogi.
+- `rozliczenia.csv` (poprawka 13, od 2026-10-06; powstaje przy pierwszym zdarzeniu) — rejestr rozliczeń monet
+  wstrzymanych lub wycofanych: symbol, dzień wykrycia, cena i źródło rozliczenia (mark / przybliżona), ekstrema mark,
+  `as_of` pierwszego zapisu. Wartości ustala pierwszy przebieg, potem są niezmienne. Pozycja w takiej monecie kończy się
+  w `transakcje.csv` powodem „wycofanie” i ceną z rejestru; w `przebiegi.log` pola „wstrzymane: …” i pola z „BŁĄD”
+  tylko przy zdarzeniu albo błędzie. Poza gitem, w `data/raw/live`: `binance_status.parquet` (status każdego
+  kontraktu) i `binance_mark_daily.parquet` (cena mark monet ze wstrzymaniem).
 
 ## Progi (zapisane z góry)
 
@@ -643,3 +805,30 @@ definicjami co strona dziennika (`tools/strona_dziennika.build_state`). Testy: `
 - **Skład koszyka a monety wycofane:** dziennik liczy rozbieg z aktywnych dziś kontraktów, więc moneta
   wycofana później znika z historii (X1F: 2 z 3 różnic składu na 258 dniach — IPUSDT, TONUSDT). X1 jest
   na to wrażliwszy niż trend: trzy zamiany po jednej monecie przesunęły sumę o ~10 pkt w 258 dniach.
+- **Moneta wstrzymana lub wycofana (poprawka 13, od 2026-10-06)** — co zostaje przybliżeniem:
+  - **oficjalna cena rozliczenia Binance: BRAK DANYCH** (publiczne API jej nie podaje). Dziennik rozlicza po zamknięciu
+    ceny mark z dnia wykrycia. Giełda rozlicza w chwili wycofania (pole `deliveryDate`, np. ALPACA 2025-04-30 09:00
+    UTC), a zamknięcie mark to koniec dnia — kilka do kilkunastu godzin później; przy gwałtownym ruchu różnica bywa
+    duża (ALPACA tego dnia: mark od 0,18 do 1,43, zamknięcie 0,58, cena ostatnia zamrożona na 1,19);
+  - **zamknięcie i ekstrema ceny mark z dnia dostawy obejmują godziny PO rozliczeniu** — giełda rozlicza zwykle
+    o 09:00 UTC (`deliveryDate`), a świeca dzienna mark trwa do północy. Cena rozliczenia dziennika to więc cena mark
+    z końca dnia, a R3 sprawdza likwidację na ekstremach całego dnia — może „zlikwidować” pozycję, którą giełda już
+    rozliczyła, albo pominąć ruch sprzed rozliczenia, którego świeca dzienna nie rozróżnia (świadomie bez ceny
+    godzinowej; uwaga 4 przeglądu 16c);
+  - bez ceny mark w pierwszym przebiegu, który widzi zdarzenie (błąd pobrania), rozliczenie po ostatnim normalnym
+    zamknięciu, oznaczone „przybliżona”, bez sprawdzenia likwidacji w dniu wykrycia — **na stałe** (rejestr), nawet
+    gdy cena mark przyjdzie później;
+  - rejestr ustala cenę zdarzenia, ale nie jego istnienie: gdyby giełda później uzupełniła brakującą świecę (zdarzenie
+    znika z danych), przeliczenie wyjdzie inaczej i pokaże to „historia zmieniona”;
+  - likwidacja na cenie mark tylko w dniu wykrycia; dni zwykłego handlu przed nim sprawdza cena ostatnia (są już
+    zapisane);
+  - **historia statusów kontraktów: BRAK DANYCH** — dziennik zna tylko status z bieżącego przebiegu (pobiera świece
+    tylko kontraktów TRADING, więc wycofanie widać jako brak świecy od dnia wycofania);
+  - **wstrzymanie krótsze niż dzień** (przerwa w trakcie dnia) nie zostawia śladu w świecy dziennej i nie jest wykrywane;
+    jednodniowa luka w danych (brak świecy, który giełda potem uzupełni) jest wykrywana jak wstrzymanie (rozliczenie
+    i 7 dni przerwy), a uzupełnienie danych zmieni historię — pokaże to „historia zmieniona”;
+  - koszt zamknięcia rozliczonej pozycji liczy się przy następnym formowaniu fazy (jak dotąd przy wycofaniu), nie w dniu
+    wykrycia; zmienność σ̂ monety, która wróci do handlu, liczy się z cen dziennika (z ceną rozliczenia w oknie
+    wyłączenia);
+  - seria wstrzymania zaczęta przed 2026-10-06 zostaje przy dawnych zasadach; zanik pliku członka koszyka daje alarm
+    (R7), ale przeliczenie historii i tak idzie bez tej monety.

@@ -1,0 +1,11 @@
+Zadanie 025 / Poprawka 13 — samo formatowanie black data/fetch_ohlcv.py (bez zmiany logiki)
+Decyzja użytkownika 2026-10-05: „Poprawka 025 + black”.
+Baza: 5cba008 (master). black 26.5.1, konfiguracja z pyproject.toml (line-length 100, py311).
+Komenda: /home/dantey1/alpha/.venv/bin/python -m black data/fetch_ohlcv.py
+Dowód: ast.dump(ast.parse(plik), include_attributes=False) przed i po — drzewo składni bez numerów linii i kolumn.
+  przed: sha256 dumpu 6f3f0d2581eec2ed55f06cdd790c61a1f3bf59401eb01adcff421a40632037d8 (31814 znaków); plik 314 linii, sha256 pliku 29f740a2925c559821a6ccc413c04df294cf1d634d96676e0ee000597c217563
+  po:    sha256 dumpu 6f3f0d2581eec2ed55f06cdd790c61a1f3bf59401eb01adcff421a40632037d8 (31814 znaków); plik 315 linii, sha256 pliku d8bacfc25656f26c4f86a54517952e55dcbceaabddcbe0007ec1a55006a88787
+  drzewa składni identyczne: True
+Różnica w pliku (numstat): 3 dodane, 2 usunięte linie —
+  (1) usunięta nadmiarowa pusta linia przed komentarzem nad RESAMPLE_RULES (3 puste → 2),
+  (2) zbyt długi print(f"[fetch] błąd sieci …") w _fetch_page_with_retry złamany na 3 linie (ten sam f-string).
